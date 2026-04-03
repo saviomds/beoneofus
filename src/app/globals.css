@@ -1,0 +1,12 @@
+@import "tailwindcss"; /* New v4 style */
+
+/* OR the traditional v3 style if you are on v3 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Your custom styles below */
+body {
+  background-color: black;
+  color: white;
+}

@@ -111,7 +111,7 @@ export default function MessagesContent() {
         </div>
 
         {/* Messages Feed */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto py-4 space-y-4 overflow-y-auto no-scrollbar">
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] ${msg.sender === "me" ? "text-right" : "text-left"}`}>

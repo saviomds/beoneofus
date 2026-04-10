@@ -10,7 +10,7 @@ function DashLayoutContent({ children }) {
   const { activeSection, setActiveSection } = useDashboard();
 
   return (
-    <div className="flex w-full min-h-screen">
+    <div className="flex w-full min-h-screen overflow-y-auto no-scrollbar">
 
       {/* 1. Left Sidebar - Fixed Width */}
       <div className="hidden md:block w-72 flex-shrink-0 border-r border-white/5">

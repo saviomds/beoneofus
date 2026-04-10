@@ -1,12 +1,30 @@
-@import "tailwindcss"; /* New v4 style */
+@import "tailwindcss";
 
-/* OR the traditional v3 style if you are on v3 */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer base {
+  body {
+    background-color: black;
+    color: white;
+  }
 
-/* Your custom styles below */
-body {
-  background-color: black;
-  color: white;
+  /* 1. Global: Hide scrollbars for all elements but keep functionality */
+  * {
+    -ms-overflow-style: none;  /* Internet Explorer/Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+
+  *::-webkit-scrollbar {
+    display: none;             /* Chrome, Safari, and Opera */
+  }
+}
+
+@layer utilities {
+  /* 2. Utility: Specifically for your scrollable dashboard blocks */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

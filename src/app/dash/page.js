@@ -35,7 +35,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 ">
       {/* Only show NewPost for feed section */}
       {activeSection === 'feed' && (
         <>

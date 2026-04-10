@@ -1,6 +1,6 @@
 "use client";
-
-import { useState, useRef } from "react"; // Removed ChangeEvent import
+import Image from "next/image";
+import { useState, useRef } from "react";
 import { 
   Plus, 
   Users, 
@@ -38,18 +38,14 @@ const GROUPS = [
 
 export default function GroupsContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // Image Upload States
-  const [imagePreview, setImagePreview] = useState(null); // Removed <string | null>
+  const [imagePreview, setImagePreview] = useState(null);
   const [isPrivateSelection, setIsPrivateSelection] = useState(false);
-  
-  // Ref for the hidden file input
-  const fileInputRef = useRef(null); // Removed <HTMLInputElement>
+  const fileInputRef = useRef(null);
 
   // Handle Image Upload logic
   const handleImageClick = () => fileInputRef.current?.click();
 
-  const handleFileChange = (event) => { // Removed : ChangeEvent<HTMLInputElement>
+  const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -60,7 +56,7 @@ export default function GroupsContent() {
     }
   };
 
-  const handleRemoveImage = (e) => { // Removed : React.MouseEvent
+  const handleRemoveImage = (e) => {
     e.stopPropagation();
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -161,7 +157,7 @@ export default function GroupsContent() {
                 >
                   {imagePreview ? (
                     <div className="relative w-full h-full group">
-                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <Image src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <X size={16} className="text-white bg-red-500 rounded-full p-0.5" onClick={handleRemoveImage} />
                       </div>
@@ -219,4 +215,4 @@ export default function GroupsContent() {
       )}
     </div>
   );
-}s
+}

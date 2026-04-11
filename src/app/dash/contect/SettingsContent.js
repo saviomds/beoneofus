@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { 
   User, Bell, Lock, ShieldCheck, CreditCard, 
   Monitor, ChevronRight, Globe, X, Loader2, CheckCircle2, 
-  Sun, Moon, Volume2, VolumeX
+  Sun, Moon, Volume2, VolumeX 
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -13,7 +13,7 @@ const SETTINGS_GROUPS = [
     title: "Account",
     items: [
       { id: "profile", label: "Profile Information", icon: <User size={18} />, desc: "Update your name, bio, and avatar", details: "Manage how your identity appears across the platform." },
-      { id: "email", label: "Email & Password", icon: <Lock size={18} />, desc: "Manage your login credentials", details: "Ensure your account stays secure." },
+      { id: "email", label: "Email & Password", icon: <Lock size={18} />, desc: "View login credentials", details: "Security protocol: Credentials are locked to this terminal." },
     ]
   },
   {
@@ -30,8 +30,9 @@ export default function SettingsContent() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   
-  // States for Settings Data
+  // Data States
   const [profile, setProfile] = useState({ username: "", status: "", bio: "" });
+  const [userEmail, setUserEmail] = useState("");
   const [notifsEnabled, setNotifsEnabled] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
@@ -40,6 +41,10 @@ export default function SettingsContent() {
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        // Set Email from Auth (Read-only)
+        setUserEmail(session.user.email);
+
+        // Fetch Profile & Preferences
         const { data } = await supabase
           .from('profiles')
           .select('username, status, bio, preferences')
@@ -52,7 +57,6 @@ export default function SettingsContent() {
             status: data.status || "",
             bio: data.bio || ""
           });
-          // Check if preferences column exists and has data
           if (data.preferences) {
             setNotifsEnabled(data.preferences.notifications ?? true);
             setIsDarkMode(data.preferences.dark_mode ?? true);
@@ -63,7 +67,7 @@ export default function SettingsContent() {
     fetchData();
   }, []);
 
-  // 2. Handle Profile & Preference Updates
+  // 2. Universal Save Handler
   const handleSaveChanges = async () => {
     setLoading(true);
     setSuccess(false);
@@ -190,6 +194,28 @@ export default function SettingsContent() {
                   </>
                 )}
 
+                {selectedItem.id === "email" && (
+                   <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-gray-500 uppercase px-1 tracking-widest">Authorized Email</label>
+                        <div className="relative group/input">
+                          <input 
+                            type="text" 
+                            value={userEmail}
+                            readOnly
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-gray-400 cursor-not-allowed font-mono outline-none"
+                          />
+                          <Lock size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                        </div>
+                      </div>
+                      <div className="p-4 bg-orange-500/5 border border-orange-500/10 rounded-xl">
+                        <p className="text-[10px] text-orange-400/80 font-bold leading-relaxed uppercase tracking-tighter">
+                          Notice: Identity credentials are hard-coded to your primary node. Contact system admin to rotate keys.
+                        </p>
+                      </div>
+                   </div>
+                )}
+
                 {selectedItem.id === "notifs" && (
                    <div className="space-y-3">
                       <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
@@ -226,23 +252,27 @@ export default function SettingsContent() {
                       </button>
                    </div>
                 )}
-
-                {selectedItem.id === "email" && (
-                   <div className="py-10 text-center border border-dashed border-white/5 rounded-2xl bg-white/[0.02]">
-                      <Lock size={24} className="mx-auto mb-3 text-gray-600" />
-                      <p className="text-gray-500 text-xs italic px-6 font-mono uppercase tracking-tighter">Auth credentials restricted to root directory.</p>
-                   </div>
-                )}
               </div>
 
               <div className="w-full space-y-3">
-                <button 
-                  onClick={handleSaveChanges}
-                  disabled={loading || success}
-                  className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2 ${success ? 'bg-green-600 text-white shadow-green-500/20' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20'}`}
-                >
-                  {loading ? <Loader2 className="animate-spin" size={16} /> : success ? "Changes Saved" : "Save Changes"}
-                </button>
+                {/* Save button only clickable for editable items */}
+                {selectedItem.id !== "email" ? (
+                  <button 
+                    onClick={handleSaveChanges}
+                    disabled={loading || success}
+                    className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2 ${success ? 'bg-green-600 text-white shadow-green-500/20' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20'}`}
+                  >
+                    {loading ? <Loader2 className="animate-spin" size={16} /> : success ? "Changes Saved" : "Save Changes"}
+                  </button>
+                ) : (
+                  <button 
+                    disabled
+                    className="w-full py-4 bg-white/5 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-xs cursor-not-allowed border border-white/5"
+                  >
+                    Read Only Mode
+                  </button>
+                )}
+                
                 <button 
                   onClick={() => setSelectedItem(null)}
                   className="w-full py-4 bg-white/5 hover:bg-white/10 text-gray-300 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border border-white/5"

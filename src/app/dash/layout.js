@@ -20,10 +20,8 @@ function DashLayoutContent({ children }) {
       {/* 2. Center Column - Fills all remaining space */}
       <main className="flex-grow flex flex-col min-w-0 bg-black">
         <Header />
-        <div className="flex-grow overflow-y-auto">
-          {/* This inner div centers your feed content if you want a max-width,
-              or remove 'max-w-3xl' to make the feed stretch completely */}
-          <div className="max-w-3xl mx-auto w-full px-4 md:px-8 py-6">
+       <div className="flex-grow overflow-y-auto">
+          <div className="w-full px-0 py-0">
             {children}
           </div>
         </div>

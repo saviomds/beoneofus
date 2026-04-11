@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { 
   Search, MoreVertical, Phone, Video, Send, 
-  Paperclip, CheckCheck, UserPlus, Check, X 
+  Paperclip, CheckCheck, UserPlus, Check, X, Trash2, 
+  AlertTriangle, MoreHorizontal 
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -14,12 +15,15 @@ export default function MessagesContent() {
   const [inputValue, setInputValue] = useState("");
   const [currentUserId, setCurrentUserId] = useState(null);
   
-  // Connection Request State
-  const [connectionStatus, setConnectionStatus] = useState(null); // 'none', 'waiting', 'incoming', 'accepted'
-  
+  // UI States
+  const [connectionStatus, setConnectionStatus] = useState(null); 
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const scrollRef = useRef(null);
 
-  // 1. Initial Setup: Get User and Contacts
+  // 1. Initial Setup
   useEffect(() => {
     const initChat = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -42,7 +46,6 @@ export default function MessagesContent() {
     if (!activeChat || !currentUserId) return;
 
     const checkConnectionAndFetch = async () => {
-      // Check for an existing connection request
       const { data: connection } = await supabase
         .from('connections')
         .select('*')
@@ -72,7 +75,6 @@ export default function MessagesContent() {
 
     checkConnectionAndFetch();
 
-    // Listen for Connection Changes (Accepting requests) and New Messages
     const channel = supabase
       .channel(`realtime-chat-${activeChat.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'connections' }, () => checkConnectionAndFetch())
@@ -83,7 +85,6 @@ export default function MessagesContent() {
       }, (payload) => {
         const newMessage = payload.new;
         const isFromActive = newMessage.sender_id === activeChat.id || newMessage.receiver_id === activeChat.id;
-        
         if (isFromActive) {
           setMessages((prev) => {
             if (prev.find(m => m.id === newMessage.id)) return prev;
@@ -96,14 +97,14 @@ export default function MessagesContent() {
     return () => supabase.removeChannel(channel);
   }, [activeChat, currentUserId]);
 
-  // 3. Auto-scroll to bottom
+  // 3. Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, connectionStatus]);
 
-  // 4. Request Logic (Send / Accept)
+  // 4. Request / Connection Handlers
   const handleSendRequest = async () => {
     await supabase.from('connections').insert({
       sender_id: currentUserId,
@@ -122,7 +123,32 @@ export default function MessagesContent() {
     setConnectionStatus('accepted');
   };
 
-  // 5. Send Message (Optimistic Logic)
+  // 5. Delete Conversation Logic
+  const handleDeleteConversation = async () => {
+    setIsDeleting(true);
+    try {
+      await supabase
+        .from('messages')
+        .delete()
+        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`);
+      
+      await supabase
+        .from('connections')
+        .delete()
+        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`);
+
+      setMessages([]);
+      setConnectionStatus('none');
+      setShowDeleteConfirm(false);
+      setShowMoreMenu(false);
+    } catch (error) {
+      console.error("Delete Error:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // 6. Send Message (Optimistic)
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputValue.trim() || !activeChat || !currentUserId || connectionStatus !== 'accepted') return;
@@ -154,13 +180,43 @@ export default function MessagesContent() {
     }
   };
 
-  if (!currentUserId) return <div className="p-10 text-gray-500">Authentication Required...</div>;
+  if (!currentUserId) return <div className="p-10 text-gray-500 font-bold tracking-widest uppercase text-xs">Access Denied: Node Unauthorized</div>;
 
   return (
-    <div className="w-full flex h-[calc(100vh-180px)] bg-transparent overflow-hidden">
+    <div className="w-full flex h-[calc(100vh-160px)] bg-transparent overflow-hidden relative">
       
+      {/* --- DELETE CONFIRMATION MODAL --- */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-sm rounded-2xl p-8 shadow-2xl text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2 tracking-tighter">Wipe Conversation?</h3>
+            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+              Permanently delete all logs and terminate the secure link with @{activeChat.username}.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={handleDeleteConversation}
+                disabled={isDeleting}
+                className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2"
+              >
+                {isDeleting ? 'Wiping...' : 'Confirm Wipe'}
+              </button>
+              <button 
+                onClick={() => setShowDeleteConfirm(false)}
+                className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar: Contacts */}
-      <div className="w-64 md:w-72 border-r border-white/5 flex flex-col pr-2">
+      <div className="w-64 md:w-72 border-r border-white/5 flex flex-col pr-2 shrink-0">
         <div className="pb-4">
           <h2 className="text-2xl font-black text-white tracking-tighter mb-3">Messages</h2>
           <div className="relative">
@@ -173,7 +229,7 @@ export default function MessagesContent() {
           {contacts.map((contact) => (
             <div 
               key={contact.id}
-              onClick={() => setActiveChat(contact)}
+              onClick={() => { setActiveChat(contact); setShowMoreMenu(false); }}
               className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-xl border ${
                 activeChat?.id === contact.id ? 'bg-blue-600/10 border-blue-500/20' : 'hover:bg-white/5 border-transparent'
               }`}
@@ -183,7 +239,7 @@ export default function MessagesContent() {
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-xs font-bold text-white truncate">{contact.username}</h4>
-                <p className="text-[10px] text-gray-500 truncate">{contact.status || 'Active'}</p>
+                <p className="text-[10px] text-gray-500 truncate font-mono uppercase tracking-tighter">{contact.status || 'Active'}</p>
               </div>
             </div>
           ))}
@@ -191,10 +247,10 @@ export default function MessagesContent() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col pl-4 min-w-0">
+      <div className="flex-1 flex flex-col pl-4 min-w-0 mr-2">
         {activeChat ? (
           <>
-            <div className="pb-3 border-b border-white/5 flex items-center justify-between">
+            <div className="pb-3 border-b border-white/5 flex items-center justify-between relative overflow-visible">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
                   {activeChat.username[0].toUpperCase()}
@@ -203,18 +259,38 @@ export default function MessagesContent() {
                   <h3 className="text-sm font-bold text-white leading-tight">{activeChat.username}</h3>
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                    <p className="text-[9px] text-green-500 font-bold uppercase">Online</p>
+                    <p className="text-[9px] text-green-500 font-bold uppercase tracking-tighter">Online</p>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1 text-gray-500">
-                <button className="p-1.5 hover:text-white"><Phone size={16} /></button>
-                <button className="p-1.5 hover:text-white"><Video size={16} /></button>
-                <button className="p-1.5 hover:text-white"><MoreVertical size={16} /></button>
+              
+              <div className="flex items-center gap-1 text-gray-500 relative">
+                <button className="p-1.5 hover:text-white transition-colors"><Phone size={16} /></button>
+                <button className="p-1.5 hover:text-white transition-colors"><Video size={16} /></button>
+                
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowMoreMenu(!showMoreMenu)}
+                    className={`p-1.5 transition-colors ${showMoreMenu ? 'text-white' : 'hover:text-white'}`}
+                  >
+                    <MoreHorizontal size={18} />
+                  </button>
+
+                  {showMoreMenu && (
+                    <div className="absolute top-10 right-0 w-48 bg-[#111111] border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] z-[150] py-2 animate-in fade-in slide-in-from-top-2">
+                      <button 
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-red-400 hover:bg-red-400/10 transition-all"
+                      >
+                        <Trash2 size={14} />
+                        <span className="font-bold uppercase tracking-widest">Delete Chat</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* MESSAGE FEED / CONNECTION GUARD */}
             <div 
               ref={scrollRef}
               className="flex-1 overflow-y-auto py-4 space-y-4 no-scrollbar scroll-smooth flex flex-col"
@@ -244,8 +320,8 @@ export default function MessagesContent() {
                       <div className="w-16 h-16 bg-blue-600/10 rounded-full flex items-center justify-center text-blue-500">
                         <UserPlus size={32} />
                       </div>
-                      <p className="text-gray-400 text-sm">Transmission blocked. Request connection to begin.</p>
-                      <button onClick={handleSendRequest} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl font-bold transition-all">Send Request</button>
+                      <p className="text-gray-400 text-sm font-bold uppercase tracking-tighter">Transmission blocked</p>
+                      <button onClick={handleSendRequest} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20">Send Request</button>
                     </>
                   )}
                   {connectionStatus === 'waiting' && (
@@ -253,7 +329,7 @@ export default function MessagesContent() {
                       <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-gray-500 animate-pulse">
                         <Send size={32} />
                       </div>
-                      <p className="text-gray-500 text-sm italic">Request sent. Waiting for @{activeChat.username} to authorize...</p>
+                      <p className="text-gray-500 text-xs italic">Syncing with @{activeChat.username}. Waiting for authorization...</p>
                     </>
                   )}
                   {connectionStatus === 'incoming' && (
@@ -261,12 +337,12 @@ export default function MessagesContent() {
                       <div className="w-16 h-16 bg-green-600/10 rounded-full flex items-center justify-center text-green-500">
                         <Check size={32} />
                       </div>
-                      <p className="text-white text-sm font-bold">@{activeChat.username} wants to establish a secure link.</p>
+                      <p className="text-white text-sm font-black tracking-tight uppercase">Incoming Handshake Request</p>
                       <div className="flex gap-3">
-                        <button onClick={handleAcceptRequest} className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 transition-all">
+                        <button onClick={handleAcceptRequest} className="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all">
                           <Check size={18} /> Accept
                         </button>
-                        <button className="bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 px-6 py-2 rounded-xl font-bold transition-all border border-white/5">
+                        <button className="bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 px-6 py-2.5 rounded-xl font-bold transition-all border border-white/5">
                           Ignore
                         </button>
                       </div>
@@ -276,25 +352,24 @@ export default function MessagesContent() {
               )}
             </div>
 
-            {/* Input Bar - Only show if accepted */}
-            <div className={`pt-3 transition-opacity ${connectionStatus === 'accepted' ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}>
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-[#0F0F0F] border border-white/5 rounded-2xl p-1.5 pl-4">
+            <div className={`pt-3 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-[#0F0F0F] border border-white/5 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500/30 transition-all">
                 <button type="button" className="text-gray-600 hover:text-gray-400"><Paperclip size={18} /></button>
                 <input 
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder={connectionStatus === 'accepted' ? `Write to @${activeChat.username}...` : 'Channel Locked'} 
+                  placeholder={connectionStatus === 'accepted' ? `Secure packet to @${activeChat.username}...` : 'Channel Offline'} 
                   className="flex-1 bg-transparent border-none focus:outline-none text-xs text-white py-2"
                 />
-                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-xl transition-all shadow-lg shadow-blue-600/20">
-                  <Send size={16} strokeWidth={2.5} />
+                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20">
+                  <Send size={16} strokeWidth={3} />
                 </button>
               </form>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-600 text-sm italic">
-            Select a contact to begin transmission.
+          <div className="flex-1 flex items-center justify-center text-gray-600 text-xs font-black uppercase tracking-[4px] italic animate-pulse">
+            Waiting for contact selection...
           </div>
         )}
       </div>

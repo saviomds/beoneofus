@@ -1,157 +1,215 @@
 "use client";
 
-import { useState } from "react";
-import { 
-  Search, 
-  MoreVertical, 
-  Phone, 
-  Video, 
-  Send, 
-  Paperclip, 
-  Smile, 
-  CheckCheck 
-} from "lucide-react";
-
-const CONTACTS = [
-  { id: 1, name: "Alex Rivera", lastMsg: "The API is ready for testing.", time: "10:24 AM", online: true, unread: 2 },
-  { id: 2, name: "Sarah Chen", lastMsg: "Did you see the new design?", time: "9:15 AM", online: false, unread: 0 },
-  { id: 3, name: "Mauritius Dev Group", lastMsg: "Meeting at Bagatelle tomorrow?", time: "Yesterday", online: true, unread: 0 },
-];
-
-const INITIAL_MESSAGES = [
-  { id: 1, sender: "them", text: "Hey! How's the SAVIOMDS project coming along?", time: "10:00 AM" },
-  { id: 2, sender: "me", text: "Going well! Just finished the groups integration. Working on the chat now.", time: "10:02 AM" },
-  { id: 3, sender: "them", text: "Awesome. Let me know if you need help with the Supabase webhooks.", time: "10:05 AM" },
-];
+import { useState, useEffect, useRef } from "react";
+import { Search, MoreVertical, Phone, Video, Send, Paperclip, CheckCheck } from "lucide-react";
+import { supabase } from "../../supabaseClient";
 
 export default function MessagesContent() {
-  const [activeChat, setActiveChat] = useState(CONTACTS[0]);
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [contacts, setContacts] = useState([]);
+  const [activeChat, setActiveChat] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
+  const [currentUserId, setCurrentUserId] = useState(null);
+  
+  const scrollRef = useRef(null);
 
-  const handleSendMessage = (e) => {
+  // 1. Initial Setup: Get User and Contacts
+  useEffect(() => {
+    const initChat = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      setCurrentUserId(session.user.id);
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, status')
+        .not('id', 'eq', session.user.id);
+      
+      setContacts(profiles || []);
+      if (profiles?.length > 0) setActiveChat(profiles[0]);
+    };
+    initChat();
+  }, []);
+
+  // 2. Fetch Messages and Listen for Realtime
+  useEffect(() => {
+    if (!activeChat || !currentUserId) return;
+
+    const fetchMessages = async () => {
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`)
+        .order('created_at', { ascending: true });
+      setMessages(data || []);
+    };
+
+    fetchMessages(); // FIXED: Changed from fetchPosts to fetchMessages
+
+    const channel = supabase
+      .channel(`realtime-chat-${activeChat.id}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'messages' 
+      }, (payload) => {
+        const newMessage = payload.new;
+        const isFromActive = newMessage.sender_id === activeChat.id || newMessage.receiver_id === activeChat.id;
+        
+        if (isFromActive) {
+          setMessages((prev) => {
+            if (prev.find(m => m.id === newMessage.id)) return prev;
+            return [...prev, newMessage];
+          });
+        }
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [activeChat, currentUserId]);
+
+  // 3. Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // 4. Send Message (Optimistic Logic)
+  const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
-    
-    setMessages([...messages, {
-      id: Date.now(),
-      sender: "me",
-      text: inputValue,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }]);
+    if (!inputValue.trim() || !activeChat || !currentUserId) return;
+
+    const messageText = inputValue;
+    const optimisticId = Date.now(); 
+
+    const optimisticMsg = {
+      id: optimisticId,
+      sender_id: currentUserId,
+      receiver_id: activeChat.id,
+      text: messageText,
+      created_at: new Date().toISOString(),
+      isSending: true 
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
     setInputValue("");
+
+    const { error } = await supabase.from('messages').insert({
+      sender_id: currentUserId,
+      receiver_id: activeChat.id,
+      text: messageText
+    });
+
+    if (error) {
+      alert("Failed to send: " + error.message);
+      setMessages((prev) => prev.filter(m => m.id !== optimisticId));
+    }
   };
 
+  if (!currentUserId) return <div className="p-10 text-gray-500">Authentication Required...</div>;
+
   return (
-    /* flex-1 ensures it only takes available space between sidebars */
     <div className="w-full flex h-[calc(100vh-180px)] bg-transparent overflow-hidden">
       
-      {/* --- Sidebar (Contacts) - Narrower width to save space --- */}
+      {/* Sidebar: Contacts */}
       <div className="w-64 md:w-72 border-r border-white/5 flex flex-col pr-2">
         <div className="pb-4">
           <h2 className="text-2xl font-black text-white tracking-tighter mb-3">Messages</h2>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
-            <input 
-              type="text" 
-              placeholder="Search..." 
-              className="w-full bg-[#0F0F0F] border border-white/5 rounded-xl py-2 pl-9 pr-3 text-xs text-gray-200 focus:outline-none focus:border-blue-500/30 transition-all"
-            />
+            <input type="text" placeholder="Search..." className="w-full bg-[#0F0F0F] border border-white/5 rounded-xl py-2 pl-9 text-xs text-white outline-none" />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar">
-          {CONTACTS.map((contact) => (
+          {contacts.map((contact) => (
             <div 
               key={contact.id}
               onClick={() => setActiveChat(contact)}
               className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-xl border ${
-                activeChat.id === contact.id 
-                ? 'bg-blue-600/10 border-blue-500/20 shadow-sm' 
-                : 'hover:bg-white/5 border-transparent'
+                activeChat?.id === contact.id ? 'bg-blue-600/10 border-blue-500/20' : 'hover:bg-white/5 border-transparent'
               }`}
             >
-              <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 text-xs font-bold">
-                  {contact.name[0]}
-                </div>
-                {contact.online && <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-black rounded-full"></div>}
+              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-bold">
+                {contact.username[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline">
-                  <h4 className="text-xs font-bold text-white truncate">{contact.name}</h4>
-                  <span className="text-[9px] text-gray-600">{contact.time}</span>
-                </div>
-                <p className="text-[11px] text-gray-500 truncate mt-0.5">{contact.lastMsg}</p>
+                <h4 className="text-xs font-bold text-white truncate">{contact.username}</h4>
+                <p className="text-[10px] text-gray-500 truncate">{contact.status || 'Active'}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* --- Main Chat Area - Removed extra padding to avoid right-margin crash --- */}
+      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col pl-4 min-w-0">
-        
-        {/* Chat Header - Compact */}
-        <div className="pb-3 border-b border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-xs font-bold">
-              {activeChat.name[0]}
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white leading-tight">{activeChat.name}</h3>
-              <p className="text-[9px] text-green-500 font-bold uppercase tracking-tighter">Online</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button className="p-1.5 text-gray-500 hover:text-white transition-colors"><Phone size={16} /></button>
-            <button className="p-1.5 text-gray-500 hover:text-white transition-colors"><Video size={16} /></button>
-            <button className="p-1.5 text-gray-500 hover:text-white transition-colors"><MoreVertical size={16} /></button>
-          </div>
-        </div>
-
-        {/* Messages Feed */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-4 overflow-y-auto no-scrollbar">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[85%] ${msg.sender === "me" ? "text-right" : "text-left"}`}>
-                <div className={`inline-block px-4 py-2.5 rounded-2xl text-[13px] leading-snug ${
-                  msg.sender === "me" 
-                  ? "bg-blue-600 text-white rounded-tr-none shadow-md shadow-blue-600/5" 
-                  : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"
-                }`}>
-                  {msg.text}
+        {activeChat ? (
+          <>
+            <div className="pb-3 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
+                  {activeChat.username[0].toUpperCase()}
                 </div>
-                <div className="mt-1 flex items-center gap-1.5 text-[9px] text-gray-600 font-medium px-1">
-                  {msg.time}
-                  {msg.sender === "me" && <CheckCheck size={12} className="text-blue-500" />}
+                <div>
+                  <h3 className="text-sm font-bold text-white leading-tight">{activeChat.username}</h3>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                    <p className="text-[9px] text-green-500 font-bold uppercase">Online</p>
+                  </div>
                 </div>
               </div>
+              <div className="flex items-center gap-1 text-gray-500">
+                <button className="p-1.5 hover:text-white"><Phone size={16} /></button>
+                <button className="p-1.5 hover:text-white"><Video size={16} /></button>
+                <button className="p-1.5 hover:text-white"><MoreVertical size={16} /></button>
+              </div>
             </div>
-          ))}
-        </div>
 
-        {/* Input Bar - Slimmed down to prevent overflow */}
-        <div className="pt-3">
-          <form 
-            onSubmit={handleSendMessage}
-            className="flex items-center gap-2 bg-[#0F0F0F] border border-white/5 rounded-2xl p-1.5 pl-4 focus-within:border-white/10 transition-all"
-          >
-            <button type="button" className="text-gray-600 hover:text-gray-400 transition-colors"><Paperclip size={18} /></button>
-            <input 
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Message..." 
-              className="flex-1 bg-transparent border-none focus:outline-none text-xs text-white py-2 placeholder-gray-700"
-            />
-            <button 
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-xl transition-all"
+            <div 
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto py-4 space-y-4 no-scrollbar scroll-smooth"
             >
-              <Send size={16} strokeWidth={2.5} />
-            </button>
-          </form>
-        </div>
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[85%] ${msg.sender_id === currentUserId ? "text-right" : "text-left"}`}>
+                    <div className={`inline-block px-4 py-2.5 rounded-2xl text-[13px] ${
+                      msg.sender_id === currentUserId 
+                      ? "bg-blue-600 text-white rounded-tr-none shadow-lg" 
+                      : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"
+                    } ${msg.isSending ? "opacity-70" : "opacity-100"}`}>
+                      {msg.text}
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 text-[9px] text-gray-600 px-1 justify-end">
+                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {msg.sender_id === currentUserId && <CheckCheck size={12} className={msg.isSending ? "text-gray-600" : "text-blue-500"} />}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-3">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-[#0F0F0F] border border-white/5 rounded-2xl p-1.5 pl-4">
+                <button type="button" className="text-gray-600 hover:text-gray-400"><Paperclip size={18} /></button>
+                <input 
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder={`Write to @${activeChat.username}...`} 
+                  className="flex-1 bg-transparent border-none focus:outline-none text-xs text-white py-2"
+                />
+                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-xl transition-all shadow-lg shadow-blue-600/20">
+                  <Send size={16} strokeWidth={2.5} />
+                </button>
+              </form>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-600 text-sm italic">
+            Select a contact to begin transmission.
+          </div>
+        )}
       </div>
     </div>
   );

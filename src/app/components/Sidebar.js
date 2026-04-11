@@ -4,7 +4,6 @@ import {
   Home, Users, MessageSquare, Bookmark, 
   MoreHorizontal, Bell, Settings, Menu, X, LogOut 
 } from 'lucide-react';
-import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../supabaseClient'; 
@@ -21,9 +20,9 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick }) => (
       <Icon size={20} />
       <span className="font-bold text-sm tracking-tight">{label}</span>
     </div>
-    {badge && (
+    {badge > 0 && (
       <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-lg">
-        {badge}
+        {badge > 99 ? '99+' : badge}
       </span>
     )}
   </div>
@@ -32,33 +31,57 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick }) => (
 export default function Sidebar({ activeSection, onSectionChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const router = useRouter();
 
-  // Fetch profile from Supabase Table
+  // 1. Fetch Profile & Real Message Count
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
-        const { data, error } = await supabase
+        // Fetch Profile
+        const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
         
-        if (data) setProfile(data);
+        if (profileData) setProfile(profileData);
+
+        // Fetch Real Message Count (Incoming to the user)
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('receiver_id', session.user.id);
+        
+        setUnreadMessages(count || 0);
       } else {
         setProfile(null);
+        setUnreadMessages(0);
       }
     };
 
-    fetchProfile();
+    fetchData();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchProfile();
+    // 2. Real-time Listener for Auth and New Messages
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(() => {
+      fetchData();
     });
 
-    return () => subscription.unsubscribe();
+    const msgSub = supabase
+      .channel('sidebar-counts')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'messages' 
+      }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      authSub.unsubscribe();
+      supabase.removeChannel(msgSub);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -77,13 +100,13 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   const sidebarItems = [
     { id: 'feed', icon: Home, label: 'My Feed' },
     { id: 'groups', icon: Users, label: 'Groups' },
-    { id: 'messages', icon: MessageSquare, label: 'Messages', badge: '1' },
+    { id: 'messages', icon: MessageSquare, label: 'Messages', badge: unreadMessages }, // Real Count Added
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks' },
     { id: 'more', icon: MoreHorizontal, label: 'More' },
   ];
 
   const bottomItems = [
-    { id: 'notifications', icon: Bell, label: 'Notifications', badge: '3' },
+    { id: 'notifications', icon: Bell, label: 'Notifications', badge: 3 },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 

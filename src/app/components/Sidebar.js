@@ -2,11 +2,13 @@
 
 import { 
   Home, Users, MessageSquare, Bookmark, 
-  MoreHorizontal, Bell, Settings, Menu, X 
+  MoreHorizontal, Bell, Settings, Menu, X, LogOut 
 } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '../supabaseClient'; 
+import { useRouter } from 'next/navigation';
 
 const SidebarItem = ({ icon: Icon, label, badge, active, onClick }) => (
   <div
@@ -29,12 +31,47 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick }) => (
 
 export default function Sidebar({ activeSection, onSectionChange }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const router = useRouter();
+
+  // Fetch profile from Supabase Table
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (data) setProfile(data);
+      } else {
+        setProfile(null);
+      }
+    };
+
+    fetchProfile();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      fetchProfile();
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setProfile(null);
+    router.push('/auth');
+  };
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
   const handleNavClick = (id) => {
     onSectionChange(id);
-    setIsOpen(false); // Auto-close on mobile after selection
+    setIsOpen(false); 
   };
 
   const sidebarItems = [
@@ -52,7 +89,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
   return (
     <>
-      {/* --- MOBILE TOGGLE BUTTON --- */}
+      {/* MOBILE TOGGLE BUTTON */}
       <button 
         onClick={toggleMenu}
         className="fixed top-4 left-4 z-[60] p-3 bg-[#0F0F0F] border border-white/5 rounded-2xl text-white md:hidden shadow-xl"
@@ -60,7 +97,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* --- MOBILE OVERLAY --- */}
+      {/* MOBILE OVERLAY */}
       {isOpen && (
         <div 
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[50] md:hidden"
@@ -68,7 +105,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         />
       )}
 
-      {/* --- SIDEBAR ASIDE --- */}
+      {/* SIDEBAR ASIDE */}
       <aside className={`
         fixed inset-y-0 left-0 z-[55] w-64 bg-black border-r border-white/5 p-6 flex flex-col transition-transform duration-300 ease-in-out
         md:translate-x-0 md:static md:h-screen sticky top-0
@@ -78,7 +115,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         {/* Logo Area */}
         <div className="flex items-center gap-2 mb-10 px-2">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-white italic">B</div>
-          <Image src="/logo.png" alt="Brand Logo" width={100} height={20} className="hidden sm:block" />
+          <p className="text-white font-black tracking-tighter text-xl">beone<span className="text-blue-500">of</span>us</p>
         </div>
 
         {/* Navigation Groups */}
@@ -111,16 +148,38 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         </nav>
 
         {/* User Profile Section */}
-        <div className="mt-auto pt-6 border-t border-white/5 flex items-center gap-3 px-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px]">
-             <div className="w-full h-full rounded-xl bg-black flex items-center justify-center text-xs font-bold text-white">DS</div>
+        <div className="mt-auto pt-6 border-t border-white/5 flex flex-col gap-4 px-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px]">
+               <div className="w-full h-full rounded-xl bg-black flex items-center justify-center text-xs font-bold text-white uppercase">
+                 {profile ? profile.username?.substring(0, 2) : '??'}
+               </div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              {profile ? (
+                <>
+                  <p className="text-sm font-bold text-white truncate">{profile.username}</p>
+                  <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">{profile.status || 'Active Node'}</p>
+                </>
+              ) : (
+                <Link href="/auth" className="block hover:opacity-80 transition-opacity">
+                  <p className="text-sm font-bold text-white">Guest User</p>
+                  <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Click to Login</p>
+                </Link>
+              )}
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <Link href="/auth" className="block">
-              <p className="text-sm font-bold text-white truncate">Guest</p>
-              <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Pro Node</p>
-            </Link>
-          </div>
+
+          {profile && (
+            <button 
+              onClick={handleLogout}
+              className="flex items-center gap-3 p-3 w-full rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all group"
+            >
+              <LogOut size={18} className="group-hover:translate-x-1 transition-transform" />
+              <span className="text-xs font-bold uppercase tracking-tighter">Sign Out</span>
+            </button>
+          )}
         </div>
       </aside>
     </>

@@ -1,14 +1,28 @@
 "use client";
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { useRouter } from 'next/navigation';
 import { LogIn, UserPlus, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function AuthForm() {
+  const router = useRouter();
   const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+
+  // Redirect if user is already logged in
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push('/dash');
+      }
+    };
+    checkUser();
+  }, [router]);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -17,12 +31,21 @@ export default function AuthForm() {
 
     try {
       if (isRegistering) {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        alert('Check your email for the confirmation link!');
+        // SQL Trigger in Supabase handles 'profiles' table insertion automatically
+        const { error: signUpError } = await supabase.auth.signUp({ 
+          email, 
+          password 
+        });
+        if (signUpError) throw signUpError;
+        alert('Log-in to your account!');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const { error: signInError } = await supabase.auth.signInWithPassword({ 
+          email, 
+          password 
+        });
+        if (signInError) throw signInError;
+        router.push('/dash');
+        router.refresh();
       }
     } catch (err) {
       setError(err.message);
@@ -32,11 +55,11 @@ export default function AuthForm() {
   };
 
   return (
-    <div className="w-full bg-[#0D0D0D] rounded-2xl p-8 shadow-2xl">
+    <div className="w-full">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
+        <h2 className="text-3xl font-bold text-white mb-2">
           {isRegistering ? 'Create Account' : 'Welcome Back'}
-        </h1>
+        </h2>
         <p className="text-gray-500">
           {isRegistering ? 'Join beoneofus today' : 'Log in to your account'}
         </p>
@@ -81,15 +104,20 @@ export default function AuthForm() {
           className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_10px_20px_-10px_rgba(37,99,235,0.5)]"
         >
           {loading ? 'Processing...' : isRegistering ? (
-            <><UserPlus size={18} /> Sign Up</>
+            <>
+              <UserPlus size={18} /> Sign Up
+            </>
           ) : (
-            <><LogIn size={18} /> Login</>
+            <>
+              <LogIn size={18} /> Login
+            </>
           )}
         </button>
       </form>
 
       <div className="mt-6 text-center">
         <button
+          type="button"
           onClick={() => setIsRegistering(!isRegistering)}
           className="text-gray-500 hover:text-blue-400 text-sm transition-colors"
         >

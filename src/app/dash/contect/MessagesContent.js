@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { 
   Search, MoreVertical, Phone, Video, Send, 
   Paperclip, CheckCheck, UserPlus, Check, X, 
-  Trash2, AlertTriangle, MoreHorizontal, ShieldAlert, ShieldCheck 
+  Trash2, AlertTriangle, MoreHorizontal, ShieldAlert, ShieldCheck,
+  ChevronLeft
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -22,6 +23,7 @@ export default function MessagesContent() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false); // Mobile view toggle
 
   const scrollRef = useRef(null);
   const channelRef = useRef(null);
@@ -198,7 +200,7 @@ export default function MessagesContent() {
       )}
 
       {/* Sidebar: Contacts */}
-      <div className="w-64 md:w-72 border-r border-white/5 flex flex-col pr-2 shrink-0">
+      <div className={`w-full md:w-64 lg:w-72 border-r-0 md:border-r border-white/5 flex-col md:pr-2 shrink-0 ${isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
         <div className="pb-4 px-2">
           <h2 className="text-2xl font-black text-white tracking-tighter mb-3">Messages</h2>
           <div className="relative">
@@ -208,7 +210,7 @@ export default function MessagesContent() {
         </div>
         <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar px-2">
           {contacts.map((contact) => (
-            <div key={contact.id} onClick={() => { setActiveChat(contact); setShowMoreMenu(false); }} className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-xl border ${activeChat?.id === contact.id ? 'bg-blue-600/10 border-blue-500/20' : 'hover:bg-white/5 border-transparent'}`}>
+            <div key={contact.id} onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-xl border ${activeChat?.id === contact.id ? 'bg-blue-600/10 border-blue-500/20' : 'hover:bg-white/5 border-transparent'}`}>
               <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-bold">{contact.username[0].toUpperCase()}</div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-xs font-bold text-white truncate">{contact.username}</h4>
@@ -220,11 +222,14 @@ export default function MessagesContent() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col pl-4 min-w-0 mr-2">
+      <div className={`flex-1 flex-col min-w-0 md:pl-4 md:mr-2 ${!isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
         {activeChat ? (
           <>
             <div className="pb-3 border-b border-white/5 flex items-center justify-between relative overflow-visible">
               <div className="flex items-center gap-3">
+                <button onClick={() => setIsMobileChatOpen(false)} className="md:hidden p-1.5 -ml-1.5 text-gray-500 hover:text-white transition-colors">
+                  <ChevronLeft size={22} />
+                </button>
                 <div className="w-9 h-9 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold">{activeChat.username[0].toUpperCase()}</div>
                 <div>
                   <h3 className="text-sm font-bold text-white leading-tight">{activeChat.username}</h3>
@@ -258,7 +263,7 @@ export default function MessagesContent() {
                 messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
                     <div className={`max-w-[85%] ${msg.sender_id === currentUserId ? "text-right" : "text-left"}`}>
-                      <div className={`inline-block px-4 py-2.5 rounded-2xl text-[13px] ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-none shadow-lg" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>{msg.text}</div>
+                      <div className={`inline-block px-4 py-2.5 rounded-2xl text-[13px] break-words text-left ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-none shadow-lg" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>{msg.text}</div>
                       <div className="mt-1 flex items-center gap-1.5 text-[9px] text-gray-600 px-1 justify-end">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{msg.sender_id === currentUserId && <CheckCheck size={12} className={msg.isSending ? "text-gray-600" : "text-blue-500"} />}</div>
                     </div>
                   </div>
@@ -286,7 +291,7 @@ export default function MessagesContent() {
               )}
             </div>
 
-            <div className={`pt-3 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
+            <div className={`pt-3 pb-2 md:pb-0 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
               <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-[#0F0F0F] border border-white/5 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500/30 transition-all">
                 <button type="button" className="text-gray-600 hover:text-gray-400 transition-colors"><Paperclip size={18} /></button>
                 <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Secure packet to @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-xs text-white py-2" />

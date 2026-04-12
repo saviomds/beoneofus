@@ -36,13 +36,13 @@ function DashLayoutContent({ children }) {
       )}
 
       {/* 1. Left Sidebar - Fixed Width */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0a0a0a] md:bg-transparent border-r border-white/5 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 flex-shrink-0 ${isLeftOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="md:hidden flex justify-end p-4 border-b border-white/5">
+      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0a0a0a] md:bg-transparent border-r border-white/5 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 flex-shrink-0 flex flex-col ${isLeftOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="md:hidden flex justify-end p-4 border-b border-white/5 shrink-0">
           <button onClick={() => setIsLeftOpen(false)} className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white">
             <X size={20} />
           </button>
         </div>
-        <div className="h-full overflow-y-auto no-scrollbar pb-16 md:pb-0">
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-16 md:pb-0">
           <Sidebar activeSection={activeSection} onSectionChange={(sec) => { setActiveSection(sec); setIsLeftOpen(false); }} />
         </div>
       </div>
@@ -68,13 +68,13 @@ function DashLayoutContent({ children }) {
       )}
 
       {/* 3. Right Sidebar - Fixed Width */}
-      <div className={`fixed inset-y-0 right-0 z-50 w-72 lg:w-[350px] bg-[#0a0a0a] lg:bg-[#050505] border-l border-white/5 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 flex-shrink-0 ${isRightOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="lg:hidden flex justify-start p-4 border-b border-white/5">
+      <div className={`fixed inset-y-0 right-0 z-50 w-72 lg:w-[350px] bg-[#0a0a0a] lg:bg-[#050505] border-l border-white/5 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 flex-shrink-0 flex flex-col ${isRightOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="lg:hidden flex justify-start p-4 border-b border-white/5 shrink-0">
           <button onClick={() => setIsRightOpen(false)} className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white">
             <X size={20} />
           </button>
         </div>
-        <div className="h-full overflow-y-auto no-scrollbar pb-16 lg:pb-0">
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-16 lg:pb-0">
           <RightSidebar activeSection={activeSection} />
         </div>
       </div>

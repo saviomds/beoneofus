@@ -127,16 +127,16 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   return (
     <>
       {/* SIDEBAR ASIDE */}
-      <aside className="w-full h-full bg-transparent p-6 flex flex-col">
+      <aside className="w-full h-full bg-transparent p-4 md:p-6 flex flex-col">
         
         {/* Logo Area */}
-        <div className="flex items-center gap-2 mb-10 px-2">
+        <div className="flex items-center gap-2 mb-6 md:mb-10 px-2 shrink-0">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-white italic shadow-[0_0_15px_rgba(37,99,235,0.4)]">B</div>
           <p className="text-white font-black tracking-tighter text-xl uppercase italic">beone<span className="text-blue-500">of</span>us</p>
         </div>
 
         {/* Navigation Groups */}
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar pb-2">
           <p className="text-[10px] font-black text-gray-600 uppercase tracking-[2px] mb-4 px-3">Main Menu</p>
           {sidebarItems.map((item) => (
             <SidebarItem
@@ -165,7 +165,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         </nav>
 
         {/* User Profile Section */}
-        <div className="mt-auto pt-6 border-t border-white/5 flex flex-col gap-4 px-2">
+        <div className="mt-auto pt-4 md:pt-6 border-t border-white/5 flex flex-col gap-4 px-2 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10">
                <div className="w-full h-full rounded-xl bg-black flex items-center justify-center text-xs font-bold text-white uppercase">

@@ -5,7 +5,7 @@ import { supabase } from '../../supabaseClient';
 import Image from 'next/image';
 import { 
   MessageSquare, Heart, Share2, MoreHorizontal, 
-  Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check
+  Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark
 } from 'lucide-react';
 
 export default function FeedContent() {
@@ -16,7 +16,7 @@ export default function FeedContent() {
 
   // Interaction States
   const [expandedComments, setExpandedComments] = useState({});
-  const [newComment, setNewComment] = useState("");
+  const [newComments, setNewComments] = useState({});
 
   // Edit State
   const [isEditing, setIsEditing] = useState(false);
@@ -32,6 +32,14 @@ export default function FeedContent() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareLink, setShareLink] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Toast State
+  const [toastMessage, setToastMessage] = useState("");
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
 
   useEffect(() => {
     const initFeed = async () => {
@@ -105,17 +113,53 @@ export default function FeedContent() {
 
   // --- COMMENTS LOGIC ---
   const handleAddComment = async (postId) => {
-    if (!newComment.trim() || !currentUserId) return;
+    const commentText = newComments[postId];
+    if (!commentText?.trim() || !currentUserId) return;
     try {
       const { error } = await supabase.from('comments').insert({
         post_id: postId,
         user_id: currentUserId,
-        content: newComment
+        content: commentText
       });
       if (error) throw error;
-      setNewComment("");
+      setNewComments({...newComments, [postId]: ""});
       fetchPosts();
-    } catch (err) { console.error(err); }
+      showToast("Comment added");
+    } catch (err) { alert("Error adding comment: " + err.message); }
+  };
+
+  // --- BOOKMARK LOGIC ---
+  const handleBookmark = async (post) => {
+    if (!currentUserId) return;
+    try {
+      const postUrl = `${window.location.origin}/posts/${post.id}`;
+      
+      // 1. Check if already bookmarked (Toggle behavior)
+      const { data: existing } = await supabase
+        .from('bookmarks')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('url', postUrl)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from('bookmarks').delete().eq('id', existing.id);
+        showToast("Removed from Bookmarks");
+        return;
+      }
+
+      // 2. If not bookmarked, save it
+      const { error } = await supabase.from('bookmarks').insert({
+        user_id: currentUserId,
+        title: post.title || 'Untitled Snippet',
+        preview: post.content || post.code_snippet || 'No preview available',
+        category: post.code_snippet ? 'Code' : 'General',
+        replies: post.comments?.length || 0,
+        url: postUrl
+      });
+      if (error) throw error;
+      showToast("Snippet saved to Bookmarks");
+    } catch (err) { alert("Error saving bookmark: " + err.message); }
   };
 
   // --- EDIT LOGIC ---
@@ -137,10 +181,12 @@ export default function FeedContent() {
           code_snippet: editingPost.code_snippet
         })
         .eq('id', editingPost.id);
+
       if (error) throw error;
       setIsEditing(false);
       fetchPosts();
-    } catch (err) { alert(err.message); }
+      showToast("Post updated successfully");
+    } catch (err) { alert("Error saving: " + err.message); }
     finally { setEditLoading(false); }
   };
 
@@ -154,10 +200,13 @@ export default function FeedContent() {
   const confirmDelete = async () => {
     setDeleteLoading(true);
     try {
-      await supabase.from('posts').delete().eq('id', postToDelete.id);
+      const { error } = await supabase.from('posts').delete().eq('id', postToDelete.id);
+      if (error) throw error;
+      
       setShowDeleteConfirm(false);
       fetchPosts();
-    } catch (err) { alert(err.message); }
+      showToast("Post deleted successfully");
+    } catch (err) { alert("Error deleting: " + err.message); }
     finally { setDeleteLoading(false); }
   };
 
@@ -307,9 +356,15 @@ export default function FeedContent() {
                   <MessageSquare size={18} />
                   <span>{post.comments?.length || 0}</span>
                 </button>
-                <button onClick={() => handleShareClick(post.id)} className="flex items-center gap-2 hover:text-green-500 transition-colors text-sm ml-auto">
-                  <Share2 size={18} />
-                </button>
+            
+            <div className="flex items-center gap-4 ml-auto">
+              <button onClick={() => handleBookmark(post)} className="flex items-center gap-2 hover:text-amber-500 transition-colors text-sm" title="Save to Bookmarks">
+                <Bookmark size={18} />
+              </button>
+              <button onClick={() => handleShareClick(post.id)} className="flex items-center gap-2 hover:text-green-500 transition-colors text-sm" title="Share Post">
+                <Share2 size={18} />
+              </button>
+            </div>
               </div>
 
               {/* Comments Section */}
@@ -324,7 +379,7 @@ export default function FeedContent() {
                     ))}
                   </div>
                   <div className="flex gap-2 items-center bg-white/5 rounded-xl px-3 py-1 border border-white/5">
-                    <input type="text" placeholder="Write a comment..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="flex-1 bg-transparent border-none py-2 text-sm text-white focus:ring-0 outline-none" onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)} />
+            <input type="text" placeholder="Write a comment..." value={newComments[post.id] || ""} onChange={(e) => setNewComments({...newComments, [post.id]: e.target.value})} className="flex-1 bg-transparent border-none py-2 text-sm text-white focus:ring-0 outline-none" onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)} />
                     <button onClick={() => handleAddComment(post.id)} className="text-blue-500 hover:text-blue-400 p-1"><Send size={16} /></button>
                   </div>
                 </div>
@@ -332,6 +387,14 @@ export default function FeedContent() {
             </div>
           );
         })
+      )}
+
+      {/* Custom Toast Popup */}
+      {toastMessage && (
+        <div className="fixed bottom-10 right-10 z-[150] flex items-center gap-3 bg-[#0D0D0D] border border-green-500/30 text-green-400 px-5 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-300">
+          <Check size={18} className="text-green-500" />
+          <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
+        </div>
       )}
     </div>
   );

@@ -1,62 +1,170 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
-  Search, 
-  Bookmark, 
-  ExternalLink, 
-  Trash2, 
-  Tag,
-  MessageSquare,
-  Clock
+  Search, Bookmark, ExternalLink, Trash2, Tag, MessageSquare, Clock, Loader2, Send, Check
 } from "lucide-react";
+import { supabase } from "../../supabaseClient";
+import Link from "next/link";
 
-const SAVED_ITEMS = [
-  { 
-    id: 1, 
-    title: "Next.js 15 Server Actions Guide", 
-    category: "Development", 
-    date: "2 hours ago",
-    preview: "Deep dive into the latest patterns for handling forms and mutations in Next.js...",
-    replies: 12
-  },
-  { 
-    id: 2, 
-    title: "Stripe Connect for Mauritius", 
-    category: "Finance", 
-    date: "Yesterday",
-    preview: "A walkthrough of setting up platform accounts in regions with limited Stripe support...",
-    replies: 45
-  },
-  { 
-    id: 3, 
-    title: "Tailwind v4 Alpha Features", 
-    category: "Design", 
-    date: "3 days ago",
-    preview: "Exploring the new engine and CSS-first configuration coming to Tailwind...",
-    replies: 8
-  },
-];
+// Lightweight helper to replace date-fns
+function formatDistanceToNow(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  const intervals = [
+    { label: 'year', seconds: 31536000 },
+    { label: 'month', seconds: 2592000 },
+    { label: 'day', seconds: 86400 },
+    { label: 'hour', seconds: 3600 },
+    { label: 'minute', seconds: 60 }
+  ];
+  for (let i = 0; i < intervals.length; i++) {
+    const count = Math.floor(seconds / intervals[i].seconds);
+    if (count >= 1) return `${count} ${intervals[i].label}${count !== 1 ? 's' : ''}`;
+  }
+  return 'a few seconds';
+}
 
 export default function BookmarksContent() {
-  const [items, setItems] = useState(SAVED_ITEMS);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
 
-  // Filter bookmarks based on search input
+  // Comments and User states
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [expandedComments, setExpandedComments] = useState({});
+  const [newComments, setNewComments] = useState({});
+  const [commentsData, setCommentsData] = useState({});
+
+  const fetchComments = async (postId, bookmarkId) => {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('id, content, created_at, user_id, profiles:user_id (username)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+    if (!error) setCommentsData(prev => ({ ...prev, [bookmarkId]: data }));
+  };
+
+  // 1. Fetch Bookmarks and Set up Realtime
+  useEffect(() => {
+    const initBookmarks = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setCurrentUserId(session?.user?.id);
+
+      const { data, error } = await supabase
+        .from('bookmarks')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error) setItems(data);
+      setLoading(false);
+    };
+
+    initBookmarks();
+
+    // Listen for real-time changes (Inserts or Deletes)
+    const channel = supabase
+      .channel('realtime_bookmarks')
+      .on('postgres_changes', { event: '*', table: 'bookmarks', schema: 'public' }, 
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setItems((prev) => [payload.new, ...prev]);
+        } else if (payload.eventType === 'DELETE') {
+          setItems((prev) => prev.filter(item => item.id !== payload.old.id));
+        }
+      })
+      .on('postgres_changes', { event: '*', table: 'comments', schema: 'public' }, 
+      () => {
+        // Signal a refetch for any expanded comment sections
+        setExpandedComments((prevExpanded) => {
+          Object.keys(prevExpanded).forEach(bookmarkId => {
+            if (prevExpanded[bookmarkId]) {
+              window.dispatchEvent(new CustomEvent('refetch_bookmark_comments', { detail: bookmarkId }));
+            }
+          });
+          return prevExpanded;
+        });
+      })
+      .subscribe();
+
+    const handleRefetch = (e) => {
+      const bId = e.detail;
+      setItems(currItems => {
+         const bookmark = currItems.find(i => i.id === bId);
+         const pId = bookmark?.url?.split('/').pop();
+         if (pId) fetchComments(pId, bId);
+         return currItems;
+      });
+    };
+    window.addEventListener('refetch_bookmark_comments', handleRefetch);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener('refetch_bookmark_comments', handleRefetch);
+    };
+  }, []);
+
+  // --- COMMENTS LOGIC FOR BOOKMARKS ---
+  const toggleComments = (item) => {
+    const postId = item.url?.split('/').pop();
+    if (!postId) return;
+
+    if (expandedComments[item.id]) {
+      setExpandedComments(prev => ({ ...prev, [item.id]: false }));
+    } else {
+      setExpandedComments(prev => ({ ...prev, [item.id]: true }));
+      fetchComments(postId, item.id);
+    }
+  };
+
+  const handleAddComment = async (item) => {
+    const commentText = newComments[item.id];
+    const postId = item.url?.split('/').pop();
+    
+    if (!commentText?.trim() || !currentUserId || !postId) return;
+
+    try {
+      const { error } = await supabase.from('comments').insert({
+        post_id: postId,
+        user_id: currentUserId,
+        content: commentText
+      });
+      if (error) throw error;
+      
+      setNewComments(prev => ({...prev, [item.id]: ""}));
+    } catch (err) {
+      alert("Error adding comment: " + err.message);
+    }
+  };
+
+  // 2. Remove Bookmark Handler (Supabase Delete)
+  const handleRemoveBookmark = async (id) => {
+    // Optimistically remove the item for an instant UI refresh
+    setItems((prevItems) => prevItems.filter(item => item.id !== id));
+
+    const { error } = await supabase
+      .from('bookmarks')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error deleting:", error.message);
+      setToastMessage("Failed to delete bookmark");
+    } else {
+      setToastMessage("Bookmark removed successfully");
+    }
+    
+    // Auto-hide the popup after 3 seconds
+    setTimeout(() => setToastMessage(""), 3000);
+  };
+
   const filteredItems = items.filter(item => 
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.preview.toLowerCase().includes(searchQuery.toLowerCase())
+    item.category?.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  // Handler to remove an item from the saved list
-  const handleRemoveBookmark = (id) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== id));
-  };
 
   return (
     <div className="w-full flex flex-col min-h-screen bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-black text-white tracking-tighter">Bookmarks</h1>
@@ -75,82 +183,95 @@ export default function BookmarksContent() {
         </div>
       </div>
 
-      {/* Bookmarks Grid - no-scrollbar ensures it doesn't clash with your sidebars */}
-      <div className="grid grid-cols-1 gap-4 no-scrollbar">
-        {filteredItems.map((item) => (
-          <div 
-            key={item.id} 
-            className="group relative bg-[#0F0F0F] border border-white/5 rounded-[1.5rem] p-5 hover:border-blue-500/30 transition-all cursor-pointer overflow-hidden"
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="animate-spin text-blue-500 mb-2" />
+          <p className="text-gray-500 text-xs">Syncing with database...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 no-scrollbar">
+          {filteredItems.map((item) => (
+            <div 
+              key={item.id} 
+              className="group relative bg-[#0F0F0F] border border-white/5 rounded-[1.5rem] p-5 hover:border-blue-500/30 transition-all cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+              <div className="relative flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-md">
+                      <Tag size={10} />
+                      {item.category || "General"}
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] text-gray-600 font-bold">
+                      <Clock size={10} />
+                      {formatDistanceToNow(new Date(item.created_at))} ago
+                    </span>
+                  </div>
+                  
+                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors truncate">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed mb-4">
+                    {item.preview}
+                  </p>
+
+                  <div className="flex items-center gap-4 pt-4 border-t border-white/5">
+                <button 
+                  onClick={() => toggleComments(item)}
+                  className="flex items-center gap-1.5 text-xs text-gray-600 font-bold hover:text-blue-500 transition-colors"
+                >
+                      <MessageSquare size={14} />
+                  {commentsData[item.id] ? commentsData[item.id].length : (item.replies || 0)} Comments
+                </button>
+                <Link 
+                      href={item.url || "#"} 
+                      target="_blank" 
+                      className="flex items-center gap-1.5 text-xs text-gray-600 font-bold hover:text-white transition-colors"
+                    >
+                      <ExternalLink size={14} />
+                      View Original
+                </Link>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <button 
+                    onClick={() => handleRemoveBookmark(item.id)}
+                    className="p-2.5 bg-white/5 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-xl border border-white/5 transition-all"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+          <button 
+            onClick={() => handleRemoveBookmark(item.id)}
+            className="p-2.5 bg-white/5 hover:bg-blue-500/10 text-gray-500 hover:text-blue-500 rounded-xl border border-white/5 transition-all"
           >
-            {/* Hover Background Glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-            <div className="relative flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-md">
-                    <Tag size={10} />
-                    {item.category}
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] text-gray-600 font-bold">
-                    <Clock size={10} />
-                    {item.date}
-                  </span>
+            <Bookmark size={18} fill="currentColor" className="text-blue-500" />
+          </button>
                 </div>
-                
-                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors truncate">
-                  {item.title}
-                </h3>
-                <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed mb-4">
-                  {item.preview}
-                </p>
-
-                <div className="flex items-center gap-4 pt-4 border-t border-white/5">
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600 font-bold">
-                    <MessageSquare size={14} />
-                    {item.replies} Comments
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600 font-bold hover:text-white transition-colors">
-                    <ExternalLink size={14} />
-                    View Original
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveBookmark(item.id);
-                  }}
-                  className="p-2.5 bg-white/5 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-xl border border-white/5 transition-all"
-                  title="Remove Bookmark"
-                >
-                  <Trash2 size={18} />
-                </button>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveBookmark(item.id);
-                  }}
-                  className="p-2.5 bg-white/5 hover:bg-blue-500/10 text-gray-500 hover:text-blue-500 rounded-xl border border-white/5 transition-all"
-                >
-                  <Bookmark size={18} fill="currentColor" className="text-blue-500" />
-                </button>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        {filteredItems.length === 0 && (
-          <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem]">
-            <Bookmark size={48} className="text-gray-800 mb-4" />
-            <p className="text-gray-600 font-bold">
-              {searchQuery ? "No bookmarks match your search" : "No bookmarks yet"}
-            </p>
-          </div>
-        )}
-      </div>
+          {filteredItems.length === 0 && (
+            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem]">
+              <Bookmark size={48} className="text-gray-800 mb-4" />
+              <p className="text-gray-600 font-bold">
+                {searchQuery ? "No matches found" : "No saved bookmarks yet"}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Custom Toast Popup */}
+      {toastMessage && (
+        <div className="fixed bottom-10 right-10 z-[100] flex items-center gap-3 bg-[#0D0D0D] border border-green-500/30 text-green-400 px-5 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-300">
+          <Check size={18} className="text-green-500" />
+          <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

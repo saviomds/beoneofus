@@ -1,8 +1,8 @@
 "use client";
 
 import { 
-  Home, Users, MessageSquare, Bookmark, 
-  MoreHorizontal, Bell, Settings, Menu, X, LogOut 
+  Home, Users, MessageSquare, Bookmark,
+  MoreHorizontal, Bell, Settings, LogOut
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -29,7 +29,6 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick }) => (
 );
 
 export default function Sidebar({ activeSection, onSectionChange }) {
-  const [isOpen, setIsOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0); // State for real notification count
@@ -108,11 +107,8 @@ export default function Sidebar({ activeSection, onSectionChange }) {
     router.push('/auth');
   };
 
-  const toggleMenu = () => setIsOpen(!isOpen);
-
   const handleNavClick = (id) => {
     onSectionChange(id);
-    setIsOpen(false); 
   };
 
   const sidebarItems = [
@@ -130,28 +126,8 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
   return (
     <>
-      {/* MOBILE TOGGLE BUTTON */}
-      <button 
-        onClick={toggleMenu}
-        className="fixed top-4 left-4 z-[60] p-3 bg-[#0F0F0F] border border-white/5 rounded-2xl text-white md:hidden shadow-xl"
-      >
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-
-      {/* MOBILE OVERLAY */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[50] md:hidden"
-          onClick={toggleMenu}
-        />
-      )}
-
       {/* SIDEBAR ASIDE */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-[55] w-64 bg-black border-r border-white/5 p-6 flex flex-col transition-transform duration-300 ease-in-out
-        md:translate-x-0 md:static md:h-screen sticky top-0
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+      <aside className="w-full h-full bg-transparent p-6 flex flex-col">
         
         {/* Logo Area */}
         <div className="flex items-center gap-2 mb-10 px-2">

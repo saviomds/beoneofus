@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Menu, X, MoreVertical } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Menu, X, MoreVertical, Lock } from 'lucide-react';
 import '../globals.css'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
 import RightSidebar from '../components/RightSidebar'
 import { DashboardProvider, useDashboard } from './contect/DashboardContext'
+import { useRouter } from 'next/navigation';
+import { supabase } from '../supabaseClient';
 
 function DashLayoutContent({ children }) {
   const { activeSection, setActiveSection } = useDashboard();
@@ -84,6 +86,68 @@ function DashLayoutContent({ children }) {
 }
 
 export default function DashLayout({ children }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showAuthPopup, setShowAuthPopup] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setShowAuthPopup(true); // Show access denied popup instead of instant redirect
+      } else {
+        setIsAuthenticated(true);
+      }
+    };
+    
+    checkAuth();
+
+    // Listen for logouts to kick users out in real-time
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        setIsAuthenticated(false);
+        setShowAuthPopup(true);
+      } else {
+        setIsAuthenticated(true);
+        setShowAuthPopup(false);
+      }
+    });
+
+    return () => authListener.subscription?.unsubscribe();
+  }, [router]);
+
+  // Show a hacker-themed loading screen while checking auth status
+  if (!isAuthenticated) {
+    if (showAuthPopup) {
+      return (
+        <div className="min-h-screen bg-black flex items-center justify-center p-4">
+          <div className="bg-[#0D0D0D] border border-red-500/30 w-full max-w-sm rounded-2xl p-8 shadow-2xl text-center animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Lock size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Access Denied</h3>
+            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+              Login first, beoneofus. You need an active session to access the dashboard.
+            </p>
+            <button 
+              onClick={() => router.replace('/auth')} 
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-blue-500/20"
+            >
+              Return to Login
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Securing connection...</p>
+      </div>
+    );
+  }
+
   return (
     <DashboardProvider>
       <DashLayoutContent>{children}</DashLayoutContent>

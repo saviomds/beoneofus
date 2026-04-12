@@ -14,7 +14,7 @@ function DashLayoutContent({ children }) {
   const [isRightOpen, setIsRightOpen] = useState(false);
 
   return (
-    <div className="flex w-full h-[100dvh] overflow-hidden bg-black text-white relative">
+    <div className="flex w-full h-[100dvh] bg-black text-white relative">
 
       {/* Mobile Navbar */}
       <div className="md:hidden absolute top-0 w-full h-16 border-b border-white/5 bg-[#050505] flex items-center justify-between px-4 z-40">
@@ -52,7 +52,7 @@ function DashLayoutContent({ children }) {
         <div className="hidden md:block">
           <Header />
         </div>
-        <div className="flex-grow overflow-y-auto no-scrollbar">
+        <div className="flex-grow overflow-y-auto custom-scrollbar md:pr-1">
           <div className="w-full px-0 py-0">
             {children}
           </div>

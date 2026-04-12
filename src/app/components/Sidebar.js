@@ -4,6 +4,7 @@ import {
   Home, Users, MessageSquare, Bookmark,
   MoreHorizontal, Bell, Settings, LogOut
 } from 'lucide-react';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../supabaseClient'; 
@@ -131,8 +132,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         
         {/* Logo Area */}
         <div className="flex items-center gap-2 mb-6 md:mb-10 px-2 shrink-0">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-white italic shadow-[0_0_15px_rgba(37,99,235,0.4)]">B</div>
-          <p className="text-white font-black tracking-tighter text-xl uppercase italic">beone<span className="text-blue-500">of</span>us</p>
+          <Image src="/logo.png" alt="beoneofus" width={100} height={24} />
         </div>
 
         {/* Navigation Groups */}

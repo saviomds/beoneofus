@@ -40,6 +40,19 @@ const SAVED_ITEMS = [
 
 export default function BookmarksContent() {
   const [items, setItems] = useState(SAVED_ITEMS);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter bookmarks based on search input
+  const filteredItems = items.filter(item => 
+    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.preview.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Handler to remove an item from the saved list
+  const handleRemoveBookmark = (id) => {
+    setItems(prevItems => prevItems.filter(item => item.id !== id));
+  };
 
   return (
     <div className="w-full flex flex-col min-h-screen bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -54,6 +67,8 @@ export default function BookmarksContent() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" size={16} />
           <input 
             type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search bookmarks..." 
             className="w-full bg-[#0F0F0F] border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-xs text-gray-200 focus:outline-none focus:border-white/20 transition-all"
           />
@@ -62,7 +77,7 @@ export default function BookmarksContent() {
 
       {/* Bookmarks Grid - no-scrollbar ensures it doesn't clash with your sidebars */}
       <div className="grid grid-cols-1 gap-4 no-scrollbar">
-        {items.map((item) => (
+        {filteredItems.map((item) => (
           <div 
             key={item.id} 
             className="group relative bg-[#0F0F0F] border border-white/5 rounded-[1.5rem] p-5 hover:border-blue-500/30 transition-all cursor-pointer overflow-hidden"
@@ -103,10 +118,23 @@ export default function BookmarksContent() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <button className="p-2.5 bg-white/5 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-xl border border-white/5 transition-all">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveBookmark(item.id);
+                  }}
+                  className="p-2.5 bg-white/5 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-xl border border-white/5 transition-all"
+                  title="Remove Bookmark"
+                >
                   <Trash2 size={18} />
                 </button>
-                <button className="p-2.5 bg-white/5 hover:bg-blue-500/10 text-gray-500 hover:text-blue-500 rounded-xl border border-white/5 transition-all">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveBookmark(item.id);
+                  }}
+                  className="p-2.5 bg-white/5 hover:bg-blue-500/10 text-gray-500 hover:text-blue-500 rounded-xl border border-white/5 transition-all"
+                >
                   <Bookmark size={18} fill="currentColor" className="text-blue-500" />
                 </button>
               </div>
@@ -114,10 +142,12 @@ export default function BookmarksContent() {
           </div>
         ))}
 
-        {items.length === 0 && (
+        {filteredItems.length === 0 && (
           <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem]">
             <Bookmark size={48} className="text-gray-800 mb-4" />
-            <p className="text-gray-600 font-bold">No bookmarks yet</p>
+            <p className="text-gray-600 font-bold">
+              {searchQuery ? "No bookmarks match your search" : "No bookmarks yet"}
+            </p>
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { 
   Bell, Heart, MessageSquare, Check, Zap, 
   ShieldAlert, ShieldCheck, MoreHorizontal, Users, ChevronRight, Clock
@@ -35,7 +36,7 @@ export default function NotificationsContent() {
           .from('notifications')
           .select(`
             *,
-            actor:actor_id (username)
+            actor:actor_id (username, avatar_url)
           `)
           .eq('receiver_id', currentUserId)
           .order('created_at', { ascending: false });
@@ -157,8 +158,12 @@ export default function NotificationsContent() {
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
               <div className="relative flex-shrink-0 z-10">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg transition-colors ${notif.unread ? 'bg-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white/5 border border-white/10 group-hover:bg-white/10'}`}>
-                  {notif.actor?.username?.[0] || 'S'}
+                <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg transition-colors overflow-hidden ${notif.unread ? 'bg-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white/5 border border-white/10 group-hover:bg-white/10'}`}>
+                  {notif.actor?.avatar_url ? (
+                    <Image src={notif.actor.avatar_url} alt="avatar" fill className="object-cover" />
+                  ) : (
+                    notif.actor?.username?.[0] || 'S'
+                  )}
                 </div>
                 <div className="absolute -bottom-2 -right-2 w-7 h-7 bg-[#0A0A0A] border border-white/10 rounded-xl flex items-center justify-center shadow-xl">
                   {getIcon(notif.type)}

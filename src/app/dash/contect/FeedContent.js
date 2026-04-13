@@ -7,12 +7,14 @@ import {
   MessageSquare, Heart, Share2, MoreHorizontal, 
   Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark
 } from 'lucide-react';
+import ProfileContent from "./ProfileContent";
 
 export default function FeedContent() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [activeMenu, setActiveMenu] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   // Interaction States
   const [expandedComments, setExpandedComments] = useState({});
@@ -66,11 +68,11 @@ export default function FeedContent() {
         .from('posts')
         .select(`
           *,
-          profiles:user_id (username, status),
+          profiles:user_id (username, status, avatar_url),
           likes (user_id),
           comments (
             id, content, created_at, user_id,
-            profiles:user_id (username)
+            profiles:user_id (username, avatar_url)
           )
         `)
         .order('created_at', { ascending: false });
@@ -309,11 +311,19 @@ export default function FeedContent() {
               
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xs font-bold text-white uppercase">
-                    {post.profiles?.username?.substring(0, 2) || '??'}
+                  <div 
+                    className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xs font-bold text-white uppercase cursor-pointer hover:opacity-80 hover:shadow-lg transition-all overflow-hidden shrink-0"
+                    onClick={() => setSelectedUserId(post.user_id)}
+                    title={`View @${post.profiles?.username}'s Profile`}
+                  >
+                    {post.profiles?.avatar_url ? (
+                      <Image src={post.profiles.avatar_url} alt="avatar" fill className="object-cover" />
+                    ) : (
+                      post.profiles?.username?.substring(0, 2) || '??'
+                    )}
                   </div>
-                  <div>
-                    <h4 className="text-white font-bold text-sm">{post.profiles?.username || 'Unknown User'}</h4>
+                  <div className="cursor-pointer group" onClick={() => setSelectedUserId(post.user_id)}>
+                    <h4 className="text-white font-bold text-sm group-hover:text-blue-400 transition-colors">{post.profiles?.username || 'Unknown User'}</h4>
                     <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">{post.profiles?.status || 'Pro Node'}</p>
                   </div>
                 </div>
@@ -387,6 +397,24 @@ export default function FeedContent() {
             </div>
           );
         })
+      )}
+
+      {/* USER PROFILE MODAL */}
+      {selectedUserId && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-[#0A0A0A] rounded-[2rem] border border-white/10 shadow-2xl">
+            <button 
+              onClick={() => setSelectedUserId(null)} 
+              className="absolute top-6 right-6 z-[250] p-2 bg-white/5 hover:bg-red-500/20 hover:text-red-500 rounded-full text-gray-400 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="p-2 sm:p-6">
+              <ProfileContent viewUserId={selectedUserId} />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Custom Toast Popup */}

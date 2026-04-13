@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { 
   Zap, 
   HelpCircle, 
@@ -23,6 +24,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import ProfileContent from "./ProfileContent";
 
 // --- TOOL COMPONENTS ---
 
@@ -172,12 +174,13 @@ const CommunityHubTool = ({ currentUserId }) => {
   const [input, setInput] = useState("");
   const scrollRef = useRef(null);
   const [error, setError] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   useEffect(() => {
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('community_messages')
-        .select('*, profiles:user_id(username)')
+        .select('*, profiles:user_id(username, avatar_url)')
         .order('created_at', { ascending: true })
         .limit(50);
       if (error) {
@@ -191,7 +194,7 @@ const CommunityHubTool = ({ currentUserId }) => {
     const channel = supabase.channel('public:community_messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'community_messages' }, (payload) => {
          const fetchNew = async () => {
-            const { data } = await supabase.from('community_messages').select('*, profiles:user_id(username)').eq('id', payload.new.id).single();
+            const { data } = await supabase.from('community_messages').select('*, profiles:user_id(username, avatar_url)').eq('id', payload.new.id).single();
             if (data) setMessages(prev => {
               if (prev.find(m => m.id === data.id)) return prev;
               return [...prev, data];
@@ -246,15 +249,48 @@ const CommunityHubTool = ({ currentUserId }) => {
           </div>
         ) : (
           messages.map(msg => (
-             <div key={msg.id} className={`flex flex-col ${msg.user_id === currentUserId ? 'items-end' : 'items-start'}`}>
-               <span className="text-[10px] text-gray-500 font-bold mb-1 pl-1">@{msg.profiles?.username}</span>
-               <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-lg ${msg.user_id === currentUserId ? 'bg-blue-600 text-white rounded-tr-none shadow-blue-500/10' : 'bg-[#111] text-gray-300 border border-white/5 rounded-tl-none'}`}>
-                 {msg.text}
-               </div>
+         <div key={msg.id} className={`flex gap-2 ${msg.user_id === currentUserId ? 'justify-end' : 'justify-start'}`}>
+           {msg.user_id !== currentUserId && (
+             <div 
+               onClick={() => setSelectedUserId(msg.user_id)}
+               className="relative w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-500/30 transition-colors overflow-hidden"
+               title={`View @${msg.profiles?.username}'s Profile`}
+             >
+               {msg.profiles?.avatar_url ? (
+                 <Image src={msg.profiles.avatar_url} alt="avatar" fill className="object-cover" />
+               ) : (
+                 msg.profiles?.username?.substring(0, 2) || "??"
+               )}
              </div>
+           )}
+           <div className={`flex flex-col ${msg.user_id === currentUserId ? 'items-end' : 'items-start'} max-w-[85%]`}>
+             {msg.user_id !== currentUserId && <span className="text-[10px] text-gray-500 font-bold mb-1 pl-1">@{msg.profiles?.username}</span>}
+             <div className={`w-full px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-lg ${msg.user_id === currentUserId ? 'bg-blue-600 text-white rounded-tr-none shadow-blue-500/10' : 'bg-[#111] text-gray-300 border border-white/5 rounded-tl-none'}`}>
+               {msg.text}
+             </div>
+           </div>
+         </div>
           ))
         )}
       </div>
+
+      {/* USER PROFILE MODAL */}
+      {selectedUserId && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-[#0A0A0A] rounded-[2rem] border border-white/10 shadow-2xl">
+            <button 
+              onClick={() => setSelectedUserId(null)} 
+              className="absolute top-6 right-6 z-[250] p-2 bg-white/5 hover:bg-red-500/20 hover:text-red-500 rounded-full text-gray-400 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="p-2 sm:p-6">
+              <ProfileContent viewUserId={selectedUserId} />
+            </div>
+          </div>
+        </div>
+      )}
       <form onSubmit={handleSend} className="p-3 bg-[#0F0F0F] border-t border-white/5 flex gap-2 shrink-0">
         <input 
           value={input} 

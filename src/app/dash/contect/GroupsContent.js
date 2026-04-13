@@ -19,6 +19,7 @@ import {
   Send
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import ProfileContent from "./ProfileContent";
 
 export default function GroupsContent() {
   const [groups, setGroups] = useState([]);
@@ -54,6 +55,7 @@ export default function GroupsContent() {
   const [workspaceMessages, setWorkspaceMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const workspaceScrollRef = useRef(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   // Fetch Groups
   useEffect(() => {
@@ -90,7 +92,7 @@ export default function GroupsContent() {
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('group_messages')
-        .select('*, profiles:user_id(username)')
+        .select('*, profiles:user_id(username, avatar_url)')
         .eq('group_id', activeWorkspace.id)
         .order('created_at', { ascending: true });
       
@@ -102,7 +104,7 @@ export default function GroupsContent() {
     const channel = supabase.channel(`group-${activeWorkspace.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages', filter: `group_id=eq.${activeWorkspace.id}` }, (payload) => {
         const fetchNewMsg = async () => {
-           const { data } = await supabase.from('group_messages').select('*, profiles:user_id(username)').eq('id', payload.new.id).maybeSingle();
+           const { data } = await supabase.from('group_messages').select('*, profiles:user_id(username, avatar_url)').eq('id', payload.new.id).maybeSingle();
            if (data) {
              setWorkspaceMessages(prev => {
                if (prev.some(m => m.id === data.id)) return prev;
@@ -380,14 +382,29 @@ export default function GroupsContent() {
               workspaceMessages.map(msg => {
                 const isMe = msg.user_id === currentUserId;
                 return (
-                  <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                    {!isMe && <span className="text-[10px] text-gray-500 font-bold mb-1 ml-1">@{msg.profiles?.username}</span>}
-                    <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-[13px] ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-500/20" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"}`}>
-                      {msg.text}
+                  <div key={msg.id} className={`flex gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
+                    {!isMe && (
+                      <div 
+                        onClick={() => setSelectedUserId(msg.user_id)}
+                        className="relative w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-500/30 transition-colors overflow-hidden"
+                        title={`View @${msg.profiles?.username}'s Profile`}
+                      >
+                        {msg.profiles?.avatar_url ? (
+                          <Image src={msg.profiles.avatar_url} alt="avatar" fill className="object-cover" />
+                        ) : (
+                          msg.profiles?.username?.substring(0, 2) || "??"
+                        )}
+                      </div>
+                    )}
+                    <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} max-w-[80%]`}>
+                      {!isMe && <span className="text-[10px] text-gray-500 font-bold mb-1 ml-1">@{msg.profiles?.username}</span>}
+                      <div className={`w-full px-4 py-2.5 rounded-2xl text-[13px] ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-500/20" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"}`}>
+                        {msg.text}
+                      </div>
+                      <span className="text-[9px] text-gray-600 mt-1 mx-1">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
-                    <span className="text-[9px] text-gray-600 mt-1 mx-1">
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
                   </div>
                 )
               })
@@ -701,6 +718,24 @@ export default function GroupsContent() {
         </div>
       </div>
     )}
+
+      {/* USER PROFILE MODAL */}
+      {selectedUserId && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-[#0A0A0A] rounded-[2rem] border border-white/10 shadow-2xl">
+            <button 
+              onClick={() => setSelectedUserId(null)} 
+              className="absolute top-6 right-6 z-[250] p-2 bg-white/5 hover:bg-red-500/20 hover:text-red-500 rounded-full text-gray-400 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="p-2 sm:p-6">
+              <ProfileContent viewUserId={selectedUserId} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TOAST POPUP */}
       {toastMessage && (

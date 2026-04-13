@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { 
   Search, MoreVertical, Phone, Video, Send, 
   Paperclip, CheckCheck, UserPlus, Check, X, 
@@ -8,6 +9,7 @@ import {
   ChevronLeft
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import ProfileContent from "./ProfileContent";
 
 export default function MessagesContent() {
   const [contacts, setContacts] = useState([]);
@@ -24,6 +26,7 @@ export default function MessagesContent() {
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false); // Mobile view toggle
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   const scrollRef = useRef(null);
   const channelRef = useRef(null);
@@ -37,7 +40,7 @@ export default function MessagesContent() {
 
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, username, status')
+        .select('id, username, status, avatar_url')
         .not('id', 'eq', session.user.id);
       
       setContacts(profiles || []);
@@ -211,10 +214,20 @@ export default function MessagesContent() {
         <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar px-2">
           {contacts.map((contact) => (
             <div key={contact.id} onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-xl border ${activeChat?.id === contact.id ? 'bg-blue-600/10 border-blue-500/20' : 'hover:bg-white/5 border-transparent'}`}>
-              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-bold">{contact.username[0].toUpperCase()}</div>
+              <div 
+                className="relative w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-bold hover:bg-blue-500/20 transition-colors overflow-hidden shrink-0"
+                onClick={(e) => { e.stopPropagation(); setSelectedUserId(contact.id); }}
+                title={`View @${contact.username}'s Profile`}
+              >
+                {contact.avatar_url ? (
+                  <Image src={contact.avatar_url} alt="avatar" fill className="object-cover" />
+                ) : (
+                  contact.username[0].toUpperCase()
+                )}
+              </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-xs font-bold text-white truncate">{contact.username}</h4>
-                <p className="text-[10px] text-gray-500 truncate font-mono uppercase tracking-tighter">{contact.status || 'Active'}</p>
+                <h4 className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">{contact.username}</h4>
+                <p className="text-[10px] text-gray-500 truncate font-mono uppercase tracking-widest">{contact.status || 'Active'}</p>
               </div>
             </div>
           ))}
@@ -230,9 +243,19 @@ export default function MessagesContent() {
                 <button onClick={() => setIsMobileChatOpen(false)} className="md:hidden p-1.5 -ml-1.5 text-gray-500 hover:text-white transition-colors">
                   <ChevronLeft size={22} />
                 </button>
-                <div className="w-9 h-9 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold">{activeChat.username[0].toUpperCase()}</div>
-                <div>
-                  <h3 className="text-sm font-bold text-white leading-tight">{activeChat.username}</h3>
+                <div 
+                  className="relative w-9 h-9 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold cursor-pointer hover:bg-blue-500/30 transition-colors overflow-hidden shrink-0"
+                  onClick={() => setSelectedUserId(activeChat.id)}
+                  title={`View @${activeChat.username}'s Profile`}
+                >
+                  {activeChat.avatar_url ? (
+                    <Image src={activeChat.avatar_url} alt="avatar" fill className="object-cover" />
+                  ) : (
+                    activeChat.username[0].toUpperCase()
+                  )}
+                </div>
+                <div className="cursor-pointer group" onClick={() => setSelectedUserId(activeChat.id)}>
+                  <h3 className="text-sm font-bold text-white leading-tight group-hover:text-blue-400 transition-colors">{activeChat.username}</h3>
                   <div className="flex items-center gap-1">
                     <div className={`w-1.5 h-1.5 ${connectionStatus === 'blocked' ? 'bg-red-500' : 'bg-green-500'} rounded-full animate-pulse`}></div>
                     <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">{connectionStatus === 'blocked' ? 'Severed' : 'Online'}</p>
@@ -303,6 +326,24 @@ export default function MessagesContent() {
           <div className="flex-1 flex items-center justify-center text-gray-600 text-xs font-black uppercase tracking-[4px] italic animate-pulse">Waiting for selection...</div>
         )}
       </div>
+
+      {/* USER PROFILE MODAL */}
+      {selectedUserId && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-[#0A0A0A] rounded-[2rem] border border-white/10 shadow-2xl">
+            <button 
+              onClick={() => setSelectedUserId(null)} 
+              className="absolute top-6 right-6 z-[260] p-2 bg-white/5 hover:bg-red-500/20 hover:text-red-500 rounded-full text-gray-400 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="p-2 sm:p-6">
+              <ProfileContent viewUserId={selectedUserId} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

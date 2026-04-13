@@ -94,6 +94,11 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         schema: 'public', 
         table: 'notifications' 
       }, () => fetchData())
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles'
+      }, () => fetchData())
       .subscribe();
 
     return () => {
@@ -166,10 +171,17 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
         {/* User Profile Section */}
         <div className="mt-auto pt-4 md:pt-6 border-t border-white/5 flex flex-col gap-4 px-2 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10">
-               <div className="w-full h-full rounded-xl bg-black flex items-center justify-center text-xs font-bold text-white uppercase">
-                 {profile ? profile.username?.substring(0, 2) : '??'}
+          <div 
+            className="flex items-center gap-3 cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-all"
+            onClick={() => { if (profile) handleNavClick('profile'); }}
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10 shrink-0">
+               <div className="relative w-full h-full rounded-xl bg-black flex items-center justify-center text-xs font-bold text-white uppercase overflow-hidden">
+                 {profile?.avatar_url ? (
+                   <Image src={profile.avatar_url} alt="Avatar" fill className="object-cover" />
+                 ) : (
+                   profile ? profile.username?.substring(0, 2) : '??'
+                 )}
                </div>
             </div>
 
@@ -183,7 +195,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
                   </div>
                 </>
               ) : (
-                <Link href="/auth" className="block hover:opacity-80 transition-opacity">
+                <Link href="/auth" className="block hover:opacity-80 transition-opacity" onClick={(e) => e.stopPropagation()}>
                   <p className="text-sm font-bold text-white uppercase italic">Guest_Node</p>
                   <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Authorize Access</p>
                 </Link>

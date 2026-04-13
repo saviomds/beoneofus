@@ -20,27 +20,27 @@ function DashLayoutContent({ children }) {
 
       {/* Mobile Navbar */}
       <div className="md:hidden absolute top-0 w-full h-16 border-b border-white/5 bg-[#050505] flex items-center justify-between px-4 z-40">
-        <button onClick={() => setIsLeftOpen(true)} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition">
-          <Menu size={20} />
+        <button onClick={() => setIsLeftOpen(true)} className="p-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition">
+          <Menu size={20} className="text-gray-700 dark:text-gray-300" />
         </button>
-        <span className="font-bold text-lg tracking-tighter">beone<span className="text-blue-500">of</span>us</span>
-        <button onClick={() => setIsRightOpen(true)} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition">
-          <MoreVertical size={20} />
+        <span className="font-bold text-lg tracking-tighter text-gray-900 dark:text-white">beone<span className="text-blue-600 dark:text-blue-500">of</span>us</span>
+        <button onClick={() => setIsRightOpen(true)} className="p-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition">
+          <MoreVertical size={20} className="text-gray-700 dark:text-gray-300" />
         </button>
       </div>
 
       {/* Left Sidebar Overlay */}
       {isLeftOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-50 md:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/20 dark:bg-black/60 z-50 md:hidden backdrop-blur-sm transition-all"
           onClick={() => setIsLeftOpen(false)}
         />
       )}
 
       {/* 1. Left Sidebar - Fixed Width */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0a0a0a] md:bg-transparent border-r border-white/5 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 flex-shrink-0 flex flex-col ${isLeftOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="md:hidden flex justify-end p-4 border-b border-white/5 shrink-0">
-          <button onClick={() => setIsLeftOpen(false)} className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white">
+      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0a0a0a] md:bg-transparent border-r border-white/5 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 flex-shrink-0 flex flex-col ${isLeftOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="md:hidden flex justify-end p-4 border-b border-gray-200 dark:border-white/5 shrink-0">
+          <button onClick={() => setIsLeftOpen(false)} className="p-2 bg-black/5 dark:bg-white/5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -64,15 +64,15 @@ function DashLayoutContent({ children }) {
       {/* Right Sidebar Overlay */}
       {isRightOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-50 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/20 dark:bg-black/60 z-50 lg:hidden backdrop-blur-sm transition-all"
           onClick={() => setIsRightOpen(false)}
         />
       )}
 
       {/* 3. Right Sidebar - Fixed Width */}
-      <div className={`fixed inset-y-0 right-0 z-50 w-72 lg:w-[350px] bg-[#0a0a0a] lg:bg-[#050505] border-l border-white/5 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 flex-shrink-0 flex flex-col ${isRightOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="lg:hidden flex justify-start p-4 border-b border-white/5 shrink-0">
-          <button onClick={() => setIsRightOpen(false)} className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white">
+      <div className={`fixed inset-y-0 right-0 z-50 w-72 lg:w-[350px] bg-[#0a0a0a] lg:bg-[#050505] border-l border-white/5 transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 flex-shrink-0 flex flex-col ${isRightOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="lg:hidden flex justify-start p-4 border-b border-gray-200 dark:border-white/5 shrink-0">
+          <button onClick={() => setIsRightOpen(false)} className="p-2 bg-black/5 dark:bg-white/5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -116,17 +116,17 @@ export default function DashLayout({ children }) {
     return () => authListener.subscription?.unsubscribe();
   }, [router]);
 
-  // Show a hacker-themed loading screen while checking auth status
+  let content;
   if (!isAuthenticated) {
     if (showAuthPopup) {
-      return (
+      content = (
         <div className="min-h-screen bg-black flex items-center justify-center p-4">
           <div className="bg-[#0D0D0D] border border-red-500/30 w-full max-w-sm rounded-2xl p-8 shadow-2xl text-center animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
               <Lock size={32} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Access Denied</h3>
-            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-8 leading-relaxed">
               Login first, beoneofus. You need an active session to access the dashboard.
             </p>
             <button 
@@ -138,19 +138,23 @@ export default function DashLayout({ children }) {
           </div>
         </div>
       );
+    } else {
+      content = (
+        <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Securing connection...</p>
+        </div>
+      );
     }
-
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Securing connection...</p>
-      </div>
+  } else {
+    content = (
+      <DashboardProvider>
+        <DashLayoutContent>{children}</DashLayoutContent>
+      </DashboardProvider>
     );
   }
 
   return (
-    <DashboardProvider>
-      <DashLayoutContent>{children}</DashLayoutContent>
-    </DashboardProvider>
+    <>{content}</>
   );
 }

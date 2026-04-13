@@ -14,7 +14,9 @@ import {
   Check,
   UserPlus,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  ChevronLeft,
+  Send
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -47,6 +49,12 @@ export default function GroupsContent() {
   const [groupToDelete, setGroupToDelete] = useState(null);
   const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false);
 
+  // Workspace Chat States
+  const [activeWorkspace, setActiveWorkspace] = useState(null);
+  const [workspaceMessages, setWorkspaceMessages] = useState([]);
+  const [messageInput, setMessageInput] = useState("");
+  const workspaceScrollRef = useRef(null);
+
   // Fetch Groups
   useEffect(() => {
     const init = async () => {
@@ -74,6 +82,44 @@ export default function GroupsContent() {
       setLoading(false);
     }
   };
+
+  // --- WORKSPACE CHAT LOGIC ---
+  useEffect(() => {
+    if (!activeWorkspace) return;
+
+    const fetchMessages = async () => {
+      const { data, error } = await supabase
+        .from('group_messages')
+        .select('*, profiles:user_id(username)')
+        .eq('group_id', activeWorkspace.id)
+        .order('created_at', { ascending: true });
+      
+      if (!error) setWorkspaceMessages(data || []);
+    };
+
+    fetchMessages();
+
+    const channel = supabase.channel(`group-${activeWorkspace.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages', filter: `group_id=eq.${activeWorkspace.id}` }, (payload) => {
+        const fetchNewMsg = async () => {
+           const { data } = await supabase.from('group_messages').select('*, profiles:user_id(username)').eq('id', payload.new.id).maybeSingle();
+           if (data) {
+             setWorkspaceMessages(prev => {
+               if (prev.some(m => m.id === data.id)) return prev;
+               return [...prev, data];
+             });
+           }
+        };
+        fetchNewMsg();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [activeWorkspace]);
+
+  useEffect(() => {
+    if (workspaceScrollRef.current) workspaceScrollRef.current.scrollTop = workspaceScrollRef.current.scrollHeight;
+  }, [workspaceMessages, activeWorkspace]);
 
   // Handle Image Upload logic
   const handleImageClick = () => fileInputRef.current?.click();
@@ -248,65 +294,180 @@ export default function GroupsContent() {
     }
   };
 
+  // --- ENTER WORKSPACE ---
+  const handleGroupClick = async (group) => {
+    setIsProcessing(true);
+    try {
+      // Check if current user is an active member
+      const { data: member, error } = await supabase
+        .from('group_members')
+        .select('id')
+        .eq('group_id', group.id)
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+        
+      if (error) throw error;
+      if (!member) throw new Error("Access Denied: You must be an invited member to access this workspace.");
+      
+      setActiveWorkspace(group);
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- SEND WORKSPACE MESSAGE ---
+  const handleSendWorkspaceMessage = async (e) => {
+    e.preventDefault();
+    if (!messageInput.trim() || !activeWorkspace || !currentUserId) return;
+    
+    const text = messageInput;
+    setMessageInput("");
+    
+    const { data: newMsg, error } = await supabase.from('group_messages').insert({
+      group_id: activeWorkspace.id,
+      user_id: currentUserId,
+      text: text
+    }).select('*, profiles:user_id(username)').single();
+    
+    if (error) {
+      if (error.message.includes('row-level security')) {
+        showToast("Access Denied: You do not have permission to send messages here.", "error");
+      } else {
+        showToast("Failed to send message: " + error.message, "error");
+      }
+    }
+    else if (newMsg) {
+      setWorkspaceMessages(prev => {
+        if (prev.some(m => m.id === newMsg.id)) return prev;
+        return [...prev, newMsg];
+      });
+    }
+  };
+
   const filteredGroups = groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto relative">
-      {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Groups</h1>
-          <p className="text-gray-400 text-sm mt-1">Manage your communities and collaborations.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setDeleteAllModalOpen(true)}
-            className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-5 py-2.5 rounded-xl transition-all font-semibold active:scale-95"
-          >
-            <Trash2 size={20} />
-             All
-          </button>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-blue-500/20 active:scale-95"
-          >
-            <Plus size={20} />
-            Create Group
-          </button>
-        </div>
-      </div>
+      {activeWorkspace ? (
+        <div className="w-full flex flex-col h-[calc(100vh-180px)] bg-[#0A0A0A] rounded-[2rem] border border-white/5 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300">
+          {/* Header */}
+          <div className="p-4 border-b border-white/5 bg-[#0F0F0F] flex items-center justify-between z-10 shrink-0">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setActiveWorkspace(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition">
+                <ChevronLeft size={20} />
+              </button>
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold uppercase">
+                <Users size={20} />
+              </div>
+              <div>
+                <h2 className="text-white font-bold text-lg leading-tight">{activeWorkspace.name}</h2>
+                <p className="text-[10px] font-black tracking-widest text-green-500 uppercase">Secured Workspace</p>
+              </div>
+            </div>
+          </div>
 
-      {/* Search bar */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
-        <input 
-          type="text" 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search groups..." 
-          className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:bg-white/10 transition-all"
-        />
-      </div>
+          {/* Messages */}
+          <div ref={workspaceScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
+            {workspaceMessages.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500">
+                <Users size={48} className="mb-4 opacity-20" />
+                <p className="font-bold text-sm uppercase tracking-widest mb-1">Workspace Initialized</p>
+                <p className="text-xs font-mono">End-to-end encrypted node. Say hello to the group.</p>
+              </div>
+            ) : (
+              workspaceMessages.map(msg => {
+                const isMe = msg.user_id === currentUserId;
+                return (
+                  <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                    {!isMe && <span className="text-[10px] text-gray-500 font-bold mb-1 ml-1">@{msg.profiles?.username}</span>}
+                    <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-[13px] ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-500/20" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"}`}>
+                      {msg.text}
+                    </div>
+                    <span className="text-[9px] text-gray-600 mt-1 mx-1">
+                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                )
+              })
+            )}
+          </div>
 
-      {/* Groups List */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="animate-spin text-blue-500 mb-2" size={32} />
-          <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Decrypting Nodes...</p>
-        </div>
-      ) : filteredGroups.length === 0 ? (
-        <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem]">
-          <Users size={48} className="text-gray-800 mb-4" />
-          <p className="text-gray-600 font-bold">No groups found.</p>
+          {/* Input */}
+          <div className="p-3 bg-[#0F0F0F] border-t border-white/5 z-10 shrink-0">
+            <form onSubmit={handleSendWorkspaceMessage} className="flex items-center gap-2 bg-black border border-white/10 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500/30 transition-all">
+              <input 
+                type="text" 
+                value={messageInput} 
+                onChange={e => setMessageInput(e.target.value)} 
+                placeholder="Broadcast to workspace..." 
+                className="flex-1 bg-transparent border-none focus:outline-none text-xs text-white py-2" 
+              />
+              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95">
+                <Send size={16} strokeWidth={3} />
+              </button>
+            </form>
+          </div>
         </div>
       ) : (
-        <div className="space-y-4">
-        {filteredGroups.map((group) => {
-          const isAdmin = group.created_by === currentUserId;
-          const memberCount = group.group_members?.[0]?.count || 1;
-          return (
-          <div 
-            key={group.id} 
+        <>
+          {/* Header Section */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-white">Groups</h1>
+              <p className="text-gray-400 text-sm mt-1">Manage your communities and collaborations.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setDeleteAllModalOpen(true)}
+                className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-5 py-2.5 rounded-xl transition-all font-semibold active:scale-95"
+              >
+                <Trash2 size={20} />
+                 All
+              </button>
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-blue-500/20 active:scale-95"
+              >
+                <Plus size={20} />
+                Create Group
+              </button>
+            </div>
+          </div>
+
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search groups..." 
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:bg-white/10 transition-all"
+            />
+          </div>
+
+          {/* Groups List */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="animate-spin text-blue-500 mb-2" size={32} />
+              <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Decrypting Nodes...</p>
+            </div>
+          ) : filteredGroups.length === 0 ? (
+            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem]">
+              <Users size={48} className="text-gray-800 mb-4" />
+              <p className="text-gray-600 font-bold">No groups found.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+            {filteredGroups.map((group) => {
+              const isAdmin = group.created_by === currentUserId;
+              const memberCount = group.group_members?.[0]?.count || 1;
+              return (
+              <div 
+                key={group.id} 
+                onClick={() => handleGroupClick(group)}
               className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-[#0A0A0A] border border-white/5 rounded-2xl p-5 hover:border-blue-500/30 hover:bg-white/[0.02] transition-all cursor-pointer"
           >
             <div className="p-4 bg-blue-500/10 rounded-xl text-blue-400 group-hover:bg-blue-500/20 transition-colors">
@@ -360,6 +521,8 @@ export default function GroupsContent() {
           );
         })}
       </div>
+          )}
+        </>
       )}
 
       {/* CREATE GROUP MODAL */}

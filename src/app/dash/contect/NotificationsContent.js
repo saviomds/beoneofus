@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { 
   Bell, Heart, MessageSquare, Check, Zap, 
-  ShieldAlert, ShieldCheck, MoreHorizontal 
+  ShieldAlert, ShieldCheck, MoreHorizontal, Users 
 } from "lucide-react"; // FIXED: Corrected from lucide-center
 import { supabase } from "../../supabaseClient";
 
@@ -72,6 +72,7 @@ export default function NotificationsContent() {
       case 'handshake': return <Check size={14} className="text-emerald-500" />;
       case 'blocked': return <ShieldAlert size={14} className="text-orange-500" />;
       case 'unblocked': return <ShieldCheck size={14} className="text-green-500" />;
+      case 'group_invite': return <Users size={14} className="text-purple-500" />;
       default: return <Zap size={14} className="text-amber-500" />;
     }
   };
@@ -124,7 +125,8 @@ export default function NotificationsContent() {
                       {notif.type === 'comment' && ` replied: "${notif.content}"`}
                       {notif.type === 'handshake' && ' authorized secure link.'}
                       {notif.type === 'blocked' && ' severed handshake link.'}
-                      {!['like', 'comment', 'handshake', 'blocked'].includes(notif.type) && ` ${notif.content}`}
+                      {notif.type === 'group_invite' && ` invited you to join the group "${notif.content}".`}
+                      {!['like', 'comment', 'handshake', 'blocked', 'group_invite'].includes(notif.type) && ` ${notif.content}`}
                     </div>
                     <div className="flex items-center gap-3">
                        <p className="text-[9px] font-black uppercase tracking-widest text-blue-500/60">{notif.type} PROT</p>

@@ -20,6 +20,7 @@ export default function MessagesContent() {
   const [currentUserId, setCurrentUserId] = useState(null);
   
   // UI & Connection States
+  const [searchQuery, setSearchQuery] = useState("");
   const [connectionStatus, setConnectionStatus] = useState(null); 
   const [blockerId, setBlockerId] = useState(null);
   const [activeConnectionId, setActiveConnectionId] = useState(null); // Track the row ID for reliable updates
@@ -38,20 +39,57 @@ export default function MessagesContent() {
 
   // 1. Initial Setup
   useEffect(() => {
-    const initChat = async () => {
+    let isMounted = true;
+
+    const fetchContacts = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      setCurrentUserId(session.user.id);
+      const uid = session.user.id;
+      if (isMounted) setCurrentUserId(uid);
 
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, username, status, avatar_url')
-        .not('id', 'eq', session.user.id);
-      
-      setContacts(profiles || []);
-      if (profiles?.length > 0) setActiveChat(profiles[0]);
+      // Fetch all connections where user is sender or receiver
+      const { data: connections } = await supabase
+        .from('connections')
+        .select('sender_id, receiver_id')
+        .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
+
+      let connectedIds = [];
+      if (connections && connections.length > 0) {
+        connectedIds = connections.map(c => c.sender_id === uid ? c.receiver_id : c.sender_id);
+      }
+
+      if (connectedIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, username, status, avatar_url')
+          .in('id', connectedIds);
+        
+        if (isMounted) {
+          setContacts(profiles || []);
+          // Keep active chat if already set, otherwise pick the first
+          setActiveChat(prev => prev || (profiles?.length > 0 ? profiles[0] : null));
+        }
+      } else {
+        if (isMounted) {
+          setContacts([]);
+          setActiveChat(null);
+        }
+      }
     };
-    initChat();
+
+    fetchContacts();
+
+    // Listen for new connections globally to update the sidebar contacts live
+    const channel = supabase.channel('messages-contacts-update')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'connections' }, () => {
+         fetchContacts();
+      })
+      .subscribe();
+
+    return () => { 
+      isMounted = false;
+      supabase.removeChannel(channel); 
+    };
   }, []);
 
   // 2. Fetch Messages and Connection Logic
@@ -267,6 +305,10 @@ export default function MessagesContent() {
     if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
+  const filteredContacts = contacts.filter(c => 
+    c.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="w-full flex h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
       
@@ -293,11 +335,22 @@ export default function MessagesContent() {
           <h2 className="text-2xl font-black text-white tracking-tighter mb-3">Messages</h2>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
-            <input type="text" placeholder="Search..." className="w-full bg-[#0F0F0F] border border-white/5 rounded-xl py-2 pl-9 text-xs text-white outline-none focus:border-blue-500/30 transition-all" />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search connections..." 
+              className="w-full bg-[#0F0F0F] border border-white/5 rounded-xl py-2 pl-9 text-xs text-white outline-none focus:border-blue-500/30 transition-all" 
+            />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar px-2">
-          {contacts.map((contact) => (
+          {filteredContacts.length === 0 && (
+            <div className="text-center text-xs text-gray-600 font-bold mt-10 px-4">
+              No connections found. Follow nodes to open channels.
+            </div>
+          )}
+          {filteredContacts.map((contact) => (
             <div key={contact.id} onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-xl border ${activeChat?.id === contact.id ? 'bg-blue-600/10 border-blue-500/20' : 'hover:bg-white/5 border-transparent'}`}>
               <div 
                 className="relative w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-bold hover:bg-blue-500/20 transition-colors overflow-hidden shrink-0"

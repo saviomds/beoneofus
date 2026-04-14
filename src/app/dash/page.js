@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import NewPost from '../components/NewPost';
 import { useDashboard } from './contect/DashboardContext';
 import FeedContent from './contect/FeedContent';
@@ -10,6 +12,24 @@ import MoreContent from './contect/MoreContent';
 import NotificationsContent from './contect/NotificationsContent';
 import SettingsContent from './contect/SettingsContent';
 import ProfileContent from './contect/ProfileContent';
+import DocsContent from './contect/DocsContent';
+
+function DashboardTabHandler() {
+  const { setActiveSection } = useDashboard();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && setActiveSection) {
+      setActiveSection(tab);
+      // Clear the tab from URL so we aren't trapped when clicking other sidebar links
+      router.replace('/dash', { scroll: false });
+    }
+  }, [searchParams, setActiveSection, router]);
+
+  return null;
+}
 
 export default function Dashboard() {
   const { activeSection } = useDashboard();
@@ -32,13 +52,20 @@ export default function Dashboard() {
         return <SettingsContent />;
       case 'profile':
         return <ProfileContent />;
+      case 'docs':
+        return <DocsContent />;
       default:
         return <FeedContent />;
     }
   };
 
   return (
-    <div className="w-full h-full p-4 md:p-6 lg:p-8 overflow-x-hidden">
+    <div className={`w-full h-full overflow-x-hidden transition-all ${activeSection === 'docs' ? 'p-2 md:p-4 lg:p-6' : 'p-4 md:p-6 lg:p-8'}`}>
+      {/* Suspense boundary fixes Next.js useSearchParams de-opt warning */}
+      <Suspense fallback={null}>
+        <DashboardTabHandler />
+      </Suspense>
+
       {/* Only show NewPost for feed section */}
       {activeSection === 'feed' && (
         <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">

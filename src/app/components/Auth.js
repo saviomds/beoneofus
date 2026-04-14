@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useRouter } from 'next/navigation';
-import { LogIn, UserPlus, Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Terminal, AlertTriangle, ShieldCheck, Command, Loader2, ChevronRight } from 'lucide-react';
 
 export default function AuthForm() {
   const router = useRouter();
@@ -56,105 +56,109 @@ export default function AuthForm() {
   };
 
   return (
-    <div className="w-full">
-      {/* --- CUSTOM SUCCESS POPUP CARD --- */}
-      {showSuccessCard && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => {
-              setShowSuccessCard(false);
-              setIsRegistering(false);
-            }}
-          />
-          <div className="bg-[#0D0D0D] border border-green-500/30 w-full max-w-sm rounded-2xl p-8 shadow-[0_0_50px_-12px_rgba(34,197,94,0.5)] text-center relative z-10 animate-in fade-in zoom-in duration-300">
-            <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
-              <CheckCircle2 size={40} className="animate-bounce" />
+    <div className="w-full max-w-xl mx-auto font-mono animate-in fade-in zoom-in-95 duration-500">
+      
+      {/* Terminal Window Container */}
+      <div className="bg-[#050505] rounded-xl border border-white/10 shadow-[0_0_60px_rgba(34,197,94,0.05)] overflow-hidden relative">
+        
+        {/* Terminal Header */}
+        <div className="bg-[#111] px-4 py-3 border-b border-white/10 flex items-center gap-2 shrink-0">
+          <div className="w-3 h-3 rounded-full bg-red-500/80" />
+          <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+          <div className="w-3 h-3 rounded-full bg-green-500/80" />
+          <span className="ml-4 text-xs text-gray-500 flex items-center gap-2">
+            <Terminal size={14} /> beoneofus_auth_node.sh
+          </span>
+        </div>
+
+        {/* Terminal Body */}
+        <div className="p-6 sm:p-10 text-green-500 space-y-6">
+          
+          {/* Boot Sequence Text */}
+          <div className="space-y-1.5 mb-8 text-sm">
+             <p className="opacity-80">&gt; INITIALIZING SECURE PROTOCOLS...</p>
+             <p className="opacity-80">&gt; ESTABLISHING CONNECTION TO CORE NETWORK...</p>
+             <p className="font-bold text-white">&gt; AUTHORIZATION REQUIRED<span className="animate-pulse">_</span></p>
+          </div>
+
+          {showSuccessCard ? (
+            <div className="py-10 text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <div className="w-16 h-16 bg-green-500/10 text-green-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/30">
+                <ShieldCheck size={32} className="animate-pulse" />
+              </div>
+              <p className="text-xl font-bold text-white uppercase tracking-widest">Node Registered</p>
+              <p className="text-gray-400 text-sm max-w-xs mx-auto leading-relaxed">
+                Your identity has been written to the master registry. You may now authorize your session.
+              </p>
+              <button
+                onClick={() => { setShowSuccessCard(false); setIsRegistering(false); }}
+                className="mt-8 px-8 py-3 bg-transparent border border-green-500/50 text-green-500 hover:bg-green-500/10 transition-all rounded-md tracking-[0.2em] uppercase text-xs font-bold"
+              >
+                Return to Auth
+              </button>
             </div>
-            <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Registration Complete!</h3>
-            <p className="text-gray-500 text-sm leading-relaxed mb-6">
-              Your node has been registered on the <span className="text-blue-500 font-bold">beoneofus</span> network.
-            </p>
-            <button 
-              onClick={() => {
-                setShowSuccessCard(false);
-                setIsRegistering(false);
-              }}
-              className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-all border border-white/5"
-            >
-              Proceed to Login
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-white mb-2">
-          {isRegistering ? 'Create Account' : 'Welcome Back'}
-        </h2>
-        <p className="text-gray-500">
-          {isRegistering ? 'Join beoneofus today' : 'Log in to your account'}
-        </p>
-      </div>
-
-      <form onSubmit={handleAuth} className="space-y-4">
-        {/* Email Field */}
-        <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-          <input
-            type="email"
-            placeholder="Email Address"
-            className="w-full bg-white/5 border-none rounded-xl py-3 pl-10 pr-4 text-white placeholder-gray-600 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-
-        {/* Password Field */}
-        <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full bg-white/5 border-none rounded-xl py-3 pl-10 pr-4 text-white placeholder-gray-600 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-
-        {error && (
-          <div className="flex items-center gap-2 text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">
-            <AlertCircle size={16} />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <button
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_10px_20px_-10px_rgba(37,99,235,0.5)]"
-        >
-          {loading ? 'Processing...' : isRegistering ? (
-            <>
-              <UserPlus size={18} /> Sign Up
-            </>
           ) : (
             <>
-              <LogIn size={18} /> Login
+              {/* Mode Switcher */}
+              <div className="flex gap-6 mb-8 border-b border-green-500/20 pb-4 text-sm">
+                <button onClick={() => setIsRegistering(false)} className={`flex items-center gap-2 transition-all ${!isRegistering ? 'text-green-400 font-bold drop-shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'text-gray-600 hover:text-green-500/70'}`}>
+                  [0] Authenticate
+                </button>
+                <button onClick={() => setIsRegistering(true)} className={`flex items-center gap-2 transition-all ${isRegistering ? 'text-green-400 font-bold drop-shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'text-gray-600 hover:text-green-500/70'}`}>
+                  [1] Register Node
+                </button>
+              </div>
+
+              {/* Interactive Form */}
+              <form onSubmit={handleAuth} className="space-y-6">
+                <div>
+                  <label className="flex items-center gap-2 text-sm mb-2 opacity-80">
+                    <span className="text-blue-500 font-black">$</span> root_email:
+                  </label>
+                  <div className="relative">
+                    <ChevronRight size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500/50" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="w-full bg-black border border-green-500/30 rounded-md py-3 pl-10 pr-4 text-green-400 focus:outline-none focus:border-green-500 focus:shadow-[0_0_15px_rgba(34,197,94,0.15)] transition-all placeholder-green-500/20"
+                      placeholder="node@network.local"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm mb-2 opacity-80">
+                    <span className="text-blue-500 font-black">$</span> encryption_key:
+                  </label>
+                  <div className="relative">
+                    <ChevronRight size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500/50" />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="w-full bg-black border border-green-500/30 rounded-md py-3 pl-10 pr-4 text-green-400 focus:outline-none focus:border-green-500 focus:shadow-[0_0_15px_rgba(34,197,94,0.15)] transition-all placeholder-green-500/20 tracking-widest"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="text-red-400 text-sm flex items-start gap-3 bg-red-500/10 p-4 rounded-md border border-red-500/20 animate-in fade-in slide-in-from-top-2">
+                    <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                    <span className="leading-relaxed"><strong>[ SYS_ERR ]:</strong> {error}</span>
+                  </div>
+                )}
+
+                <button disabled={loading} className="w-full bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/50 py-4 rounded-md font-bold tracking-[0.2em] uppercase transition-all disabled:opacity-50 mt-6 flex items-center justify-center gap-3">
+                  {loading ? <><Loader2 size={18} className="animate-spin" /> Transmitting...</> : isRegistering ? <><Command size={18} /> Initialize Node</> : <><ShieldCheck size={18} /> Authorize Session</>}
+                </button>
+              </form>
             </>
           )}
-        </button>
-      </form>
-
-      <div className="mt-6 text-center">
-        <button
-          type="button"
-          onClick={() => setIsRegistering(!isRegistering)}
-          className="text-gray-500 hover:text-blue-400 text-sm transition-colors"
-        >
-          {isRegistering ? 'Already have an account? Log in' : "Don't have an account? Sign up"}
-        </button>
+        </div>
       </div>
     </div>
   );

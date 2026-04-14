@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   Send,
   Paperclip,
-  MessageSquare
+  MessageSquare,
+  Hash
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -206,12 +207,12 @@ export default function GroupsContent() {
         role: 'admin'
       });
       if (memberError) {
-        // Rollback: if adding the member fails, delete the group we just created to prevent ghost groups
+        // Rollback: if adding the member fails, delete the group we just created to prevent ghost channels
         await supabase.from('groups').delete().eq('id', newGroup.id);
         throw memberError;
       }
 
-      showToast("Group created successfully!");
+      showToast("Channel created successfully!");
       setIsModalOpen(false);
       setName("");
       setDescription("");
@@ -219,7 +220,7 @@ export default function GroupsContent() {
       setImagePreview(null);
       fetchGroups();
     } catch (err) {
-      showToast("Failed to create group: " + err.message, "error");
+      showToast("Failed to create channel: " + err.message, "error");
     } finally {
       setIsProcessing(false);
     }
@@ -243,7 +244,7 @@ export default function GroupsContent() {
       if (inviteErr) {
         // Catch PostgreSQL duplicate key error (code 23505)
         if (inviteErr.code === '23505' || inviteErr.message.includes('duplicate')) {
-          throw new Error(`@${inviteUsername} is already a member of this group.`);
+          throw new Error(`@${inviteUsername} is already a member of this channel.`);
         }
         throw inviteErr;
       }
@@ -287,12 +288,12 @@ export default function GroupsContent() {
         throw new Error("Deletion blocked by database (RLS). You don't have permission.");
       }
 
-      showToast("Group deleted successfully");
+      showToast("Channel deleted successfully");
       setDeleteModalOpen(false);
       setGroupToDelete(null);
       fetchGroups();
     } catch (err) {
-      showToast("Failed to delete group: " + err.message, "error");
+      showToast("Failed to delete channel: " + err.message, "error");
     } finally {
       setIsProcessing(false);
     }
@@ -320,11 +321,11 @@ export default function GroupsContent() {
         }
       }
 
-      showToast("All your groups have been deleted.");
+      showToast("All your channels have been deleted.");
       setDeleteAllModalOpen(false);
       fetchGroups();
     } catch (err) {
-      showToast("Failed to delete all groups: " + err.message, "error");
+      showToast("Failed to delete all channels: " + err.message, "error");
     } finally {
       setIsProcessing(false);
     }
@@ -378,7 +379,7 @@ export default function GroupsContent() {
     try {
       const { error } = await supabase.from('group_members').delete().eq('group_id', activeWorkspace.id).eq('user_id', userId);
       if (error) throw error;
-      showToast(`@${username} has been removed from the group.`);
+      showToast(`@${username} has been removed from the channel.`);
       setWorkspaceMembers(prev => prev.filter(m => m.user_id !== userId));
     } catch(err) {
       showToast(err.message, "error");
@@ -448,7 +449,7 @@ export default function GroupsContent() {
                 <ChevronLeft size={20} />
               </button>
               <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold uppercase">
-                <Users size={20} />
+                <Hash size={20} />
               </div>
               <div>
                 <h2 className="text-white font-bold text-lg leading-tight">{activeWorkspace.name}</h2>
@@ -471,9 +472,9 @@ export default function GroupsContent() {
           <div ref={workspaceScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
             {workspaceMessages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500">
-                <Users size={48} className="mb-4 opacity-20" />
+                <Hash size={48} className="mb-4 opacity-20" />
                 <p className="font-bold text-sm uppercase tracking-widest mb-1">Node Initialized</p>
-                <p className="text-xs font-mono">End-to-end encrypted node. Say hello to the group.</p>
+                <p className="text-xs font-mono">End-to-end encrypted node. Say hello to the channel.</p>
               </div>
             ) : (
               workspaceMessages.map(msg => {
@@ -580,7 +581,7 @@ export default function GroupsContent() {
           {/* Header Section */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white">Groups</h1>
+              <h1 className="text-3xl font-bold text-white">Channels</h1>
               <p className="text-gray-400 text-sm mt-1">Manage your communities and collaborations.</p>
             </div>
             <div className="flex items-center gap-3">
@@ -596,7 +597,7 @@ export default function GroupsContent() {
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-blue-500/20 active:scale-95"
               >
                 <Plus size={20} />
-                Create Group
+                Create Channel
               </button>
             </div>
           </div>
@@ -608,7 +609,7 @@ export default function GroupsContent() {
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search groups..." 
+              placeholder="Search channels..." 
               className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:bg-white/10 transition-all"
             />
           </div>
@@ -621,8 +622,8 @@ export default function GroupsContent() {
             </div>
           ) : filteredGroups.length === 0 ? (
             <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem]">
-              <Users size={48} className="text-gray-800 mb-4" />
-              <p className="text-gray-600 font-bold">No groups found.</p>
+              <Hash size={48} className="text-gray-800 mb-4" />
+              <p className="text-gray-600 font-bold">No channels found.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -636,7 +637,7 @@ export default function GroupsContent() {
               className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-[#0A0A0A] border border-white/5 rounded-2xl p-5 hover:border-blue-500/30 hover:bg-white/[0.02] transition-all cursor-pointer"
           >
             <div className="p-4 bg-blue-500/10 rounded-xl text-blue-400 group-hover:bg-blue-500/20 transition-colors">
-              <Users size={28} />
+              <Hash size={28} />
             </div>
             
             <div className="flex-1 min-w-0">
@@ -672,7 +673,7 @@ export default function GroupsContent() {
                     <button 
                       onClick={(e) => { e.stopPropagation(); setGroupToDelete(group); setDeleteModalOpen(true); }}
                       className="p-2 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-xl transition-all border border-white/5"
-                      title="Delete Group"
+                      title="Delete Channel"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -703,7 +704,7 @@ export default function GroupsContent() {
           
           <div className="relative w-full max-w-lg bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-white/5 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">Create New Group</h2>
+              <h2 className="text-xl font-bold text-white">Create New Channel</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-400 transition-colors">
                 <X size={20} />
               </button>
@@ -730,20 +731,20 @@ export default function GroupsContent() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">Group Icon</p>
+                  <p className="text-sm font-medium text-white">Channel Icon</p>
                   <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Group Name</label>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Channel Name</label>
                   <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Next.js Masters" className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all" />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Description</label>
-                  <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this group about?" className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all resize-none" />
+                  <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this channel about?" className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all resize-none" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -769,7 +770,7 @@ export default function GroupsContent() {
                   Cancel
                 </button>
                 <button type="submit" disabled={isProcessing} className="flex-1 flex justify-center py-3 px-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50">
-                  {isProcessing ? <Loader2 size={20} className="animate-spin" /> : "Create Group"}
+                  {isProcessing ? <Loader2 size={20} className="animate-spin" /> : "Create Channel"}
                 </button>
               </div>
             </form>
@@ -783,7 +784,7 @@ export default function GroupsContent() {
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setInviteModalOpen(false)} />
           <div className="relative w-full max-w-sm bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-blue-600/10">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2"><UserPlus size={18} className="text-blue-500" /> Invite to Group</h2>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2"><UserPlus size={18} className="text-blue-500" /> Invite to Channel</h2>
               <button onClick={() => setInviteModalOpen(false)} className="text-gray-400 hover:text-white transition-colors"><X size={18} /></button>
             </div>
             <form className="p-6 space-y-5" onSubmit={handleInviteUser}>
@@ -813,7 +814,7 @@ export default function GroupsContent() {
             <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle size={32} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Delete Group?</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Delete Channel?</h3>
             <p className="text-gray-400 text-sm mb-6 leading-relaxed">
               Are you sure you want to delete <span className="font-bold text-white">{groupToDelete.name}</span>? This action cannot be undone.
             </p>
@@ -844,9 +845,9 @@ export default function GroupsContent() {
           <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle size={32} />
           </div>
-          <h3 className="text-xl font-bold text-white mb-2">Delete All Groups?</h3>
+          <h3 className="text-xl font-bold text-white mb-2">Delete All Channels?</h3>
           <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-            Are you sure you want to delete <span className="font-bold text-white">ALL</span> groups you created? This action cannot be undone.
+            Are you sure you want to delete <span className="font-bold text-white">ALL</span> channels you created? This action cannot be undone.
           </p>
           <div className="flex flex-col gap-3">
             <button 
@@ -873,7 +874,7 @@ export default function GroupsContent() {
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setGroupToJoin(null)} />
           <div className="relative w-full max-w-sm bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl p-6 text-center animate-in fade-in zoom-in duration-200">
             <div className="w-16 h-16 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users size={32} />
+              <Hash size={32} />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Request Access?</h3>
             <p className="text-gray-400 text-sm mb-6 leading-relaxed">
@@ -914,7 +915,7 @@ export default function GroupsContent() {
           <div className="relative w-full max-w-md bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
               <div>
-                <h2 className="text-xl font-bold text-white">Group Members</h2>
+                <h2 className="text-xl font-bold text-white">Channel Members</h2>
                 <p className="text-xs text-gray-500 mt-1">{activeWorkspace.name}</p>
               </div>
               <button onClick={() => setMembersModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-400 transition-colors">

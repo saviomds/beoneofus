@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import { 
-  Users, X, Loader2, Sparkles, UserPlus, Check, Globe, Lock, ChevronRight, Zap
+  Users, X, Loader2, Sparkles, UserPlus, Check, Globe, Lock, ChevronRight, Zap, BookOpen
 } from 'lucide-react';
 import ProfileContent from "../dash/contect/ProfileContent";
 
@@ -20,7 +21,8 @@ const SectionHeader = ({ title, icon: Icon }) => (
   </div>
 );
 
-export default function RightSidebar() {
+export default function RightSidebar({ onSectionChange, setActiveTab }) {
+  const router = useRouter();
   const [suggestions, setSuggestions] = useState([]);
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -151,6 +153,16 @@ export default function RightSidebar() {
     }
   };
 
+  const handleDocsClick = () => {
+    if (onSectionChange) {
+      onSectionChange('docs');
+    } else if (setActiveTab) {
+      setActiveTab('docs');
+    } else {
+      router.push('/dash?tab=docs');
+    }
+  };
+
   return (
     <aside className="w-full flex flex-col p-6 space-y-10 h-screen sticky top-0 overflow-y-auto no-scrollbar bg-transparent border-l border-white/5 relative">
       
@@ -207,13 +219,13 @@ export default function RightSidebar() {
         )}
       </div>
 
-      {/* 2. Discover Groups */}
+      {/* 2. Discover Channels */}
       <div>
-        <SectionHeader title="Discover Groups" icon={Globe} />
+        <SectionHeader title="Discover Channels" icon={Globe} />
         {loading ? (
           <div className="flex justify-center items-center h-24"><Loader2 size={20} className="animate-spin text-gray-600" /></div>
         ) : groups.length === 0 ? (
-          <div className="text-xs text-gray-600 font-medium">No active groups.</div>
+          <div className="text-xs text-gray-600 font-medium">No active channels.</div>
         ) : (
           <div className="space-y-3">
             {groups.map((group) => (
@@ -249,7 +261,7 @@ export default function RightSidebar() {
               </div>
               <div>
                 <h4 className="text-xs font-bold text-white mb-0.5">End-to-End Workspaces</h4>
-                <p className="text-[10px] text-gray-400 leading-relaxed">Secure, private group chats are now active. Create a node to begin.</p>
+                <p className="text-[10px] text-gray-400 leading-relaxed">Secure, private channel chats are now active. Create a node to begin.</p>
               </div>
             </div>
             <div className="flex gap-3 items-start">
@@ -262,6 +274,26 @@ export default function RightSidebar() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* 4. Platform Documentation Link */}
+      <div>
+        <SectionHeader title="Resources" icon={BookOpen} />
+        <div
+          onClick={handleDocsClick}
+          className="flex items-center justify-between group cursor-pointer p-4 rounded-2xl bg-[#0F0F0F] border border-white/5 hover:border-blue-500/30 transition-all shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+              <BookOpen size={16} />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">Platform Docs</span>
+              <span className="text-[10px] text-gray-500 line-clamp-1">Read the network reference manual</span>
+            </div>
+          </div>
+          <ChevronRight size={14} className="text-gray-700 group-hover:text-blue-500 transition-all shrink-0" />
         </div>
       </div>
 

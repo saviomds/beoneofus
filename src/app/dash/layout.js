@@ -77,7 +77,7 @@ function DashLayoutContent({ children }) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto no-scrollbar pb-16 lg:pb-0">
-          <RightSidebar activeSection={activeSection} />
+          <RightSidebar activeSection={activeSection} onSectionChange={(sec) => { setActiveSection(sec); setIsRightOpen(false); }} />
         </div>
       </div>
 

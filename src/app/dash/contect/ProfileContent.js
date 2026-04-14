@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
 export default function ProfileContent({ viewUserId }) {
@@ -14,7 +14,14 @@ export default function ProfileContent({ viewUserId }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ username: "", status: "" });
   const [toast, setToast] = useState("");
+  const [followersCount, setFollowersCount] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState('none');
+  const [connectionProcessing, setConnectionProcessing] = useState(false);
   
+  const [showFollowersList, setShowFollowersList] = useState(false);
+  const [followersData, setFollowersData] = useState([]);
+  const [loadingFollowers, setLoadingFollowers] = useState(false);
+
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
@@ -30,9 +37,7 @@ export default function ProfileContent({ viewUserId }) {
         const own = loggedInUserId === targetUserId;
         setIsOwnProfile(own);
 
-        if (own) {
-          setCurrentUser(session.user);
-        }
+        setCurrentUser(session.user);
 
         const { data: profileData, error } = await supabase
           .from('profiles')
@@ -42,6 +47,34 @@ export default function ProfileContent({ viewUserId }) {
 
         if (error) throw error;
         setProfile(profileData);
+
+        // Fetch followers count (accepted connections)
+        const { count } = await supabase
+          .from('connections')
+          .select('*', { count: 'exact', head: true })
+          .or(`receiver_id.eq.${targetUserId},sender_id.eq.${targetUserId}`)
+          .eq('status', 'accepted');
+          
+        setFollowersCount(count || 0);
+
+        if (!own) {
+          const { data: connection } = await supabase
+            .from('connections')
+            .select('*')
+            .or(`and(sender_id.eq.${loggedInUserId},receiver_id.eq.${targetUserId}),and(sender_id.eq.${targetUserId},receiver_id.eq.${loggedInUserId})`)
+            .maybeSingle();
+
+          if (connection) {
+            if (connection.status === 'accepted') {
+              setConnectionStatus('accepted');
+            } else if (connection.status === 'pending') {
+              setConnectionStatus(connection.sender_id === loggedInUserId ? 'pending_sent' : 'pending_received');
+            }
+          } else {
+            setConnectionStatus('none');
+          }
+        }
+
         if (own) {
           setFormData({ 
             username: profileData.username || "", 
@@ -125,6 +158,96 @@ export default function ProfileContent({ viewUserId }) {
     setFormData({ username: profile?.username || "", status: profile?.status || "" });
     setImageFile(null);
     setImagePreview(null);
+  };
+
+  const handleFollow = async () => {
+    setConnectionProcessing(true);
+    try {
+      const { error } = await supabase.from('connections').insert({
+        sender_id: currentUser.id,
+        receiver_id: profile.id,
+        status: 'pending'
+      });
+      if (error) throw error;
+      setConnectionStatus('pending_sent');
+      
+      await supabase.from('notifications').insert({
+        receiver_id: profile.id,
+        actor_id: currentUser.id,
+        type: 'connection_request',
+        content: 'wants to connect'
+      });
+      
+      setToast("Follow request sent");
+      setTimeout(() => setToast(""), 3000);
+    } catch (err) {
+      console.error(err);
+      setToast("Failed to follow");
+      setTimeout(() => setToast(""), 3000);
+    } finally {
+      setConnectionProcessing(false);
+    }
+  };
+
+  const handleUnfollow = async () => {
+    setConnectionProcessing(true);
+    try {
+      const { data, error } = await supabase.from('connections')
+        .delete()
+        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${currentUser.id})`)
+        .select();
+        
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        throw new Error("Action blocked by database. Missing DELETE policy.");
+      }
+
+      if (connectionStatus === 'accepted') {
+        setFollowersCount(prev => Math.max(0, prev - 1));
+      }
+      setConnectionStatus('none');
+      setToast("Unfollowed successfully");
+      setTimeout(() => setToast(""), 3000);
+    } catch (err) {
+      console.error(err);
+      setToast("Failed to unfollow");
+      setTimeout(() => setToast(""), 3000);
+    } finally {
+      setConnectionProcessing(false);
+    }
+  };
+
+  const handleViewFollowers = async () => {
+    if (showFollowersList) {
+      setShowFollowersList(false);
+      return;
+    }
+    if (followersCount === 0) return;
+    
+    setShowFollowersList(true);
+    if (followersData.length > 0) return;
+    
+    setLoadingFollowers(true);
+    try {
+      const { data: connections, error: connErr } = await supabase
+        .from('connections')
+        .select('sender_id, receiver_id')
+        .or(`receiver_id.eq.${profile.id},sender_id.eq.${profile.id}`)
+        .eq('status', 'accepted');
+        
+      if (connErr) throw connErr;
+      if (connections && connections.length > 0) {
+        const userIds = connections.map(c => c.sender_id === profile.id ? c.receiver_id : c.sender_id);
+        const { data: users, error: userErr } = await supabase.from('profiles').select('id, username, avatar_url, status').in('id', userIds);
+        if (userErr) throw userErr;
+        setFollowersData(users || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingFollowers(false);
+    }
   };
 
   if (loading) {
@@ -213,10 +336,50 @@ export default function ProfileContent({ viewUserId }) {
                 <h2 className="text-2xl font-black text-white mb-1 flex items-center gap-2">
                   @{profile?.username || 'I am robot'}
                 </h2>
-                <p className="text-blue-400 font-mono text-sm mb-6 flex items-center gap-2">
-                  <Activity size={14} className="animate-pulse" />
-                  {profile?.status || 'Maintenance & Limited'}
-                </p>
+                <div className="flex items-center gap-4 mb-6">
+                  <p className="text-blue-400 font-mono text-sm flex items-center gap-2">
+                    <Activity size={14} className="animate-pulse" />
+                    {profile?.status || 'Bio not set'}
+                  </p>
+                  <div className="w-1.5 h-1.5 bg-white/10 rounded-full" />
+                  
+                  <div className="relative">
+                    <p 
+                      onClick={handleViewFollowers}
+                      className={`text-gray-400 text-sm font-bold flex items-center gap-1.5 transition-colors ${followersCount > 0 ? 'cursor-pointer hover:text-white' : ''}`}
+                    >
+                      <Users size={14} className="text-gray-500" />
+                      <span className="text-white">
+                        {Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(followersCount)}
+                      </span> Followers
+                    </p>
+
+                    {showFollowersList && (
+                      <div className="absolute top-full left-0 mt-2 w-64 bg-[#111111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="p-3 bg-white/5 border-b border-white/5 flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Network Nodes</span>
+                          <button onClick={() => setShowFollowersList(false)} className="text-gray-500 hover:text-white transition-colors"><X size={14}/></button>
+                        </div>
+                        {/* max-h-[170px] perfectly fits 3 items of ~50px height before initiating the scrollbar */}
+                        <div className="max-h-[170px] overflow-y-auto custom-scrollbar p-2 space-y-1">
+                          {loadingFollowers ? (
+                            <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-blue-500" /></div>
+                          ) : followersData.map(user => (
+                            <div key={`follower-${user.id}`} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-xl transition-colors cursor-pointer group">
+                              <div className="relative w-8 h-8 rounded-full bg-black border border-white/10 flex items-center justify-center text-xs font-bold uppercase text-white shrink-0 overflow-hidden">
+                                {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill className="object-cover" /> : user.username?.substring(0, 2)}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">@{user.username}</p>
+                                <p className="text-[9px] text-gray-500 truncate uppercase tracking-widest">{user.status || 'Active Node'}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   <div className="flex items-center gap-4 bg-[#0F0F0F] p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
@@ -249,7 +412,7 @@ export default function ProfileContent({ viewUserId }) {
                   </div>
                 </div>
 
-                {isOwnProfile && (
+                {isOwnProfile ? (
                   <div className="mt-8 pt-6 border-t border-white/5 flex">
                     <button 
                       onClick={() => setIsEditing(true)} 
@@ -257,6 +420,44 @@ export default function ProfileContent({ viewUserId }) {
                     >
                       <Edit3 size={16} /> Edit Identity
                     </button>
+                  </div>
+                ) : (
+                  <div className="mt-8 pt-6 border-t border-white/5 flex">
+                    {connectionStatus === 'none' && (
+                      <button 
+                        onClick={handleFollow}
+                        disabled={connectionProcessing}
+                        className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50"
+                      >
+                        {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Follow
+                      </button>
+                    )}
+                    {connectionStatus === 'pending_sent' && (
+                      <button 
+                        onClick={handleUnfollow}
+                        disabled={connectionProcessing}
+                        className="flex items-center gap-2 text-sm font-bold text-gray-400 bg-white/5 hover:bg-red-500/10 hover:text-red-400 px-6 py-3 rounded-xl border border-white/5 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Cancel Request
+                      </button>
+                    )}
+                    {connectionStatus === 'pending_received' && (
+                       <button 
+                        disabled
+                        className="flex items-center gap-2 text-sm font-bold text-amber-500 bg-amber-500/10 px-6 py-3 rounded-xl border border-amber-500/20 transition-all cursor-default"
+                      >
+                        <Users size={16} /> Review in Notifications
+                      </button>
+                    )}
+                    {connectionStatus === 'accepted' && (
+                      <button 
+                        onClick={handleUnfollow}
+                        disabled={connectionProcessing}
+                        className="flex items-center gap-2 text-sm font-bold text-gray-400 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 px-6 py-3 rounded-xl border border-white/5 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Unfollow
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

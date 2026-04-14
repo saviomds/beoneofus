@@ -58,7 +58,7 @@ export default function MessagesContent() {
         .from('connections')
         .select('*')
         .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`)
-        .single();
+        .maybeSingle();
 
       if (!connection) {
         setConnectionStatus('none');
@@ -115,16 +115,36 @@ export default function MessagesContent() {
 
   // 4. Connection Handlers
   const handleSendRequest = async () => {
-    await supabase.from('connections').insert({
+    const { error } = await supabase.from('connections').insert({
       sender_id: currentUserId,
       receiver_id: activeChat.id,
       status: 'pending'
     });
+    
+    if (!error) {
+      setConnectionStatus('waiting'); // Optimistic UI update
+      await supabase.from('notifications').insert({
+        receiver_id: activeChat.id,
+        actor_id: currentUserId,
+        type: 'connection_request',
+        content: 'wants to connect'
+      });
+    }
   };
 
   const handleAcceptRequest = async () => {
     if (!activeConnectionId) return;
-    await supabase.from('connections').update({ status: 'accepted' }).eq('id', activeConnectionId);
+    const { error } = await supabase.from('connections').update({ status: 'accepted' }).eq('id', activeConnectionId);
+    
+    if (!error) {
+      setConnectionStatus('accepted'); // Optimistic UI update
+      await supabase.from('notifications').insert({
+        receiver_id: activeChat.id,
+        actor_id: currentUserId,
+        type: 'handshake',
+        content: 'accepted your connection request'
+      });
+    }
   };
 
   // 5. BLOCK / UNBLOCK LOGIC (Fixed for persistence)

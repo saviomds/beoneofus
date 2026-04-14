@@ -1,7 +1,7 @@
 "use client";
 
-import { 
-  Home, Users, MessageSquare, Bookmark,
+import {
+  Home, Users, MessageSquare, Bookmark, FileText,
   MoreHorizontal, Bell, Settings, LogOut
 } from 'lucide-react';
 import Image from 'next/image';
@@ -120,6 +120,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   const sidebarItems = [
     { id: 'feed', icon: Home, label: 'My Feed' },
     { id: 'groups', icon: Users, label: 'Groups' },
+    { id: 'pages', icon: FileText, label: 'Pages' },
     { id: 'messages', icon: MessageSquare, label: 'Messages', badge: unreadMessages },
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks' },
     { id: 'more', icon: MoreHorizontal, label: 'More' },

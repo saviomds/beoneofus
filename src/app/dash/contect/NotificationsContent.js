@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { 
   Bell, Heart, MessageSquare, Check, Zap, 
-  ShieldAlert, ShieldCheck, MoreHorizontal, Users, ChevronRight, Clock
+  ShieldAlert, ShieldCheck, MoreHorizontal, Users, ChevronRight, Clock, UserPlus
 } from "lucide-react"; 
 import { supabase } from "../../supabaseClient";
 import { useDashboard } from "./DashboardContext";
@@ -84,16 +84,75 @@ export default function NotificationsContent() {
 
     switch (notif.type) {
       case 'group_invite': 
+      case 'group_join_request':
         setActiveSection('groups'); break;
       case 'comment':
       case 'like': 
         setActiveSection('feed'); break;
+      case 'connection_request':
       case 'handshake': 
       case 'blocked':
       case 'unblocked': 
         setActiveSection('messages'); break;
       default: break;
     }
+  };
+
+  const handleAcceptConnection = async (e, notif) => {
+    e.stopPropagation();
+    if (!currentUserId) return;
+
+    await supabase.from('connections')
+      .update({ status: 'accepted' })
+      .eq('sender_id', notif.actor_id)
+      .eq('receiver_id', currentUserId);
+
+    await supabase.from('notifications').insert({
+      receiver_id: notif.actor_id,
+      actor_id: currentUserId,
+      type: 'handshake',
+      content: 'accepted your connection request'
+    });
+
+    await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+  };
+
+  const handleDeclineConnection = async (e, notif) => {
+    e.stopPropagation();
+    if (!currentUserId) return;
+
+    await supabase.from('connections')
+      .delete()
+      .eq('sender_id', notif.actor_id)
+      .eq('receiver_id', currentUserId);
+
+    await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+  };
+
+  const handleAcceptGroupJoin = async (e, notif, groupId, groupName) => {
+    e.stopPropagation();
+    if (!currentUserId || !groupId) return;
+
+    const { error } = await supabase.from('group_members').insert({
+      group_id: groupId,
+      user_id: notif.actor_id,
+      role: 'member'
+    });
+
+    if (!error || (error && error.message.includes('duplicate'))) {
+      await supabase.from('notifications').insert({ receiver_id: notif.actor_id, actor_id: currentUserId, type: 'group_invite', content: groupName });
+    }
+
+    await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+  };
+
+  const handleDeclineGroupJoin = async (e, notif) => {
+    e.stopPropagation();
+    await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
+    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
   };
 
   const getIcon = (type) => {
@@ -104,6 +163,8 @@ export default function NotificationsContent() {
       case 'blocked': return <ShieldAlert size={14} className="text-orange-500" />;
       case 'unblocked': return <ShieldCheck size={14} className="text-green-500" />;
       case 'group_invite': return <Users size={14} className="text-purple-500" />;
+      case 'group_join_request': return <Users size={14} className="text-blue-500" />;
+      case 'connection_request': return <UserPlus size={14} className="text-blue-500" />;
       default: return <Zap size={14} className="text-amber-500" />;
     }
   };
@@ -148,7 +209,18 @@ export default function NotificationsContent() {
 
       <div className="flex flex-col gap-2 px-2 pb-20">
         {notifications.length > 0 ? (
-          notifications.map((notif) => (
+          notifications.map((notif) => {
+            let displayContent = notif.content;
+            let groupId = null;
+            if (notif.type === 'group_join_request') {
+              const parts = notif.content?.split('|') || [];
+              if (parts.length > 1) {
+                groupId = parts[0];
+                displayContent = parts.slice(1).join('|');
+              }
+            }
+
+            return (
             <div 
               key={notif.id} 
               onClick={() => handleNotificationClick(notif)}
@@ -175,9 +247,11 @@ export default function NotificationsContent() {
                   {notif.type === 'like' && 'liked your post.'}
                   {notif.type === 'comment' && <>replied: <span className="text-gray-300 italic">{notif.content}</span></>}
                   {notif.type === 'handshake' && 'accepted your connection request.'}
+                  {notif.type === 'connection_request' && 'sent you a connection request.'}
                   {notif.type === 'blocked' && 'severed the connection.'}
-                  {notif.type === 'group_invite' && <>invited you to <span className="font-bold text-white">{notif.content}</span>.</>}
-                  {!['like', 'comment', 'handshake', 'blocked', 'group_invite'].includes(notif.type) && `${notif.content}`}
+                  {notif.type === 'group_join_request' && <>requested to join <span className="font-bold text-white">{displayContent}</span>.</>}
+                  {notif.type === 'group_invite' && <>granted you access to <span className="font-bold text-white">{displayContent}</span>.</>}
+                  {!['like', 'comment', 'handshake', 'connection_request', 'blocked', 'unblocked', 'group_invite', 'group_join_request'].includes(notif.type) && `${displayContent}`}
                 </div>
                 
                 <div className="flex items-center gap-3 mt-3">
@@ -188,13 +262,50 @@ export default function NotificationsContent() {
                     <Clock size={12} /> {formatTime(notif.created_at)}
                   </span>
                 </div>
+
+                {/* ACTION BUTTONS FOR CONNECTION REQUEST */}
+                {notif.type === 'connection_request' && notif.unread && (
+                  <div className="flex items-center gap-2 mt-3 z-20">
+                    <button 
+                      onClick={(e) => handleAcceptConnection(e, notif)}
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-lg shadow-blue-500/20"
+                    >
+                      Accept
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeclineConnection(e, notif)}
+                      className="bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-white/5"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                )}
+
+                {/* ACTION BUTTONS FOR GROUP JOIN REQUEST */}
+                {notif.type === 'group_join_request' && notif.unread && (
+                  <div className="flex items-center gap-2 mt-3 z-20">
+                    <button 
+                      onClick={(e) => handleAcceptGroupJoin(e, notif, groupId, displayContent)}
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-lg shadow-blue-500/20"
+                    >
+                      Approve
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeclineGroupJoin(e, notif)}
+                      className="bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-white/5"
+                    >
+                      Deny
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-3 z-10 pl-2 shrink-0">
                  {notif.unread && <div className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse" />}
                  <ChevronRight size={18} className="text-gray-600 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
               </div>
             </div>
-          ))
+            );
+          })
         ) : (
           <div className="py-32 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-[3rem] bg-gradient-to-b from-transparent to-white/[0.02]">
             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 shadow-inner">

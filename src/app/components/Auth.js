@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useRouter } from 'next/navigation';
-import { LogIn, UserPlus, Mail, Lock, AlertCircle } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function AuthForm() {
   const router = useRouter();
   const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showSuccessCard, setShowSuccessCard] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
@@ -37,7 +38,7 @@ export default function AuthForm() {
           password 
         });
         if (signUpError) throw signUpError;
-        alert('Log-in to your account!');
+        setShowSuccessCard(true);
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({ 
           email, 
@@ -56,6 +57,37 @@ export default function AuthForm() {
 
   return (
     <div className="w-full">
+      {/* --- CUSTOM SUCCESS POPUP CARD --- */}
+      {showSuccessCard && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              setShowSuccessCard(false);
+              setIsRegistering(false);
+            }}
+          />
+          <div className="bg-[#0D0D0D] border border-green-500/30 w-full max-w-sm rounded-2xl p-8 shadow-[0_0_50px_-12px_rgba(34,197,94,0.5)] text-center relative z-10 animate-in fade-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
+              <CheckCircle2 size={40} className="animate-bounce" />
+            </div>
+            <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Registration Complete!</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6">
+              Your node has been registered on the <span className="text-blue-500 font-bold">beoneofus</span> network.
+            </p>
+            <button 
+              onClick={() => {
+                setShowSuccessCard(false);
+                setIsRegistering(false);
+              }}
+              className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-all border border-white/5"
+            >
+              Proceed to Login
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-white mb-2">
           {isRegistering ? 'Create Account' : 'Welcome Back'}

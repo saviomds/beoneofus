@@ -13,6 +13,7 @@ import {
   Loader2,
   Check,
   UserPlus,
+  UserMinus,
   Trash2,
   AlertTriangle,
   ChevronLeft,
@@ -49,6 +50,13 @@ export default function GroupsContent() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState(null);
   const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false);
+
+  // Join Request States
+  const [groupToJoin, setGroupToJoin] = useState(null);
+
+  // Manage Members States
+  const [membersModalOpen, setMembersModalOpen] = useState(false);
+  const [workspaceMembers, setWorkspaceMembers] = useState([]);
 
   // Workspace Chat States
   const [activeWorkspace, setActiveWorkspace] = useState(null);
@@ -92,7 +100,7 @@ export default function GroupsContent() {
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('group_messages')
-        .select('*, profiles:user_id(username, avatar_url)')
+        .select('*, profiles(username, avatar_url)')
         .eq('group_id', activeWorkspace.id)
         .order('created_at', { ascending: true });
       
@@ -104,7 +112,7 @@ export default function GroupsContent() {
     const channel = supabase.channel(`group-${activeWorkspace.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages', filter: `group_id=eq.${activeWorkspace.id}` }, (payload) => {
         const fetchNewMsg = async () => {
-           const { data } = await supabase.from('group_messages').select('*, profiles:user_id(username, avatar_url)').eq('id', payload.new.id).maybeSingle();
+           const { data } = await supabase.from('group_messages').select('*, profiles(username, avatar_url)').eq('id', payload.new.id).maybeSingle();
            if (data) {
              setWorkspaceMessages(prev => {
                if (prev.some(m => m.id === data.id)) return prev;
@@ -309,10 +317,44 @@ export default function GroupsContent() {
         .maybeSingle();
         
       if (error) throw error;
-      if (!member) throw new Error("Access Denied: You must be an invited member to access this workspace.");
+      if (!member) {
+        setGroupToJoin(group);
+        return;
+      }
       
       setActiveWorkspace(group);
     } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- MANAGE MEMBERS ---
+  const fetchWorkspaceMembers = async () => {
+    setIsProcessing(true);
+    try {
+      const { data, error } = await supabase
+        .from('group_members')
+        .select('user_id, role, profiles(username, avatar_url)')
+        .eq('group_id', activeWorkspace.id);
+      if (error) throw error;
+      setWorkspaceMembers(data || []);
+    } catch(err) {
+      showToast(err.message, "error");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleKickUser = async (userId, username) => {
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.from('group_members').delete().eq('group_id', activeWorkspace.id).eq('user_id', userId);
+      if (error) throw error;
+      showToast(`@${username} has been removed from the group.`);
+      setWorkspaceMembers(prev => prev.filter(m => m.user_id !== userId));
+    } catch(err) {
       showToast(err.message, "error");
     } finally {
       setIsProcessing(false);
@@ -331,7 +373,7 @@ export default function GroupsContent() {
       group_id: activeWorkspace.id,
       user_id: currentUserId,
       text: text
-    }).select('*, profiles:user_id(username)').single();
+    }).select('*, profiles(username, avatar_url)').single();
     
     if (error) {
       if (error.message.includes('row-level security')) {
@@ -368,6 +410,16 @@ export default function GroupsContent() {
                 <p className="text-[10px] font-black tracking-widest text-green-500 uppercase">Secured Workspace</p>
               </div>
             </div>
+            
+            <button 
+              onClick={() => {
+                fetchWorkspaceMembers();
+                setMembersModalOpen(true);
+              }}
+              className="flex items-center gap-2 p-2 sm:px-4 sm:py-2 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition-colors text-xs font-bold"
+            >
+              <Users size={16} /> <span className="hidden sm:inline">Members</span>
+            </button>
           </div>
 
           {/* Messages */}
@@ -718,6 +770,110 @@ export default function GroupsContent() {
         </div>
       </div>
     )}
+
+      {/* REQUEST JOIN MODAL */}
+      {groupToJoin && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setGroupToJoin(null)} />
+          <div className="relative w-full max-w-sm bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl p-6 text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Request Access?</h3>
+            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+              You are not a member of <span className="font-bold text-white">{groupToJoin.name}</span>. Would you like to request access from the administrator?
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={async () => {
+                  setIsProcessing(true);
+                  try {
+                    const { error } = await supabase.from('notifications').insert({
+                      receiver_id: groupToJoin.created_by,
+                      actor_id: currentUserId,
+                      type: 'group_join_request',
+                      content: `${groupToJoin.id}|${groupToJoin.name}`
+                    });
+                    if (error) throw error;
+                    showToast("Join request sent to the admin.");
+                    setGroupToJoin(null);
+                  } catch(e) { showToast(e.message, "error"); } 
+                  finally { setIsProcessing(false); }
+                }} 
+                disabled={isProcessing} 
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'Send Join Request'}
+              </button>
+              <button onClick={() => setGroupToJoin(null)} className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition border border-white/5">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MEMBERS MODAL */}
+      {membersModalOpen && activeWorkspace && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setMembersModalOpen(false)} />
+          <div className="relative w-full max-w-md bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-white">Group Members</h2>
+                <p className="text-xs text-gray-500 mt-1">{activeWorkspace.name}</p>
+              </div>
+              <button onClick={() => setMembersModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-400 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-2">
+              {isProcessing && workspaceMembers.length === 0 ? (
+                <div className="flex justify-center p-10"><Loader2 className="animate-spin text-blue-500" /></div>
+              ) : (
+                workspaceMembers.map(member => {
+                  const isAdmin = member.user_id === activeWorkspace.created_by;
+                  const isMe = member.user_id === currentUserId;
+                  const canKick = activeWorkspace.created_by === currentUserId && !isAdmin;
+                  
+                  return (
+                    <div key={member.user_id} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative w-10 h-10 rounded-xl bg-black overflow-hidden shrink-0 border border-white/10 flex items-center justify-center text-xs font-bold text-gray-500 uppercase">
+                          {member.profiles?.avatar_url ? (
+                            <Image src={member.profiles.avatar_url} alt="avatar" fill className="object-cover" />
+                          ) : (
+                            member.profiles?.username?.substring(0,2) || '??'
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-bold text-white truncate flex items-center gap-2">
+                            @{member.profiles?.username}
+                            {isMe && <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-widest">You</span>}
+                          </h4>
+                          <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mt-0.5">
+                            {isAdmin ? <span className="text-green-500">Administrator</span> : 'Member'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {canKick && (
+                        <button 
+                          onClick={() => handleKickUser(member.user_id, member.profiles?.username)}
+                          disabled={isProcessing}
+                          className="p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
+                          title={`Kick @${member.profiles?.username}`}
+                        >
+                          <UserMinus size={16} />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* USER PROFILE MODAL */}
       {selectedUserId && (

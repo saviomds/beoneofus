@@ -174,7 +174,7 @@ export default function RightSidebar() {
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="relative w-10 h-10 rounded-xl bg-black overflow-hidden shrink-0 border border-white/10">
                       {user.avatar_url ? (
-                        <Image src={user.avatar_url} alt="avatar" fill className="object-cover" />
+                        <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                       ) : (
                         <div className="w-full h-full bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold text-sm uppercase">
                           {user.username?.[0]}

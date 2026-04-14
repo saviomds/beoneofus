@@ -17,7 +17,9 @@ import {
   Trash2,
   AlertTriangle,
   ChevronLeft,
-  Send
+  Send,
+  Paperclip,
+  MessageSquare
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -63,7 +65,11 @@ export default function GroupsContent() {
   const [workspaceMessages, setWorkspaceMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const workspaceScrollRef = useRef(null);
+  const imageInputRef = useRef(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [chatImageFile, setChatImageFile] = useState(null);
+  const [chatImagePreview, setChatImagePreview] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null);
 
   // Fetch Groups
   useEffect(() => {
@@ -100,7 +106,7 @@ export default function GroupsContent() {
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('group_messages')
-        .select('*, profiles(username, avatar_url)')
+        .select('*, profiles(username, avatar_url), replied_message:reply_to_message_id(*, text, image_url, profiles(username))')
         .eq('group_id', activeWorkspace.id)
         .order('created_at', { ascending: true });
       
@@ -112,7 +118,7 @@ export default function GroupsContent() {
     const channel = supabase.channel(`group-${activeWorkspace.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages', filter: `group_id=eq.${activeWorkspace.id}` }, (payload) => {
         const fetchNewMsg = async () => {
-           const { data } = await supabase.from('group_messages').select('*, profiles(username, avatar_url)').eq('id', payload.new.id).maybeSingle();
+           const { data } = await supabase.from('group_messages').select('*, profiles(username, avatar_url), replied_message:reply_to_message_id(*, text, image_url, profiles(username))').eq('id', payload.new.id).maybeSingle();
            if (data) {
              setWorkspaceMessages(prev => {
                if (prev.some(m => m.id === data.id)) return prev;
@@ -131,10 +137,10 @@ export default function GroupsContent() {
     if (workspaceScrollRef.current) workspaceScrollRef.current.scrollTop = workspaceScrollRef.current.scrollHeight;
   }, [workspaceMessages, activeWorkspace]);
 
-  // Handle Image Upload logic
-  const handleImageClick = () => fileInputRef.current?.click();
+  // --- GROUP IMAGE UPLOAD LOGIC ---
+  const handleGroupImageClick = () => fileInputRef.current?.click();
 
-  const handleFileChange = (event) => {
+  const handleGroupFileChange = (event) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -145,10 +151,30 @@ export default function GroupsContent() {
     }
   };
 
-  const handleRemoveImage = (e) => {
+  const handleRemoveGroupImage = (e) => {
     e.stopPropagation();
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // --- CHAT IMAGE UPLOAD LOGIC ---
+  const handleChatFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setChatImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setChatImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveChatImage = (e) => {
+    e.stopPropagation();
+    setChatImageFile(null);
+    setChatImagePreview(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
   const showToast = (msg, type = "success") => {
@@ -364,29 +390,48 @@ export default function GroupsContent() {
   // --- SEND WORKSPACE MESSAGE ---
   const handleSendWorkspaceMessage = async (e) => {
     e.preventDefault();
-    if (!messageInput.trim() || !activeWorkspace || !currentUserId) return;
-    
     const text = messageInput;
-    setMessageInput("");
-    
-    const { data: newMsg, error } = await supabase.from('group_messages').insert({
-      group_id: activeWorkspace.id,
-      user_id: currentUserId,
-      text: text
-    }).select('*, profiles(username, avatar_url)').single();
-    
-    if (error) {
-      if (error.message.includes('row-level security')) {
-        showToast("Access Denied: You do not have permission to send messages here.", "error");
-      } else {
-        showToast("Failed to send message: " + error.message, "error");
+    const imageToUpload = chatImageFile;
+    const replyToId = replyingTo?.id;
+
+    if (!text.trim() && !imageToUpload) return;
+
+    // Store values and reset UI immediately for responsiveness
+    setMessageInput('');
+    setChatImageFile(null);
+    setChatImagePreview(null);
+    setReplyingTo(null);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+
+    try {
+      let imageUrl = null;
+      if (imageToUpload) {
+        const fileExt = imageToUpload.name.split('.').pop();
+        const fileName = `msg-${Date.now()}.${fileExt}`;
+        const filePath = `${activeWorkspace.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('group_images')
+          .upload(filePath, imageToUpload);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from('group_images').getPublicUrl(filePath);
+        imageUrl = urlData.publicUrl;
       }
-    }
-    else if (newMsg) {
-      setWorkspaceMessages(prev => {
-        if (prev.some(m => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
+
+      // Insert message. The real-time subscription will update the UI.
+      const { error } = await supabase.from('group_messages').insert({
+        group_id: activeWorkspace.id,
+        user_id: currentUserId,
+        text: text.trim() || "",
+        image_url: imageUrl,
+        reply_to_message_id: replyToId,
       });
+
+      if (error) throw error;
+    } catch (err) {
+      showToast('Failed to send message: ' + err.message, 'error');
     }
   };
 
@@ -427,7 +472,7 @@ export default function GroupsContent() {
             {workspaceMessages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500">
                 <Users size={48} className="mb-4 opacity-20" />
-                <p className="font-bold text-sm uppercase tracking-widest mb-1">Workspace Initialized</p>
+                <p className="font-bold text-sm uppercase tracking-widest mb-1">Node Initialized</p>
                 <p className="text-xs font-mono">End-to-end encrypted node. Say hello to the group.</p>
               </div>
             ) : (
@@ -435,28 +480,54 @@ export default function GroupsContent() {
                 const isMe = msg.user_id === currentUserId;
                 return (
                   <div key={msg.id} className={`flex gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
-                    {!isMe && (
+                    {!isMe ? (
                       <div 
                         onClick={() => setSelectedUserId(msg.user_id)}
                         className="relative w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-500/30 transition-colors overflow-hidden"
                         title={`View @${msg.profiles?.username}'s Profile`}
                       >
                         {msg.profiles?.avatar_url ? (
-                          <Image src={msg.profiles.avatar_url} alt="avatar" fill className="object-cover" />
+                          <Image src={msg.profiles.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" />
                         ) : (
                           msg.profiles?.username?.substring(0, 2) || "??"
                         )}
                       </div>
+                    ) : (
+                      <div className="flex items-end">
+                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MessageSquare size={14} />
+                        </button>
+                      </div>
                     )}
-                    <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} max-w-[80%]`}>
+                    <div className={`flex flex-col group ${isMe ? "items-end" : "items-start"} max-w-[80%]`}>
                       {!isMe && <span className="text-[10px] text-gray-500 font-bold mb-1 ml-1">@{msg.profiles?.username}</span>}
-                      <div className={`w-full px-4 py-2.5 rounded-2xl text-[13px] ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-500/20" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"}`}>
-                        {msg.text}
+                      <div className={`w-full p-1 rounded-2xl ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-500/20" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"}`}>
+                        <div className="px-3 pt-1.5 pb-2">
+                          {msg.replied_message && (
+                            <div className="border-l-2 border-blue-500/50 pl-2 mb-2 text-xs opacity-80">
+                              <p className="font-bold text-current">@{msg.replied_message.profiles?.username}</p>
+                              <p className="text-current/80 line-clamp-1">{msg.replied_message.text || 'Image'}</p>
+                            </div>
+                          )}
+                          {msg.image_url && (
+                            <div className="relative w-full aspect-video rounded-lg overflow-hidden my-2 cursor-pointer" onClick={() => window.open(msg.image_url, '_blank')}>
+                              <Image src={msg.image_url} alt="message attachment" fill sizes="(max-width: 768px) 100vw, 400px" className="object-cover" />
+                            </div>
+                          )}
+                          {msg.text && <p className="text-[13px] whitespace-pre-wrap break-words">{msg.text}</p>}
+                        </div>
                       </div>
                       <span className="text-[9px] text-gray-600 mt-1 mx-1">
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
+                    {!isMe && (
+                      <div className="flex items-end">
+                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MessageSquare size={14} />
+                        </button>
+                      </div>
+                  )}
                   </div>
                 )
               })
@@ -465,15 +536,40 @@ export default function GroupsContent() {
 
           {/* Input */}
           <div className="p-3 bg-[#0F0F0F] border-t border-white/5 z-10 shrink-0">
+            {replyingTo && (
+              <div className="bg-black/30 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="min-w-0">
+                  <p className="text-gray-400">Replying to <span className="font-bold text-blue-400">@{replyingTo.profiles?.username}</span></p>
+                  <p className="text-gray-500 truncate">{replyingTo.text || 'Image'}</p>
+                </div>
+                <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 hover:text-white"><X size={16} /></button>
+              </div>
+            )}
+            {chatImagePreview && (
+              <div className="bg-black/30 rounded-t-xl p-2 flex animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="relative w-16 h-16 rounded-lg overflow-hidden">
+                  <Image src={chatImagePreview} alt="preview" fill sizes="64px" className="object-cover" />
+                  <button onClick={handleRemoveChatImage} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5"><X size={12} /></button>
+                </div>
+              </div>
+            )}
             <form onSubmit={handleSendWorkspaceMessage} className="flex items-center gap-2 bg-black border border-white/10 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500/30 transition-all">
+              <input type="file" ref={imageInputRef} onChange={handleChatFileChange} accept="image/*" className="hidden" />
+              <button 
+                type="button" 
+                onClick={() => imageInputRef.current?.click()}
+                className="p-2 text-gray-500 hover:text-blue-400 transition-colors"
+              >
+                <Paperclip size={18} />
+              </button>
               <input 
                 type="text" 
                 value={messageInput} 
                 onChange={e => setMessageInput(e.target.value)} 
                 placeholder="Broadcast to workspace..." 
-                className="flex-1 bg-transparent border-none focus:outline-none text-xs text-white py-2" 
+                className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white py-2" 
               />
-              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95">
+              <button type="submit" disabled={isProcessing} className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50">
                 <Send size={16} strokeWidth={3} />
               </button>
             </form>
@@ -615,18 +711,18 @@ export default function GroupsContent() {
 
             <form className="p-6 space-y-5" onSubmit={handleCreateGroup}>
               <div className="flex items-center gap-4">
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                <input type="file" ref={fileInputRef} onChange={handleGroupFileChange} accept="image/*" className="hidden" />
                 <div 
-                  onClick={handleImageClick}
+                  onClick={handleGroupImageClick}
                   className={`h-16 w-16 rounded-2xl flex items-center justify-center cursor-pointer transition-all overflow-hidden border ${
                     imagePreview ? 'border-transparent' : 'bg-white/5 border-dashed border-white/20 hover:border-blue-500/50 text-gray-500 hover:text-blue-400'
                   }`}
                 >
                   {imagePreview ? (
                     <div className="relative w-full h-full group">
-                      <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                      <Image src={imagePreview} alt="Preview" fill sizes="64px" className="object-cover" />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <X size={16} className="text-white bg-red-500 rounded-full p-0.5" onClick={handleRemoveImage} />
+                        <X size={16} className="text-white bg-red-500 rounded-full p-0.5" onClick={handleRemoveGroupImage} />
                       </div>
                     </div>
                   ) : (
@@ -840,7 +936,7 @@ export default function GroupsContent() {
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="relative w-10 h-10 rounded-xl bg-black overflow-hidden shrink-0 border border-white/10 flex items-center justify-center text-xs font-bold text-gray-500 uppercase">
                           {member.profiles?.avatar_url ? (
-                            <Image src={member.profiles.avatar_url} alt="avatar" fill className="object-cover" />
+                            <Image src={member.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                           ) : (
                             member.profiles?.username?.substring(0,2) || '??'
                           )}

@@ -179,7 +179,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10 shrink-0">
                <div className="relative w-full h-full rounded-xl bg-black flex items-center justify-center text-xs font-bold text-white uppercase overflow-hidden">
                  {profile?.avatar_url ? (
-                   <Image src={profile.avatar_url} alt="Avatar" fill className="object-cover" />
+                   <Image src={profile.avatar_url} alt="Avatar" fill sizes="40px" className="object-cover" />
                  ) : (
                    profile ? profile.username?.substring(0, 2) : '??'
                  )}

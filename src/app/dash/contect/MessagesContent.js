@@ -6,7 +6,8 @@ import {
   Search, MoreVertical, Phone, Video, Send, 
   Paperclip, CheckCheck, UserPlus, Check, X, 
   Trash2, AlertTriangle, MoreHorizontal, ShieldAlert, ShieldCheck,
-  ChevronLeft
+  ChevronLeft,
+  MessageSquare
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -27,6 +28,10 @@ export default function MessagesContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false); // Mobile view toggle
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const imageInputRef = useRef(null);
 
   const scrollRef = useRef(null);
   const channelRef = useRef(null);
@@ -85,7 +90,7 @@ export default function MessagesContent() {
     const fetchMessages = async () => {
       const { data } = await supabase
         .from('messages')
-        .select('*')
+        .select('*, replied_message:reply_to_message_id(*)')
         .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`)
         .order('created_at', { ascending: true });
       setMessages(data || []);
@@ -97,10 +102,16 @@ export default function MessagesContent() {
     channelRef.current = supabase
       .channel(channelId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'connections' }, () => checkConnectionAndFetch())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
         const newMessage = payload.new;
         if (newMessage.sender_id === activeChat.id || newMessage.receiver_id === activeChat.id) {
-          setMessages((prev) => prev.find(m => m.id === newMessage.id) ? prev : [...prev, newMessage]);
+          // Fetch the joined replied message data immediately
+          const { data } = await supabase.from('messages').select('*, replied_message:reply_to_message_id(*)').eq('id', newMessage.id).maybeSingle();
+          if (data) {
+            setMessages((prev) => prev.find(m => m.id === data.id) ? prev : [...prev, data]);
+          } else {
+            setMessages((prev) => prev.find(m => m.id === newMessage.id) ? prev : [...prev, newMessage]);
+          }
         }
       })
       .subscribe();
@@ -191,16 +202,70 @@ export default function MessagesContent() {
   // 6. Send Message
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputValue.trim() || connectionStatus !== 'accepted') return;
+    if (connectionStatus !== 'accepted') return;
+    
     const msgText = inputValue;
+    const imageToUpload = imageFile;
+    const replyToId = replyingTo?.id;
+
+    if (!msgText.trim() && !imageToUpload) return;
+
     const optimisticId = Date.now(); 
-    setMessages((prev) => [...prev, { id: optimisticId, sender_id: currentUserId, receiver_id: activeChat.id, text: msgText, created_at: new Date().toISOString(), isSending: true }]);
+    setMessages((prev) => [...prev, { id: optimisticId, sender_id: currentUserId, receiver_id: activeChat.id, text: msgText, image_url: imagePreview, replied_message: replyingTo, created_at: new Date().toISOString(), isSending: true }]);
+    
     setInputValue("");
-    const { error } = await supabase.from('messages').insert({ sender_id: currentUserId, receiver_id: activeChat.id, text: msgText });
-    if (error) setMessages((prev) => prev.filter(m => m.id !== optimisticId));
+    setImageFile(null);
+    setImagePreview(null);
+    setReplyingTo(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+
+    try {
+      let imageUrl = null;
+      if (imageToUpload) {
+        const fileExt = imageToUpload.name.split('.').pop();
+        const fileName = `msg-${Date.now()}.${fileExt}`;
+        const filePath = `${currentUserId}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage.from('chat_images').upload(filePath, imageToUpload);
+        if (uploadError) throw uploadError;
+        
+        const { data: urlData } = supabase.storage.from('chat_images').getPublicUrl(filePath);
+        imageUrl = urlData.publicUrl;
+      }
+
+      const { error } = await supabase.from('messages').insert({ 
+        sender_id: currentUserId, 
+        receiver_id: activeChat.id, 
+        text: msgText.trim() || "",
+        image_url: imageUrl,
+        reply_to_message_id: replyToId
+      });
+      if (error) throw error;
+    } catch (err) {
+      setMessages((prev) => prev.filter(m => m.id !== optimisticId));
+      alert("Failed to send message: " + err.message);
+    }
   };
 
   if (!currentUserId) return <div className="p-10 text-gray-500 font-bold uppercase text-xs text-center">Node Unauthorized</div>;
+
+  // Handle Image attach
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = (e) => {
+    e.stopPropagation();
+    setImageFile(null);
+    setImagePreview(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  };
 
   return (
     <div className="w-full flex h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
@@ -240,7 +305,7 @@ export default function MessagesContent() {
                 title={`View @${contact.username}'s Profile`}
               >
                 {contact.avatar_url ? (
-                  <Image src={contact.avatar_url} alt="avatar" fill className="object-cover" />
+                  <Image src={contact.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                 ) : (
                   contact.username[0].toUpperCase()
                 )}
@@ -269,7 +334,7 @@ export default function MessagesContent() {
                   title={`View @${activeChat.username}'s Profile`}
                 >
                   {activeChat.avatar_url ? (
-                    <Image src={activeChat.avatar_url} alt="avatar" fill className="object-cover" />
+                    <Image src={activeChat.avatar_url} alt="avatar" fill sizes="36px" className="object-cover" />
                   ) : (
                     activeChat.username[0].toUpperCase()
                   )}
@@ -304,11 +369,43 @@ export default function MessagesContent() {
             <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 space-y-4 no-scrollbar scroll-smooth flex flex-col">
               {connectionStatus === 'accepted' ? (
                 messages.map((msg) => (
-                  <div key={msg.id} className={`flex ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
+                  <div key={msg.id} className={`flex gap-2 group ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
+                    {msg.sender_id !== currentUserId && (
+                      <div className="flex items-end">
+                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MessageSquare size={14} />
+                        </button>
+                      </div>
+                    )}
                     <div className={`max-w-[85%] ${msg.sender_id === currentUserId ? "text-right" : "text-left"}`}>
-                      <div className={`inline-block px-4 py-2.5 rounded-2xl text-[13px] break-words text-left ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-none shadow-lg" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>{msg.text}</div>
-                      <div className="mt-1 flex items-center gap-1.5 text-[9px] text-gray-600 px-1 justify-end">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{msg.sender_id === currentUserId && <CheckCheck size={12} className={msg.isSending ? "text-gray-600" : "text-blue-500"} />}</div>
+                      <div className={`inline-block p-1 rounded-2xl text-[13px] break-words text-left shadow-lg ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-none" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>
+                        <div className="px-3 pt-1.5 pb-2">
+                          {msg.replied_message && (
+                            <div className="border-l-2 border-blue-500/50 pl-2 mb-2 text-xs opacity-80">
+                              <p className="font-bold text-current">@{msg.replied_message.sender_id === currentUserId ? 'You' : activeChat.username}</p>
+                              <p className="text-current/80 line-clamp-1">{msg.replied_message.text || 'Image'}</p>
+                            </div>
+                          )}
+                          {msg.image_url && (
+                            <div className="relative w-full min-w-[200px] aspect-video rounded-lg overflow-hidden my-2 cursor-pointer" onClick={() => window.open(msg.image_url, '_blank')}>
+                              <Image src={msg.image_url} alt="attachment" fill sizes="(max-width: 768px) 100vw, 400px" className="object-cover" />
+                            </div>
+                          )}
+                          {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+                        </div>
+                      </div>
+                      <div className={`mt-1 flex items-center gap-1.5 text-[9px] text-gray-600 px-1 ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {msg.sender_id === currentUserId && <CheckCheck size={12} className={msg.isSending ? "text-gray-600" : "text-blue-500"} />}
+                      </div>
                     </div>
+                    {msg.sender_id === currentUserId && (
+                      <div className="flex items-end">
+                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MessageSquare size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
@@ -335,8 +432,28 @@ export default function MessagesContent() {
             </div>
 
             <div className={`pt-3 pb-2 md:pb-0 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
+              {replyingTo && (
+                <div className="bg-black/30 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="min-w-0">
+                    <p className="text-gray-400">Replying to <span className="font-bold text-blue-400">@{replyingTo.sender_id === currentUserId ? 'You' : activeChat.username}</span></p>
+                    <p className="text-gray-500 truncate">{replyingTo.text || 'Image'}</p>
+                  </div>
+                  <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 hover:text-white"><X size={16} /></button>
+                </div>
+              )}
+              {imagePreview && (
+                <div className="bg-black/30 rounded-t-xl p-2 flex animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden">
+                    <Image src={imagePreview} alt="preview" fill sizes="64px" className="object-cover" />
+                    <button onClick={handleRemoveImage} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5"><X size={12} /></button>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-[#0F0F0F] border border-white/5 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500/30 transition-all">
-                <button type="button" className="text-gray-600 hover:text-gray-400 transition-colors"><Paperclip size={18} /></button>
+                <input type="file" ref={imageInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-600 hover:text-blue-400 transition-colors p-2">
+                  <Paperclip size={18} />
+                </button>
                 <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Secure packet to @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-xs text-white py-2" />
                 <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
               </form>

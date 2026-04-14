@@ -317,7 +317,7 @@ export default function FeedContent() {
                     title={`View @${post.profiles?.username}'s Profile`}
                   >
                     {post.profiles?.avatar_url ? (
-                      <Image src={post.profiles.avatar_url} alt="avatar" fill className="object-cover" />
+                      <Image src={post.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                     ) : (
                       post.profiles?.username?.substring(0, 2) || '??'
                     )}
@@ -351,7 +351,7 @@ export default function FeedContent() {
                 )}
                 {post.image_url && (
                   <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10">
-                    <Image src={post.image_url} alt="Post media" fill className="object-cover" />
+                    <Image src={post.image_url} alt="Post media" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                   </div>
                 )}
               </div>

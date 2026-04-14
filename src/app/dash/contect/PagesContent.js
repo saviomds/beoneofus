@@ -142,7 +142,7 @@ export default function PagesContent() {
                 <div key={post.id} className="bg-[#111111] border border-white/5 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-2">
                   <div className="relative w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 overflow-hidden">
                     {post.profiles?.avatar_url ? (
-                      <Image src={post.profiles.avatar_url} alt="avatar" fill className="object-cover" />
+                      <Image src={post.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                     ) : (
                       post.profiles?.username?.substring(0, 2) || "??"
                     )}

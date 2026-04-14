@@ -232,7 +232,7 @@ export default function NotificationsContent() {
               <div className="relative flex-shrink-0 z-10">
                 <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg transition-colors overflow-hidden ${notif.unread ? 'bg-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white/5 border border-white/10 group-hover:bg-white/10'}`}>
                   {notif.actor?.avatar_url ? (
-                    <Image src={notif.actor.avatar_url} alt="avatar" fill className="object-cover" />
+                    <Image src={notif.actor.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
                   ) : (
                     notif.actor?.username?.[0] || 'S'
                   )}

@@ -131,7 +131,7 @@ export default function Header({ setActiveTab }) {
                         <div key={`user-${user.id}`} onClick={() => { setSearchQuery(''); setSelectedUserId(user.id); }} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-xl cursor-pointer transition-all group">
                           <div className="relative w-8 h-8 rounded-xl bg-black overflow-hidden shrink-0 border border-white/10 flex items-center justify-center text-xs font-bold text-white uppercase">
                             {user.avatar_url ? (
-                              <Image src={user.avatar_url} alt="avatar" fill className="object-cover" />
+                              <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" />
                             ) : (
                               user.username?.substring(0, 2) || '??'
                             )}

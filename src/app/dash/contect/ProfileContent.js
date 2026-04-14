@@ -280,7 +280,7 @@ export default function ProfileContent({ viewUserId }) {
           {/* Avatar Section */}
           <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-4xl font-black text-white shadow-xl shadow-blue-500/20 shrink-0 border border-white/10 overflow-hidden group">
             {displayAvatar ? (
-              <Image src={displayAvatar} alt="Profile Avatar" fill className="object-cover" />
+              <Image src={displayAvatar} alt="Profile Avatar" fill sizes="96px" className="object-cover" />
             ) : (
               userInitial
             )}
@@ -367,7 +367,7 @@ export default function ProfileContent({ viewUserId }) {
                           ) : followersData.map(user => (
                             <div key={`follower-${user.id}`} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-xl transition-colors cursor-pointer group">
                               <div className="relative w-8 h-8 rounded-full bg-black border border-white/10 flex items-center justify-center text-xs font-bold uppercase text-white shrink-0 overflow-hidden">
-                                {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill className="object-cover" /> : user.username?.substring(0, 2)}
+                                {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : user.username?.substring(0, 2)}
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">@{user.username}</p>

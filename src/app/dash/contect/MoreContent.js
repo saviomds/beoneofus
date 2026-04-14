@@ -257,7 +257,7 @@ const CommunityHubTool = ({ currentUserId }) => {
                title={`View @${msg.profiles?.username}'s Profile`}
              >
                {msg.profiles?.avatar_url ? (
-                 <Image src={msg.profiles.avatar_url} alt="avatar" fill className="object-cover" />
+                 <Image src={msg.profiles.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" />
                ) : (
                  msg.profiles?.username?.substring(0, 2) || "??"
                )}

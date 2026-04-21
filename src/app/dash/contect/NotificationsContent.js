@@ -196,13 +196,13 @@ export default function NotificationsContent() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 px-2">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tighter flex items-center gap-3">
+          <h1 className="text-3xl font-black text-gray-900 tracking-tighter flex items-center gap-3">
             <Bell size={28} className="text-blue-500" />
             Notifications
           </h1>
           <p className="text-gray-500 text-sm mt-1 font-medium">Monitor your incoming alerts and network handshakes.</p>
         </div>
-        <button onClick={markAllRead} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 px-4 py-2.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-500/5">
+        <button onClick={markAllRead} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm">
           <Check size={16} /> Mark all read
         </button>
       </div>
@@ -224,38 +224,38 @@ export default function NotificationsContent() {
             <div 
               key={notif.id} 
               onClick={() => handleNotificationClick(notif)}
-              className={`group relative flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-[1.5rem] transition-all border cursor-pointer overflow-hidden ${notif.unread ? 'bg-blue-900/10 border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.08)]' : 'bg-[#0A0A0A] border-white/5 hover:border-blue-500/30 hover:bg-[#0F0F0F]'}`}
+              className={`group relative flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-[1.5rem] transition-all border cursor-pointer overflow-hidden ${notif.unread ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-gray-200 hover:border-blue-500/30 hover:shadow-md'}`}
             >
               {/* Subtle background glow effect on hover */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 via-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
               <div className="relative flex-shrink-0 z-10">
-                <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg transition-colors overflow-hidden ${notif.unread ? 'bg-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white/5 border border-white/10 group-hover:bg-white/10'}`}>
+                <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg transition-colors overflow-hidden ${notif.unread ? 'bg-blue-600 shadow-sm' : 'bg-gray-100 text-gray-500 border border-gray-200 group-hover:bg-gray-200'}`}>
                   {notif.actor?.avatar_url ? (
                     <Image src={notif.actor.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
                   ) : (
                     notif.actor?.username?.[0] || 'S'
                   )}
                 </div>
-                <div className="absolute -bottom-2 -right-2 w-7 h-7 bg-[#0A0A0A] border border-white/10 rounded-xl flex items-center justify-center shadow-xl">
+                <div className="absolute -bottom-2 -right-2 w-7 h-7 bg-white border border-gray-200 rounded-xl flex items-center justify-center shadow-sm">
                   {getIcon(notif.type)}
                 </div>
               </div>
               <div className="flex-1 min-w-0 z-10 pt-1">
-                <div className="text-sm text-gray-400 leading-relaxed">
-                  <span className="font-bold text-white mr-1">@{notif.actor?.username || 'System'}</span> 
+                <div className="text-sm text-gray-600 leading-relaxed">
+                  <span className="font-bold text-gray-900 mr-1">@{notif.actor?.username || 'System'}</span> 
                   {notif.type === 'like' && 'liked your post.'}
-                  {notif.type === 'comment' && <>replied: <span className="text-gray-300 italic">{notif.content}</span></>}
+                  {notif.type === 'comment' && <>replied: <span className="text-gray-700 italic">{notif.content}</span></>}
                   {notif.type === 'handshake' && 'accepted your connection request.'}
                   {notif.type === 'connection_request' && 'sent you a connection request.'}
                   {notif.type === 'blocked' && 'severed the connection.'}
-                  {notif.type === 'group_join_request' && <>requested to join <span className="font-bold text-white">{displayContent}</span>.</>}
-                  {notif.type === 'group_invite' && <>granted you access to <span className="font-bold text-white">{displayContent}</span>.</>}
+                  {notif.type === 'group_join_request' && <>requested to join <span className="font-bold text-gray-900">{displayContent}</span>.</>}
+                  {notif.type === 'group_invite' && <>granted you access to <span className="font-bold text-gray-900">{displayContent}</span>.</>}
                   {!['like', 'comment', 'handshake', 'connection_request', 'blocked', 'unblocked', 'group_invite', 'group_join_request'].includes(notif.type) && `${displayContent}`}
                 </div>
                 
                 <div className="flex items-center gap-3 mt-3">
-                  <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg border ${notif.unread ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-white/5 text-gray-500 border-white/10'}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg border ${notif.unread ? 'bg-blue-100 text-blue-600 border-blue-200' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
                     {notif.type.replace('_', ' ')}
                   </span>
                   <span className="text-xs text-gray-600 font-medium flex items-center gap-1">
@@ -268,13 +268,13 @@ export default function NotificationsContent() {
                   <div className="flex items-center gap-2 mt-3 z-20">
                     <button 
                       onClick={(e) => handleAcceptConnection(e, notif)}
-                      className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-lg shadow-blue-500/20"
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
                     >
                       Accept
                     </button>
                     <button 
                       onClick={(e) => handleDeclineConnection(e, notif)}
-                      className="bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-white/5"
+                      className="bg-gray-50 hover:bg-red-50 text-gray-600 hover:text-red-600 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-gray-200"
                     >
                       Decline
                     </button>
@@ -286,13 +286,13 @@ export default function NotificationsContent() {
                   <div className="flex items-center gap-2 mt-3 z-20">
                     <button 
                       onClick={(e) => handleAcceptGroupJoin(e, notif, groupId, displayContent)}
-                      className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-lg shadow-blue-500/20"
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
                     >
                       Approve
                     </button>
                     <button 
                       onClick={(e) => handleDeclineGroupJoin(e, notif)}
-                      className="bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-white/5"
+                      className="bg-gray-50 hover:bg-red-50 text-gray-600 hover:text-red-600 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-gray-200"
                     >
                       Deny
                     </button>
@@ -300,18 +300,18 @@ export default function NotificationsContent() {
                 )}
               </div>
               <div className="flex items-center gap-3 z-10 pl-2 shrink-0">
-                 {notif.unread && <div className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse" />}
-                 <ChevronRight size={18} className="text-gray-600 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                 {notif.unread && <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse" />}
+                 <ChevronRight size={18} className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
               </div>
             </div>
             );
           })
         ) : (
-          <div className="py-32 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-[3rem] bg-gradient-to-b from-transparent to-white/[0.02]">
-            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 shadow-inner">
-              <Bell size={40} className="text-gray-700" />
+          <div className="py-32 flex flex-col items-center justify-center border border-dashed border-gray-300 rounded-[3rem] bg-gray-50">
+            <div className="w-20 h-20 bg-white border border-gray-200 rounded-full flex items-center justify-center mb-6 shadow-sm">
+              <Bell size={40} className="text-gray-400" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">No notifications yet</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">No notifications yet</h3>
             <p className="text-gray-500 text-sm text-center max-w-sm">When you get network updates, handshakes, or messages, they will appear here.</p>
           </div>
         )}

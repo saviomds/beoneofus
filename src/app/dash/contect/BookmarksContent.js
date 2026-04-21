@@ -167,7 +167,7 @@ export default function BookmarksContent() {
     <div className="w-full flex flex-col min-h-screen bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tighter">Bookmarks</h1>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tighter">Bookmarks</h1>
           <p className="text-gray-500 text-sm mt-1 font-medium">Your saved snippets and discussions.</p>
         </div>
         
@@ -178,7 +178,7 @@ export default function BookmarksContent() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search bookmarks..." 
-            className="w-full bg-[#0F0F0F] border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-xs text-gray-200 focus:outline-none focus:border-white/20 transition-all"
+            className="w-full bg-white border border-gray-300 rounded-xl py-2.5 pl-10 pr-4 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
           />
         </div>
       </div>
@@ -193,9 +193,9 @@ export default function BookmarksContent() {
           {filteredItems.map((item) => (
             <div 
               key={item.id} 
-              className="group relative bg-[#0F0F0F] border border-white/5 rounded-[1.5rem] p-5 hover:border-blue-500/30 transition-all cursor-pointer overflow-hidden"
+              className="group relative bg-white border border-gray-200 rounded-[1.5rem] p-5 hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer overflow-hidden shadow-sm"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
               <div className="relative flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -210,17 +210,17 @@ export default function BookmarksContent() {
                     </span>
                   </div>
                   
-                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors truncate">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors truncate">
                     {item.title}
                   </h3>
                   <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed mb-4">
                     {item.preview}
                   </p>
 
-                  <div className="flex items-center gap-4 pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
                 <button 
                   onClick={() => toggleComments(item)}
-                  className="flex items-center gap-1.5 text-xs text-gray-600 font-bold hover:text-blue-500 transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-gray-500 font-bold hover:text-blue-600 transition-colors"
                 >
                       <MessageSquare size={14} />
                   {commentsData[item.id] ? commentsData[item.id].length : (item.replies || 0)} Comments
@@ -228,7 +228,7 @@ export default function BookmarksContent() {
                 <Link 
                       href={item.url || "#"} 
                       target="_blank" 
-                      className="flex items-center gap-1.5 text-xs text-gray-600 font-bold hover:text-white transition-colors"
+                      className="flex items-center gap-1.5 text-xs text-gray-500 font-bold hover:text-gray-900 transition-colors"
                     >
                       <ExternalLink size={14} />
                       View Original
@@ -239,13 +239,13 @@ export default function BookmarksContent() {
                 <div className="flex flex-col gap-2">
                   <button 
                     onClick={() => handleRemoveBookmark(item.id)}
-                    className="p-2.5 bg-white/5 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded-xl border border-white/5 transition-all"
+                    className="p-2.5 bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-xl border border-gray-200 transition-all"
                   >
                     <Trash2 size={18} />
                   </button>
           <button 
             onClick={() => handleRemoveBookmark(item.id)}
-            className="p-2.5 bg-white/5 hover:bg-blue-500/10 text-gray-500 hover:text-blue-500 rounded-xl border border-white/5 transition-all"
+            className="p-2.5 bg-gray-50 hover:bg-blue-50 text-gray-500 hover:text-blue-600 rounded-xl border border-gray-200 transition-all"
           >
             <Bookmark size={18} fill="currentColor" className="text-blue-500" />
           </button>
@@ -255,9 +255,9 @@ export default function BookmarksContent() {
           ))}
 
           {filteredItems.length === 0 && (
-            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem]">
-              <Bookmark size={48} className="text-gray-800 mb-4" />
-              <p className="text-gray-600 font-bold">
+            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-gray-300 rounded-[2rem] bg-gray-50">
+              <Bookmark size={48} className="text-gray-300 mb-4" />
+              <p className="text-gray-500 font-bold">
                 {searchQuery ? "No matches found" : "No saved bookmarks yet"}
               </p>
             </div>
@@ -267,7 +267,7 @@ export default function BookmarksContent() {
 
       {/* Custom Toast Popup */}
       {toastMessage && (
-        <div className="fixed bottom-10 right-10 z-[100] flex items-center gap-3 bg-[#0D0D0D] border border-green-500/30 text-green-400 px-5 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-300">
+        <div className="fixed bottom-10 right-10 z-[100] flex items-center gap-3 bg-white border border-green-200 text-green-600 px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300">
           <Check size={18} className="text-green-500" />
           <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
         </div>

@@ -61,20 +61,20 @@ const SystemStatusTool = () => {
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-         <div className="p-6 bg-white/5 border border-white/10 rounded-2xl flex flex-col justify-between">
+         <div className="p-6 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col justify-between shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <Activity size={18} className="text-gray-400" />
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Network Latency</p>
+              <Activity size={18} className="text-gray-500" />
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Network Latency</p>
             </div>
             <div className="flex items-end gap-2">
-               <span className="text-5xl font-black text-white tracking-tighter">{ping}</span>
+               <span className="text-5xl font-black text-gray-900 tracking-tighter">{ping}</span>
                <span className="text-gray-500 mb-1 font-bold">ms</span>
             </div>
          </div>
-         <div className="p-6 bg-white/5 border border-white/10 rounded-2xl flex flex-col justify-between">
+         <div className="p-6 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col justify-between shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <Database size={18} className="text-gray-400" />
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Platform Health</p>
+              <Database size={18} className="text-gray-500" />
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Platform Health</p>
             </div>
             <div className="flex items-center gap-3 mt-2">
                <div className={`w-4 h-4 rounded-full shadow-lg ${status === 'Operational' ? 'bg-green-500 shadow-green-500/50 animate-pulse' : 'bg-red-500 shadow-red-500/50'}`} />
@@ -83,8 +83,8 @@ const SystemStatusTool = () => {
          </div>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-6">Real-Time Packet Monitor</p>
+      <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 shadow-sm">
+        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-6">Real-Time Packet Monitor</p>
         <div className="h-40 flex items-end gap-1.5 w-full">
           {history.map((val, i) => {
             const height = Math.min(100, Math.max(2, (val / 500) * 100));
@@ -129,7 +129,7 @@ const ApiAccessTool = () => {
     <div className="space-y-8 max-w-3xl mx-auto py-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-white font-bold text-lg">Active Secret Keys</h3>
+          <h3 className="text-gray-900 font-bold text-lg">Active Secret Keys</h3>
           <p className="text-gray-500 text-sm mt-1">Do not share your API keys in publicly accessible areas.</p>
         </div>
         <button onClick={generateKey} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/20 shrink-0">
@@ -137,26 +137,26 @@ const ApiAccessTool = () => {
         </button>
       </div>
 
-      <div className="bg-[#0A0A0A] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+      <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
         {keys.length === 0 ? (
            <div className="p-10 text-center text-gray-500 text-sm">No API keys found. Generate one to get started.</div>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-gray-100">
             {keys.map(k => (
-              <div key={k.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-white/[0.02] transition-all gap-4">
+              <div key={k.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-gray-50 transition-all gap-4">
                 <div>
-                  <h4 className="text-white font-bold text-sm flex items-center gap-2 mb-1">
+                  <h4 className="text-gray-900 font-bold text-sm flex items-center gap-2 mb-1">
                     <Key size={14} className={k.key.startsWith('sk_live') ? 'text-green-500' : 'text-amber-500'} /> 
                     {k.name}
                   </h4>
-                  <p className="text-xs text-gray-500 font-mono tracking-wider bg-black px-2 py-1 rounded inline-block border border-white/5">{k.key.substring(0, 12)}••••••••••••••••</p>
+                  <p className="text-xs text-gray-600 font-mono tracking-wider bg-gray-100 px-2 py-1 rounded inline-block border border-gray-200">{k.key.substring(0, 12)}••••••••••••••••</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest hidden sm:block mr-2">{k.created}</span>
-                  <button onClick={() => handleCopy(k.key)} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition-all border border-white/5" title="Copy Key">
+                  <button onClick={() => handleCopy(k.key)} className="p-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-gray-900 transition-all border border-gray-200" title="Copy Key">
                     {copied === k.key ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
                   </button>
-                  <button onClick={() => deleteKey(k.id)} className="p-2.5 bg-white/5 hover:bg-red-500/20 rounded-xl text-gray-400 hover:text-red-500 transition-all border border-white/5" title="Revoke Key">
+                  <button onClick={() => deleteKey(k.id)} className="p-2.5 bg-gray-50 hover:bg-red-50 rounded-xl text-gray-500 hover:text-red-600 transition-all border border-gray-200" title="Revoke Key">
                     <X size={16} />
                   </button>
                 </div>
@@ -239,11 +239,11 @@ const CommunityHubTool = ({ currentUserId }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-black border border-white/10 rounded-[2rem] overflow-hidden max-w-4xl mx-auto shadow-2xl">
+    <div className="flex flex-col h-full bg-white border border-gray-200 rounded-[2rem] overflow-hidden max-w-4xl mx-auto shadow-lg">
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar" ref={scrollRef}>
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
-             <Globe size={48} className="mb-4 opacity-20" />
+             <Globe size={48} className="mb-4 opacity-30 text-blue-500" />
              <p className="font-bold text-sm uppercase tracking-widest mb-1">Global Chat Initialized</p>
              <p className="text-xs font-mono">Say hello to the network.</p>
           </div>
@@ -253,7 +253,7 @@ const CommunityHubTool = ({ currentUserId }) => {
            {msg.user_id !== currentUserId && (
              <div 
                onClick={() => setSelectedUserId(msg.user_id)}
-               className="relative w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-500/30 transition-colors overflow-hidden"
+               className="relative w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 transition-colors overflow-hidden"
                title={`View @${msg.profiles?.username}'s Profile`}
              >
                {msg.profiles?.avatar_url ? (
@@ -265,7 +265,7 @@ const CommunityHubTool = ({ currentUserId }) => {
            )}
            <div className={`flex flex-col ${msg.user_id === currentUserId ? 'items-end' : 'items-start'} max-w-[85%]`}>
              {msg.user_id !== currentUserId && <span className="text-[10px] text-gray-500 font-bold mb-1 pl-1">@{msg.profiles?.username}</span>}
-             <div className={`w-full px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-lg ${msg.user_id === currentUserId ? 'bg-blue-600 text-white rounded-tr-none shadow-blue-500/10' : 'bg-[#111] text-gray-300 border border-white/5 rounded-tl-none'}`}>
+               <div className={`w-full px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm ${msg.user_id === currentUserId ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-50 text-gray-800 border border-gray-200 rounded-tl-none'}`}>
                {msg.text}
              </div>
            </div>
@@ -277,11 +277,11 @@ const CommunityHubTool = ({ currentUserId }) => {
       {/* USER PROFILE MODAL */}
       {selectedUserId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-[#0A0A0A] rounded-[2rem] border border-white/10 shadow-2xl">
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[250] p-2 bg-white/5 hover:bg-red-500/20 hover:text-red-500 rounded-full text-gray-400 transition-colors"
+              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full text-gray-500 transition-colors"
             >
               <X size={20} />
             </button>
@@ -291,14 +291,14 @@ const CommunityHubTool = ({ currentUserId }) => {
           </div>
         </div>
       )}
-      <form onSubmit={handleSend} className="p-3 bg-[#0F0F0F] border-t border-white/5 flex gap-2 shrink-0">
+      <form onSubmit={handleSend} className="p-3 bg-gray-50 border-t border-gray-200 flex gap-2 shrink-0">
         <input 
           value={input} 
           onChange={e => setInput(e.target.value)} 
           placeholder="Broadcast to community..." 
-          className="flex-1 bg-black border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all" 
+          className="flex-1 bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
         />
-        <button type="submit" disabled={!input.trim()} className="px-5 bg-white text-black hover:bg-gray-200 rounded-2xl font-black disabled:opacity-50 transition-all">
+        <button type="submit" disabled={!input.trim()} className="px-5 bg-blue-600 text-white hover:bg-blue-700 rounded-2xl font-black disabled:opacity-50 transition-all">
           <Send size={18} />
         </button>
       </form>
@@ -321,31 +321,31 @@ const SupportTool = () => {
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto py-4">
-      <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-[2rem] flex items-start gap-5">
-        <div className="w-12 h-12 bg-blue-500/20 text-blue-500 rounded-full flex items-center justify-center shrink-0 shadow-lg">
+      <div className="p-6 bg-blue-50 border border-blue-200 rounded-[2rem] flex items-start gap-5">
+        <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-blue-200">
           <HelpCircle size={24} />
         </div>
         <div>
-          <h3 className="text-blue-400 font-bold text-lg mb-2">Need Technical Assistance?</h3>
-          <p className="text-sm text-blue-200/60 leading-relaxed">
+          <h3 className="text-blue-700 font-bold text-lg mb-2">Need Technical Assistance?</h3>
+          <p className="text-sm text-blue-600/80 leading-relaxed">
             Our engineering team is ready to help you with architecture reviews, debugging, and platform guidance. Expected response time: &lt; 2 hours.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 bg-[#111] p-6 sm:p-8 rounded-[2.5rem] border border-white/5 shadow-2xl">
+      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-gray-200 shadow-xl">
         <div>
-          <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 pl-2">Describe your issue</label>
+          <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-3 pl-2">Describe your issue</label>
           <textarea 
             rows={6}
             required
             value={issue}
             onChange={e => setIssue(e.target.value)}
             placeholder="E.g., I am getting a 500 error when trying to invoke a serverless function..."
-            className="w-full bg-black border border-white/10 rounded-2xl p-5 text-sm text-white focus:border-blue-500/50 focus:bg-white/5 outline-none resize-none transition-all placeholder:text-gray-700 custom-scrollbar"
+            className="w-full bg-gray-50 border border-gray-300 rounded-2xl p-5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none transition-all placeholder:text-gray-400 custom-scrollbar"
           />
         </div>
-        <button disabled={submitted || !issue.trim()} type="submit" className="w-full py-4 bg-white text-black font-black uppercase tracking-widest text-xs rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+        <button disabled={submitted || !issue.trim()} type="submit" className="w-full py-4 bg-blue-600 text-white font-black uppercase tracking-widest text-xs rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
           {submitted ? 'Ticket Submitted Successfully' : 'Open Support Ticket'}
         </button>
       </form>
@@ -413,7 +413,7 @@ export default function MoreContent() {
       
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-white tracking-tighter">Resources</h1>
+        <h1 className="text-3xl font-black text-gray-900 tracking-tighter">Resources</h1>
         <p className="text-gray-500 text-sm mt-1 font-medium">Extra tools for your development workflow.</p>
       </div>
 
@@ -423,18 +423,18 @@ export default function MoreContent() {
           <div 
             key={tool.id}
             onClick={() => setActiveItem(tool)}
-            className="group flex items-center justify-between p-5 bg-[#0F0F0F] border border-white/5 rounded-[1.5rem] hover:border-blue-500/30 transition-all cursor-pointer"
+            className="group flex items-center justify-between p-5 bg-white border border-gray-200 rounded-[1.5rem] hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 group-hover:text-blue-500 transition-colors">
+              <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-500 group-hover:text-blue-600 transition-colors">
                 {tool.icon}
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-bold text-white tracking-tight">{tool.label}</span>
+                <span className="text-sm font-bold text-gray-900 tracking-tight">{tool.label}</span>
                 <span className="text-[11px] text-gray-600 font-bold uppercase tracking-wider">{tool.desc}</span>
               </div>
             </div>
-            <ChevronRight size={16} className="text-gray-800 group-hover:text-white transition-all" />
+            <ChevronRight size={16} className="text-gray-400 group-hover:text-blue-600 transition-all" />
           </div>
         ))}
       </div>
@@ -443,7 +443,7 @@ export default function MoreContent() {
       <div className="mt-8 space-y-2">
          <button 
            onClick={handleShareProfile}
-           className="w-full flex items-center justify-between p-4 bg-white/5 rounded-2xl text-gray-400 hover:text-white transition-all group"
+           className="w-full flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all group"
          >
             <div className="flex items-center gap-3">
                {copiedProfile ? <Check size={18} className="text-green-500" /> : <Share2 size={18} />}
@@ -465,30 +465,30 @@ export default function MoreContent() {
       {activeItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div 
-            className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            className="absolute inset-0 bg-gray-900/50 backdrop-blur-md"
             onClick={() => setActiveItem(null)}
           />
           
-          <div className="relative w-full max-w-4xl h-[85vh] bg-[#0A0A0A] border border-white/10 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-4xl h-[85vh] bg-white border border-gray-200 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             
             {/* Header */}
-            <div className="p-6 border-b border-white/5 bg-[#0F0F0F] flex items-center justify-between shrink-0">
+            <div className="p-6 border-b border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
                <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-500 shadow-lg">
+                 <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-sm">
                    {activeItem.icon}
                  </div>
                  <div>
-                   <h2 className="text-xl font-black text-white">{activeItem.label}</h2>
+                   <h2 className="text-xl font-black text-gray-900">{activeItem.label}</h2>
                    <p className="text-xs text-gray-500 font-medium">{activeItem.desc}</p>
                  </div>
                </div>
-               <button onClick={() => setActiveItem(null)} className="p-2.5 bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white transition-all rounded-xl border border-white/5">
+               <button onClick={() => setActiveItem(null)} className="p-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-all rounded-xl">
                  <X size={20} />
                </button>
             </div>
 
             {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#0A0A0A] custom-scrollbar relative">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white custom-scrollbar relative">
                {activeItem.id === 'status' && <SystemStatusTool />}
                {activeItem.id === 'api' && <ApiAccessTool />}
                {activeItem.id === 'community' && <CommunityHubTool currentUserId={currentUserId} />}

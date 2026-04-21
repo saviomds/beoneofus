@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 const SidebarItem = ({ icon: Icon, label, badge, active, onClick }) => (
   <div
     className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
-      active ? 'text-blue-500 bg-blue-500/10' : 'text-gray-400 hover:text-white hover:bg-white/5'
+      active ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
     }`}
     onClick={onClick}
   >
@@ -171,13 +171,13 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         </nav>
 
         {/* User Profile Section */}
-        <div className="mt-auto pt-4 md:pt-6 border-t border-white/5 flex flex-col gap-4 px-2 shrink-0">
+        <div className="mt-auto pt-4 md:pt-6 border-t border-gray-200 flex flex-col gap-4 px-2 shrink-0">
           <div 
-            className="flex items-center gap-3 cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-xl transition-all"
+            className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded-xl transition-all"
             onClick={() => { if (profile) handleNavClick('profile'); }}
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10 shrink-0">
-               <div className="relative w-full h-full rounded-xl bg-black flex items-center justify-center text-xs font-bold text-white uppercase overflow-hidden">
+               <div className="relative w-full h-full rounded-xl bg-white flex items-center justify-center text-xs font-bold text-gray-700 uppercase overflow-hidden">
                  {profile?.avatar_url ? (
                    <Image src={profile.avatar_url} alt="Avatar" fill sizes="40px" className="object-cover" />
                  ) : (
@@ -189,7 +189,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
             <div className="flex-1 min-w-0">
               {profile ? (
                 <>
-                  <p className="text-sm font-bold text-white truncate">@{profile.username}</p>
+                  <p className="text-sm font-bold text-gray-900 truncate">@{profile.username}</p>
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                     <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest">{profile.status || 'Active Node'}</p>
@@ -197,7 +197,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
                 </>
               ) : (
                 <Link href="/auth" className="block hover:opacity-80 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <p className="text-sm font-bold text-white uppercase italic">Guest_Node</p>
+                  <p className="text-sm font-bold text-gray-900 uppercase italic">Guest_Node</p>
                   <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Authorize Access</p>
                 </Link>
               )}
@@ -207,7 +207,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
           {profile && (
             <button 
               onClick={handleLogout}
-              className="flex items-center gap-3 p-3 w-full rounded-xl text-gray-500 hover:text-red-500 hover:bg-red-500/5 transition-all group border border-transparent hover:border-red-500/10"
+              className="flex items-center gap-3 p-3 w-full rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all group border border-transparent hover:border-red-100"
             >
               <LogOut size={18} className="group-hover:translate-x-1 transition-transform" />
               <span className="text-[10px] font-black uppercase tracking-tighter">Terminate Session</span>

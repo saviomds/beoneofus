@@ -441,18 +441,18 @@ export default function GroupsContent() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto relative">
       {activeWorkspace ? (
-        <div className="w-full flex flex-col h-[calc(100vh-180px)] bg-[#0A0A0A] rounded-[2rem] border border-white/5 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300">
+        <div className="w-full flex flex-col h-[calc(100vh-180px)] bg-white rounded-[2rem] border border-gray-200 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300 shadow-sm">
           {/* Header */}
-          <div className="p-4 border-b border-white/5 bg-[#0F0F0F] flex items-center justify-between z-10 shrink-0">
+          <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between z-10 shrink-0">
             <div className="flex items-center gap-3">
-              <button onClick={() => setActiveWorkspace(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition">
+              <button onClick={() => setActiveWorkspace(null)} className="p-2 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-gray-900 transition">
                 <ChevronLeft size={20} />
               </button>
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold uppercase">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold uppercase">
                 <Hash size={20} />
               </div>
               <div>
-                <h2 className="text-white font-bold text-lg leading-tight">{activeWorkspace.name}</h2>
+                <h2 className="text-gray-900 font-bold text-lg leading-tight">{activeWorkspace.name}</h2>
                 <p className="text-[10px] font-black tracking-widest text-green-500 uppercase">Secured Workspace</p>
               </div>
             </div>
@@ -462,7 +462,7 @@ export default function GroupsContent() {
                 fetchWorkspaceMembers();
                 setMembersModalOpen(true);
               }}
-              className="flex items-center gap-2 p-2 sm:px-4 sm:py-2 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition-colors text-xs font-bold"
+              className="flex items-center gap-2 p-2 sm:px-4 sm:py-2 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl text-gray-600 hover:text-gray-900 transition-colors text-xs font-bold"
             >
               <Users size={16} /> <span className="hidden sm:inline">Members</span>
             </button>
@@ -484,7 +484,7 @@ export default function GroupsContent() {
                     {!isMe ? (
                       <div 
                         onClick={() => setSelectedUserId(msg.user_id)}
-                        className="relative w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-500/30 transition-colors overflow-hidden"
+                        className="relative w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 transition-colors overflow-hidden"
                         title={`View @${msg.profiles?.username}'s Profile`}
                       >
                         {msg.profiles?.avatar_url ? (
@@ -502,7 +502,7 @@ export default function GroupsContent() {
                     )}
                     <div className={`flex flex-col group ${isMe ? "items-end" : "items-start"} max-w-[80%]`}>
                       {!isMe && <span className="text-[10px] text-gray-500 font-bold mb-1 ml-1">@{msg.profiles?.username}</span>}
-                      <div className={`w-full p-1 rounded-2xl ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-500/20" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"}`}>
+                      <div className={`w-full p-1 rounded-2xl ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-md shadow-blue-500/20" : "bg-gray-100 text-gray-800 border border-gray-200 rounded-tl-none"}`}>
                         <div className="px-3 pt-1.5 pb-2">
                           {msg.replied_message && (
                             <div className="border-l-2 border-blue-500/50 pl-2 mb-2 text-xs opacity-80">
@@ -536,11 +536,11 @@ export default function GroupsContent() {
           </div>
 
           {/* Input */}
-          <div className="p-3 bg-[#0F0F0F] border-t border-white/5 z-10 shrink-0">
+          <div className="p-3 bg-gray-50 border-t border-gray-200 z-10 shrink-0">
             {replyingTo && (
-              <div className="bg-black/30 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="bg-white border border-gray-200 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
                 <div className="min-w-0">
-                  <p className="text-gray-400">Replying to <span className="font-bold text-blue-400">@{replyingTo.profiles?.username}</span></p>
+                  <p className="text-gray-500">Replying to <span className="font-bold text-blue-600">@{replyingTo.profiles?.username}</span></p>
                   <p className="text-gray-500 truncate">{replyingTo.text || 'Image'}</p>
                 </div>
                 <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 hover:text-white"><X size={16} /></button>
@@ -550,11 +550,11 @@ export default function GroupsContent() {
               <div className="bg-black/30 rounded-t-xl p-2 flex animate-in fade-in slide-in-from-bottom-2 duration-200">
                 <div className="relative w-16 h-16 rounded-lg overflow-hidden">
                   <Image src={chatImagePreview} alt="preview" fill sizes="64px" className="object-cover" />
-                  <button onClick={handleRemoveChatImage} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5"><X size={12} /></button>
+                  <button onClick={handleRemoveChatImage} className="absolute top-1 right-1 bg-white/80 text-gray-900 rounded-full p-0.5"><X size={12} /></button>
                 </div>
               </div>
             )}
-            <form onSubmit={handleSendWorkspaceMessage} className="flex items-center gap-2 bg-black border border-white/10 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500/30 transition-all">
+            <form onSubmit={handleSendWorkspaceMessage} className="flex items-center gap-2 bg-white border border-gray-300 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
               <input type="file" ref={imageInputRef} onChange={handleChatFileChange} accept="image/*" className="hidden" />
               <button 
                 type="button" 
@@ -568,7 +568,7 @@ export default function GroupsContent() {
                 value={messageInput} 
                 onChange={e => setMessageInput(e.target.value)} 
                 placeholder="Broadcast to workspace..." 
-                className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white py-2" 
+                className="flex-1 bg-transparent border-none focus:outline-none text-sm text-gray-900 py-2" 
               />
               <button type="submit" disabled={isProcessing} className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50">
                 <Send size={16} strokeWidth={3} />
@@ -581,13 +581,13 @@ export default function GroupsContent() {
           {/* Header Section */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white">Channels</h1>
-              <p className="text-gray-400 text-sm mt-1">Manage your communities and collaborations.</p>
+              <h1 className="text-3xl font-bold text-gray-900">Channels</h1>
+              <p className="text-gray-600 text-sm mt-1">Manage your communities and collaborations.</p>
             </div>
             <div className="flex items-center gap-3">
               <button 
                 onClick={() => setDeleteAllModalOpen(true)}
-                className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-5 py-2.5 rounded-xl transition-all font-semibold active:scale-95"
+                className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-5 py-2.5 rounded-xl transition-all font-semibold active:scale-95"
               >
                 <Trash2 size={20} />
                  All
@@ -610,7 +610,7 @@ export default function GroupsContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search channels..." 
-              className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:bg-white/10 transition-all"
+              className="w-full bg-white border border-gray-300 rounded-2xl py-3.5 pl-12 pr-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
             />
           </div>
 
@@ -621,7 +621,7 @@ export default function GroupsContent() {
               <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Decrypting Nodes...</p>
             </div>
           ) : filteredGroups.length === 0 ? (
-            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem]">
+            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-gray-300 bg-gray-50 rounded-[2rem]">
               <Hash size={48} className="text-gray-800 mb-4" />
               <p className="text-gray-600 font-bold">No channels found.</p>
             </div>
@@ -634,26 +634,26 @@ export default function GroupsContent() {
               <div 
                 key={group.id} 
                 onClick={() => handleGroupClick(group)}
-              className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-[#0A0A0A] border border-white/5 rounded-2xl p-5 hover:border-blue-500/30 hover:bg-white/[0.02] transition-all cursor-pointer"
+              className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer"
           >
-            <div className="p-4 bg-blue-500/10 rounded-xl text-blue-400 group-hover:bg-blue-500/20 transition-colors">
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-600 group-hover:bg-blue-100 transition-colors">
               <Hash size={28} />
             </div>
             
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1">
-                <h3 className="text-lg font-bold text-white truncate">{group.name}</h3>
+                <h3 className="text-lg font-bold text-gray-900 truncate">{group.name}</h3>
                 <span className={`flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-md border ${
-                    group.is_private ? 'border-amber-500/30 text-amber-500 bg-amber-500/5' : 'border-blue-500/30 text-blue-400 bg-blue-500/5'
+                    group.is_private ? 'border-amber-200 text-amber-600 bg-amber-50' : 'border-blue-200 text-blue-600 bg-blue-50'
                 }`}>
                     {group.is_private ? <Lock size={10} /> : <Globe size={10} />}
                     {group.is_private ? 'Private' : 'Public'}
                 </span>
                   {isAdmin && (
-                    <span className="text-[9px] uppercase font-black tracking-widest text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">Admin</span>
+                    <span className="text-[9px] uppercase font-black tracking-widest text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-200">Admin</span>
                   )}
               </div>
-              <p className="text-gray-400 text-sm line-clamp-1 group-hover:text-gray-300 transition-colors">
+              <p className="text-gray-600 text-sm line-clamp-1 transition-colors">
                 {group.description}
               </p>
               <div className="mt-2 text-xs text-gray-500 font-medium">
@@ -666,13 +666,13 @@ export default function GroupsContent() {
                   <>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setSelectedGroup(group); setInviteModalOpen(true); }}
-                      className="px-4 py-2 bg-white/5 hover:bg-blue-500/20 text-gray-400 hover:text-blue-400 rounded-xl transition-all text-xs font-bold border border-white/5 flex items-center gap-2"
+                      className="px-4 py-2 bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 rounded-xl transition-all text-xs font-bold border border-gray-200 flex items-center gap-2"
                     >
                       <UserPlus size={14} /> Invite
                     </button>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setGroupToDelete(group); setDeleteModalOpen(true); }}
-                      className="p-2 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-xl transition-all border border-white/5"
+                      className="p-2 bg-gray-50 hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-xl transition-all border border-gray-200"
                       title="Delete Channel"
                     >
                       <Trash2 size={16} />
@@ -695,17 +695,17 @@ export default function GroupsContent() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
             onClick={() => {
               setIsModalOpen(false);
               setImagePreview(null);
             }}
           />
           
-          <div className="relative w-full max-w-lg bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">Create New Channel</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-400 transition-colors">
+          <div className="relative w-full max-w-lg bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Create New Channel</h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -716,14 +716,14 @@ export default function GroupsContent() {
                 <div 
                   onClick={handleGroupImageClick}
                   className={`h-16 w-16 rounded-2xl flex items-center justify-center cursor-pointer transition-all overflow-hidden border ${
-                    imagePreview ? 'border-transparent' : 'bg-white/5 border-dashed border-white/20 hover:border-blue-500/50 text-gray-500 hover:text-blue-400'
+                    imagePreview ? 'border-transparent' : 'bg-gray-50 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-500 hover:text-blue-500'
                   }`}
                 >
                   {imagePreview ? (
                     <div className="relative w-full h-full group">
                       <Image src={imagePreview} alt="Preview" fill sizes="64px" className="object-cover" />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <X size={16} className="text-white bg-red-500 rounded-full p-0.5" onClick={handleRemoveGroupImage} />
+                      <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X size={16} className="text-white bg-red-500 hover:bg-red-600 rounded-full p-0.5" onClick={handleRemoveGroupImage} />
                       </div>
                     </div>
                   ) : (
@@ -731,34 +731,34 @@ export default function GroupsContent() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">Channel Icon</p>
-                  <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</p>
+                  <p className="text-sm font-medium text-gray-900">Channel Icon</p>
+                  <p className="text-xs text-gray-500 mt-0.5">PNG, JPG up to 5MB</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Channel Name</label>
-                  <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Next.js Masters" className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all" />
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Channel Name</label>
+                  <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Next.js Masters" className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Description</label>
-                  <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this channel about?" className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all resize-none" />
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Description</label>
+                  <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this channel about?" className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <button 
                     type="button" 
                     onClick={() => setIsPrivateSelection(false)}
-                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all text-sm font-medium ${!isPrivateSelection ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-white/10 bg-white/5 text-gray-400'}`}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all text-sm font-medium ${!isPrivateSelection ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-gray-200 bg-gray-50 text-gray-500 hover:text-gray-900'}`}
                   >
                     <Globe size={16} /> Public
                   </button>
                   <button 
                     type="button" 
                     onClick={() => setIsPrivateSelection(true)}
-                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all text-sm font-medium ${isPrivateSelection ? 'border-amber-500 bg-amber-500/10 text-amber-500' : 'border-white/10 bg-white/5 text-gray-400'}`}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all text-sm font-medium ${isPrivateSelection ? 'border-amber-500 bg-amber-50 text-amber-600' : 'border-gray-200 bg-gray-50 text-gray-500 hover:text-gray-900'}`}
                   >
                     <Lock size={16} /> Private
                   </button>
@@ -766,10 +766,10 @@ export default function GroupsContent() {
               </div>
 
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 px-4 rounded-xl text-gray-400 font-medium hover:bg-white/5 transition-all">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 px-4 rounded-xl text-gray-700 bg-gray-50 border border-gray-200 font-bold hover:bg-gray-100 transition-all">
                   Cancel
                 </button>
-                <button type="submit" disabled={isProcessing} className="flex-1 flex justify-center py-3 px-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50">
+                <button type="submit" disabled={isProcessing} className="flex-1 flex justify-center py-3 px-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-sm transition-all disabled:opacity-50">
                   {isProcessing ? <Loader2 size={20} className="animate-spin" /> : "Create Channel"}
                 </button>
               </div>
@@ -781,21 +781,21 @@ export default function GroupsContent() {
       {/* INVITE USER MODAL */}
       {inviteModalOpen && selectedGroup && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setInviteModalOpen(false)} />
-          <div className="relative w-full max-w-sm bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-blue-600/10">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2"><UserPlus size={18} className="text-blue-500" /> Invite to Channel</h2>
-              <button onClick={() => setInviteModalOpen(false)} className="text-gray-400 hover:text-white transition-colors"><X size={18} /></button>
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setInviteModalOpen(false)} />
+          <div className="relative w-full max-w-sm bg-white border border-gray-200 rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-blue-50 text-blue-600">
+              <h2 className="text-lg font-bold flex items-center gap-2"><UserPlus size={18} /> Invite to Channel</h2>
+              <button onClick={() => setInviteModalOpen(false)} className="text-blue-400 hover:text-blue-600 transition-colors"><X size={18} /></button>
             </div>
             <form className="p-6 space-y-5" onSubmit={handleInviteUser}>
               <div>
-                <p className="text-sm text-gray-400 mb-4 leading-relaxed">
-                  Grant access to <span className="font-bold text-white">{selectedGroup.name}</span>. Enter the exact username of the user you wish to invite.
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                  Grant access to <span className="font-bold text-gray-900">{selectedGroup.name}</span>. Enter the exact username of the user you wish to invite.
                 </p>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Username</label>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Username</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">@</span>
-                  <input type="text" required value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} placeholder="tech_ninja_99" className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all" />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">@</span>
+                  <input type="text" required value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} placeholder="tech_ninja_99" className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                 </div>
               </div>
               <button type="submit" disabled={isProcessing} className="w-full flex justify-center py-3.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50">
@@ -809,14 +809,14 @@ export default function GroupsContent() {
       {/* DELETE GROUP MODAL */}
       {deleteModalOpen && groupToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setDeleteModalOpen(false)} />
-          <div className="relative w-full max-w-sm bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl p-6 text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setDeleteModalOpen(false)} />
+          <div className="relative w-full max-w-sm bg-white border border-gray-200 rounded-3xl shadow-xl p-6 text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
               <AlertTriangle size={32} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Delete Channel?</h3>
-            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-              Are you sure you want to delete <span className="font-bold text-white">{groupToDelete.name}</span>? This action cannot be undone.
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Channel?</h3>
+            <p className="text-gray-600 text-sm mb-6 leading-relaxed">
+              Are you sure you want to delete <span className="font-bold text-gray-900">{groupToDelete.name}</span>? This action cannot be undone.
             </p>
             <div className="flex flex-col gap-3">
               <button 
@@ -828,7 +828,7 @@ export default function GroupsContent() {
               </button>
               <button 
                 onClick={() => setDeleteModalOpen(false)} 
-                className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition border border-white/5"
+                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold py-3 rounded-xl transition border border-gray-200"
               >
                 Cancel
               </button>
@@ -840,14 +840,14 @@ export default function GroupsContent() {
     {/* DELETE ALL GROUPS MODAL */}
     {deleteAllModalOpen && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setDeleteAllModalOpen(false)} />
-        <div className="relative w-full max-w-sm bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl p-6 text-center animate-in fade-in zoom-in duration-200">
-          <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setDeleteAllModalOpen(false)} />
+        <div className="relative w-full max-w-sm bg-white border border-gray-200 rounded-3xl shadow-xl p-6 text-center animate-in fade-in zoom-in duration-200">
+          <div className="w-16 h-16 bg-red-50 text-red-600 border border-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle size={32} />
           </div>
-          <h3 className="text-xl font-bold text-white mb-2">Delete All Channels?</h3>
-          <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-            Are you sure you want to delete <span className="font-bold text-white">ALL</span> channels you created? This action cannot be undone.
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Delete All Channels?</h3>
+          <p className="text-gray-600 text-sm mb-6 leading-relaxed">
+            Are you sure you want to delete <span className="font-bold text-gray-900">ALL</span> channels you created? This action cannot be undone.
           </p>
           <div className="flex flex-col gap-3">
             <button 
@@ -859,7 +859,7 @@ export default function GroupsContent() {
             </button>
             <button 
               onClick={() => setDeleteAllModalOpen(false)} 
-              className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition border border-white/5"
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold py-3 rounded-xl transition border border-gray-200"
             >
               Cancel
             </button>
@@ -871,14 +871,14 @@ export default function GroupsContent() {
       {/* REQUEST JOIN MODAL */}
       {groupToJoin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setGroupToJoin(null)} />
-          <div className="relative w-full max-w-sm bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl p-6 text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setGroupToJoin(null)} />
+          <div className="relative w-full max-w-sm bg-white border border-gray-200 rounded-3xl shadow-xl p-6 text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-blue-50 border border-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <Hash size={32} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Request Access?</h3>
-            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-              You are not a member of <span className="font-bold text-white">{groupToJoin.name}</span>. Would you like to request access from the administrator?
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Request Access?</h3>
+            <p className="text-gray-600 text-sm mb-6 leading-relaxed">
+              You are not a member of <span className="font-bold text-gray-900">{groupToJoin.name}</span>. Would you like to request access from the administrator?
             </p>
             <div className="flex flex-col gap-3">
               <button 
@@ -902,7 +902,7 @@ export default function GroupsContent() {
               >
                 {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'Send Join Request'}
               </button>
-              <button onClick={() => setGroupToJoin(null)} className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition border border-white/5">Cancel</button>
+              <button onClick={() => setGroupToJoin(null)} className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold py-3 rounded-xl transition border border-gray-200">Cancel</button>
             </div>
           </div>
         </div>
@@ -911,14 +911,14 @@ export default function GroupsContent() {
       {/* MEMBERS MODAL */}
       {membersModalOpen && activeWorkspace && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setMembersModalOpen(false)} />
-          <div className="relative w-full max-w-md bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setMembersModalOpen(false)} />
+          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-3xl shadow-xl flex flex-col max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center shrink-0">
               <div>
-                <h2 className="text-xl font-bold text-white">Channel Members</h2>
+                <h2 className="text-xl font-bold text-gray-900">Channel Members</h2>
                 <p className="text-xs text-gray-500 mt-1">{activeWorkspace.name}</p>
               </div>
-              <button onClick={() => setMembersModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-400 transition-colors">
+              <button onClick={() => setMembersModalOpen(false)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -933,19 +933,19 @@ export default function GroupsContent() {
                   const canKick = activeWorkspace.created_by === currentUserId && !isAdmin;
                   
                   return (
-                    <div key={member.user_id} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all">
+                    <div key={member.user_id} className="flex items-center justify-between p-3 rounded-2xl bg-white border border-gray-200 hover:shadow-sm transition-all">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative w-10 h-10 rounded-xl bg-black overflow-hidden shrink-0 border border-white/10 flex items-center justify-center text-xs font-bold text-gray-500 uppercase">
+                        <div className="relative w-10 h-10 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 uppercase">
                           {member.profiles?.avatar_url ? (
                             <Image src={member.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                           ) : (
-                            member.profiles?.username?.substring(0,2) || '??'
+                            member.profiles?.username?.substring(0, 2) || '??'
                           )}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-bold text-white truncate flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-gray-900 truncate flex items-center gap-2">
                             @{member.profiles?.username}
-                            {isMe && <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-widest">You</span>}
+                            {isMe && <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded uppercase tracking-widest">You</span>}
                           </h4>
                           <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mt-0.5">
                             {isAdmin ? <span className="text-green-500">Administrator</span> : 'Member'}
@@ -957,7 +957,7 @@ export default function GroupsContent() {
                         <button 
                           onClick={() => handleKickUser(member.user_id, member.profiles?.username)}
                           disabled={isProcessing}
-                          className="p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
+                          className="p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50"
                           title={`Kick @${member.profiles?.username}`}
                         >
                           <UserMinus size={16} />
@@ -975,11 +975,11 @@ export default function GroupsContent() {
       {/* USER PROFILE MODAL */}
       {selectedUserId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-[#0A0A0A] rounded-[2rem] border border-white/10 shadow-2xl">
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[250] p-2 bg-white/5 hover:bg-red-500/20 hover:text-red-500 rounded-full text-gray-400 transition-colors"
+              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full text-gray-500 transition-colors"
             >
               <X size={20} />
             </button>
@@ -992,7 +992,7 @@ export default function GroupsContent() {
 
       {/* TOAST POPUP */}
       {toastMessage && (
-        <div className={`fixed bottom-10 right-10 z-[150] flex items-center gap-3 bg-[#0D0D0D] border px-5 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-300 max-w-md ${toastType === 'error' ? 'border-red-500/30 text-red-400' : 'border-green-500/30 text-green-400'}`}>
+        <div className={`fixed bottom-10 right-10 z-[150] flex items-center gap-3 bg-white border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 max-w-md ${toastType === 'error' ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
           {toastType === 'error' ? <AlertTriangle size={18} className="text-red-500 shrink-0" /> : <Check size={18} className="text-green-500 shrink-0" />}
           <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
         </div>

@@ -31,13 +31,13 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-blue-500/30 overflow-x-hidden relative">
+    <div className="min-h-screen bg-gray-50 text-gray-900 selection:bg-blue-500/30 overflow-x-hidden relative">
       
       {/* Global Background Grid Effect */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000008_1px,transparent_1px),linear-gradient(to_bottom,#00000008_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
       {/* Navbar */}
-      <nav className="fixed top-0 w-full border-b border-white/5 bg-[#050505]/80 backdrop-blur-xl z-50">
+      <nav className="fixed top-0 w-full border-b border-gray-200 bg-white/80 backdrop-blur-xl z-50">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="font-black text-2xl tracking-tighter flex items-center gap-2">
             <Terminal className="text-blue-500" size={28} />
@@ -46,26 +46,26 @@ export default function LandingPage() {
           
           <div className="flex items-center gap-4">
             {loading ? (
-               <div className="w-32 h-10 bg-white/5 animate-pulse rounded-xl"></div>
+               <div className="w-32 h-10 bg-gray-200 animate-pulse rounded-xl"></div>
             ) : session ? (
               <div className="flex items-center gap-4 sm:gap-6">
-                <div className="hidden sm:flex items-center gap-3 bg-white/5 pr-4 rounded-full border border-white/10">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs uppercase overflow-hidden relative border border-white/5">
+                <div className="hidden sm:flex items-center gap-3 bg-gray-100 pr-4 rounded-full border border-gray-200">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase overflow-hidden relative border border-blue-200">
                     {profile?.avatar_url ? (
                       <Image src={profile.avatar_url} alt="avatar" fill className="object-cover" sizes="40px" />
                     ) : (
                       profile?.username?.[0] || 'U'
                     )}
                   </div>
-                  <span className="text-sm font-bold text-gray-300 tracking-tight">@{profile?.username}</span>
+                  <span className="text-sm font-bold text-gray-700 tracking-tight">@{profile?.username}</span>
                 </div>
                 <Link href="/dash" className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2">
-                  Terminal <ArrowRight size={16} />
+                  Dashboard <ArrowRight size={16} />
                 </Link>
               </div>
             ) : (
-              <Link href="/auth" className="bg-white text-black hover:bg-gray-200 px-6 py-2.5 rounded-xl text-sm font-black transition-all">
-                Initialize Node
+              <Link href="/auth" className="bg-gray-900 text-white hover:bg-gray-800 px-6 py-2.5 rounded-xl text-sm font-black transition-all">
+                Sign In / Join
               </Link>
             )}
           </div>
@@ -75,19 +75,19 @@ export default function LandingPage() {
       {/* Hero Section */}
       <main className="pt-40 pb-20 px-6 relative z-10">
         {/* Glowing orb behind hero */}
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-blue-600/20 blur-[120px] rounded-full pointer-events-none -z-10" />
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-blue-400/20 blur-[120px] rounded-full pointer-events-none -z-10" />
         
         <div className="max-w-4xl mx-auto text-center space-y-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-widest mb-4">
-            <Zap size={14} className="animate-pulse" /> Network v1.0 Online
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-black uppercase tracking-widest mb-4">
+            <Zap size={14} className="animate-pulse" /> Platform v1.0 Online
           </div>
           
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-[1.1]">
-            The network for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-500">developer nodes.</span>
+            The network for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600">developers.</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed font-medium">
-            Establish peer-to-peer handshakes. Broadcast your code. Join end-to-end encrypted workspaces. Stop networking, start connecting.
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed font-medium">
+            Connect with developers worldwide. Broadcast your code. Join secure workspaces. Stop networking, start connecting.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
@@ -98,10 +98,10 @@ export default function LandingPage() {
             ) : (
               <>
                 <Link href="/auth" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl text-lg font-black transition-all shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95">
-                  Join the Network <ChevronRight size={20} />
+                  Join for Free <ChevronRight size={20} />
                 </Link>
-                <Link href="/auth" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all border border-white/10 hover:border-white/20">
-                  Existing Node Login
+                <Link href="/auth" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-900 px-8 py-4 rounded-2xl text-lg font-bold transition-all border border-gray-200">
+                  Sign In
                 </Link>
               </>
             )}
@@ -112,80 +112,79 @@ export default function LandingPage() {
       {/* Features Grid */}
       <section className="max-w-7xl mx-auto px-6 py-24 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[#0A0A0A]/80 backdrop-blur-sm p-8 rounded-[2rem] border border-white/5 hover:border-blue-500/30 transition-all group">
-            <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/10">
+          <div className="bg-white backdrop-blur-sm p-8 rounded-[2rem] border border-gray-200 hover:border-blue-500/30 hover:shadow-lg transition-all group">
+            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform shadow-sm">
               <Shield size={28} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-3">Secured Workspaces</h3>
-            <p className="text-gray-400 leading-relaxed text-sm font-medium">
-              Create public or private collaboration nodes. Real-time packet syncing ensures your team is always connected.
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Secured Workspaces</h3>
+            <p className="text-gray-600 leading-relaxed text-sm font-medium">
+              Create public or private collaboration workspaces. Real-time syncing ensures your team is always connected.
             </p>
           </div>
           
-          <div className="bg-[#0A0A0A]/80 backdrop-blur-sm p-8 rounded-[2rem] border border-white/5 hover:border-purple-500/30 transition-all group">
-            <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-500 mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-purple-500/10">
+          <div className="bg-white backdrop-blur-sm p-8 rounded-[2rem] border border-gray-200 hover:border-purple-500/30 hover:shadow-lg transition-all group">
+            <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 mb-6 group-hover:scale-110 transition-transform shadow-sm">
               <Zap size={28} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-3">P2P Handshakes</h3>
-            <p className="text-gray-400 leading-relaxed text-sm font-medium">
-              Direct messaging requires mutual authorization. Sever connections instantly if a node becomes hostile.
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Direct Messaging</h3>
+            <p className="text-gray-600 leading-relaxed text-sm font-medium">
+              Connect with peers directly. Messaging requires mutual authorization to keep your inbox clean and relevant.
             </p>
           </div>
           
-          <div className="bg-[#0A0A0A]/80 backdrop-blur-sm p-8 rounded-[2rem] border border-white/5 hover:border-green-500/30 transition-all group">
-            <div className="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center text-green-500 mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-green-500/10">
+          <div className="bg-white backdrop-blur-sm p-8 rounded-[2rem] border border-gray-200 hover:border-green-500/30 hover:shadow-lg transition-all group">
+            <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 mb-6 group-hover:scale-110 transition-transform shadow-sm">
               <Cpu size={28} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-3">Public Broadcasts</h3>
-            <p className="text-gray-400 leading-relaxed text-sm font-medium">
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Public Broadcasts</h3>
+            <p className="text-gray-600 leading-relaxed text-sm font-medium">
               Share code snippets, debug issues, and broadcast updates to the entire global developer feed.
             </p>
           </div>
         </div>
       </section>
 
-      {/* System Terminal Preview */}
+      {/* Live Feed Preview */}
       <section className="max-w-5xl mx-auto px-6 py-10 md:py-20 relative z-10">
-        <div className="bg-[#0A0A0A] rounded-[2rem] border border-white/10 overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.05)]">
-          <div className="bg-[#111] px-4 py-3 border-b border-white/10 flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-            <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-            <span className="ml-4 text-xs text-gray-500 font-mono">beoneofus_terminal_v1.sh</span>
+        <div className="bg-white rounded-[2rem] border border-gray-200 overflow-hidden shadow-xl">
+          <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-400"></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+            <div className="w-3 h-3 rounded-full bg-green-400"></div>
+            <span className="ml-4 text-xs text-gray-500 font-mono tracking-tight">network_activity.log</span>
           </div>
-          <div className="p-6 md:p-8 font-mono text-sm md:text-base text-gray-300 space-y-4 overflow-x-auto">
-            <p><span className="text-blue-500">$</span> root@beoneofus ~ ./init_node --user={`"`}new_dev{`"`}</p>
-            <p className="text-gray-500">Initializing secure node connection...</p>
-            <p className="text-green-400">[OK] Keypair generated.</p>
-            <p className="text-green-400">[OK] Handshake protocols loaded.</p>
-            <p className="text-purple-400">Syncing public feed packets...</p>
-            <div className="pl-4 border-l-2 border-white/10 text-gray-400 py-2">
-              &gt; Node 0xA8F1: {`"`}Just deployed the new edge runtime!{`"`}<br/>
-              &gt; Node 0x77B2: {`"`}Looking for code review on my rust module.{`"`}
+          <div className="p-6 md:p-8 font-mono text-sm md:text-base text-gray-700 space-y-4 overflow-x-auto">
+            <p><span className="text-blue-600 font-bold">[SYSTEM]</span> Authenticating new developer connection...</p>
+            <p className="text-gray-500">Establishing secure environment...</p>
+            <p className="text-green-600">✓ Security tokens verified.</p>
+            <p className="text-green-600">✓ Workspace loaded successfully.</p>
+            <p className="text-purple-600 font-bold">Fetching recent network activity...</p>
+            <div className="pl-4 border-l-2 border-gray-200 text-gray-600 py-2 bg-gray-50/50 rounded-r-lg">
+              <span className="text-blue-500 font-bold">@alex_dev</span>: {`"`}Just deployed the new edge runtime!{`"`}<br/>
+              <span className="text-purple-500 font-bold">@sarah_sys</span>: {`"`}Looking for code review on my rust module.{`"`}
             </div>
-            <p><span className="text-blue-500">$</span> connection established. Welcome to the network.</p>
-            <p className="animate-pulse font-black text-lg">_</p>
+            <p><span className="text-blue-600 font-bold">[SYSTEM]</span> Connection established. Welcome.</p>
           </div>
         </div>
       </section>
 
       {/* Network Stats */}
-      <section className="border-y border-white/5 bg-white/[0.02] py-16 mt-10 relative z-10">
+      <section className="border-y border-gray-200 bg-white py-16 mt-10 relative z-10">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 text-center">
           <div className="space-y-2">
-            <h4 className="text-4xl md:text-5xl font-black text-white tracking-tighter">99.9<span className="text-blue-500">%</span></h4>
+            <h4 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter">99.9<span className="text-blue-500">%</span></h4>
             <p className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest">Network Uptime</p>
           </div>
           <div className="space-y-2">
-            <h4 className="text-4xl md:text-5xl font-black text-white tracking-tighter">&lt;10<span className="text-purple-500">ms</span></h4>
+            <h4 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter">&lt;10<span className="text-purple-500">ms</span></h4>
             <p className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest">Packet Latency</p>
           </div>
           <div className="space-y-2">
-            <h4 className="text-4xl md:text-5xl font-black text-white tracking-tighter">256<span className="text-green-500">bit</span></h4>
-            <p className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest">P2P Encryption</p>
+            <h4 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter">100<span className="text-green-500">k+</span></h4>
+            <p className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest">Active Developers</p>
           </div>
           <div className="space-y-2">
-            <h4 className="text-4xl md:text-5xl font-black text-white tracking-tighter">∞</h4>
+            <h4 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter">∞</h4>
             <p className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest">Lines of Code</p>
           </div>
         </div>
@@ -194,16 +193,16 @@ export default function LandingPage() {
       {/* Bottom CTA */}
       <section className="py-24 md:py-32 px-6 relative z-10 text-center">
         <div className="max-w-3xl mx-auto space-y-8">
-          <h2 className="text-4xl md:text-6xl font-black tracking-tighter">Ready to join the collective?</h2>
-          <p className="text-gray-400 text-lg">No trackers. No algorithms. Just developers transmitting raw data.</p>
+          <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-gray-900">Ready to join the collective?</h2>
+          <p className="text-gray-600 text-lg">No trackers. No algorithms. Just developers sharing knowledge.</p>
           <div className="pt-4">
             {session ? (
               <Link href="/dash" className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl text-lg font-black transition-all shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95">
-                Access Terminal <ArrowRight size={20} />
+                Go to Dashboard <ArrowRight size={20} />
               </Link>
             ) : (
-              <Link href="/auth" className="inline-flex items-center justify-center gap-2 bg-white text-black hover:bg-gray-200 px-8 py-4 rounded-2xl text-lg font-black transition-all hover:scale-105 active:scale-95 shadow-xl shadow-white/10">
-                Initialize Your Node <ChevronRight size={20} />
+              <Link href="/auth" className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white hover:bg-gray-800 px-8 py-4 rounded-2xl text-lg font-black transition-all hover:scale-105 active:scale-95 shadow-xl">
+                Create an Account <ChevronRight size={20} />
               </Link>
             )}
           </div>
@@ -211,8 +210,8 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-10 text-center text-gray-600 text-xs font-mono uppercase tracking-widest relative z-10">
-        beoneofus network v1.0 © {new Date().getFullYear()}
+      <footer className="border-t border-gray-200 py-10 text-center text-gray-500 text-xs font-mono uppercase tracking-widest relative z-10">
+        beoneofus platform v1.0 © {new Date().getFullYear()}
       </footer>
     </div>
   );

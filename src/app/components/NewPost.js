@@ -101,20 +101,20 @@ export default function NewPost() {
       {showSuccess && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
             onClick={() => setShowSuccess(false)}
           />
-          <div className="bg-[#0D0D0D] border border-green-500/30 w-full max-w-sm rounded-2xl p-8 shadow-[0_0_50px_-12px_rgba(34,197,94,0.5)] text-center relative z-10 animate-in fade-in zoom-in duration-300">
+          <div className="bg-white border border-green-200 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center relative z-10 animate-in fade-in zoom-in duration-300">
             <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
               <CheckCircle2 size={40} className="animate-bounce" />
             </div>
-            <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Post Deployed!</h3>
+            <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Post Deployed!</h3>
             <p className="text-gray-500 text-sm leading-relaxed mb-6">
               Your update is now live on the <span className="text-blue-500 font-bold">beoneofus</span> network.
             </p>
             <button 
               onClick={() => setShowSuccess(false)}
-              className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-all border border-white/5"
+              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold py-3 rounded-xl transition-all border border-gray-200"
             >
               Dismiss
             </button>
@@ -123,7 +123,7 @@ export default function NewPost() {
       )}
 
       {/* --- MAIN POST FORM --- */}
-      <div className="bg-[#0D0D0D] border border-white/10 rounded-xl p-4 mb-6 shadow-2xl relative">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 shadow-sm relative">
         <div className="flex flex-col gap-4">
           
           <input 
@@ -131,14 +131,14 @@ export default function NewPost() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Post Title / Header..."
-            className="bg-transparent border-b border-white/5 pb-2 focus:outline-none text-blue-500 font-bold text-xl placeholder-gray-700"
+            className="bg-transparent border-b border-gray-200 pb-2 focus:outline-none text-blue-600 font-bold text-xl placeholder-gray-400"
           />
 
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="What's the latest code, TechNinja?"
-            className="w-full bg-transparent border-none focus:ring-0 text-gray-200 placeholder-gray-600 resize-none min-h-[80px] text-lg"
+            className="w-full bg-transparent border-none focus:ring-0 text-gray-900 placeholder-gray-400 resize-none min-h-[80px] text-lg"
           />
 
           {showCodeInput && (
@@ -146,15 +146,15 @@ export default function NewPost() {
               value={codeSnippet}
               onChange={(e) => setCodeSnippet(e.target.value)}
               placeholder="Paste your code snippet here..."
-              className="w-full bg-black/50 p-3 rounded-lg font-mono text-sm text-blue-300 border border-white/5 focus:outline-none min-h-[100px]"
+              className="w-full bg-gray-50 p-3 rounded-lg font-mono text-sm text-blue-600 border border-gray-200 focus:outline-none min-h-[100px]"
             />
           )}
 
           {selectedImage && (
-            <div className="relative w-full h-64 overflow-hidden rounded-lg border border-white/10">
+            <div className="relative w-full h-64 overflow-hidden rounded-lg border border-gray-200">
               <button 
                 onClick={() => { setSelectedImage(null); setImageFile(null); }}
-                className="absolute top-2 right-2 bg-black/50 p-1 rounded-full text-white hover:bg-red-500 z-10"
+                className="absolute top-2 right-2 bg-white/80 p-1 rounded-full text-gray-700 hover:text-white hover:bg-red-500 z-10"
               >
                 <X size={16} />
               </button>
@@ -164,12 +164,12 @@ export default function NewPost() {
 
           <input type="file" ref={fileInputRef} onChange={onFileChange} className="hidden" accept="image/*" />
           
-          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
             <div className="flex items-center gap-4 text-gray-400">
               <button 
                 type="button"
                 onClick={() => setShowCodeInput(!showCodeInput)}
-                className={`${showCodeInput ? 'text-blue-400' : 'hover:text-blue-400'} transition-colors flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5`}
+                className={`${showCodeInput ? 'text-blue-600' : 'hover:text-blue-600'} transition-colors flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-50`}
               >
                 <Code2 size={20} />
               </button>
@@ -177,7 +177,7 @@ export default function NewPost() {
               <button 
                 type="button"
                 onClick={handleImageClick}
-                className="hover:text-green-400 transition-colors flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5"
+                className="hover:text-green-500 transition-colors flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-50"
               >
                 <ImageIcon size={20} />
               </button>
@@ -186,16 +186,16 @@ export default function NewPost() {
                 <button 
                   type="button"
                   onClick={() => setShowMore(!showMore)}
-                  className="hover:text-white transition-colors flex items-center gap-1 text-sm px-2 py-1 rounded-md hover:bg-white/5"
+                  className="hover:text-gray-900 transition-colors flex items-center gap-1 text-sm px-2 py-1 rounded-md hover:bg-gray-50"
                 >
                   <span>More</span>
                   <ChevronDown size={14} className={showMore ? "rotate-180 transition-transform" : "transition-transform"} />
                 </button>
 
                 {showMore && (
-                  <div className="absolute bottom-10 left-0 w-32 bg-[#1A1A1A] border border-white/10 rounded-lg shadow-xl z-10 py-2">
-                    <button type="button" className="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-white/5">Schedule</button>
-                    <button type="button" className="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-white/5">Drafts</button>
+                  <div className="absolute bottom-10 left-0 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 py-2">
+                    <button type="button" className="w-full text-left px-4 py-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50">Schedule</button>
+                    <button type="button" className="w-full text-left px-4 py-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50">Drafts</button>
                   </div>
                 )}
               </div>
@@ -205,7 +205,7 @@ export default function NewPost() {
               type="button"
               onClick={handlePostSubmit}
               disabled={loading}
-              className="bg-blue-500 hover:bg-blue-600 text-black p-2 px-4 rounded-lg transition-all active:scale-95 shadow-[0_0_15px_rgba(59,130,246,0.5)] flex items-center gap-2 disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 text-white p-2 px-4 rounded-lg transition-all active:scale-95 shadow-sm flex items-center gap-2 disabled:opacity-50"
             >
               {loading ? (
                 <Loader2 size={18} className="animate-spin" />

@@ -314,46 +314,46 @@ export default function MessagesContent() {
       
       {/* BLOCK MODAL */}
       {showBlockConfirm && (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-sm rounded-2xl p-8 shadow-2xl text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-orange-50 border border-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <ShieldAlert size={32} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Sever Connection?</h3>
-            <p className="text-gray-500 text-sm mb-8 leading-relaxed">Block @{activeChat.username}. Handshake will be terminated until you re-authorize this node.</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Sever Connection?</h3>
+            <p className="text-gray-600 text-sm mb-8 leading-relaxed">Block @{activeChat.username}. Connection will be terminated until you re-authorize this node.</p>
             <div className="flex flex-col gap-3">
               <button onClick={handleBlockUser} disabled={isProcessing} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition">{isProcessing ? 'Terminating...' : 'Confirm Block'}</button>
-              <button onClick={() => setShowBlockConfirm(false)} className="w-full bg-white/5 text-white font-bold py-3 rounded-xl transition border border-white/5">Cancel</button>
+              <button onClick={() => setShowBlockConfirm(false)} className="w-full bg-gray-50 text-gray-700 font-bold py-3 rounded-xl transition border border-gray-200 hover:bg-gray-100">Cancel</button>
             </div>
           </div>
         </div>
       )}
 
       {/* Sidebar: Contacts */}
-      <div className={`w-full md:w-64 lg:w-72 border-r-0 md:border-r border-white/5 flex-col md:pr-2 shrink-0 ${isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-64 lg:w-72 border-r-0 md:border-r border-gray-200 flex-col md:pr-2 shrink-0 ${isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
         <div className="pb-4 px-2">
-          <h2 className="text-2xl font-black text-white tracking-tighter mb-3">Messages</h2>
+          <h2 className="text-2xl font-black text-gray-900 tracking-tighter mb-3">Messages</h2>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search connections..." 
-              className="w-full bg-[#0F0F0F] border border-white/5 rounded-xl py-2 pl-9 text-xs text-white outline-none focus:border-blue-500/30 transition-all" 
+              className="w-full bg-white border border-gray-300 rounded-xl py-2 pl-9 text-xs text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
             />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar px-2">
           {filteredContacts.length === 0 && (
-            <div className="text-center text-xs text-gray-600 font-bold mt-10 px-4">
+            <div className="text-center text-xs text-gray-500 font-bold mt-10 px-4">
               No connections found. Follow nodes to open channels.
             </div>
           )}
           {filteredContacts.map((contact) => (
-            <div key={contact.id} onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-xl border ${activeChat?.id === contact.id ? 'bg-blue-600/10 border-blue-500/20' : 'hover:bg-white/5 border-transparent'}`}>
+            <div key={contact.id} onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-xl border ${activeChat?.id === contact.id ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50 border-transparent'}`}>
               <div 
-                className="relative w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-bold hover:bg-blue-500/20 transition-colors overflow-hidden shrink-0"
+                className="relative w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-blue-600 font-bold hover:bg-blue-50 transition-colors overflow-hidden shrink-0"
                 onClick={(e) => { e.stopPropagation(); setSelectedUserId(contact.id); }}
                 title={`View @${contact.username}'s Profile`}
               >
@@ -364,7 +364,7 @@ export default function MessagesContent() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">{contact.username}</h4>
+                <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{contact.username}</h4>
                 <p className="text-[10px] text-gray-500 truncate font-mono uppercase tracking-widest">{contact.status || 'Active'}</p>
               </div>
             </div>
@@ -376,13 +376,13 @@ export default function MessagesContent() {
       <div className={`flex-1 flex-col min-w-0 md:pl-4 md:mr-2 ${!isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
         {activeChat ? (
           <>
-            <div className="pb-3 border-b border-white/5 flex items-center justify-between relative overflow-visible">
+            <div className="pb-3 border-b border-gray-200 flex items-center justify-between relative overflow-visible">
               <div className="flex items-center gap-3">
-                <button onClick={() => setIsMobileChatOpen(false)} className="md:hidden p-1.5 -ml-1.5 text-gray-500 hover:text-white transition-colors">
+                <button onClick={() => setIsMobileChatOpen(false)} className="md:hidden p-1.5 -ml-1.5 text-gray-500 hover:text-gray-900 transition-colors">
                   <ChevronLeft size={22} />
                 </button>
                 <div 
-                  className="relative w-9 h-9 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold cursor-pointer hover:bg-blue-500/30 transition-colors overflow-hidden shrink-0"
+                  className="relative w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 font-bold cursor-pointer hover:bg-blue-100 transition-colors overflow-hidden shrink-0"
                   onClick={() => setSelectedUserId(activeChat.id)}
                   title={`View @${activeChat.username}'s Profile`}
                 >
@@ -393,7 +393,7 @@ export default function MessagesContent() {
                   )}
                 </div>
                 <div className="cursor-pointer group" onClick={() => setSelectedUserId(activeChat.id)}>
-                  <h3 className="text-sm font-bold text-white leading-tight group-hover:text-blue-400 transition-colors">{activeChat.username}</h3>
+                  <h3 className="text-sm font-bold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors">{activeChat.username}</h3>
                   <div className="flex items-center gap-1">
                     <div className={`w-1.5 h-1.5 ${connectionStatus === 'blocked' ? 'bg-red-500' : 'bg-green-500'} rounded-full animate-pulse`}></div>
                     <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">{connectionStatus === 'blocked' ? 'Severed' : 'Online'}</p>
@@ -402,16 +402,16 @@ export default function MessagesContent() {
               </div>
               
               <div className="flex items-center gap-1 text-gray-500 relative">
-                <button className="p-1.5 hover:text-white transition-colors"><Phone size={16} /></button>
-                <button className="p-1.5 hover:text-white transition-colors"><Video size={16} /></button>
+                <button className="p-1.5 hover:text-gray-900 transition-colors"><Phone size={16} /></button>
+                <button className="p-1.5 hover:text-gray-900 transition-colors"><Video size={16} /></button>
                 <div className="relative">
-                  <button onClick={() => setShowMoreMenu(!showMoreMenu)} className={`p-1.5 transition-colors ${showMoreMenu ? 'text-white' : 'hover:text-white'}`}><MoreHorizontal size={18} /></button>
+                  <button onClick={() => setShowMoreMenu(!showMoreMenu)} className={`p-1.5 transition-colors ${showMoreMenu ? 'text-gray-900' : 'hover:text-gray-900'}`}><MoreHorizontal size={18} /></button>
                   {showMoreMenu && (
-                    <div className="absolute top-10 right-0 w-48 bg-[#111111] border border-white/10 rounded-xl shadow-2xl z-[150] py-2 animate-in fade-in slide-in-from-top-2">
+                    <div className="absolute top-10 right-0 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-[150] py-2 animate-in fade-in slide-in-from-top-2">
                       {connectionStatus === 'blocked' && blockerId === currentUserId ? (
-                         <button onClick={handleUnblockUser} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-green-400 hover:bg-green-400/10 transition-all font-bold"><ShieldCheck size={14} /> UNBLOCK NODE</button>
+                         <button onClick={handleUnblockUser} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-green-600 hover:bg-green-50 transition-all font-bold"><ShieldCheck size={14} /> UNBLOCK NODE</button>
                       ) : (
-                        <button onClick={() => setShowBlockConfirm(true)} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-orange-400 hover:bg-orange-400/10 transition-all font-bold"><ShieldAlert size={14} /> BLOCK NODE</button>
+                        <button onClick={() => setShowBlockConfirm(true)} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-orange-600 hover:bg-orange-50 transition-all font-bold"><ShieldAlert size={14} /> BLOCK NODE</button>
                       )}
                     </div>
                   )}
@@ -425,16 +425,16 @@ export default function MessagesContent() {
                   <div key={msg.id} className={`flex gap-2 group ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
                     {msg.sender_id !== currentUserId && (
                       <div className="flex items-end">
-                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
                           <MessageSquare size={14} />
                         </button>
                       </div>
                     )}
                     <div className={`max-w-[85%] ${msg.sender_id === currentUserId ? "text-right" : "text-left"}`}>
-                      <div className={`inline-block p-1 rounded-2xl text-[13px] break-words text-left shadow-lg ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-none" : "bg-[#111111] text-gray-300 border border-white/5 rounded-tl-none"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>
+                      <div className={`inline-block p-1 rounded-2xl text-[13px] break-words text-left shadow-sm ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-none" : "bg-gray-100 text-gray-800 border border-gray-200 rounded-tl-none"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>
                         <div className="px-3 pt-1.5 pb-2">
                           {msg.replied_message && (
-                            <div className="border-l-2 border-blue-500/50 pl-2 mb-2 text-xs opacity-80">
+                            <div className="border-l-2 border-blue-200 pl-2 mb-2 text-xs opacity-80">
                               <p className="font-bold text-current">@{msg.replied_message.sender_id === currentUserId ? 'You' : activeChat.username}</p>
                               <p className="text-current/80 line-clamp-1">{msg.replied_message.text || 'Image'}</p>
                             </div>
@@ -454,7 +454,7 @@ export default function MessagesContent() {
                     </div>
                     {msg.sender_id === currentUserId && (
                       <div className="flex items-end">
-                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
                           <MessageSquare size={14} />
                         </button>
                       </div>
@@ -465,20 +465,20 @@ export default function MessagesContent() {
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
                   {connectionStatus === 'blocked' ? (
                     <>
-                      <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><ShieldAlert size={32} /></div>
-                      <p className="text-gray-400 text-sm font-bold uppercase tracking-tighter">Handshake Severed</p>
+                      <div className="w-16 h-16 bg-red-50 border border-red-100 rounded-full flex items-center justify-center text-red-600"><ShieldAlert size={32} /></div>
+                      <p className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Connection Severed</p>
                       {blockerId === currentUserId ? (
                         <button onClick={handleUnblockUser} className="text-blue-500 text-xs font-black uppercase hover:underline">Re-authorize Link</button>
                       ) : (
-                        <p className="text-gray-600 text-xs italic font-mono">Channel locked by peer node.</p>
+                        <p className="text-gray-500 text-xs italic font-mono">Channel locked by peer user.</p>
                       )}
                     </>
                   ) : connectionStatus === 'none' ? (
-                    <><div className="w-16 h-16 bg-blue-600/10 rounded-full flex items-center justify-center text-blue-500"><UserPlus size={32} /></div><p className="text-gray-400 text-sm font-bold uppercase tracking-tighter">Transmission blocked</p><button onClick={handleSendRequest} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold">Send Request</button></>
+                    <><div className="w-16 h-16 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center text-blue-600"><UserPlus size={32} /></div><p className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Transmission blocked</p><button onClick={handleSendRequest} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold">Send Request</button></>
                   ) : connectionStatus === 'waiting' ? (
-                    <><div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-gray-500 animate-pulse"><Send size={32} /></div><p className="text-gray-500 text-xs italic font-mono uppercase tracking-tighter">Syncing... waiting for peer authorization.</p></>
+                    <><div className="w-16 h-16 bg-gray-50 border border-gray-200 rounded-full flex items-center justify-center text-gray-400 animate-pulse"><Send size={32} /></div><p className="text-gray-500 text-xs italic font-mono uppercase tracking-tighter">Syncing... waiting for peer authorization.</p></>
                   ) : (
-                    <><div className="w-16 h-16 bg-green-600/10 rounded-full flex items-center justify-center text-green-500"><Check size={32} /></div><p className="text-white text-sm font-black tracking-tight uppercase">Handshake Request Detected</p><div className="flex gap-3"><button onClick={handleAcceptRequest} className="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all"><Check size={18} /> Accept</button><button onClick={() => { supabase.from('connections').delete().eq('id', activeConnectionId); setConnectionStatus('none'); }} className="bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 px-6 py-2.5 rounded-xl font-bold transition-all border border-white/5">Ignore</button></div></>
+                    <><div className="w-16 h-16 bg-green-50 border border-green-100 rounded-full flex items-center justify-center text-green-600"><Check size={32} /></div><p className="text-gray-900 text-sm font-black tracking-tight uppercase">Connection Request Detected</p><div className="flex gap-3"><button onClick={handleAcceptRequest} className="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all"><Check size={18} /> Accept</button><button onClick={() => { supabase.from('connections').delete().eq('id', activeConnectionId); setConnectionStatus('none'); }} className="bg-white border border-gray-300 hover:bg-red-50 text-gray-700 hover:text-red-600 px-6 py-2.5 rounded-xl font-bold transition-all">Ignore</button></div></>
                   )}
                 </div>
               )}
@@ -486,28 +486,28 @@ export default function MessagesContent() {
 
             <div className={`pt-3 pb-2 md:pb-0 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
               {replyingTo && (
-                <div className="bg-black/30 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="bg-gray-100 border border-gray-200 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="min-w-0">
-                    <p className="text-gray-400">Replying to <span className="font-bold text-blue-400">@{replyingTo.sender_id === currentUserId ? 'You' : activeChat.username}</span></p>
+                    <p className="text-gray-500">Replying to <span className="font-bold text-blue-600">@{replyingTo.sender_id === currentUserId ? 'You' : activeChat.username}</span></p>
                     <p className="text-gray-500 truncate">{replyingTo.text || 'Image'}</p>
                   </div>
-                  <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 hover:text-white"><X size={16} /></button>
+                  <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 hover:text-gray-900"><X size={16} /></button>
                 </div>
               )}
               {imagePreview && (
-                <div className="bg-black/30 rounded-t-xl p-2 flex animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="bg-gray-100 border border-gray-200 border-b-0 rounded-t-xl p-2 flex animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="relative w-16 h-16 rounded-lg overflow-hidden">
                     <Image src={imagePreview} alt="preview" fill sizes="64px" className="object-cover" />
-                    <button onClick={handleRemoveImage} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5"><X size={12} /></button>
+                    <button onClick={handleRemoveImage} className="absolute top-1 right-1 bg-white/80 text-gray-900 rounded-full p-0.5"><X size={12} /></button>
                   </div>
                 </div>
               )}
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-[#0F0F0F] border border-white/5 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500/30 transition-all">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-white border border-gray-300 rounded-2xl p-1.5 pl-4 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-sm">
                 <input type="file" ref={imageInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-600 hover:text-blue-400 transition-colors p-2">
+                <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 hover:text-blue-600 transition-colors p-2">
                   <Paperclip size={18} />
                 </button>
-                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Secure packet to @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-xs text-white py-2" />
+                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-xs text-gray-900 py-2" />
                 <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
               </form>
             </div>
@@ -520,11 +520,11 @@ export default function MessagesContent() {
       {/* USER PROFILE MODAL */}
       {selectedUserId && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-[#0A0A0A] rounded-[2rem] border border-white/10 shadow-2xl">
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[260] p-2 bg-white/5 hover:bg-red-500/20 hover:text-red-500 rounded-full text-gray-400 transition-colors"
+              className="absolute top-6 right-6 z-[260] p-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full text-gray-500 transition-colors"
             >
               <X size={20} />
             </button>

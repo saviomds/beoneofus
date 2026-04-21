@@ -267,18 +267,18 @@ export default function ProfileContent({ viewUserId }) {
   return (
     <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 pt-4 px-2">
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-white tracking-tighter">Identity Profile</h1>
+        <h1 className="text-3xl font-black text-gray-900 tracking-tighter">Identity Profile</h1>
         <p className="text-gray-500 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your personal information and network status." : "Viewing network identity data."}</p>
       </div>
 
-      <div className="max-w-4xl bg-[#0A0A0A] border border-white/5 rounded-[2rem] p-6 sm:p-10 relative overflow-hidden shadow-2xl">
+      <div className="max-w-4xl bg-white border border-gray-200 rounded-[2rem] p-6 sm:p-10 relative overflow-hidden shadow-lg">
         {/* Background Accents */}
-        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-blue-600/10 to-purple-600/10" />
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
+        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-blue-50 to-purple-50" />
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent" />
         
         <div className="relative flex flex-col md:flex-row gap-8 items-start md:items-center pt-4">
           {/* Avatar Section */}
-          <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-4xl font-black text-white shadow-xl shadow-blue-500/20 shrink-0 border border-white/10 overflow-hidden group">
+          <div className="relative w-24 h-24 rounded-3xl bg-gray-100 flex items-center justify-center text-4xl font-black text-gray-700 shadow-sm shrink-0 border border-gray-200 overflow-hidden group z-10">
             {displayAvatar ? (
               <Image src={displayAvatar} alt="Profile Avatar" fill sizes="96px" className="object-cover" />
             ) : (
@@ -288,7 +288,7 @@ export default function ProfileContent({ viewUserId }) {
             {isEditing && (
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                className="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
               >
                 <Camera size={24} className="text-white mb-1" />
                 <span className="text-[9px] font-bold uppercase tracking-widest text-white">Change</span>
@@ -303,12 +303,12 @@ export default function ProfileContent({ viewUserId }) {
                 <div>
                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Username</label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">@</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">@</span>
                     <input 
                       type="text" 
                       value={formData.username} 
                       onChange={(e) => setFormData({...formData, username: e.target.value})}
-                      className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm focus:border-blue-500/50 focus:bg-white/5 outline-none transition-all"
+                      className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                     />
                   </div>
                 </div>
@@ -319,21 +319,21 @@ export default function ProfileContent({ viewUserId }) {
                     value={formData.status} 
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
                     placeholder="e.g. Maintenance & Limited"
-                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl py-3 px-4 text-white text-sm focus:border-blue-500/50 focus:bg-white/5 outline-none transition-all"
+                    className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <button onClick={handleSave} disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20">
+                  <button onClick={handleSave} disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm">
                     {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} Save
                   </button>
-                  <button onClick={handleCancel} className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-bold transition-all border border-white/5">
+                  <button onClick={handleCancel} className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 py-3 rounded-xl font-bold transition-all border border-gray-200">
                     Cancel
                   </button>
                 </div>
               </div>
             ) : (
               <div className="animate-in fade-in duration-300">
-                <h2 className="text-2xl font-black text-white mb-1 flex items-center gap-2">
+                <h2 className="text-2xl font-black text-gray-900 mb-1 flex items-center gap-2">
                   @{profile?.username || 'I am robot'}
                 </h2>
                 <div className="flex items-center gap-4 mb-6">
@@ -341,36 +341,36 @@ export default function ProfileContent({ viewUserId }) {
                     <Activity size={14} className="animate-pulse" />
                     {profile?.status || 'Bio not set'}
                   </p>
-                  <div className="w-1.5 h-1.5 bg-white/10 rounded-full" />
+                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full" />
                   
                   <div className="relative">
                     <p 
                       onClick={handleViewFollowers}
-                      className={`text-gray-400 text-sm font-bold flex items-center gap-1.5 transition-colors ${followersCount > 0 ? 'cursor-pointer hover:text-white' : ''}`}
+                      className={`text-gray-500 text-sm font-bold flex items-center gap-1.5 transition-colors ${followersCount > 0 ? 'cursor-pointer hover:text-gray-900' : ''}`}
                     >
-                      <Users size={14} className="text-gray-500" />
-                      <span className="text-white">
+                      <Users size={14} className="text-gray-400" />
+                      <span className="text-gray-900">
                         {Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(followersCount)}
                       </span> Followers
                     </p>
 
                     {showFollowersList && (
-                      <div className="absolute top-full left-0 mt-2 w-64 bg-[#111111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="p-3 bg-white/5 border-b border-white/5 flex justify-between items-center">
+                      <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                           <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Network Nodes</span>
-                          <button onClick={() => setShowFollowersList(false)} className="text-gray-500 hover:text-white transition-colors"><X size={14}/></button>
+                          <button onClick={() => setShowFollowersList(false)} className="text-gray-400 hover:text-gray-900 transition-colors"><X size={14}/></button>
                         </div>
                         {/* max-h-[170px] perfectly fits 3 items of ~50px height before initiating the scrollbar */}
                         <div className="max-h-[170px] overflow-y-auto custom-scrollbar p-2 space-y-1">
                           {loadingFollowers ? (
                             <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-blue-500" /></div>
                           ) : followersData.map(user => (
-                            <div key={`follower-${user.id}`} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-xl transition-colors cursor-pointer group">
-                              <div className="relative w-8 h-8 rounded-full bg-black border border-white/10 flex items-center justify-center text-xs font-bold uppercase text-white shrink-0 overflow-hidden">
+                            <div key={`follower-${user.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer group">
+                              <div className="relative w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-bold uppercase text-gray-500 shrink-0 overflow-hidden">
                                 {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : user.username?.substring(0, 2)}
                               </div>
                               <div className="min-w-0">
-                                <p className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">@{user.username}</p>
+                                <p className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">@{user.username}</p>
                                 <p className="text-[9px] text-gray-500 truncate uppercase tracking-widest">{user.status || 'Active Node'}</p>
                               </div>
                             </div>
@@ -382,52 +382,52 @@ export default function ProfileContent({ viewUserId }) {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                  <div className="flex items-center gap-4 bg-[#0F0F0F] p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 shrink-0"><Mail size={18} /></div>
+                  <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-500/30 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-500 shrink-0"><Mail size={18} /></div>
                     <div className="min-w-0">
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">{isOwnProfile ? "Email Address" : "Email Visibility"}</p>
-                      <p className="text-sm text-gray-300 truncate font-medium">{isOwnProfile ? (currentUser?.email || 'N/A') : 'Protected by User'}</p>
+                      <p className="text-sm text-gray-700 truncate font-medium">{isOwnProfile ? (currentUser?.email || 'N/A') : 'Protected by User'}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 bg-[#0F0F0F] p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 shrink-0"><Calendar size={18} /></div>
+                  <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-500/30 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-500 shrink-0"><Calendar size={18} /></div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Node Registered</p>
-                      <p className="text-sm text-gray-300 font-medium">{isOwnProfile && currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Active Member'}</p>
+                      <p className="text-sm text-gray-700 font-medium">{isOwnProfile && currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Active Member'}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 bg-[#0F0F0F] p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 shrink-0"><Shield size={18} /></div>
+                  <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-500/30 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center text-green-600 shrink-0"><Shield size={18} /></div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Security Clearance</p>
-                      <p className="text-sm text-green-400 font-bold tracking-tight">Verified Member</p>
+                      <p className="text-sm text-green-600 font-bold tracking-tight">Verified Member</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 bg-[#0F0F0F] p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 shrink-0"><User size={18} /></div>
+                  <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-500/30 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-500 shrink-0"><User size={18} /></div>
                     <div className="min-w-0">
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Account ID</p>
-                      <p className="text-xs text-gray-500 font-mono truncate">{profile?.id || 'N/A'}</p>
+                      <p className="text-xs text-gray-400 font-mono truncate">{profile?.id || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
 
                 {isOwnProfile ? (
-                  <div className="mt-8 pt-6 border-t border-white/5 flex">
+                  <div className="mt-8 pt-6 border-t border-gray-200 flex">
                     <button 
                       onClick={() => setIsEditing(true)} 
-                      className="flex items-center gap-2 text-sm font-bold text-white bg-white/5 hover:bg-white/10 px-6 py-3 rounded-xl border border-white/5 transition-all shadow-sm active:scale-95"
+                      className="flex items-center gap-2 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 px-6 py-3 rounded-xl border border-gray-200 transition-all shadow-sm active:scale-95"
                     >
                       <Edit3 size={16} /> Edit Identity
                     </button>
                   </div>
                 ) : (
-                  <div className="mt-8 pt-6 border-t border-white/5 flex">
+                  <div className="mt-8 pt-6 border-t border-gray-200 flex">
                     {connectionStatus === 'none' && (
                       <button 
                         onClick={handleFollow}
                         disabled={connectionProcessing}
-                        className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50"
+                        className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
                       >
                         {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Follow
                       </button>
@@ -436,7 +436,7 @@ export default function ProfileContent({ viewUserId }) {
                       <button 
                         onClick={handleUnfollow}
                         disabled={connectionProcessing}
-                        className="flex items-center gap-2 text-sm font-bold text-gray-400 bg-white/5 hover:bg-red-500/10 hover:text-red-400 px-6 py-3 rounded-xl border border-white/5 transition-all active:scale-95 disabled:opacity-50"
+                        className="flex items-center gap-2 text-sm font-bold text-gray-600 bg-gray-50 hover:bg-red-50 hover:text-red-600 px-6 py-3 rounded-xl border border-gray-200 transition-all active:scale-95 disabled:opacity-50"
                       >
                         {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Cancel Request
                       </button>
@@ -444,7 +444,7 @@ export default function ProfileContent({ viewUserId }) {
                     {connectionStatus === 'pending_received' && (
                        <button 
                         disabled
-                        className="flex items-center gap-2 text-sm font-bold text-amber-500 bg-amber-500/10 px-6 py-3 rounded-xl border border-amber-500/20 transition-all cursor-default"
+                        className="flex items-center gap-2 text-sm font-bold text-amber-600 bg-amber-50 px-6 py-3 rounded-xl border border-amber-200 transition-all cursor-default"
                       >
                         <Users size={16} /> Review in Notifications
                       </button>
@@ -453,7 +453,7 @@ export default function ProfileContent({ viewUserId }) {
                       <button 
                         onClick={handleUnfollow}
                         disabled={connectionProcessing}
-                        className="flex items-center gap-2 text-sm font-bold text-gray-400 bg-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 px-6 py-3 rounded-xl border border-white/5 transition-all active:scale-95 disabled:opacity-50"
+                        className="flex items-center gap-2 text-sm font-bold text-gray-600 bg-gray-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-6 py-3 rounded-xl border border-gray-200 transition-all active:scale-95 disabled:opacity-50"
                       >
                         {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Unfollow
                       </button>
@@ -468,7 +468,7 @@ export default function ProfileContent({ viewUserId }) {
 
       {/* Custom Toast Popup */}
       {toast && (
-        <div className={`fixed bottom-10 right-10 z-[150] flex items-center gap-3 bg-[#0D0D0D] border px-5 py-3 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-300 ${isError ? 'border-red-500/30 text-red-400' : 'border-green-500/30 text-green-400'}`}>
+        <div className={`fixed bottom-10 right-10 z-[150] flex items-center gap-3 bg-white border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 ${isError ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
           {isError ? <AlertTriangle size={18} className="text-red-500" /> : <Check size={18} className="text-green-500" />}
           <span className="text-sm font-bold tracking-tight">{toast}</span>
         </div>

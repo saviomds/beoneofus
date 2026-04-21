@@ -164,7 +164,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
   };
 
   return (
-    <aside className="w-full flex flex-col p-6 space-y-10 h-screen sticky top-0 overflow-y-auto no-scrollbar bg-transparent border-l border-white/5 relative">
+    <aside className="w-full flex flex-col p-6 space-y-10 h-screen sticky top-0 overflow-y-auto no-scrollbar bg-transparent border-l border-gray-200 relative">
       
       {/* 1. Suggested Connections */}
       <div className="pt-2">
@@ -181,10 +181,10 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                 <div 
                   key={user.id} 
                   onClick={() => setSelectedUserId(user.id)}
-                  className="flex items-center justify-between group cursor-pointer p-2 -mx-2 rounded-xl hover:bg-white/5 transition-all"
+                  className="flex items-center justify-between group cursor-pointer p-2 -mx-2 rounded-xl hover:bg-gray-50 transition-all"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-10 h-10 rounded-xl bg-black overflow-hidden shrink-0 border border-white/10">
+                    <div className="relative w-10 h-10 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
                       {user.avatar_url ? (
                         <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                       ) : (
@@ -194,13 +194,13 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                       )}
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <span className="text-sm font-bold text-gray-200 truncate group-hover:text-blue-400 transition-colors">@{user.username}</span>
+                      <span className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">@{user.username}</span>
                       <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest truncate">{user.status || 'Active Node'}</span>
                     </div>
                   </div>
                   <button 
                     onClick={(e) => handleFollowToggle(e, user.id, isFollowed)}
-                    className={`group/btn shrink-0 p-2 rounded-xl transition-all border ${isFollowed ? 'bg-green-500/10 border-green-500/20 text-green-500 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'}`}
+                    className={`group/btn shrink-0 p-2 rounded-xl transition-all border ${isFollowed ? 'bg-green-50 border-green-200 text-green-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
                     title={isFollowed ? "Unfollow" : "Follow"}
                   >
                     {isFollowed ? (
@@ -231,11 +231,11 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
             {groups.map((group) => (
               <div 
                 key={group.id} 
-                className="flex flex-col group cursor-pointer p-3 rounded-2xl bg-[#0F0F0F] border border-white/5 hover:border-blue-500/30 transition-all"
+                className="flex flex-col group cursor-pointer p-3 rounded-2xl bg-white border border-gray-200 hover:shadow-sm hover:border-blue-500/30 transition-all"
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-sm font-bold text-white truncate">{group.name}</span>
+                    <span className="text-sm font-bold text-gray-900 truncate">{group.name}</span>
                     {group.is_private ? <Lock size={10} className="text-amber-500 shrink-0" /> : <Globe size={10} className="text-blue-500 shrink-0" />}
                   </div>
                   <ChevronRight size={14} className="text-gray-700 group-hover:text-blue-500 transition-all shrink-0" />
@@ -260,8 +260,8 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                 <Zap size={12} className="text-blue-400" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white mb-0.5">End-to-End Workspaces</h4>
-                <p className="text-[10px] text-gray-400 leading-relaxed">Secure, private channel chats are now active. Create a node to begin.</p>
+                <h4 className="text-xs font-bold text-gray-900 mb-0.5">End-to-End Workspaces</h4>
+                <p className="text-[10px] text-gray-600 leading-relaxed">Secure, private channel chats are now active. Create a node to begin.</p>
               </div>
             </div>
             <div className="flex gap-3 items-start">
@@ -269,8 +269,8 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                 <Users size={12} className="text-purple-400" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white mb-0.5">Global Connections</h4>
-                <p className="text-[10px] text-gray-400 leading-relaxed">Follow other developers and build your custom network feed.</p>
+                <h4 className="text-xs font-bold text-gray-900 mb-0.5">Global Connections</h4>
+                <p className="text-[10px] text-gray-600 leading-relaxed">Follow other developers and build your custom network feed.</p>
               </div>
             </div>
           </div>
@@ -282,14 +282,14 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
         <SectionHeader title="Resources" icon={BookOpen} />
         <div
           onClick={handleDocsClick}
-          className="flex items-center justify-between group cursor-pointer p-4 rounded-2xl bg-[#0F0F0F] border border-white/5 hover:border-blue-500/30 transition-all shadow-sm"
+          className="flex items-center justify-between group cursor-pointer p-4 rounded-2xl bg-white border border-gray-200 hover:shadow-md hover:border-blue-500/30 transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
               <BookOpen size={16} />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors">Platform Docs</span>
+              <span className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">Platform Docs</span>
               <span className="text-[10px] text-gray-500 line-clamp-1">Read the network reference manual</span>
             </div>
           </div>
@@ -300,11 +300,11 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
       {/* USER PROFILE MODAL */}
       {selectedUserId && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-[#0A0A0A] rounded-[2rem] border border-white/10 shadow-2xl">
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[250] p-2 bg-white/5 hover:bg-red-500/20 hover:text-red-500 rounded-full text-gray-400 transition-colors"
+              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full text-gray-500 transition-colors"
             >
               <X size={20} />
             </button>
@@ -318,7 +318,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
 
       {/* Footer/About Section */}
       <div className="mt-auto pt-8 text-center">
-        <p className="text-[10px] text-gray-700 font-mono">
+        <p className="text-[10px] text-gray-500 font-mono">
           beoneofus network v1.0<br/>
           All systems operational.
         </p>

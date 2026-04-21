@@ -114,17 +114,17 @@ export default function PagesContent() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto relative animate-in fade-in slide-in-from-bottom-4 duration-700">
       {activePage ? (
-        <div className="w-full flex flex-col h-[calc(100vh-180px)] bg-[#0A0A0A] rounded-[2rem] border border-white/5 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300">
+        <div className="w-full flex flex-col h-[calc(100vh-180px)] bg-white rounded-[2rem] border border-gray-200 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300 shadow-sm">
           {/* Header */}
-          <div className="p-4 border-b border-white/5 bg-[#0F0F0F] flex items-center gap-3 z-10 shrink-0">
-            <button onClick={() => setActivePage(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition">
+          <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center gap-3 z-10 shrink-0">
+            <button onClick={() => setActivePage(null)} className="p-2 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-gray-900 transition">
               <ChevronLeft size={20} />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold uppercase shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 flex items-center justify-center font-bold uppercase shrink-0">
               <LayoutTemplate size={20} />
             </div>
             <div>
-              <h2 className="text-white font-bold text-lg leading-tight">{activePage.title}</h2>
+              <h2 className="text-gray-900 font-bold text-lg leading-tight">{activePage.title}</h2>
               <p className="text-[10px] font-black tracking-widest text-purple-500 uppercase">Public Page</p>
             </div>
           </div>
@@ -133,14 +133,14 @@ export default function PagesContent() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
             {pagePosts.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500">
-                <LayoutTemplate size={48} className="mb-4 opacity-20" />
+                <LayoutTemplate size={48} className="mb-4 opacity-30 text-purple-500" />
                 <p className="font-bold text-sm uppercase tracking-widest mb-1">No Updates Yet</p>
                 <p className="text-xs font-mono">Be the first to post on this page.</p>
               </div>
             ) : (
               pagePosts.map(post => (
-                <div key={post.id} className="bg-[#111111] border border-white/5 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-2">
-                  <div className="relative w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 overflow-hidden">
+                <div key={post.id} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-2">
+                  <div className="relative w-10 h-10 rounded-xl bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-xs uppercase shrink-0 overflow-hidden">
                     {post.profiles?.avatar_url ? (
                       <Image src={post.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                     ) : (
@@ -149,12 +149,12 @@ export default function PagesContent() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-bold text-white truncate">@{post.profiles?.username}</span>
+                      <span className="text-sm font-bold text-gray-900 truncate">@{post.profiles?.username}</span>
                       <span className="text-[9px] text-gray-500 uppercase tracking-widest shrink-0">
                         {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-300 leading-relaxed">{post.content}</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">{post.content}</p>
                   </div>
                 </div>
               ))
@@ -162,16 +162,16 @@ export default function PagesContent() {
           </div>
 
           {/* Input */}
-          <div className="p-3 bg-[#0F0F0F] border-t border-white/5 z-10 shrink-0">
-            <form onSubmit={handleCreatePost} className="flex items-center gap-2 bg-black border border-white/10 rounded-2xl p-1.5 pl-4 focus-within:border-purple-500/30 transition-all">
+          <div className="p-3 bg-gray-50 border-t border-gray-200 z-10 shrink-0">
+            <form onSubmit={handleCreatePost} className="flex items-center gap-2 bg-white border border-gray-300 rounded-2xl p-1.5 pl-4 focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-500 transition-all shadow-sm">
               <input 
                 type="text" 
                 value={postInput} 
                 onChange={e => setPostInput(e.target.value)} 
                 placeholder="Share an update on this page..." 
-                className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white py-2" 
+                className="flex-1 bg-transparent border-none focus:outline-none text-sm text-gray-900 py-2" 
               />
-              <button type="submit" disabled={isProcessing} className="bg-purple-600 hover:bg-purple-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-purple-600/20 active:scale-95 disabled:opacity-50">
+              <button type="submit" disabled={isProcessing} className="bg-purple-600 hover:bg-purple-700 text-white p-2.5 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50">
                 {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} strokeWidth={3} />}
               </button>
             </form>
@@ -182,12 +182,12 @@ export default function PagesContent() {
           {/* Header Section */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white">Pages</h1>
-              <p className="text-gray-400 text-sm mt-1">Discover and manage public spaces.</p>
+              <h1 className="text-3xl font-bold text-gray-900">Pages</h1>
+              <p className="text-gray-600 text-sm mt-1">Discover and manage public spaces.</p>
             </div>
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-purple-500/20 active:scale-95"
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl transition-all font-semibold shadow-sm active:scale-95"
             >
               <Plus size={20} />
               Create Page
@@ -201,8 +201,8 @@ export default function PagesContent() {
               <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Loading Pages...</p>
             </div>
           ) : pages.length === 0 ? (
-            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem]">
-              <FileText size={48} className="text-gray-800 mb-4" />
+            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-gray-300 bg-gray-50 rounded-[2rem]">
+              <FileText size={48} className="text-gray-400 mb-4" />
               <p className="text-gray-600 font-bold">No pages found.</p>
             </div>
           ) : (
@@ -211,20 +211,20 @@ export default function PagesContent() {
                 <div 
                   key={page.id} 
                   onClick={() => setActivePage(page)}
-                  className="group flex flex-col gap-2 bg-[#0A0A0A] border border-white/5 rounded-2xl p-5 hover:border-purple-500/30 hover:bg-white/[0.02] transition-all cursor-pointer"
+                  className="group flex flex-col gap-2 bg-white border border-gray-200 rounded-2xl p-5 hover:border-purple-500/30 hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400 group-hover:bg-purple-500/20 transition-colors">
+                    <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-purple-600 group-hover:bg-purple-100 transition-colors">
                       <LayoutTemplate size={24} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-white truncate">{page.title}</h3>
+                      <h3 className="text-lg font-bold text-gray-900 truncate">{page.title}</h3>
                       <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500 flex items-center gap-1 mt-0.5">
                         <Globe size={10} /> Public Space
                       </span>
                     </div>
                   </div>
-                  <p className="text-gray-400 text-sm line-clamp-2 mt-2">{page.description}</p>
+                  <p className="text-gray-600 text-sm line-clamp-2 mt-2">{page.description}</p>
                 </div>
               ))}
             </div>
@@ -235,12 +235,12 @@ export default function PagesContent() {
       {/* CREATE PAGE MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
           
-          <div className="relative w-full max-w-md bg-[#0F0F0F] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">Create New Page</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-400 transition-colors">
+          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Create New Page</h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -248,21 +248,21 @@ export default function PagesContent() {
             <form className="p-6 space-y-5" onSubmit={handleCreatePage}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Page Title</label>
-                  <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Next.js Updates" className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40 transition-all" />
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Page Title</label>
+                  <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Next.js Updates" className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all" />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Description</label>
-                  <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this page about?" className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/40 transition-all resize-none" />
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Description</label>
+                  <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this page about?" className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all resize-none" />
                 </div>
               </div>
 
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 px-4 rounded-xl text-gray-400 font-medium hover:bg-white/5 transition-all">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 px-4 rounded-xl text-gray-700 bg-gray-50 border border-gray-200 font-bold hover:bg-gray-100 transition-all">
                   Cancel
                 </button>
-                <button type="submit" disabled={isProcessing} className="flex-1 flex justify-center py-3 px-4 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 shadow-lg shadow-purple-500/20 transition-all disabled:opacity-50">
+                <button type="submit" disabled={isProcessing} className="flex-1 flex justify-center py-3 px-4 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 shadow-sm transition-all disabled:opacity-50">
                   {isProcessing ? <Loader2 size={20} className="animate-spin" /> : "Create Page"}
                 </button>
               </div>

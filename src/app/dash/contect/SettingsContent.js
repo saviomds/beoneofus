@@ -6,17 +6,26 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
 export default function SettingsContent() {
+  // Theme state from next-themes
   const { theme, setTheme, systemTheme } = useTheme();
+  // State to ensure component is mounted on the client before rendering theme UI
   const [mounted, setMounted] = useState(false);
+  // State for user profile data (used for delete confirmation)
   const [profile, setProfile] = useState(null);
+  // UI state for delete account confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // Controlled input for delete confirmation
   const [deleteInput, setDeleteInput] = useState("");
+  // Loading state for the delete operation
   const [isDeleting, setIsDeleting] = useState(false);
+  // Error message state for the delete operation
   const [deleteError, setDeleteError] = useState("");
 
-  // Prevent hydration mismatch by only rendering after mount
+  // Effect to handle client-side-only logic
   useEffect(() => {
+    // Set mounted to true to avoid hydration mismatch with theme logic
     setMounted(true);
+    // Fetch user profile to get username for delete confirmation
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -27,30 +36,43 @@ export default function SettingsContent() {
     fetchProfile();
   }, []);
 
+  // Prevent rendering theme-dependent UI on the server
   if (!mounted) return null;
 
+  // Configuration for the theme selection UI
   const themeOptions = [
     { id: 'light', label: 'Light', icon: Sun, desc: 'Clean and bright' },
     { id: 'dark', label: 'Dark', icon: Moon, desc: 'Easy on the eyes' },
     { id: 'system', label: 'System', icon: Monitor, desc: 'Matches device' }
   ];
 
+  /**
+   * Handles the account deletion process.
+   * It verifies the user's input against their username before proceeding.
+   * It calls a Supabase RPC function 'delete_user' to securely delete the user's auth entry.
+   * After successful deletion, it signs the user out and redirects them.
+   */
   const handleDeleteAccount = async () => {
+    // Double-check confirmation input
     if (deleteInput !== `delete ${profile?.username}`) return;
+    
     setIsDeleting(true);
     setDeleteError("");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // 1. Call the secure RPC function to delete the auth user
+        // 1. Call the secure RPC function to delete the auth user.
+        // This is the preferred, secure way to handle user deletion.
         const { error: rpcError } = await supabase.rpc('delete_user');
         
         if (rpcError) {
-          // Fallback: Try to delete the profile if RPC isn't set up
+          // Fallback for if the RPC function isn't set up.
+          // This is less secure as it relies on RLS policies alone.
           const { error: profileError } = await supabase.from('profiles').delete().eq('id', session.user.id);
           if (profileError) throw new Error("Could not delete account. Ensure you ran the SQL script to create the delete_user function.");
         }
 
+        // 2. Sign out the user from the client and redirect
         await supabase.auth.signOut();
         window.location.href = '/auth';
       }
@@ -63,13 +85,15 @@ export default function SettingsContent() {
 
   return (
     <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
+      {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-black text-gray-900 tracking-tighter">Settings</h1>
         <p className="text-gray-500 text-sm mt-1 font-medium">Manage your preferences and app appearance.</p>
       </div>
 
       <div className="space-y-8 max-w-3xl">
-        {/* Appearance Section */}
+        {/* Appearance Section - Commented out as per request */}
+        {/*
         <div className="bg-white border border-gray-200 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
@@ -113,8 +137,9 @@ export default function SettingsContent() {
             })}
           </div>
         </div>
+        */}
 
-        {/* Danger Zone */}
+        {/* Danger Zone Section for account deletion */}
         <div className="bg-white border border-red-100 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
@@ -141,10 +166,12 @@ export default function SettingsContent() {
         </div>
       </div>
 
-      {/* Delete Account Modal */}
+      {/* Delete Account Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          {/* Modal backdrop */}
           <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => { setShowDeleteModal(false); setDeleteInput(""); }} />
+          {/* Modal content */}
           <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-3xl shadow-xl p-6 text-center animate-in fade-in zoom-in duration-200">
             <button 
               onClick={() => { setShowDeleteModal(false); setDeleteInput(""); }} 
@@ -165,6 +192,7 @@ export default function SettingsContent() {
             </p>
             
             <div className="space-y-4">
+              {/* Confirmation Input */}
               <input 
                 type="text" 
                 value={deleteInput}
@@ -174,12 +202,14 @@ export default function SettingsContent() {
                 className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 text-gray-900 focus:outline-none focus:border-red-500/50 transition-all text-center"
               />
               
+              {/* Error message display */}
               {deleteError && (
                 <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-xl text-left">
                   <span className="font-bold">Error:</span> {deleteError}
                 </div>
               )}
 
+              {/* Final Delete Button */}
               <button 
                 onClick={handleDeleteAccount}
                 disabled={deleteInput !== `delete ${profile?.username}` || isDeleting}

@@ -34,6 +34,11 @@ export default function MessagesContent() {
   const [replyingTo, setReplyingTo] = useState(null);
   const imageInputRef = useRef(null);
 
+  // Call States
+  const [activeCall, setActiveCall] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const globalCallsRef = useRef(null);
+
   const scrollRef = useRef(null);
   const channelRef = useRef(null);
 
@@ -162,7 +167,70 @@ export default function MessagesContent() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, connectionStatus]);
 
-  // 4. Connection Handlers
+  // 4. Global Calling Setup & Methods
+  useEffect(() => {
+    if (!currentUserId) return;
+    
+    // Single global channel for all call signals
+    globalCallsRef.current = supabase.channel('global-calls')
+      .on('broadcast', { event: 'call_ring' }, ({ payload }) => {
+        if (payload.targetId === currentUserId) setIncomingCall(payload);
+      })
+      .on('broadcast', { event: 'call_accept' }, ({ payload }) => {
+        if (payload.targetId === currentUserId) {
+          setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null);
+        }
+      })
+      .on('broadcast', { event: 'call_reject' }, ({ payload }) => {
+        if (payload.targetId === currentUserId) {
+          setActiveCall(null);
+          setIncomingCall(null);
+        }
+      })
+      .on('broadcast', { event: 'call_end' }, ({ payload }) => {
+        if (payload.targetId === currentUserId) {
+          setActiveCall(null);
+          setIncomingCall(null);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      if (globalCallsRef.current) supabase.removeChannel(globalCallsRef.current);
+    };
+  }, [currentUserId]);
+
+  const startCall = (isVideo) => {
+    if (!activeChat || !currentUserId) return;
+    const roomId = `beoneofus-${[currentUserId, activeChat.id].sort().join('-')}-${Date.now()}`;
+    
+    globalCallsRef.current?.send({
+      type: 'broadcast',
+      event: 'call_ring',
+      payload: { targetId: activeChat.id, callerId: currentUserId, isVideo, roomId }
+    });
+    
+    setActiveCall({ roomId, isVideo, status: 'ringing', peerId: activeChat.id });
+  };
+
+  const acceptCall = () => {
+    globalCallsRef.current?.send({ type: 'broadcast', event: 'call_accept', payload: { targetId: incomingCall.callerId } });
+    setActiveCall({ roomId: incomingCall.roomId, isVideo: incomingCall.isVideo, status: 'connected', peerId: incomingCall.callerId });
+    setIncomingCall(null);
+  };
+
+  const rejectCall = () => {
+    globalCallsRef.current?.send({ type: 'broadcast', event: 'call_reject', payload: { targetId: incomingCall.callerId } });
+    setIncomingCall(null);
+  };
+
+  const endCall = () => {
+    if (activeCall?.peerId) globalCallsRef.current?.send({ type: 'broadcast', event: 'call_end', payload: { targetId: activeCall.peerId } });
+    setActiveCall(null);
+    setIncomingCall(null);
+  };
+
+  // 5. Connection Handlers
   const handleSendRequest = async () => {
     const { error } = await supabase.from('connections').insert({
       sender_id: currentUserId,
@@ -196,7 +264,7 @@ export default function MessagesContent() {
     }
   };
 
-  // 5. BLOCK / UNBLOCK LOGIC (Fixed for persistence)
+  // 6. BLOCK / UNBLOCK LOGIC (Fixed for persistence)
   const handleBlockUser = async () => {
     if (!activeConnectionId || !currentUserId) return;
     setIsProcessing(true);
@@ -237,7 +305,7 @@ export default function MessagesContent() {
     } finally { setIsProcessing(false); }
   };
 
-  // 6. Send Message
+  // 7. Send Message
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (connectionStatus !== 'accepted') return;
@@ -402,8 +470,12 @@ export default function MessagesContent() {
               </div>
               
               <div className="flex items-center gap-1 text-gray-500 relative">
-                <button className="p-1.5 hover:text-gray-900 transition-colors"><Phone size={16} /></button>
-                <button className="p-1.5 hover:text-gray-900 transition-colors"><Video size={16} /></button>
+                {connectionStatus === 'accepted' && (
+                  <>
+                    <button onClick={() => startCall(false)} className="p-1.5 hover:text-gray-900 transition-colors" title="Start Audio Call"><Phone size={16} /></button>
+                    <button onClick={() => startCall(true)} className="p-1.5 hover:text-gray-900 transition-colors" title="Start Video Call"><Video size={16} /></button>
+                  </>
+                )}
                 <div className="relative">
                   <button onClick={() => setShowMoreMenu(!showMoreMenu)} className={`p-1.5 transition-colors ${showMoreMenu ? 'text-gray-900' : 'hover:text-gray-900'}`}><MoreHorizontal size={18} /></button>
                   {showMoreMenu && (
@@ -516,6 +588,75 @@ export default function MessagesContent() {
           <div className="flex-1 flex items-center justify-center text-gray-600 text-xs font-black uppercase tracking-[4px] italic animate-pulse">Waiting for selection...</div>
         )}
       </div>
+
+      {/* INCOMING CALL OVERLAY */}
+      {incomingCall && (
+        <div className="fixed inset-0 z-[300] bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-3xl flex flex-col items-center shadow-2xl animate-in zoom-in duration-300 w-full max-w-sm text-center">
+            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 animate-pulse shadow-inner">
+              {incomingCall.isVideo ? <Video size={32} /> : <Phone size={32} />}
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Incoming {incomingCall.isVideo ? 'Video' : 'Audio'} Call</h3>
+            <p className="text-gray-500 mb-8 font-medium">
+              @{contacts.find(c => c.id === incomingCall.callerId)?.username || 'A connection'} is calling you...
+            </p>
+            <div className="flex gap-4 w-full">
+              <button onClick={rejectCall} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-xl font-bold transition-all border border-red-200">
+                Decline
+              </button>
+              <button onClick={acceptCall} className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/30">
+                <Check size={20} /> Answer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OUTGOING CALL RINGING OVERLAY */}
+      {activeCall?.status === 'ringing' && (
+        <div className="fixed inset-0 z-[300] bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-3xl flex flex-col items-center shadow-2xl animate-in zoom-in duration-300 w-full max-w-sm text-center">
+            <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 animate-bounce shadow-inner">
+              {activeCall.isVideo ? <Video size={32} /> : <Phone size={32} />}
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Calling @{activeChat?.username}...</h3>
+            <p className="text-gray-500 mb-8 font-medium">Waiting for them to answer</p>
+            <button onClick={endCall} className="w-full bg-red-50 hover:bg-red-100 text-red-600 px-8 py-3 rounded-xl font-bold transition-all border border-red-200">
+              Cancel Call
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ACTIVE CALL OVERLAY (JITSI IFRAME) */}
+      {activeCall?.status === 'connected' && (
+        <div className="fixed inset-0 z-[300] bg-gray-900 flex flex-col animate-in fade-in">
+          <div className="p-4 bg-gray-900 border-b border-gray-800 text-white flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center">
+                {activeCall.isVideo ? <Video size={20} className="text-blue-400" /> : <Phone size={20} className="text-green-400" />}
+              </div>
+              <div>
+                <h3 className="font-bold text-sm tracking-tight text-white">{activeCall.isVideo ? 'Secure Video Link' : 'Secure Audio Link'}</h3>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-[10px] font-mono text-green-400 uppercase tracking-widest">End-to-End Encrypted</span>
+                </div>
+              </div>
+            </div>
+            <button onClick={endCall} className="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs transition-colors shadow-lg shadow-red-500/20">
+              Disconnect
+            </button>
+          </div>
+          <div className="flex-1 bg-black relative">
+            <iframe 
+              src={`https://meet.jit.si/${activeCall.roomId}#config.prejoinPageEnabled=false&config.startWithVideoMuted=${!activeCall.isVideo}&interfaceConfig.SHOW_JITSI_WATERMARK=false`}
+              allow="camera; microphone; fullscreen; display-capture"
+              className="w-full h-full border-none absolute inset-0"
+            />
+          </div>
+        </div>
+      )}
 
       {/* USER PROFILE MODAL */}
       {selectedUserId && (

@@ -340,7 +340,7 @@ export default function MessagesContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search connections..." 
-              className="w-full bg-white border border-gray-300 rounded-xl py-2 pl-9 text-xs text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+              className="w-full bg-white border border-gray-300 rounded-xl py-2 pl-9 text-base md:text-xs text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
             />
           </div>
         </div>
@@ -507,7 +507,7 @@ export default function MessagesContent() {
                 <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 hover:text-blue-600 transition-colors p-2">
                   <Paperclip size={18} />
                 </button>
-                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-xs text-gray-900 py-2" />
+                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-base md:text-xs text-gray-900 py-2" />
                 <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
               </form>
             </div>

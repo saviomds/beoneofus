@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "./supabaseClient";
-import { Terminal, Zap, Shield, Cpu, ChevronRight, ArrowRight } from "lucide-react";
+import { Terminal, Zap, Shield, Cpu, ChevronRight, ArrowRight, Code2, Users, Globe } from "lucide-react";
 
 export default function LandingPage() {
   const [session, setSession] = useState(null);
@@ -141,6 +141,97 @@ export default function LandingPage() {
               Share code snippets, debug issues, and broadcast updates to the entire global developer feed.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* More Info Section */}
+      <section className="max-w-7xl mx-auto px-6 pb-24 relative z-10">
+        <div className="bg-gradient-to-b from-blue-50 to-white rounded-[3rem] p-8 md:p-16 border border-blue-100 shadow-sm">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-6 tracking-tighter">
+              A new standard for developer collaboration.
+            </h2>
+            <p className="text-lg text-gray-600 font-medium">
+              Whether you are an indie hacker, a startup founder, or an enterprise engineer, beoneofus provides the tools you need to build in public and connect in private.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <div className="space-y-4">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
+                <Users size={24} />
+              </div>
+              <h4 className="text-xl font-bold text-gray-900">Curated Network</h4>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                No recruiters, no spam. Just a dedicated space for software engineers to share knowledge, discuss architecture, and find co-founders.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
+                <Code2 size={24} />
+              </div>
+              <h4 className="text-xl font-bold text-gray-900">Snippet Sharing</h4>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Share code blocks with built-in syntax highlighting. Get immediate feedback, optimizations, and security reviews from peers.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-sky-600 shadow-sm border border-sky-100">
+                <Globe size={24} />
+              </div>
+              <h4 className="text-xl font-bold text-gray-900">Global Reach</h4>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Follow trending repositories, join niche technology groups, and stay up-to-date with the global software engineering ecosystem.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trending Spaces / Ecosystem */}
+      <section className="max-w-7xl mx-auto px-6 py-24 relative z-10 border-t border-gray-200">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-6 tracking-tighter">
+            Explore the ecosystem.
+          </h2>
+          <p className="text-lg text-gray-600 font-medium">
+            Dive into specialized communities, from low-level systems programming to indie hacking and AI research.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { name: 'Systems & Rust', members: '12.4k', icon: <Cpu size={20} /> },
+            { name: 'Frontend Architecture', members: '24.1k', icon: <Code2 size={20} /> },
+            { name: 'Indie Hackers', members: '8.9k', icon: <Zap size={20} /> },
+            { name: 'AI & Machine Learning', members: '18.2k', icon: <Globe size={20} /> },
+          ].map((space, i) => (
+            <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-blue-500/50 hover:shadow-lg transition cursor-pointer group">
+              <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-700 mb-4 group-hover:bg-blue-50 group-hover:text-blue-600 transition">
+                {space.icon}
+              </div>
+              <h4 className="font-bold text-gray-900 mb-1">{space.name}</h4>
+              <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{space.members} Members</p>
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-16 max-w-4xl mx-auto bg-gradient-to-r from-gray-900 to-gray-800 rounded-[2rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl border border-gray-800">
+          <div className="text-center md:text-left">
+            <h3 className="text-2xl md:text-3xl font-black text-white mb-3 tracking-tight">
+              {session ? "Ready to dive back in?" : "Want to look around first?"}
+            </h3>
+            <p className="text-gray-400 font-medium max-w-xl text-sm md:text-base leading-relaxed">
+              {session 
+                ? "Your workspace is ready. Access your network feed, direct messages, and specialized groups." 
+                : "Explore the network feed, discover trending repositories, and read expert discussions in Guest Mode before creating an account."}
+            </p>
+          </div>
+          <Link href="/dash" className="flex-shrink-0 w-full md:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl text-lg font-bold transition-all shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 whitespace-nowrap">
+            {session ? "Open Dashboard" : "Launch Guest Dashboard"} <ArrowRight size={20} />
+          </Link>
         </div>
       </section>
 

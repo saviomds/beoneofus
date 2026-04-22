@@ -86,75 +86,46 @@ function DashLayoutContent({ children }) {
 }
 
 export default function DashLayout({ children }) {
+  const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showAuthPopup, setShowAuthPopup] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setShowAuthPopup(true); // Show access denied popup instead of instant redirect
-      } else {
-        setIsAuthenticated(true);
-      }
+      setIsAuthenticated(!!session);
+      setIsLoading(false);
     };
     
     checkAuth();
 
-    // Listen for logouts to kick users out in real-time
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        setIsAuthenticated(false);
-        setShowAuthPopup(true);
-      } else {
-        setIsAuthenticated(true);
-        setShowAuthPopup(false);
-      }
+      setIsAuthenticated(!!session);
     });
 
     return () => authListener.subscription?.unsubscribe();
   }, [router]);
 
-  let content;
-  if (!isAuthenticated) {
-    if (showAuthPopup) {
-      content = (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-red-200 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Lock size={32} />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h3>
-            <p className="text-gray-600 text-sm mb-8 leading-relaxed">
-              Login first, beoneofus. You need an active session to access the dashboard.
-            </p>
-            <button 
-              onClick={() => router.replace('/auth')} 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-sm"
-            >
-              Return to Login
-            </button>
-          </div>
-        </div>
-      );
-    } else {
-      content = (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Securing connection...</p>
-        </div>
-      );
-    }
-  } else {
-    content = (
-      <DashboardProvider>
-        <DashLayoutContent>{children}</DashLayoutContent>
-      </DashboardProvider>
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Loading...</p>
+      </div>
     );
   }
 
   return (
-    <>{content}</>
+    <DashboardProvider>
+      {!isAuthenticated && (
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-900 text-white p-4 z-[100] flex flex-col sm:flex-row items-center justify-center gap-4 shadow-2xl border-t border-gray-800">
+          <span className="text-sm font-medium text-gray-300">You are viewing the dashboard in guest mode. Join to post, follow, and interact.</span>
+          <button onClick={() => router.push('/auth')} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg text-sm font-bold transition whitespace-nowrap">
+            Sign In / Join Free
+          </button>
+        </div>
+      )}
+      <DashLayoutContent>{children}</DashLayoutContent>
+    </DashboardProvider>
   );
 }

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { supabase } from '../supabaseClient';
 import NewPost from '../components/NewPost';
 import { useDashboard } from './contect/DashboardContext';
 import FeedContent from './contect/FeedContent';
@@ -33,6 +34,20 @@ function DashboardTabHandler() {
 
 export default function Dashboard() {
   const { activeSection } = useDashboard();
+  const [session, setSession] = useState(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => authListener.subscription?.unsubscribe();
+  }, []);
 
   const renderContent = () => {
     switch (activeSection) {
@@ -75,8 +90,21 @@ export default function Dashboard() {
             <p className="text-gray-600 text-sm mt-1 font-medium">Broadcast your updates to the ecosystem.</p>
           </div>
 
-          {/* 1. New Post Area */}
-          <NewPost />
+          {/* 1. New Post Area or Login Prompt */}
+          {session ? (
+            <NewPost />
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm mt-4 mb-6">
+              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Join the conversation</h3>
+              <p className="text-gray-600 mb-4 text-sm font-medium">Sign in to share your code, broadcast updates, and connect with the community.</p>
+              <button onClick={() => router.push('/auth')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition shadow-sm">
+                Sign In to Post
+              </button>
+            </div>
+          )}
           
           {/* 2. Tabs Navigation */}
           <div className="flex gap-6 border-b border-gray-200 mt-8 mb-6">

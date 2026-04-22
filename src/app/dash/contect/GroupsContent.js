@@ -439,11 +439,11 @@ export default function GroupsContent() {
   const filteredGroups = groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto relative">
+    <div className="space-y-6 max-w-4xl mx-auto relative animate-in fade-in slide-in-from-bottom-4 duration-700">
       {activeWorkspace ? (
-        <div className="w-full flex flex-col h-[calc(100vh-180px)] bg-white rounded-[2rem] border border-gray-200 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300 shadow-sm">
+        <div className="w-full flex flex-col h-[calc(100vh-180px)] bg-white rounded-[2.5rem] border border-gray-200 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300 shadow-xl">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between z-10 shrink-0">
+          <div className="p-4 sm:px-6 sm:py-5 border-b border-gray-200 bg-white/90 backdrop-blur-xl flex items-center justify-between z-20 shrink-0 shadow-sm sticky top-0">
             <div className="flex items-center gap-3">
               <button onClick={() => setActiveWorkspace(null)} className="p-2 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-gray-900 transition">
                 <ChevronLeft size={20} />
@@ -472,9 +472,11 @@ export default function GroupsContent() {
           <div ref={workspaceScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
             {workspaceMessages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500">
-                <Hash size={48} className="mb-4 opacity-20" />
-                <p className="font-bold text-sm uppercase tracking-widest mb-1">Node Initialized</p>
-                <p className="text-xs font-mono">End-to-end encrypted node. Say hello to the channel.</p>
+                <div className="w-24 h-24 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center mb-6 text-blue-500 shadow-sm">
+                  <Hash size={48} className="opacity-50" />
+                </div>
+                <p className="font-bold text-gray-900 text-xl mb-2 tracking-tight">Workspace Initialized</p>
+                <p className="text-sm font-medium text-gray-500 max-w-sm leading-relaxed">This is the start of an end-to-end encrypted node. Say hello to the channel.</p>
               </div>
             ) : (
               workspaceMessages.map(msg => {
@@ -536,7 +538,7 @@ export default function GroupsContent() {
           </div>
 
           {/* Input */}
-          <div className="p-3 bg-gray-50 border-t border-gray-200 z-10 shrink-0">
+          <div className="p-3 sm:p-5 bg-white/90 backdrop-blur-xl border-t border-gray-200 z-20 shrink-0 sticky bottom-0">
             {replyingTo && (
               <div className="bg-white border border-gray-200 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
                 <div className="min-w-0">
@@ -554,7 +556,7 @@ export default function GroupsContent() {
                 </div>
               </div>
             )}
-            <form onSubmit={handleSendWorkspaceMessage} className="flex items-center gap-2 bg-white border border-gray-300 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+            <form onSubmit={handleSendWorkspaceMessage} className="flex items-center gap-2 bg-white border border-gray-300 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all shadow-sm">
               <input type="file" ref={imageInputRef} onChange={handleChatFileChange} accept="image/*" className="hidden" />
               <button 
                 type="button" 
@@ -579,51 +581,56 @@ export default function GroupsContent() {
       ) : (
         <>
           {/* Header Section */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Channels</h1>
               <p className="text-gray-600 text-sm mt-1">Manage your communities and collaborations.</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full md:w-auto">
               <button 
                 onClick={() => setDeleteAllModalOpen(true)}
-                className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-5 py-2.5 rounded-xl transition-all font-semibold active:scale-95"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white hover:bg-red-50 text-gray-700 hover:text-red-600 border border-gray-200 hover:border-red-200 px-5 py-2.5 rounded-xl transition-all font-bold text-sm shadow-sm active:scale-95"
               >
-                <Trash2 size={20} />
-                 All
+                <Trash2 size={18} />
+                 Clear All
               </button>
               <button 
                 onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all font-semibold shadow-lg shadow-blue-500/20 active:scale-95"
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl transition-all font-bold text-sm shadow-lg shadow-blue-500/20 active:scale-95"
               >
-                <Plus size={20} />
+                <Plus size={18} />
                 Create Channel
               </button>
             </div>
           </div>
 
           {/* Search bar */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+          <div className="relative group shadow-sm rounded-2xl mb-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search channels..." 
-              className="w-full bg-white border border-gray-300 rounded-2xl py-3.5 pl-12 pr-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+              className="w-full bg-white border border-gray-200 rounded-2xl py-4 pl-12 pr-4 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all hover:border-gray-300"
             />
           </div>
 
           {/* Groups List */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="animate-spin text-blue-500 mb-2" size={32} />
-              <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Decrypting Nodes...</p>
+            <div className="flex flex-col items-center justify-center py-32">
+              <div className="w-16 h-16 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                <Loader2 className="animate-spin text-blue-600" size={32} />
+              </div>
+              <p className="text-gray-500 font-mono uppercase text-xs tracking-widest font-bold">Decrypting Nodes...</p>
             </div>
           ) : filteredGroups.length === 0 ? (
-            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-gray-300 bg-gray-50 rounded-[2rem]">
-              <Hash size={48} className="text-gray-800 mb-4" />
-              <p className="text-gray-600 font-bold">No channels found.</p>
+            <div className="py-32 flex flex-col items-center justify-center border border-dashed border-gray-300 bg-gray-50/50 rounded-[3rem] shadow-inner">
+              <div className="w-20 h-20 bg-white border border-gray-200 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                <Hash size={40} className="text-gray-400" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 tracking-tight">No channels found</h3>
+              <p className="text-gray-500 text-sm text-center max-w-sm font-medium leading-relaxed">Create a new channel or search for an existing one to get started.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -634,13 +641,14 @@ export default function GroupsContent() {
               <div 
                 key={group.id} 
                 onClick={() => handleGroupClick(group)}
-              className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer"
+              className="group relative flex flex-col sm:flex-row items-start sm:items-center gap-5 bg-white border border-gray-200 rounded-[1.5rem] p-5 hover:border-blue-500/30 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
           >
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-600 group-hover:bg-blue-100 transition-colors">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl text-blue-600 group-hover:bg-blue-100 group-hover:scale-105 transition-all relative z-10 shrink-0">
               <Hash size={28} />
             </div>
             
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 z-10">
               <div className="flex items-center gap-3 mb-1">
                 <h3 className="text-lg font-bold text-gray-900 truncate">{group.name}</h3>
                 <span className={`flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-md border ${
@@ -661,18 +669,18 @@ export default function GroupsContent() {
               </div>
             </div>
 
-              <div className="hidden sm:flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-3 z-10">
                 {isAdmin && (
                   <>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setSelectedGroup(group); setInviteModalOpen(true); }}
-                      className="px-4 py-2 bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 rounded-xl transition-all text-xs font-bold border border-gray-200 flex items-center gap-2"
+                      className="px-4 py-2.5 bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 rounded-xl transition-all text-xs font-bold border border-gray-200 flex items-center gap-2 shadow-sm"
                     >
                       <UserPlus size={14} /> Invite
                     </button>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setGroupToDelete(group); setDeleteModalOpen(true); }}
-                      className="p-2 bg-gray-50 hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-xl transition-all border border-gray-200"
+                      className="p-2.5 bg-gray-50 hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-xl transition-all border border-gray-200 shadow-sm"
                       title="Delete Channel"
                     >
                       <Trash2 size={16} />
@@ -694,8 +702,7 @@ export default function GroupsContent() {
       {/* CREATE GROUP MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-md"
             onClick={() => {
               setIsModalOpen(false);
               setImagePreview(null);
@@ -781,7 +788,7 @@ export default function GroupsContent() {
       {/* INVITE USER MODAL */}
       {inviteModalOpen && selectedGroup && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setInviteModalOpen(false)} />
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-md" onClick={() => setInviteModalOpen(false)} />
           <div className="relative w-full max-w-sm bg-white border border-gray-200 rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-blue-50 text-blue-600">
               <h2 className="text-lg font-bold flex items-center gap-2"><UserPlus size={18} /> Invite to Channel</h2>
@@ -809,7 +816,7 @@ export default function GroupsContent() {
       {/* DELETE GROUP MODAL */}
       {deleteModalOpen && groupToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setDeleteModalOpen(false)} />
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-md" onClick={() => setDeleteModalOpen(false)} />
           <div className="relative w-full max-w-sm bg-white border border-gray-200 rounded-3xl shadow-xl p-6 text-center animate-in fade-in zoom-in duration-200">
             <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
               <AlertTriangle size={32} />
@@ -840,7 +847,7 @@ export default function GroupsContent() {
     {/* DELETE ALL GROUPS MODAL */}
     {deleteAllModalOpen && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setDeleteAllModalOpen(false)} />
+        <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-md" onClick={() => setDeleteAllModalOpen(false)} />
         <div className="relative w-full max-w-sm bg-white border border-gray-200 rounded-3xl shadow-xl p-6 text-center animate-in fade-in zoom-in duration-200">
           <div className="w-16 h-16 bg-red-50 text-red-600 border border-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle size={32} />
@@ -871,7 +878,7 @@ export default function GroupsContent() {
       {/* REQUEST JOIN MODAL */}
       {groupToJoin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setGroupToJoin(null)} />
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-md" onClick={() => setGroupToJoin(null)} />
           <div className="relative w-full max-w-sm bg-white border border-gray-200 rounded-3xl shadow-xl p-6 text-center animate-in fade-in zoom-in duration-200">
             <div className="w-16 h-16 bg-blue-50 border border-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <Hash size={32} />
@@ -911,7 +918,7 @@ export default function GroupsContent() {
       {/* MEMBERS MODAL */}
       {membersModalOpen && activeWorkspace && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setMembersModalOpen(false)} />
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-md" onClick={() => setMembersModalOpen(false)} />
           <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-3xl shadow-xl flex flex-col max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center shrink-0">
               <div>
@@ -975,7 +982,7 @@ export default function GroupsContent() {
       {/* USER PROFILE MODAL */}
       {selectedUserId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-md" onClick={() => setSelectedUserId(null)} />
           <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 

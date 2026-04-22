@@ -39,6 +39,11 @@ export default function MessagesContent() {
   const [incomingCall, setIncomingCall] = useState(null);
   const globalCallsRef = useRef(null);
 
+  // Native Video Call Refs
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  const localStreamRef = useRef(null);
+
   const scrollRef = useRef(null);
   const channelRef = useRef(null);
 
@@ -171,6 +176,15 @@ export default function MessagesContent() {
   useEffect(() => {
     if (!currentUserId) return;
     
+    const cleanupLocalMedia = () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
+      }
+      setActiveCall(null);
+      setIncomingCall(null);
+    };
+
     // Single global channel for all call signals
     globalCallsRef.current = supabase.channel('global-calls')
       .on('broadcast', { event: 'call_ring' }, ({ payload }) => {
@@ -183,14 +197,12 @@ export default function MessagesContent() {
       })
       .on('broadcast', { event: 'call_reject' }, ({ payload }) => {
         if (payload.targetId === currentUserId) {
-          setActiveCall(null);
-          setIncomingCall(null);
+          cleanupLocalMedia();
         }
       })
       .on('broadcast', { event: 'call_end' }, ({ payload }) => {
         if (payload.targetId === currentUserId) {
-          setActiveCall(null);
-          setIncomingCall(null);
+          cleanupLocalMedia();
         }
       })
       .subscribe();
@@ -226,9 +238,26 @@ export default function MessagesContent() {
 
   const endCall = () => {
     if (activeCall?.peerId) globalCallsRef.current?.send({ type: 'broadcast', event: 'call_end', payload: { targetId: activeCall.peerId } });
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
     setActiveCall(null);
     setIncomingCall(null);
   };
+
+  // Handle Local Media when Call connects
+  useEffect(() => {
+    if (activeCall?.status === 'connected') {
+      navigator.mediaDevices.getUserMedia({ video: activeCall.isVideo, audio: true })
+        .then(stream => {
+          localStreamRef.current = stream;
+          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+          // TODO: Initialize WebRTC PeerConnection here and attach localStream
+        })
+        .catch(err => console.error("Media access denied:", err));
+    }
+  }, [activeCall?.status, activeCall?.isVideo]);
 
   // 5. Connection Handlers
   const handleSendRequest = async () => {
@@ -648,12 +677,47 @@ export default function MessagesContent() {
               Disconnect
             </button>
           </div>
-          <div className="flex-1 bg-black relative">
-            <iframe 
-              src={`https://meet.jit.si/${activeCall.roomId}#config.prejoinPageEnabled=false&config.startWithVideoMuted=${!activeCall.isVideo}&interfaceConfig.SHOW_JITSI_WATERMARK=false`}
-              allow="camera; microphone; fullscreen; display-capture"
-              className="w-full h-full border-none absolute inset-0"
+          <div className="flex-1 bg-gray-950 relative flex items-center justify-center overflow-hidden">
+            {/* Remote Video (Full Screen) */}
+            <video 
+              ref={remoteVideoRef}
+              autoPlay 
+              playsInline 
+              className="w-full h-full object-cover absolute inset-0 z-0"
             />
+
+            {/* Local Video (PIP) */}
+            <div className="absolute bottom-8 right-8 w-32 md:w-48 aspect-[3/4] md:aspect-video bg-gray-900 rounded-2xl overflow-hidden border-2 border-gray-700 shadow-2xl z-10">
+              <video 
+                ref={localVideoRef}
+                autoPlay 
+                playsInline 
+                muted
+                className={`w-full h-full object-cover ${activeCall.isVideo ? '-scale-x-100' : ''}`}
+              />
+              {!activeCall.isVideo && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                  <div className="w-12 h-12 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center">
+                    <Phone size={24} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Audio Only Avatar Placeholder */}
+            {!activeCall.isVideo && (
+               <div className="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center z-0">
+                 <div className="w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center text-4xl font-bold text-gray-500 mb-6 border-4 border-gray-700 shadow-xl overflow-hidden relative">
+                   {activeChat?.avatar_url ? (
+                      <Image src={activeChat.avatar_url} alt="avatar" fill sizes="128px" className="object-cover" />
+                   ) : (
+                      activeChat?.username?.[0]?.toUpperCase()
+                   )}
+                 </div>
+                 <h2 className="text-white text-2xl font-bold">@{activeChat?.username}</h2>
+                 <p className="text-gray-400 mt-2 font-medium">Secured Audio Connection</p>
+               </div>
+            )}
           </div>
         </div>
       )}

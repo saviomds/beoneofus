@@ -40,6 +40,7 @@ export default function MessagesContent() {
   const globalCallsRef = useRef(null);
 
   // Native Video Call Refs
+  const peerConnectionRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -181,6 +182,10 @@ export default function MessagesContent() {
         localStreamRef.current.getTracks().forEach(track => track.stop());
         localStreamRef.current = null;
       }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
       setActiveCall(null);
       setIncomingCall(null);
     };
@@ -205,6 +210,45 @@ export default function MessagesContent() {
           cleanupLocalMedia();
         }
       })
+      .on('broadcast', { event: 'webrtc_ready' }, async ({ payload }) => {
+        if (payload.targetId === currentUserId && !payload.isCaller && peerConnectionRef.current) {
+          try {
+            const pc = peerConnectionRef.current;
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            globalCallsRef.current?.send({
+              type: 'broadcast',
+              event: 'webrtc_offer',
+              payload: { targetId: payload.senderId, senderId: currentUserId, offer }
+            });
+          } catch (e) { console.error(e); }
+        }
+      })
+      .on('broadcast', { event: 'webrtc_offer' }, async ({ payload }) => {
+        if (payload.targetId === currentUserId && peerConnectionRef.current) {
+          try {
+            const pc = peerConnectionRef.current;
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            globalCallsRef.current?.send({
+              type: 'broadcast',
+              event: 'webrtc_answer',
+              payload: { targetId: payload.senderId, answer }
+            });
+          } catch (e) { console.error(e); }
+        }
+      })
+      .on('broadcast', { event: 'webrtc_answer' }, async ({ payload }) => {
+        if (payload.targetId === currentUserId && peerConnectionRef.current) {
+          try { await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer)); } catch (e) { console.error(e); }
+        }
+      })
+      .on('broadcast', { event: 'webrtc_ice_candidate' }, async ({ payload }) => {
+        if (payload.targetId === currentUserId && peerConnectionRef.current) {
+          try { await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (e) { console.error(e); }
+        }
+      })
       .subscribe();
 
     return () => {
@@ -222,12 +266,12 @@ export default function MessagesContent() {
       payload: { targetId: activeChat.id, callerId: currentUserId, isVideo, roomId }
     });
     
-    setActiveCall({ roomId, isVideo, status: 'ringing', peerId: activeChat.id });
+    setActiveCall({ roomId, isVideo, status: 'ringing', peerId: activeChat.id, isCaller: true });
   };
 
   const acceptCall = () => {
     globalCallsRef.current?.send({ type: 'broadcast', event: 'call_accept', payload: { targetId: incomingCall.callerId } });
-    setActiveCall({ roomId: incomingCall.roomId, isVideo: incomingCall.isVideo, status: 'connected', peerId: incomingCall.callerId });
+    setActiveCall({ roomId: incomingCall.roomId, isVideo: incomingCall.isVideo, status: 'connected', peerId: incomingCall.callerId, isCaller: false });
     setIncomingCall(null);
   };
 
@@ -242,22 +286,57 @@ export default function MessagesContent() {
       localStreamRef.current.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
     }
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
     setActiveCall(null);
     setIncomingCall(null);
   };
 
   // Handle Local Media when Call connects
   useEffect(() => {
+    let isMounted = true;
     if (activeCall?.status === 'connected') {
       navigator.mediaDevices.getUserMedia({ video: activeCall.isVideo, audio: true })
         .then(stream => {
+          if (!isMounted) return;
           localStreamRef.current = stream;
           if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-          // TODO: Initialize WebRTC PeerConnection here and attach localStream
+          
+          const pc = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+          });
+          peerConnectionRef.current = pc;
+
+          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+          pc.ontrack = (event) => {
+            if (remoteVideoRef.current && event.streams[0]) {
+              remoteVideoRef.current.srcObject = event.streams[0];
+            }
+          };
+
+          pc.onicecandidate = (event) => {
+            if (event.candidate) {
+              globalCallsRef.current?.send({
+                type: 'broadcast',
+                event: 'webrtc_ice_candidate',
+                payload: { targetId: activeCall.peerId, candidate: event.candidate }
+              });
+            }
+          };
+
+          globalCallsRef.current?.send({
+            type: 'broadcast',
+            event: 'webrtc_ready',
+            payload: { targetId: activeCall.peerId, senderId: currentUserId, isCaller: activeCall.isCaller }
+          });
         })
         .catch(err => console.error("Media access denied:", err));
     }
-  }, [activeCall?.status, activeCall?.isVideo]);
+    return () => { isMounted = false; };
+  }, [activeCall?.status, activeCall?.isVideo, activeCall?.peerId, activeCall?.isCaller, currentUserId]);
 
   // 5. Connection Handlers
   const handleSendRequest = async () => {

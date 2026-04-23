@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { 
-  Code2, Image as ImageIcon, ChevronDown, 
+  Code2, Image as ImageIcon, 
   Send, X, Loader2, CheckCircle2 
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -15,7 +15,6 @@ export default function NewPost({ onPostCreated }) {
   const [content, setContent] = useState('');
   const [codeSnippet, setCodeSnippet] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
-  const [showMore, setShowMore] = useState(false);
   
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
@@ -81,8 +80,7 @@ export default function NewPost({ onPostCreated }) {
       setSelectedImage(null);
       setImageFile(null);
       setShowCodeInput(false);
-      setShowMore(false);
-      
+
       // SHOW CUSTOM SUCCESS CARD
       setShowSuccess(true);
       setTimeout(() => {
@@ -184,24 +182,6 @@ export default function NewPost({ onPostCreated }) {
               >
                 <ImageIcon size={20} />
               </button>
-
-              <div className="relative">
-                <button 
-                  type="button"
-                  onClick={() => setShowMore(!showMore)}
-                  className="hover:text-gray-900 transition-colors flex items-center gap-1 text-sm px-2 py-1 rounded-md hover:bg-gray-50"
-                >
-                  <span>More</span>
-                  <ChevronDown size={14} className={showMore ? "rotate-180 transition-transform" : "transition-transform"} />
-                </button>
-
-                {showMore && (
-                  <div className="absolute bottom-10 left-0 w-32 bg-white border border-gray-200 rounded-lg shadow-xl z-10 py-2">
-                    <button type="button" className="w-full text-left px-4 py-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50">Schedule</button>
-                    <button type="button" className="w-full text-left px-4 py-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-50">Drafts</button>
-                  </div>
-                )}
-              </div>
             </div>
 
             <button 

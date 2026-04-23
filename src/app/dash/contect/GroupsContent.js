@@ -618,11 +618,23 @@ export default function GroupsContent() {
 
           {/* Groups List */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-32">
-              <div className="w-16 h-16 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center mb-6 shadow-sm">
-                <Loader2 className="animate-spin text-blue-600" size={32} />
-              </div>
-              <p className="text-gray-500 font-mono uppercase text-xs tracking-widest font-bold">Decrypting Nodes...</p>
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex flex-col sm:flex-row items-start sm:items-center gap-5 bg-white border border-gray-200 rounded-[1.5rem] p-5 shadow-sm">
+                  <div className="w-[60px] h-[60px] rounded-2xl bg-gray-200 animate-pulse shrink-0"></div>
+                  <div className="flex-1 w-full space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-5 bg-gray-200 rounded animate-pulse w-48"></div>
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div>
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                    <div className="h-3 bg-gray-200 rounded animate-pulse w-24 mt-1"></div>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-3 shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-gray-200 animate-pulse"></div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredGroups.length === 0 ? (
             <div className="py-32 flex flex-col items-center justify-center border border-dashed border-gray-300 bg-gray-50/50 rounded-[3rem] shadow-inner">

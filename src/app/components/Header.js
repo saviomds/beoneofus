@@ -147,7 +147,17 @@ export default function Header({ setActiveTab }) {
           {searchQuery.trim().length > 0 && (
             <div className="absolute top-full left-0 w-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
               {isSearching ? (
-                <div className="p-4 flex justify-center"><Loader2 size={18} className="animate-spin text-blue-500" /></div>
+                <div className="p-4 space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-gray-100 animate-pulse shrink-0"></div>
+                      <div className="space-y-2 flex-1">
+                        <div className="h-3 bg-gray-100 rounded animate-pulse w-1/3"></div>
+                        <div className="h-2 bg-gray-100 rounded animate-pulse w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (searchResults.posts.length === 0 && searchResults.groups.length === 0 && searchResults.users.length === 0) ? (
                 <div className="p-4 text-center text-xs text-gray-500 font-medium">No nodes, discussions, or users found.</div>
               ) : (
@@ -270,7 +280,17 @@ export default function Header({ setActiveTab }) {
             {/* Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
               {isNetworkLoading ? (
-                <div className="flex justify-center items-center h-full p-10"><Loader2 size={24} className="animate-spin text-blue-500" /></div>
+                <div className="space-y-3 p-4">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-gray-100 animate-pulse shrink-0"></div>
+                      <div className="space-y-2 flex-1">
+                        <div className="h-3 bg-gray-100 rounded animate-pulse w-1/3"></div>
+                        <div className="h-2 bg-gray-100 rounded animate-pulse w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <>
                   {networkTab === 'connections' && (

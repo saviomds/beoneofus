@@ -33,11 +33,13 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   const [profile, setProfile] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0); // State for real notification count
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const router = useRouter();
 
   // 1. Fetch Profile & Real Counts (Messages + Notifications)
   useEffect(() => {
     const fetchData = async () => {
+      setIsProfileLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
@@ -73,6 +75,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         setUnreadMessages(0);
         setUnreadNotifs(0);
       }
+      setIsProfileLoading(false);
     };
 
     fetchData();
@@ -172,37 +175,47 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
         {/* User Profile Section */}
         <div className="mt-auto pt-4 md:pt-6 border-t border-gray-200 flex flex-col gap-4 px-2 shrink-0">
-          <div 
-            className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded-xl transition-all"
-            onClick={() => { if (profile) handleNavClick('profile'); }}
-          >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10 shrink-0">
-               <div className="relative w-full h-full rounded-xl bg-white flex items-center justify-center text-xs font-bold text-gray-700 uppercase overflow-hidden">
-                 {profile?.avatar_url ? (
-                   <Image src={profile.avatar_url} alt="Avatar" fill sizes="40px" className="object-cover" />
-                 ) : (
-                   profile ? profile.username?.substring(0, 2) : '??'
-                 )}
-               </div>
+          {isProfileLoading ? (
+            <div className="flex items-center gap-3 p-2 -mx-2">
+              <div className="w-10 h-10 rounded-xl bg-gray-200 animate-pulse shrink-0"></div>
+              <div className="space-y-2 flex-1">
+                <div className="h-3 bg-gray-200 rounded animate-pulse w-24"></div>
+                <div className="h-2 bg-gray-200 rounded animate-pulse w-16"></div>
+              </div>
             </div>
+          ) : (
+            <div 
+              className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded-xl transition-all"
+              onClick={() => { if (profile) handleNavClick('profile'); }}
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10 shrink-0">
+                 <div className="relative w-full h-full rounded-xl bg-white flex items-center justify-center text-xs font-bold text-gray-700 uppercase overflow-hidden">
+                   {profile?.avatar_url ? (
+                     <Image src={profile.avatar_url} alt="Avatar" fill sizes="40px" className="object-cover" />
+                   ) : (
+                     profile ? profile.username?.substring(0, 2) : '??'
+                   )}
+                 </div>
+              </div>
 
-            <div className="flex-1 min-w-0">
-              {profile ? (
-                <>
-                  <p className="text-sm font-bold text-gray-900 truncate">@{profile.username}</p>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                    <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest">{profile.status || 'Active Node'}</p>
-                  </div>
-                </>
-              ) : (
-                <Link href="/auth" className="block hover:opacity-80 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <p className="text-sm font-bold text-gray-900 uppercase italic">Guest_Node</p>
-                  <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Authorize Access</p>
-                </Link>
-              )}
+              <div className="flex-1 min-w-0">
+                {profile ? (
+                  <>
+                    <p className="text-sm font-bold text-gray-900 truncate">@{profile.username}</p>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                      <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest">{profile.status || 'Active Node'}</p>
+                    </div>
+                  </>
+                ) : (
+                  <Link href="/auth" className="block hover:opacity-80 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-sm font-bold text-gray-900 uppercase italic">Guest_Node</p>
+                    <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Authorize Access</p>
+                  </Link>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {profile && (
             <button 

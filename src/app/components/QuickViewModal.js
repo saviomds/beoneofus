@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, ArrowRight, Loader2 } from 'lucide-react';
+import { X, ArrowRight } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 export default function QuickViewModal({ type, onClose, onNavigate }) {
@@ -69,9 +69,14 @@ export default function QuickViewModal({ type, onClose, onNavigate }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {loading ? (
-              <div className="col-span-1 md:col-span-2 flex justify-center py-6">
-                <Loader2 className="animate-spin text-blue-500" size={24} />
-              </div>
+              <>
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                  </div>
+                ))}
+              </>
             ) : items.length > 0 ? items.map(item => (
               <div key={item.id} onClick={() => onNavigate(isDiscuss ? 'feed' : 'groups')} className="p-4 bg-gray-50 rounded-2xl border border-gray-200 hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer group">
                 <p className="text-sm font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">{item.title || item.name || 'Untitled Node'}</p>

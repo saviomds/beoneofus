@@ -13,6 +13,7 @@ export default function AuthForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Redirect if user is already logged in
   useEffect(() => {
@@ -20,6 +21,8 @@ export default function AuthForm() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         router.push('/dash');
+      } else {
+        setIsCheckingAuth(false);
       }
     };
     checkUser();
@@ -56,6 +59,25 @@ export default function AuthForm() {
   };
 
   return (
+    isCheckingAuth ? (
+      <div className="w-full space-y-6 animate-pulse">
+        <div className="flex gap-6 mb-8 border-b border-gray-200 pb-px">
+          <div className="h-4 bg-gray-200 rounded w-16 pb-3"></div>
+          <div className="h-4 bg-gray-200 rounded w-24 pb-3"></div>
+        </div>
+        <div className="space-y-5">
+          <div>
+            <div className="h-3 bg-gray-200 rounded w-24 mb-2"></div>
+            <div className="h-12 bg-gray-200 rounded-xl w-full"></div>
+          </div>
+          <div>
+            <div className="h-3 bg-gray-200 rounded w-20 mb-2"></div>
+            <div className="h-12 bg-gray-200 rounded-xl w-full"></div>
+          </div>
+          <div className="h-12 bg-gray-200 rounded-xl w-full mt-6"></div>
+        </div>
+      </div>
+    ) : (
     <div className="w-full animate-in fade-in zoom-in-95 duration-500">
       {showSuccessCard ? (
         <div className="py-8 text-center space-y-4">
@@ -129,5 +151,6 @@ export default function AuthForm() {
         </>
       )}
     </div>
+    )
   );
 }

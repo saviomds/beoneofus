@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { 
-  FileText, Plus, X, Loader2, Globe, Send, ChevronRight, ChevronLeft, LayoutTemplate
+  FileText, Plus, X, Loader2, Globe, Send, ChevronRight, ChevronLeft, LayoutTemplate, Trash2
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -18,6 +18,7 @@ export default function PagesContent() {
   
   const [activePage, setActivePage] = useState(null);
   const [pagePosts, setPagePosts] = useState([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
   const [postInput, setPostInput] = useState("");
   
   useEffect(() => {
@@ -54,8 +55,11 @@ export default function PagesContent() {
     if (!activePage) return;
     
     const fetchPosts = async () => {
+      setLoadingPosts(true);
+      setPagePosts([]);
       const { data, error } = await supabase.from('page_posts').select('*, profiles(username, avatar_url)').eq('page_id', activePage.id).order('created_at', { ascending: false });
       if (!error && data) setPagePosts(data);
+      setLoadingPosts(false);
     };
     fetchPosts();
 
@@ -111,6 +115,17 @@ export default function PagesContent() {
     }
   };
 
+  const handleDeletePost = async (postId) => {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+    try {
+      const { error } = await supabase.from('page_posts').delete().eq('id', postId);
+      if (error) throw error;
+      setPagePosts(prev => prev.filter(p => p.id !== postId));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto relative animate-in fade-in slide-in-from-bottom-4 duration-700">
       {activePage ? (
@@ -131,15 +146,30 @@ export default function PagesContent() {
 
           {/* Feed */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
-            {pagePosts.length === 0 ? (
+            {loadingPosts ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex gap-3 shadow-sm">
+                    <div className="w-10 h-10 rounded-xl bg-gray-200 animate-pulse shrink-0"></div>
+                    <div className="flex-1 space-y-2 py-1">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                      <div className="h-3 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                      <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : pagePosts.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500">
                 <LayoutTemplate size={48} className="mb-4 opacity-30 text-purple-500" />
                 <p className="font-bold text-sm uppercase tracking-widest mb-1">No Updates Yet</p>
                 <p className="text-xs font-mono">Be the first to post on this page.</p>
               </div>
             ) : (
-              pagePosts.map(post => (
-                <div key={post.id} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-2">
+              pagePosts.map(post => {
+                const canDelete = post.user_id === currentUserId || activePage?.created_by === currentUserId;
+                return (
+                <div key={post.id} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-2 relative group">
                   <div className="relative w-10 h-10 rounded-xl bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-xs uppercase shrink-0 overflow-hidden">
                     {post.profiles?.avatar_url ? (
                       <Image src={post.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
@@ -147,7 +177,7 @@ export default function PagesContent() {
                       post.profiles?.username?.substring(0, 2) || "??"
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-8">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-bold text-gray-900 truncate">@{post.profiles?.username}</span>
                       <span className="text-[9px] text-gray-500 uppercase tracking-widest shrink-0">
@@ -156,8 +186,18 @@ export default function PagesContent() {
                     </div>
                     <p className="text-sm text-gray-700 leading-relaxed">{post.content}</p>
                   </div>
+                  {canDelete && (
+                    <button 
+                      onClick={() => handleDeletePost(post.id)}
+                      className="absolute top-3 right-3 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                      title="Delete Post"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -196,9 +236,22 @@ export default function PagesContent() {
 
           {/* Pages List */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="animate-spin text-purple-500 mb-2" size={32} />
-              <p className="text-gray-500 font-mono uppercase text-xs tracking-widest">Loading Pages...</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex flex-col gap-2 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gray-200 animate-pulse shrink-0"></div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="h-5 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                      <div className="h-3 bg-gray-200 rounded animate-pulse w-1/3"></div>
+                    </div>
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-4/5"></div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : pages.length === 0 ? (
             <div className="py-20 flex flex-col items-center justify-center border border-dashed border-gray-300 bg-gray-50 rounded-[2rem]">

@@ -11,14 +11,17 @@ import {
 import ProfileContent from "../dash/contect/ProfileContent";
 import NewPost from "./NewPost";
 
-const SectionHeader = ({ title, icon: Icon }) => (
-  <div className="flex items-center justify-between mb-4">
+const SectionHeader = ({ title, icon: Icon, isCollapsible, isOpen, onToggle }) => (
+  <div className={`flex items-center justify-between mb-4 ${isCollapsible ? 'cursor-pointer group' : ''}`} onClick={isCollapsible ? onToggle : undefined}>
     <div className="flex items-center gap-2">
-      <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-[2.5px]">
+      <h3 className={`text-[10px] font-black text-gray-600 uppercase tracking-[2.5px] ${isCollapsible ? 'group-hover:text-blue-600 transition-colors' : ''}`}>
         {title}
       </h3>
     </div>
-    {Icon && <Icon size={14} className="text-gray-700" />}
+    <div className="flex items-center gap-2 text-gray-700">
+      {Icon && <Icon size={14} />}
+      {isCollapsible && <ChevronRight size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />}
+    </div>
   </div>
 );
 
@@ -30,6 +33,10 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [followedIds, setFollowedIds] = useState([]);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [isSuggestedConnectionsOpen, setIsSuggestedConnectionsOpen] = useState(true);
+  const [isDiscoverChannelsOpen, setIsDiscoverChannelsOpen] = useState(true);
+  const [isInviteDevelopersOpen, setIsInviteDevelopersOpen] = useState(true);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(true);
 
   const [isCopied, setIsCopied] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -199,154 +206,219 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
 
       {/* 1. Suggested Connections */}
       <div>
-        <SectionHeader title="Suggested Connections" icon={Users} />
-        {loading ? (
-          <div className="flex justify-center items-center h-24"><Loader2 size={20} className="animate-spin text-gray-600" /></div>
-        ) : suggestions.length === 0 ? (
-          <div className="text-xs text-gray-600 font-medium">No suggestions right now.</div>
-        ) : (
-          <div className="space-y-3 max-h-[190px] overflow-y-auto custom-scrollbar pr-2">
-            {suggestions.map((user) => {
-              const isFollowed = followedIds.includes(user.id);
-              return (
-                <div 
-                  key={user.id} 
-                  onClick={() => setSelectedUserId(user.id)}
-                  className="flex items-center justify-between group cursor-pointer p-2 -mx-2 rounded-xl hover:bg-gray-50 transition-all"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-10 h-10 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
-                      {user.avatar_url ? (
-                        <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold text-sm uppercase">
-                          {user.username?.[0]}
-                        </div>
-                      )}
+        <SectionHeader 
+          title="Suggested Connections" 
+          icon={Users} 
+          isCollapsible 
+          isOpen={isSuggestedConnectionsOpen} 
+          onToggle={() => setIsSuggestedConnectionsOpen(!isSuggestedConnectionsOpen)} 
+        />
+        {isSuggestedConnectionsOpen && (
+          <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+            {loading ? (
+              <div className="space-y-3 max-h-[190px] overflow-hidden pr-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-2 -mx-2">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-gray-200 animate-pulse shrink-0"></div>
+                      <div className="flex flex-col gap-2 flex-1">
+                        <div className="h-3.5 bg-gray-200 rounded animate-pulse w-24"></div>
+                        <div className="h-2 bg-gray-200 rounded animate-pulse w-16"></div>
+                      </div>
                     </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">@{user.username}</span>
-                      <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest truncate">{user.status || 'Active Node'}</span>
-                    </div>
+                    <div className="w-8 h-8 rounded-xl bg-gray-200 animate-pulse shrink-0 ml-2"></div>
                   </div>
-                  <button 
-                    onClick={(e) => handleFollowToggle(e, user.id, isFollowed)}
-                    className={`group/btn shrink-0 p-2 rounded-xl transition-all border ${isFollowed ? 'bg-green-50 border-green-200 text-green-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
-                    title={isFollowed ? "Unfollow" : "Follow"}
-                  >
-                    {isFollowed ? (
-                      <>
-                        <Check size={14} className="group-hover/btn:hidden block" />
-                        <X size={14} className="group-hover/btn:block hidden" />
-                      </>
-                    ) : (
-                      <UserPlus size={14} />
-                    )}
-                  </button>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            ) : suggestions.length === 0 ? (
+              <div className="text-xs text-gray-600 font-medium">No suggestions right now.</div>
+            ) : (
+              <div className="space-y-3 max-h-[190px] overflow-y-auto custom-scrollbar pr-2">
+                {suggestions.map((user) => {
+                  const isFollowed = followedIds.includes(user.id);
+                  return (
+                    <div 
+                      key={user.id} 
+                      onClick={() => setSelectedUserId(user.id)}
+                      className="flex items-center justify-between group cursor-pointer p-2 -mx-2 rounded-xl hover:bg-gray-50 transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative w-10 h-10 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
+                          {user.avatar_url ? (
+                            <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold text-sm uppercase">
+                              {user.username?.[0]}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">@{user.username}</span>
+                          <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest truncate">{user.status || 'Active Node'}</span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={(e) => handleFollowToggle(e, user.id, isFollowed)}
+                        className={`group/btn shrink-0 p-2 rounded-xl transition-all border ${isFollowed ? 'bg-green-50 border-green-200 text-green-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
+                        title={isFollowed ? "Unfollow" : "Follow"}
+                      >
+                        {isFollowed ? (
+                          <>
+                            <Check size={14} className="group-hover/btn:hidden block" />
+                            <X size={14} className="group-hover/btn:block hidden" />
+                          </>
+                        ) : (
+                          <UserPlus size={14} />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* 2. Discover Channels */}
       <div>
-        <SectionHeader title="Discover Channels" icon={Globe} />
-        {loading ? (
-          <div className="flex justify-center items-center h-24"><Loader2 size={20} className="animate-spin text-gray-600" /></div>
-        ) : groups.length === 0 ? (
-          <div className="text-xs text-gray-600 font-medium">No active channels.</div>
-        ) : (
-          <div className="space-y-3">
-            {groups.map((group) => (
-              <div 
-                key={group.id} 
-                className="flex flex-col group cursor-pointer p-3 rounded-2xl bg-white border border-gray-200 hover:shadow-sm hover:border-blue-500/30 transition-all"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-sm font-bold text-gray-900 truncate">{group.name}</span>
-                    {group.is_private ? <Lock size={10} className="text-amber-500 shrink-0" /> : <Globe size={10} className="text-blue-500 shrink-0" />}
+        <SectionHeader 
+          title="Discover Channels" 
+          icon={Globe} 
+          isCollapsible 
+          isOpen={isDiscoverChannelsOpen} 
+          onToggle={() => setIsDiscoverChannelsOpen(!isDiscoverChannelsOpen)} 
+        />
+        {isDiscoverChannelsOpen && (
+          <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex flex-col p-3 rounded-2xl bg-white border border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 flex-1">
+                        <div className="h-3.5 bg-gray-200 rounded animate-pulse w-24"></div>
+                        <div className="w-2.5 h-2.5 bg-gray-200 rounded-full animate-pulse"></div>
+                      </div>
+                      <div className="w-3 h-3 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                    <div className="space-y-1.5 mt-1">
+                        <div className="h-2 bg-gray-200 rounded animate-pulse w-full"></div>
+                        <div className="h-2 bg-gray-200 rounded animate-pulse w-4/5"></div>
+                    </div>
                   </div>
-                  <ChevronRight size={14} className="text-gray-700 group-hover:text-blue-500 transition-all shrink-0" />
-                </div>
-                <p className="text-xs text-gray-500 line-clamp-2">
-                  {group.description || "A community node on beoneofus."}
-                </p>
+                ))}
               </div>
-            ))}
+            ) : groups.length === 0 ? (
+              <div className="text-xs text-gray-600 font-medium">No active channels.</div>
+            ) : (
+              <div className="space-y-3">
+                {groups.map((group) => (
+                  <div 
+                    key={group.id} 
+                    className="flex flex-col group cursor-pointer p-3 rounded-2xl bg-white border border-gray-200 hover:shadow-sm hover:border-blue-500/30 transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-bold text-gray-900 truncate">{group.name}</span>
+                        {group.is_private ? <Lock size={10} className="text-amber-500 shrink-0" /> : <Globe size={10} className="text-blue-500 shrink-0" />}
+                      </div>
+                      <ChevronRight size={14} className="text-gray-700 group-hover:text-blue-500 transition-all shrink-0" />
+                    </div>
+                    <p className="text-xs text-gray-500 line-clamp-2">
+                      {group.description || "A community node on beoneofus."}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* 3. Invite Users */}
       <div>
-        <SectionHeader title="Invite Developers" icon={UserPlus} />
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-blue-500/30 transition-all group space-y-4">
-          <p className="text-xs text-gray-500 leading-relaxed">
-            Know someone who belongs here? Share your unique invite link or send them an email to grow the network.
-          </p>
-          <button 
-            onClick={handleCopyInvite}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              isCopied 
-                ? 'bg-green-50 text-green-600 border border-green-200' 
-                : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:text-gray-900 group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-600'
-            }`}
-          >
-            {isCopied ? <Check size={14} /> : <Copy size={14} />}
-            {isCopied ? 'Link Copied!' : 'Copy Invite Link'}
-          </button>
-
-          <div className="relative flex items-center gap-2">
-            <div className="flex-grow border-t border-gray-100"></div>
-            <span className="text-[9px] uppercase font-black text-gray-300 tracking-[2px]">OR</span>
-            <div className="flex-grow border-t border-gray-100"></div>
-          </div>
-
-          <form onSubmit={handleEmailInvite} className="flex gap-2">
-            <input
-              type="email"
-              placeholder="developer@gmail.com"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              required
-              className="flex-1 w-full bg-gray-50 border border-gray-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all min-w-0"
-            />
-            <button type="submit" className="bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-xl transition-colors flex items-center justify-center shrink-0" title="Send Email">
-              <Mail size={14} />
+        <SectionHeader 
+          title="Invite Developers" 
+          icon={UserPlus} 
+          isCollapsible 
+          isOpen={isInviteDevelopersOpen} 
+          onToggle={() => setIsInviteDevelopersOpen(!isInviteDevelopersOpen)} 
+        />
+        {isInviteDevelopersOpen && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-blue-500/30 transition-all group space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Know someone who belongs here? Share your unique invite link or send them an email to grow the network.
+            </p>
+            <button 
+              onClick={handleCopyInvite}
+              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                isCopied 
+                  ? 'bg-green-50 text-green-600 border border-green-200' 
+                  : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:text-gray-900 group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-600'
+              }`}
+            >
+              {isCopied ? <Check size={14} /> : <Copy size={14} />}
+              {isCopied ? 'Link Copied!' : 'Copy Invite Link'}
             </button>
-          </form>
-        </div>
+
+            <div className="relative flex items-center gap-2">
+              <div className="flex-grow border-t border-gray-100"></div>
+              <span className="text-[9px] uppercase font-black text-gray-300 tracking-[2px]">OR</span>
+              <div className="flex-grow border-t border-gray-100"></div>
+            </div>
+
+            <form onSubmit={handleEmailInvite} className="flex gap-2">
+              <input
+                type="email"
+                placeholder="developer@gmail.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+                className="flex-1 w-full bg-gray-50 border border-gray-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all min-w-0"
+              />
+              <button type="submit" className="bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-xl transition-colors flex items-center justify-center shrink-0" title="Send Email">
+                <Mail size={14} />
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       {/* 4. New Features */}
       <div>
-        <SectionHeader title="What's New" icon={Sparkles} />
-        <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-blue-500/20 rounded-2xl p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full" />
-          <div className="relative z-10 space-y-4">
-            <div className="flex gap-3 items-start">
-              <div className="mt-0.5 w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center shrink-0">
-                <Zap size={12} className="text-blue-400" />
+        <SectionHeader 
+          title="What's New" 
+          icon={Sparkles} 
+          isCollapsible 
+          isOpen={isWhatsNewOpen} 
+          onToggle={() => setIsWhatsNewOpen(!isWhatsNewOpen)} 
+        />
+        {isWhatsNewOpen && (
+          <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-blue-500/20 rounded-2xl p-5 relative overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full" />
+            <div className="relative z-10 space-y-4">
+              <div className="flex gap-3 items-start">
+                <div className="mt-0.5 w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center shrink-0">
+                  <Zap size={12} className="text-blue-400" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-gray-900 mb-0.5">End-to-End Workspaces</h4>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">Secure, private channel chats are now active. Create a node to begin.</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-gray-900 mb-0.5">End-to-End Workspaces</h4>
-                <p className="text-[10px] text-gray-600 leading-relaxed">Secure, private channel chats are now active. Create a node to begin.</p>
-              </div>
-            </div>
-            <div className="flex gap-3 items-start">
-              <div className="mt-0.5 w-5 h-5 rounded-md bg-purple-500/20 flex items-center justify-center shrink-0">
-                <Users size={12} className="text-purple-400" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-gray-900 mb-0.5">Global Connections</h4>
-                <p className="text-[10px] text-gray-600 leading-relaxed">Follow other developers and build your custom network feed.</p>
+              <div className="flex gap-3 items-start">
+                <div className="mt-0.5 w-5 h-5 rounded-md bg-purple-500/20 flex items-center justify-center shrink-0">
+                  <Users size={12} className="text-purple-400" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-gray-900 mb-0.5">Global Connections</h4>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">Follow other developers and build your custom network feed.</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* 5. Platform Documentation Link */}

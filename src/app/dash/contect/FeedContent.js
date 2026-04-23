@@ -212,7 +212,28 @@ export default function FeedContent() {
     finally { setDeleteLoading(false); }
   };
 
-  if (loading) return <div className="flex justify-center p-10 text-gray-500 animate-pulse">Loading your feed...</div>;
+  if (loading) return (
+    <div className="space-y-6">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center gap-3 w-full">
+              <div className="w-10 h-10 rounded-xl bg-gray-200 animate-pulse shrink-0"></div>
+              <div className="space-y-2 flex-1">
+                <div className="h-3 bg-gray-200 rounded animate-pulse w-32"></div>
+                <div className="h-2 bg-gray-200 rounded animate-pulse w-20"></div>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-5/6"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-6">

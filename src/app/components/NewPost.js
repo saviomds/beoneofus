@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
-export default function NewPost() {
+export default function NewPost({ onPostCreated }) {
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false); // New Success State
   const [title, setTitle] = useState('');
@@ -85,7 +85,10 @@ export default function NewPost() {
       
       // SHOW CUSTOM SUCCESS CARD
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000); // Auto-hide after 3 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+        if (onPostCreated) onPostCreated();
+      }, 2000); // Auto-hide after 2 seconds and close modal if applicable
 
     } catch (error) {
       console.error(error);
@@ -99,7 +102,7 @@ export default function NewPost() {
     <div className="relative">
       {/* --- CUSTOM SUCCESS POPUP CARD --- */}
       {showSuccess && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
             onClick={() => setShowSuccess(false)}

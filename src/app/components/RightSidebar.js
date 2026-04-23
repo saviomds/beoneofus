@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import { 
-  Users, X, Loader2, Sparkles, UserPlus, Check, Globe, Lock, ChevronRight, Zap, BookOpen
+  Users, X, Loader2, Sparkles, UserPlus, Check, Globe, Lock, ChevronRight, Zap, BookOpen, Copy, Plus, Mail
 } from 'lucide-react';
 import ProfileContent from "../dash/contect/ProfileContent";
+import NewPost from "./NewPost";
 
 const SectionHeader = ({ title, icon: Icon }) => (
   <div className="flex items-center justify-between mb-4">
@@ -28,6 +29,26 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [followedIds, setFollowedIds] = useState([]);
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+
+  const [isCopied, setIsCopied] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+
+  const handleCopyInvite = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/auth`);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const handleEmailInvite = (e) => {
+    e.preventDefault();
+    if (!inviteEmail) return;
+    const inviteLink = `${window.location.origin}/auth`;
+    const subject = encodeURIComponent("You're invited to join beoneofus!");
+    const body = encodeURIComponent(`Hi there,\n\nI'd like to invite you to join the beoneofus developer network.\n\nJoin here: ${inviteLink}\n\nSee you inside!`);
+    window.open(`mailto:${inviteEmail}?subject=${subject}&body=${body}`);
+    setInviteEmail('');
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -164,10 +185,20 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
   };
 
   return (
-    <aside className="w-full flex flex-col p-6 space-y-10 h-screen sticky top-0 overflow-y-auto no-scrollbar bg-transparent border-l border-gray-200 relative">
+    <aside className="w-full flex flex-col p-6 space-y-8 h-screen sticky top-0 overflow-y-auto no-scrollbar bg-transparent border-l border-gray-200 relative">
       
+      {/* Primary Action Button */}
+      <div className="shrink-0 pt-1">
+        <button 
+          onClick={() => setShowBroadcastModal(true)}
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm py-3.5 rounded-xl transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 active:scale-95"
+        >
+          <Plus size={18} strokeWidth={3} /> Create Broadcast
+        </button>
+      </div>
+
       {/* 1. Suggested Connections */}
-      <div className="pt-2">
+      <div>
         <SectionHeader title="Suggested Connections" icon={Users} />
         {loading ? (
           <div className="flex justify-center items-center h-24"><Loader2 size={20} className="animate-spin text-gray-600" /></div>
@@ -249,7 +280,48 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
         )}
       </div>
 
-      {/* 3. New Features */}
+      {/* 3. Invite Users */}
+      <div>
+        <SectionHeader title="Invite Developers" icon={UserPlus} />
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-blue-500/30 transition-all group space-y-4">
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Know someone who belongs here? Share your unique invite link or send them an email to grow the network.
+          </p>
+          <button 
+            onClick={handleCopyInvite}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              isCopied 
+                ? 'bg-green-50 text-green-600 border border-green-200' 
+                : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:text-gray-900 group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-600'
+            }`}
+          >
+            {isCopied ? <Check size={14} /> : <Copy size={14} />}
+            {isCopied ? 'Link Copied!' : 'Copy Invite Link'}
+          </button>
+
+          <div className="relative flex items-center gap-2">
+            <div className="flex-grow border-t border-gray-100"></div>
+            <span className="text-[9px] uppercase font-black text-gray-300 tracking-[2px]">OR</span>
+            <div className="flex-grow border-t border-gray-100"></div>
+          </div>
+
+          <form onSubmit={handleEmailInvite} className="flex gap-2">
+            <input
+              type="email"
+              placeholder="developer@gmail.com"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              required
+              className="flex-1 w-full bg-gray-50 border border-gray-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all min-w-0"
+            />
+            <button type="submit" className="bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-xl transition-colors flex items-center justify-center shrink-0" title="Send Email">
+              <Mail size={14} />
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* 4. New Features */}
       <div>
         <SectionHeader title="What's New" icon={Sparkles} />
         <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-blue-500/20 rounded-2xl p-5 relative overflow-hidden">
@@ -277,7 +349,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
         </div>
       </div>
 
-      {/* 4. Platform Documentation Link */}
+      {/* 5. Platform Documentation Link */}
       <div>
         <SectionHeader title="Resources" icon={BookOpen} />
         <div
@@ -310,6 +382,25 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
             </button>
             <div className="p-2 sm:p-6">
               <ProfileContent viewUserId={selectedUserId} />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* CREATE BROADCAST MODAL */}
+      {showBroadcastModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setShowBroadcastModal(false)} />
+          <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-[2rem] shadow-xl animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50 rounded-t-[2rem] shrink-0">
+              <h2 className="text-xl font-bold text-gray-900">Create Broadcast</h2>
+              <button onClick={() => setShowBroadcastModal(false)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 sm:p-6 overflow-y-auto no-scrollbar bg-gray-50 rounded-b-[2rem]">
+              <NewPost onPostCreated={() => setShowBroadcastModal(false)} />
             </div>
           </div>
         </div>,

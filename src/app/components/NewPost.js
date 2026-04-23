@@ -137,7 +137,7 @@ export default function NewPost() {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="What's the latest code, TechNinja?"
+            placeholder="What's the latest code, BeOneOfUs?"
             className="w-full bg-transparent border-none focus:ring-0 text-gray-900 placeholder-gray-400 resize-none min-h-[80px] text-lg"
           />
 

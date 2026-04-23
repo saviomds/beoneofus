@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
+import { useDashboard } from "./DashboardContext";
 
 export default function MessagesContent() {
   const [contacts, setContacts] = useState([]);
@@ -18,6 +19,7 @@ export default function MessagesContent() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [currentUserId, setCurrentUserId] = useState(null);
+  const { targetChatUser, setTargetChatUser } = useDashboard();
   
   // UI & Connection States
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,6 +39,7 @@ export default function MessagesContent() {
   // Call States
   const [activeCall, setActiveCall] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
+  const [callDuration, setCallDuration] = useState(0);
   const globalCallsRef = useRef(null);
 
   // Native Video Call Refs
@@ -46,9 +49,18 @@ export default function MessagesContent() {
   const localStreamRef = useRef(null);
   const pendingOfferRef = useRef(null);
   const pendingCandidatesRef = useRef([]);
+  const ringAudioRef = useRef(null);
+  const incomingRingAudioRef = useRef(null);
 
   const scrollRef = useRef(null);
   const channelRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      ringAudioRef.current = new Audio("https://actions.google.com/sounds/v1/alarms/phone_ringing.ogg");
+      incomingRingAudioRef.current = new Audio("https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg");
+    }
+  }, []);
 
   // 1. Initial Setup
   useEffect(() => {
@@ -104,6 +116,20 @@ export default function MessagesContent() {
       supabase.removeChannel(channel); 
     };
   }, []);
+
+  // Handle opening chat directly from outside (e.g., My Network modal)
+  useEffect(() => {
+    if (targetChatUser) {
+      setActiveChat(targetChatUser);
+      setContacts(prev => {
+        if (!prev.find(c => c.id === targetChatUser.id)) {
+          return [targetChatUser, ...prev];
+        }
+        return prev;
+      });
+      setTargetChatUser(null);
+    }
+  }, [targetChatUser, setTargetChatUser]);
 
   // 2. Fetch Messages and Connection Logic
   useEffect(() => {
@@ -364,6 +390,44 @@ export default function MessagesContent() {
     return () => { isMounted = false; };
   }, [activeCall?.status, activeCall?.isVideo, activeCall?.peerId, activeCall?.isCaller, currentUserId]);
 
+  // Outgoing Call Ringing Sound
+  useEffect(() => {
+    if (activeCall?.status === 'ringing' && ringAudioRef.current) {
+      ringAudioRef.current.loop = true;
+      ringAudioRef.current.play().catch(e => console.error("Audio playback failed:", e));
+    } else if (ringAudioRef.current) {
+      ringAudioRef.current.pause();
+      ringAudioRef.current.currentTime = 0;
+    }
+  }, [activeCall?.status]);
+
+  // Incoming Call Ringing Sound
+  useEffect(() => {
+    if (incomingCall && incomingRingAudioRef.current) {
+      incomingRingAudioRef.current.loop = true;
+      incomingRingAudioRef.current.play().catch(e => console.error("Audio playback failed:", e));
+    } else if (incomingRingAudioRef.current) {
+      incomingRingAudioRef.current.pause();
+      incomingRingAudioRef.current.currentTime = 0;
+    }
+    // Ensure sound stops if component unmounts while ringing
+    return () => { if (incomingRingAudioRef.current) incomingRingAudioRef.current.pause(); };
+  }, [incomingCall]);
+
+  // Call Duration Timer
+  useEffect(() => {
+    let timerInterval;
+    if (activeCall?.status === 'connected') {
+      setCallDuration(0); // Reset on new call
+      timerInterval = setInterval(() => {
+        setCallDuration(prevDuration => prevDuration + 1);
+      }, 1000);
+    }
+    return () => {
+      clearInterval(timerInterval);
+    };
+  }, [activeCall?.status]);
+
   // 5. Connection Handlers
   const handleSendRequest = async () => {
     const { error } = await supabase.from('connections').insert({
@@ -510,6 +574,12 @@ export default function MessagesContent() {
   const filteredContacts = contacts.filter(c => 
     c.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const formatDuration = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+  };
 
   return (
     <div className="w-full flex h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
@@ -812,15 +882,19 @@ export default function MessagesContent() {
             {/* Audio Only Avatar Placeholder */}
             {!activeCall.isVideo && (
                <div className="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center z-0">
-                 <div className="w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center text-4xl font-bold text-gray-500 mb-6 border-4 border-gray-700 shadow-xl overflow-hidden relative">
-                   {activeChat?.avatar_url ? (
-                      <Image src={activeChat.avatar_url} alt="avatar" fill sizes="128px" className="object-cover" />
-                   ) : (
-                      activeChat?.username?.[0]?.toUpperCase()
-                   )}
+                 <div className="relative w-32 h-32 mb-6">
+                   <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20"></div>
+                   <div className="w-full h-full bg-gray-800 rounded-full flex items-center justify-center text-4xl font-bold text-gray-500 border-4 border-red-500/80 shadow-[0_0_30px_rgba(239,68,68,0.3)] overflow-hidden relative z-10">
+                     {activeChat?.avatar_url ? (
+                        <Image src={activeChat.avatar_url} alt="avatar" fill sizes="128px" className="object-cover" />
+                     ) : (
+                        activeChat?.username?.[0]?.toUpperCase()
+                     )}
+                   </div>
                  </div>
                  <h2 className="text-white text-2xl font-bold">@{activeChat?.username}</h2>
                  <p className="text-gray-400 mt-2 font-medium">Secured Audio Connection</p>
+                 <p className="text-gray-400 font-mono text-lg mt-2">{formatDuration(callDuration)}</p>
                </div>
             )}
           </div>

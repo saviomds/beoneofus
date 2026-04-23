@@ -1,28 +1,40 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Compass, MessageCircle, X, Loader2 } from 'lucide-react';
+import { Search, Compass, MessageCircle, X, Loader2, Users, Hash } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { supabase } from '../supabaseClient';
 import ProfileContent from '../dash/contect/ProfileContent';
+import { useDashboard } from '../dash/contect/DashboardContext';
 
 // Dynamically import the modal to keep the Header bundle lightweight for the end user
 const QuickViewModal = dynamic(() => import('./QuickViewModal'), { ssr: false });
 
 export default function Header({ setActiveTab }) {
+  const { setActiveSection, setTargetChatUser } = useDashboard();
   const [showQuickView, setShowQuickView] = useState(null); // 'discuss' or 'discover'
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState({ posts: [], groups: [], users: [] });
   const [selectedUserId, setSelectedUserId] = useState(null);
   const searchRef = useRef(null);
+  const [showNetworkModal, setShowNetworkModal] = useState(false);
+  const [networkData, setNetworkData] = useState({ connections: [], groups: [] });
+  const [isNetworkLoading, setIsNetworkLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [networkTab, setNetworkTab] = useState('connections'); // 'connections' or 'groups'
 
   const closeQuickView = () => setShowQuickView(null);
 
   const handleNavigate = (tab) => {
     closeQuickView();
-    if (setActiveTab) setActiveTab(tab);
+    setShowNetworkModal(false);
+    if (setActiveSection) {
+      setActiveSection(tab);
+    } else if (setActiveTab) { // Fallback for the prop
+      setActiveTab(tab);
+    }
   };
 
   // Handle click outside to close search dropdown
@@ -35,6 +47,49 @@ export default function Header({ setActiveTab }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Get current user ID
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setCurrentUserId(session.user.id);
+      }
+    };
+    getSession();
+  }, []);
+
+  // Fetch network data when modal opens
+  useEffect(() => {
+    if (showNetworkModal && currentUserId) {
+      const fetchNetworkData = async () => {
+        setIsNetworkLoading(true);
+        try {
+          // Fetch Connections
+          const { data: connectionsData } = await supabase.from('connections').select('sender_id, receiver_id').or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`).eq('status', 'accepted');
+          const connectedIds = connectionsData ? connectionsData.map(c => c.sender_id === currentUserId ? c.receiver_id : c.sender_id) : [];
+          const { data: profiles } = connectedIds.length > 0 ? await supabase.from('profiles').select('id, username, status, avatar_url').in('id', connectedIds) : { data: [] };
+
+          // Fetch Groups
+          const { data: groupMemberships } = await supabase.from('group_members').select('group_id').eq('user_id', currentUserId);
+          const groupIds = groupMemberships ? groupMemberships.map(gm => gm.group_id) : [];
+          const { data: groups } = groupIds.length > 0 ? await supabase.from('groups').select('id, name, description, is_private').in('id', groupIds) : { data: [] };
+
+          setNetworkData({
+            connections: profiles || [],
+            groups: groups || []
+          });
+
+        } catch (error) {
+          console.error("Error fetching network data:", error);
+        } finally {
+          setIsNetworkLoading(false);
+        }
+      };
+      fetchNetworkData();
+    }
+  }, [showNetworkModal, currentUserId]);
+
 
   // Real-time debounced search function
   useEffect(() => {
@@ -153,6 +208,13 @@ export default function Header({ setActiveTab }) {
         {/* Right: Nav Links */}
         <nav className="flex items-center gap-6 ml-8">
           <button 
+            onClick={() => setShowNetworkModal(true)}
+            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-gray-900 transition-all"
+          >
+            <Users size={16} />
+            My Network
+          </button>
+          <button 
             onClick={() => setShowQuickView('discuss')}
             className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-gray-900 transition-all"
           >
@@ -176,6 +238,88 @@ export default function Header({ setActiveTab }) {
           onClose={closeQuickView} 
           onNavigate={handleNavigate} 
         />
+      )}
+
+      {/* --- MY NETWORK MODAL --- */}
+      {showNetworkModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setShowNetworkModal(false)} />
+          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-3xl shadow-2xl flex flex-col max-h-[70vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center shrink-0">
+              <h2 className="text-xl font-bold text-gray-900">My Network</h2>
+              <button onClick={() => setShowNetworkModal(false)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            {/* Tabs */}
+            <div className="flex gap-4 border-b border-gray-200 px-6 shrink-0">
+              <button 
+                onClick={() => setNetworkTab('connections')}
+                className={`py-3 text-sm font-bold flex items-center gap-2 transition-all ${networkTab === 'connections' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 border-b-2 border-transparent'}`}
+              >
+                <Users size={14} /> Connections ({networkData.connections.length})
+              </button>
+              <button 
+                onClick={() => setNetworkTab('groups')}
+                className={`py-3 text-sm font-bold flex items-center gap-2 transition-all ${networkTab === 'groups' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-900 border-b-2 border-transparent'}`}
+              >
+                <Hash size={14} /> Channels ({networkData.groups.length})
+              </button>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+              {isNetworkLoading ? (
+                <div className="flex justify-center items-center h-full p-10"><Loader2 size={24} className="animate-spin text-blue-500" /></div>
+              ) : (
+                <>
+                  {networkTab === 'connections' && (
+                    networkData.connections.length > 0 ? (
+                      <div className="space-y-1 p-2">
+                        {networkData.connections.map(user => (
+                          <div key={`net-user-${user.id}`} onClick={() => { 
+                            if (setTargetChatUser) setTargetChatUser(user); 
+                            handleNavigate('messages'); 
+                          }} 
+                          className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-all group">
+                            <div className="relative w-8 h-8 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 uppercase">
+                              {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : (user.username?.substring(0, 2) || '??')}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">@{user.username}</p>
+                              <p className="text-[10px] text-gray-500 line-clamp-1 mt-0.5 uppercase tracking-widest font-black">{user.status || 'Active'}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center text-xs text-gray-500 font-medium p-10">No active connections.</div>
+                    )
+                  )}
+                  {networkTab === 'groups' && (
+                    networkData.groups.length > 0 ? (
+                      <div className="space-y-1 p-2">
+                        {networkData.groups.map(group => (
+                          <div key={`net-group-${group.id}`} onClick={() => handleNavigate('groups')} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl cursor-pointer transition-all group">
+                            <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shrink-0">
+                              <Hash size={16} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">{group.name}</p>
+                              <p className="text-[10px] text-gray-500 line-clamp-1 mt-0.5">{group.description || (group.is_private ? 'Private Channel' : 'Public Channel')}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center text-xs text-gray-500 font-medium p-10">You are not a member of any channels.</div>
+                    )
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* USER PROFILE MODAL */}

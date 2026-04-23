@@ -6,9 +6,10 @@ const DashboardContext = createContext();
 
 export function DashboardProvider({ children }) {
   const [activeSection, setActiveSection] = useState('feed');
+  const [targetChatUser, setTargetChatUser] = useState(null);
 
   return (
-    <DashboardContext.Provider value={{ activeSection, setActiveSection }}>
+    <DashboardContext.Provider value={{ activeSection, setActiveSection, targetChatUser, setTargetChatUser }}>
       {children}
     </DashboardContext.Provider>
   );

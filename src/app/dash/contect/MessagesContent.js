@@ -44,6 +44,8 @@ export default function MessagesContent() {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
+  const pendingOfferRef = useRef(null);
+  const pendingCandidatesRef = useRef([]);
 
   const scrollRef = useRef(null);
   const channelRef = useRef(null);
@@ -174,26 +176,31 @@ export default function MessagesContent() {
   }, [messages, connectionStatus]);
 
   // 4. Global Calling Setup & Methods
+  const cleanupLocalMedia = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    setActiveCall(null);
+    setIncomingCall(null);
+    pendingOfferRef.current = null;
+    pendingCandidatesRef.current = [];
+  };
+
   useEffect(() => {
     if (!currentUserId) return;
-    
-    const cleanupLocalMedia = () => {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop());
-        localStreamRef.current = null;
-      }
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-        peerConnectionRef.current = null;
-      }
-      setActiveCall(null);
-      setIncomingCall(null);
-    };
 
     // Single global channel for all call signals
     globalCallsRef.current = supabase.channel('global-calls')
-      .on('broadcast', { event: 'call_ring' }, ({ payload }) => {
-        if (payload.targetId === currentUserId) setIncomingCall(payload);
+      .on('broadcast', { event: 'call_ring' }, async ({ payload }) => {
+        if (payload.targetId === currentUserId) {
+          const { data } = await supabase.from('profiles').select('username, avatar_url').eq('id', payload.callerId).single();
+          setIncomingCall({ ...payload, callerInfo: data });
+        }
       })
       .on('broadcast', { event: 'call_accept' }, ({ payload }) => {
         if (payload.targetId === currentUserId) {
@@ -201,52 +208,48 @@ export default function MessagesContent() {
         }
       })
       .on('broadcast', { event: 'call_reject' }, ({ payload }) => {
-        if (payload.targetId === currentUserId) {
-          cleanupLocalMedia();
-        }
+        if (payload.targetId === currentUserId) cleanupLocalMedia();
       })
       .on('broadcast', { event: 'call_end' }, ({ payload }) => {
-        if (payload.targetId === currentUserId) {
-          cleanupLocalMedia();
-        }
-      })
-      .on('broadcast', { event: 'webrtc_ready' }, async ({ payload }) => {
-        if (payload.targetId === currentUserId && !payload.isCaller && peerConnectionRef.current) {
-          try {
-            const pc = peerConnectionRef.current;
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            globalCallsRef.current?.send({
-              type: 'broadcast',
-              event: 'webrtc_offer',
-              payload: { targetId: payload.senderId, senderId: currentUserId, offer }
-            });
-          } catch (e) { console.error(e); }
-        }
+        if (payload.targetId === currentUserId) cleanupLocalMedia();
       })
       .on('broadcast', { event: 'webrtc_offer' }, async ({ payload }) => {
-        if (payload.targetId === currentUserId && peerConnectionRef.current) {
-          try {
-            const pc = peerConnectionRef.current;
-            await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            globalCallsRef.current?.send({
-              type: 'broadcast',
-              event: 'webrtc_answer',
-              payload: { targetId: payload.senderId, answer }
-            });
-          } catch (e) { console.error(e); }
+        if (payload.targetId === currentUserId) {
+          if (localStreamRef.current && peerConnectionRef.current) {
+            try {
+              const pc = peerConnectionRef.current;
+              await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+              const answer = await pc.createAnswer();
+              await pc.setLocalDescription(answer);
+              globalCallsRef.current?.send({
+                type: 'broadcast',
+                event: 'webrtc_answer',
+                payload: { targetId: payload.senderId, answer }
+              });
+              pendingCandidatesRef.current.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(e => console.error(e)));
+              pendingCandidatesRef.current = [];
+            } catch(e) { console.error(e); }
+          } else {
+            pendingOfferRef.current = payload;
+          }
         }
       })
       .on('broadcast', { event: 'webrtc_answer' }, async ({ payload }) => {
         if (payload.targetId === currentUserId && peerConnectionRef.current) {
-          try { await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer)); } catch (e) { console.error(e); }
+          try { 
+            await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer)); 
+            pendingCandidatesRef.current.forEach(c => peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(c)).catch(e => console.error(e)));
+            pendingCandidatesRef.current = [];
+          } catch (e) { console.error(e); }
         }
       })
       .on('broadcast', { event: 'webrtc_ice_candidate' }, async ({ payload }) => {
-        if (payload.targetId === currentUserId && peerConnectionRef.current) {
-          try { await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (e) { console.error(e); }
+        if (payload.targetId === currentUserId) {
+          if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
+            try { await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (e) { console.error(e); }
+          } else {
+            pendingCandidatesRef.current.push(payload.candidate);
+          }
         }
       })
       .subscribe();
@@ -272,26 +275,22 @@ export default function MessagesContent() {
   const acceptCall = () => {
     globalCallsRef.current?.send({ type: 'broadcast', event: 'call_accept', payload: { targetId: incomingCall.callerId } });
     setActiveCall({ roomId: incomingCall.roomId, isVideo: incomingCall.isVideo, status: 'connected', peerId: incomingCall.callerId, isCaller: false });
+    
+    if (!activeChat || activeChat.id !== incomingCall.callerId) {
+      setActiveChat({ id: incomingCall.callerId, ...incomingCall.callerInfo });
+    }
+    
     setIncomingCall(null);
   };
 
   const rejectCall = () => {
     globalCallsRef.current?.send({ type: 'broadcast', event: 'call_reject', payload: { targetId: incomingCall.callerId } });
-    setIncomingCall(null);
+    cleanupLocalMedia();
   };
 
   const endCall = () => {
     if (activeCall?.peerId) globalCallsRef.current?.send({ type: 'broadcast', event: 'call_end', payload: { targetId: activeCall.peerId } });
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
-      localStreamRef.current = null;
-    }
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
-    }
-    setActiveCall(null);
-    setIncomingCall(null);
+    cleanupLocalMedia();
   };
 
   // Handle Local Media when Call connects
@@ -299,7 +298,7 @@ export default function MessagesContent() {
     let isMounted = true;
     if (activeCall?.status === 'connected') {
       navigator.mediaDevices.getUserMedia({ video: activeCall.isVideo, audio: true })
-        .then(stream => {
+        .then(async stream => {
           if (!isMounted) return;
           localStreamRef.current = stream;
           if (localVideoRef.current) localVideoRef.current.srcObject = stream;
@@ -327,13 +326,40 @@ export default function MessagesContent() {
             }
           };
 
-          globalCallsRef.current?.send({
-            type: 'broadcast',
-            event: 'webrtc_ready',
-            payload: { targetId: activeCall.peerId, senderId: currentUserId, isCaller: activeCall.isCaller }
-          });
+          if (activeCall.isCaller) {
+            try {
+              const offer = await pc.createOffer();
+              await pc.setLocalDescription(offer);
+              globalCallsRef.current?.send({
+                type: 'broadcast',
+                event: 'webrtc_offer',
+                payload: { targetId: activeCall.peerId, senderId: currentUserId, offer }
+              });
+            } catch(e) { console.error(e); }
+          } else {
+            if (pendingOfferRef.current) {
+              const payload = pendingOfferRef.current;
+              try {
+                await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                globalCallsRef.current?.send({
+                  type: 'broadcast',
+                  event: 'webrtc_answer',
+                  payload: { targetId: payload.senderId, answer }
+                });
+                pendingCandidatesRef.current.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(e => console.error(e)));
+                pendingCandidatesRef.current = [];
+              } catch(e) { console.error(e); }
+              pendingOfferRef.current = null;
+            }
+          }
         })
-        .catch(err => console.error("Media access denied:", err));
+        .catch(err => {
+          console.error("Media access denied:", err);
+          alert("Camera or Microphone access is required for calls.");
+          endCall();
+        });
     }
     return () => { isMounted = false; };
   }, [activeCall?.status, activeCall?.isVideo, activeCall?.peerId, activeCall?.isCaller, currentUserId]);
@@ -706,7 +732,7 @@ export default function MessagesContent() {
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Incoming {incomingCall.isVideo ? 'Video' : 'Audio'} Call</h3>
             <p className="text-gray-500 mb-8 font-medium">
-              @{contacts.find(c => c.id === incomingCall.callerId)?.username || 'A connection'} is calling you...
+              @{incomingCall.callerInfo?.username || 'A connection'} is calling you...
             </p>
             <div className="flex gap-4 w-full">
               <button onClick={rejectCall} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-xl font-bold transition-all border border-red-200">

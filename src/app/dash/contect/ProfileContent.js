@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, BadgeCheck } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 
@@ -350,7 +350,7 @@ export default function ProfileContent({ viewUserId }) {
       if (connErr) throw connErr;
       if (connections && connections.length > 0) {
         const userIds = connections.map(c => c.sender_id === profile.id ? c.receiver_id : c.sender_id);
-        const { data: users, error: userErr } = await supabase.from('profiles').select('id, username, avatar_url, status').in('id', userIds);
+        const { data: users, error: userErr } = await supabase.from('profiles').select('id, username, avatar_url, status, is_verified').in('id', userIds);
         if (userErr) throw userErr;
         setFollowersData(users || []);
       }
@@ -595,8 +595,9 @@ export default function ProfileContent({ viewUserId }) {
             </div>
           ) : (
             <div className="animate-in fade-in duration-300 pt-2">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
                 {profile?.username || 'Unknown User'}
+                {profile?.is_verified && <BadgeCheck size={28} className="text-blue-500" fill="currentColor" stroke="white" />}
               </h2>
               <p className="text-gray-700 text-base sm:text-lg mt-1.5 font-medium max-w-2xl">
                 {profile?.status || 'Software Engineer'}
@@ -634,7 +635,10 @@ export default function ProfileContent({ viewUserId }) {
                               {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : user.username?.substring(0, 2)}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">@{user.username}</p>
+                              <p className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                                @{user.username}
+                                {user.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                              </p>
                               <p className="text-[9px] text-gray-500 truncate uppercase tracking-widest">{user.status || 'Active Node'}</p>
                             </div>
                           </div>
@@ -666,7 +670,11 @@ export default function ProfileContent({ viewUserId }) {
                     <div className="mt-0.5 text-gray-400"><Shield size={20} /></div>
                     <div>
                       <p className="text-sm font-bold text-gray-900">Security Clearance</p>
-                      <p className="text-sm text-green-600 font-medium">Verified Identity</p>
+                      {profile?.is_verified ? (
+                        <p className="text-sm text-blue-600 font-bold flex items-center gap-1 mt-0.5"><BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" /> Verified Identity</p>
+                      ) : (
+                        <p className="text-sm text-gray-500 font-medium mt-0.5">Standard Node</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-start gap-3">

@@ -20,7 +20,8 @@ import {
   Send,
   Paperclip,
   MessageSquare,
-  Hash
+  Hash,
+  BadgeCheck
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -107,7 +108,7 @@ export default function GroupsContent() {
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('group_messages')
-        .select('*, profiles(username, avatar_url), replied_message:reply_to_message_id(*, text, image_url, profiles(username))')
+        .select('*, profiles(username, avatar_url, is_verified), replied_message:reply_to_message_id(*, text, image_url, profiles(username, is_verified))')
         .eq('group_id', activeWorkspace.id)
         .order('created_at', { ascending: true });
       
@@ -119,7 +120,7 @@ export default function GroupsContent() {
     const channel = supabase.channel(`group-${activeWorkspace.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages', filter: `group_id=eq.${activeWorkspace.id}` }, (payload) => {
         const fetchNewMsg = async () => {
-           const { data } = await supabase.from('group_messages').select('*, profiles(username, avatar_url), replied_message:reply_to_message_id(*, text, image_url, profiles(username))').eq('id', payload.new.id).maybeSingle();
+           const { data } = await supabase.from('group_messages').select('*, profiles(username, avatar_url, is_verified), replied_message:reply_to_message_id(*, text, image_url, profiles(username, is_verified))').eq('id', payload.new.id).maybeSingle();
            if (data) {
              setWorkspaceMessages(prev => {
                if (prev.some(m => m.id === data.id)) return prev;
@@ -363,7 +364,7 @@ export default function GroupsContent() {
     try {
       const { data, error } = await supabase
         .from('group_members')
-        .select('user_id, role, profiles(username, avatar_url)')
+        .select('user_id, role, profiles(username, avatar_url, is_verified)')
         .eq('group_id', activeWorkspace.id);
       if (error) throw error;
       setWorkspaceMembers(data || []);
@@ -503,12 +504,15 @@ export default function GroupsContent() {
                       </div>
                     )}
                     <div className={`flex flex-col group ${isMe ? "items-end" : "items-start"} max-w-[80%]`}>
-                      {!isMe && <span className="text-[10px] text-gray-500 font-bold mb-1 ml-1">@{msg.profiles?.username}</span>}
+                      {!isMe && <span className="text-[10px] text-gray-500 font-bold mb-1 ml-1 flex items-center gap-1">
+                        @{msg.profiles?.username}
+                        {msg.profiles?.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}
+                      </span>}
                       <div className={`w-full p-1 rounded-2xl ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-md shadow-blue-500/20" : "bg-gray-100 text-gray-800 border border-gray-200 rounded-tl-none"}`}>
                         <div className="px-3 pt-1.5 pb-2">
                           {msg.replied_message && (
                             <div className="border-l-2 border-blue-500/50 pl-2 mb-2 text-xs opacity-80">
-                              <p className="font-bold text-current">@{msg.replied_message.profiles?.username}</p>
+                              <p className="font-bold text-current flex items-center gap-1">@{msg.replied_message.profiles?.username}{msg.replied_message.profiles?.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}</p>
                               <p className="text-current/80 line-clamp-1">{msg.replied_message.text || 'Image'}</p>
                             </div>
                           )}
@@ -542,7 +546,10 @@ export default function GroupsContent() {
             {replyingTo && (
               <div className="bg-white border border-gray-200 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
                 <div className="min-w-0">
-                  <p className="text-gray-500">Replying to <span className="font-bold text-blue-600">@{replyingTo.profiles?.username}</span></p>
+                  <p className="text-gray-500 flex items-center gap-1">Replying to <span className="font-bold text-blue-600 flex items-center gap-1">
+                    @{replyingTo.profiles?.username}
+                    {replyingTo.profiles?.is_verified && <BadgeCheck size={12} className="text-blue-500" fill="currentColor" stroke="white" />}
+                  </span></p>
                   <p className="text-gray-500 truncate">{replyingTo.text || 'Image'}</p>
                 </div>
                 <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 hover:text-white"><X size={16} /></button>
@@ -964,6 +971,7 @@ export default function GroupsContent() {
                         <div className="min-w-0">
                           <h4 className="text-sm font-bold text-gray-900 truncate flex items-center gap-2">
                             @{member.profiles?.username}
+                            {member.profiles?.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
                             {isMe && <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded uppercase tracking-widest">You</span>}
                           </h4>
                           <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mt-0.5">

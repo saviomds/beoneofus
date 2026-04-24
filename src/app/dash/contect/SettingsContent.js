@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Palette, Check, AlertTriangle, Trash2, X, Loader2 } from "lucide-react";
+import { Moon, Sun, Monitor, Palette, Check, AlertTriangle, Trash2, X, Loader2, BadgeCheck, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
@@ -20,6 +20,7 @@ export default function SettingsContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   // Error message state for the delete operation
   const [deleteError, setDeleteError] = useState("");
+  const [requestingVerification, setRequestingVerification] = useState(false);
 
   // Effect to handle client-side-only logic
   useEffect(() => {
@@ -29,7 +30,7 @@ export default function SettingsContent() {
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const { data } = await supabase.from('profiles').select('username').eq('id', session.user.id).single();
+        const { data } = await supabase.from('profiles').select('username, is_verified, verification_status').eq('id', session.user.id).single();
         setProfile(data);
       }
     };
@@ -80,6 +81,24 @@ export default function SettingsContent() {
       console.error(error);
       setDeleteError(error.message);
       setIsDeleting(false);
+    }
+  };
+
+  const handleRequestVerification = async () => {
+    setRequestingVerification(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { error } = await supabase.from('profiles').update({ verification_status: 'pending' }).eq('id', session.user.id);
+      if (error) throw error;
+      
+      setProfile(prev => ({ ...prev, verification_status: 'pending' }));
+      alert("Verification request sent to beoneofus!");
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setRequestingVerification(false);
     }
   };
 
@@ -138,6 +157,44 @@ export default function SettingsContent() {
           </div>
         </div>
         */}
+
+        {/* Verification Section */}
+        <div className="bg-white border border-gray-200 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+              <BadgeCheck size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Account Verification</h2>
+              <p className="text-xs text-gray-500 font-medium">Get the blue verified badge on your profile.</p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Verified Node Status</h3>
+              <p className="text-xs text-gray-500 mt-1">Official verification by the beoneofus company.</p>
+            </div>
+            {profile?.is_verified ? (
+              <div className="flex items-center justify-center gap-2 text-blue-600 bg-blue-50 px-5 py-2.5 rounded-xl font-bold text-sm border border-blue-200 shrink-0 w-full sm:w-auto">
+                <BadgeCheck size={18} className="text-blue-600" fill="currentColor" stroke="white" /> Verified
+              </div>
+            ) : profile?.verification_status === 'pending' ? (
+              <div className="flex items-center justify-center gap-2 text-amber-600 bg-amber-50 px-5 py-2.5 rounded-xl font-bold text-sm border border-amber-200 shrink-0 w-full sm:w-auto">
+                <Loader2 size={18} className="animate-spin" /> Pending Review
+              </div>
+            ) : (
+              <button 
+                onClick={handleRequestVerification}
+                disabled={requestingVerification}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm shrink-0 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {requestingVerification ? <Loader2 size={16} className="animate-spin"/> : <Shield size={16} />}
+                Request Verification
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Danger Zone Section for account deletion */}
         <div className="bg-white border border-red-100 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { 
   Bell, Heart, MessageSquare, Check, Zap, 
-  ShieldAlert, ShieldCheck, MoreHorizontal, Users, ChevronRight, Clock, UserPlus
+  ShieldAlert, ShieldCheck, MoreHorizontal, Users, ChevronRight, Clock, UserPlus,
+  BadgeCheck
 } from "lucide-react"; 
 import { supabase } from "../../supabaseClient";
 import { useDashboard } from "./DashboardContext";
@@ -36,7 +37,7 @@ export default function NotificationsContent() {
           .from('notifications')
           .select(`
             *,
-            actor:actor_id (username, avatar_url)
+            actor:actor_id (username, avatar_url, is_verified)
           `)
           .eq('receiver_id', currentUserId)
           .order('created_at', { ascending: false });
@@ -243,7 +244,10 @@ export default function NotificationsContent() {
               </div>
               <div className="flex-1 min-w-0 z-10 pt-1">
                 <div className="text-sm text-gray-600 leading-relaxed">
-                  <span className="font-bold text-gray-900 mr-1">@{notif.actor?.username || 'System'}</span> 
+                  <span className="font-bold text-gray-900 mr-1 inline-flex items-center gap-1 align-bottom">
+                    @{notif.actor?.username || 'System'}
+                    {notif.actor?.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                  </span> 
                   {notif.type === 'like' && 'liked your post.'}
                   {notif.type === 'comment' && <>replied: <span className="text-gray-700 italic">{notif.content}</span></>}
                   {notif.type === 'handshake' && 'accepted your connection request.'}

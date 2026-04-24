@@ -21,7 +21,14 @@ import {
   Database,
   Key,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  ShieldAlert,
+  ShieldCheck,
+  Loader2,
+  Search,
+  Trash2,
+  Users,
+  BadgeCheck
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -180,7 +187,7 @@ const CommunityHubTool = ({ currentUserId }) => {
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('community_messages')
-        .select('*, profiles:user_id(username, avatar_url)')
+        .select('*, profiles:user_id(username, avatar_url, is_verified)')
         .order('created_at', { ascending: true })
         .limit(50);
       if (error) {
@@ -194,7 +201,7 @@ const CommunityHubTool = ({ currentUserId }) => {
     const channel = supabase.channel('public:community_messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'community_messages' }, (payload) => {
          const fetchNew = async () => {
-            const { data } = await supabase.from('community_messages').select('*, profiles:user_id(username, avatar_url)').eq('id', payload.new.id).single();
+            const { data } = await supabase.from('community_messages').select('*, profiles:user_id(username, avatar_url, is_verified)').eq('id', payload.new.id).single();
             if (data) setMessages(prev => {
               if (prev.find(m => m.id === data.id)) return prev;
               return [...prev, data];
@@ -264,7 +271,10 @@ const CommunityHubTool = ({ currentUserId }) => {
              </div>
            )}
            <div className={`flex flex-col ${msg.user_id === currentUserId ? 'items-end' : 'items-start'} max-w-[85%]`}>
-             {msg.user_id !== currentUserId && <span className="text-[10px] text-gray-500 font-bold mb-1 pl-1">@{msg.profiles?.username}</span>}
+             {msg.user_id !== currentUserId && <span className="text-[10px] text-gray-500 font-bold mb-1 pl-1 flex items-center gap-1">
+               @{msg.profiles?.username}
+               {msg.profiles?.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}
+             </span>}
                <div className={`w-full px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm ${msg.user_id === currentUserId ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-50 text-gray-800 border border-gray-200 rounded-tl-none'}`}>
                {msg.text}
              </div>
@@ -302,6 +312,223 @@ const CommunityHubTool = ({ currentUserId }) => {
           <Send size={18} />
         </button>
       </form>
+    </div>
+  );
+};
+
+const AdminPanelTool = ({ currentUserId }) => {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminTab, setAdminTab] = useState('requests'); // 'requests' | 'users'
+  const [allUsers, setAllUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+
+  useEffect(() => {
+    const checkAdminAndFetch = async () => {
+      if (!currentUserId) return;
+      
+      // Check admin status
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', currentUserId)
+        .single();
+
+      if (!profile?.is_admin) {
+        setLoading(false);
+        return;
+      }
+      setIsAdmin(true);
+
+      // Fetch pending requests
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url, status')
+        .eq('verification_status', 'pending');
+        
+      if (error) console.error("Error fetching requests:", error);
+      if (data) setRequests(data);
+      setLoading(false);
+    };
+
+    checkAdminAndFetch();
+  }, [currentUserId]);
+
+  // Fetch all users when the 'Users' tab is opened
+  useEffect(() => {
+    if (adminTab === 'users' && isAdmin && allUsers.length === 0) {
+      const fetchAllUsers = async () => {
+        setUsersLoading(true);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url, status, is_verified')
+          .limit(100);
+        if (error) console.error("Error fetching users:", error);
+        if (data) setAllUsers(data);
+        setUsersLoading(false);
+      };
+      fetchAllUsers();
+    }
+  }, [adminTab, isAdmin, allUsers.length]);
+
+  const handleAction = async (userId, action) => {
+    try {
+      const updates = action === 'approve' 
+        ? { is_verified: true, verification_status: 'verified' }
+        : { is_verified: false, verification_status: 'unverified' };
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      // Remove from list
+      setRequests(prev => prev.filter(req => req.id !== userId));
+      
+      // Send a notification to the user
+      await supabase.from('notifications').insert({
+        receiver_id: userId,
+        actor_id: currentUserId,
+        type: action === 'approve' ? 'handshake' : 'blocked',
+        content: action === 'approve' ? 'approved your verification request!' : 'denied your verification request.'
+      });
+
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  };
+
+  const handleDeleteUser = async (userId, username) => {
+    if (!confirm(`Are you sure you want to permanently delete @${username}?`)) return;
+    try {
+      const { error } = await supabase.from('profiles').delete().eq('id', userId);
+      if (error) throw error;
+      setAllUsers(prev => prev.filter(u => u.id !== userId));
+      alert(`User @${username} has been deleted.`);
+    } catch (err) {
+      alert("Error deleting user: " + err.message);
+    }
+  };
+
+  if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>;
+
+  if (!isAdmin) return (
+    <div className="flex flex-col items-center justify-center h-full space-y-4 text-center p-10">
+      <ShieldAlert size={48} className="text-red-500/50 mb-2" />
+      <div>
+        <p className="text-red-400 font-bold mb-2 text-lg">Unauthorized Access</p>
+        <p className="text-gray-500 text-sm max-w-md mx-auto leading-relaxed">
+          Your node does not have the required security clearance (Admin) to view this terminal.
+        </p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6 max-w-3xl mx-auto py-4">
+      {/* Header + Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-blue-50 border border-blue-200 rounded-[2rem]">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-blue-200">
+            <ShieldCheck size={24} />
+          </div>
+          <div>
+            <h3 className="text-blue-700 font-bold text-lg mb-1">Admin Dashboard</h3>
+            <p className="text-sm text-blue-600/80 leading-relaxed">Manage the platform and verify nodes.</p>
+          </div>
+        </div>
+        <div className="flex bg-white p-1 rounded-xl border border-blue-200 shadow-sm shrink-0">
+          <button onClick={() => setAdminTab('requests')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${adminTab === 'requests' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>Requests</button>
+          <button onClick={() => setAdminTab('users')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${adminTab === 'users' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>Users</button>
+        </div>
+      </div>
+
+      {/* Requests Tab */}
+      {adminTab === 'requests' && (
+        <div className="bg-white border border-gray-200 rounded-[2.5rem] overflow-hidden shadow-sm">
+        {requests.length === 0 ? (
+          <div className="p-10 text-center text-gray-500 text-sm font-medium">No pending verification requests.</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {requests.map(req => (
+              <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-gray-50 transition-all gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative w-12 h-12 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center font-bold text-gray-500 uppercase">
+                    {req.avatar_url ? (
+                      <Image src={req.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
+                    ) : (
+                      req.username?.substring(0, 2) || "??"
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="text-gray-900 font-bold text-sm">@{req.username}</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">{req.status || 'Active Node'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleAction(req.id, 'reject')} className="px-5 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold text-xs transition-colors border border-red-200">
+                    Deny
+                  </button>
+                  <button onClick={() => handleAction(req.id, 'approve')} className="px-5 py-2.5 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-bold text-xs transition-colors shadow-sm">
+                    Approve
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        </div>
+      )}
+
+      {/* Manage Users Tab */}
+      {adminTab === 'users' && (
+        <div className="bg-white border border-gray-200 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
+          <div className="p-4 border-b border-gray-100 bg-gray-50">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input 
+                type="text" 
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                placeholder="Search users by username..." 
+                className="w-full bg-white border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              />
+            </div>
+          </div>
+          
+          {usersLoading ? (
+            <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
+          ) : allUsers.length === 0 ? (
+            <div className="p-10 text-center text-gray-500 text-sm font-medium">No users found.</div>
+          ) : (
+            <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto custom-scrollbar">
+              {allUsers.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase())).map(user => (
+                <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50 transition-all gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative w-10 h-10 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center font-bold text-gray-500 uppercase">
+                      {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : user.username?.substring(0, 2) || "??"}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-gray-900 font-bold text-sm flex items-center gap-1 truncate">
+                        @{user.username}
+                        {user.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                      </h4>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5 truncate">{user.status || 'Active Node'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center shrink-0">
+                    <button onClick={() => handleDeleteUser(user.id, user.username)} className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition-colors border border-red-200 hover:border-red-600" title="Delete User"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -381,6 +608,13 @@ const MORE_TOOLS = [
     icon: <HelpCircle size={20} />, 
     desc: "Get technical help", 
     details: "Access our documentation or open a ticket with our support engineering team." 
+  },
+  { 
+    id: "admin", 
+    label: "Admin Dashboard", 
+    icon: <ShieldAlert size={20} />, 
+    desc: "Platform management", 
+    details: "Review verification requests and manage the network." 
   },
 ];
 
@@ -493,6 +727,7 @@ export default function MoreContent() {
                {activeItem.id === 'api' && <ApiAccessTool />}
                {activeItem.id === 'community' && <CommunityHubTool currentUserId={currentUserId} />}
                {activeItem.id === 'support' && <SupportTool />}
+               {activeItem.id === 'admin' && <AdminPanelTool currentUserId={currentUserId} />}
             </div>
           </div>
         </div>

@@ -2,7 +2,8 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { 
-  FileText, Plus, X, Loader2, Globe, Send, ChevronRight, ChevronLeft, LayoutTemplate, Trash2, Pencil
+  FileText, Plus, X, Loader2, Globe, Send, ChevronRight, ChevronLeft, LayoutTemplate, Trash2, Pencil,
+  BadgeCheck
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -59,7 +60,7 @@ export default function PagesContent() {
     const fetchPosts = async () => {
       setLoadingPosts(true);
       setPagePosts([]);
-      const { data, error } = await supabase.from('page_posts').select('*, profiles(username, avatar_url)').eq('page_id', activePage.id).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('page_posts').select('*, profiles(username, avatar_url, is_verified)').eq('page_id', activePage.id).order('created_at', { ascending: false });
       if (!error && data) setPagePosts(data);
       setLoadingPosts(false);
     };
@@ -69,7 +70,7 @@ export default function PagesContent() {
     const channel = supabase.channel(`page-${activePage.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'page_posts', filter: `page_id=eq.${activePage.id}` }, (payload) => {
         const fetchNewPost = async () => {
-           const { data } = await supabase.from('page_posts').select('*, profiles(username, avatar_url)').eq('id', payload.new.id).single();
+           const { data } = await supabase.from('page_posts').select('*, profiles(username, avatar_url, is_verified)').eq('id', payload.new.id).single();
            if (data) {
              setPagePosts(prev => [data, ...prev]);
            }
@@ -195,7 +196,10 @@ export default function PagesContent() {
                   </div>
                   <div className="flex-1 min-w-0 pr-16">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-bold text-gray-900 truncate">@{post.profiles?.username}</span>
+                      <span className="text-sm font-bold text-gray-900 truncate flex items-center gap-1">
+                        @{post.profiles?.username}
+                        {post.profiles?.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                      </span>
                       <span className="text-[9px] text-gray-500 uppercase tracking-widest shrink-0">
                         {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>

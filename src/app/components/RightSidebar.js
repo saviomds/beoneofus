@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import { 
-  Users, X, Loader2, Sparkles, UserPlus, Check, Globe, Lock, ChevronRight, Zap, BookOpen, Copy, Plus, Mail
+  Users, X, Loader2, Sparkles, UserPlus, Check, Globe, Lock, ChevronRight, Zap, BookOpen, Copy, Plus, Mail, BadgeCheck
 } from 'lucide-react';
 import ProfileContent from "../dash/contect/ProfileContent";
 import NewPost from "./NewPost";
@@ -100,7 +100,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
       // Fetch suggested users
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, username, status, avatar_url')
+        .select('id, username, status, avatar_url, is_verified')
         .neq('id', uid);
 
       if (profiles && isMounted) {
@@ -269,7 +269,10 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                           )}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">@{user.username}</span>
+                          <span className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                            @{user.username}
+                            {user.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                          </span>
                           <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest truncate">{user.status || 'Active Node'}</span>
                         </div>
                       </div>

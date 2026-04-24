@@ -2,7 +2,7 @@
 
 import {
   Home, Users, MessageSquare, Bookmark, FileText,
-  MoreHorizontal, Bell, Settings, LogOut
+  MoreHorizontal, Bell, Settings, LogOut, BadgeCheck
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
@@ -201,7 +201,10 @@ export default function Sidebar({ activeSection, onSectionChange }) {
               <div className="flex-1 min-w-0">
                 {profile ? (
                   <>
-                    <p className="text-sm font-bold text-gray-900 truncate">@{profile.username}</p>
+                    <p className="text-sm font-bold text-gray-900 truncate flex items-center gap-1">
+                      @{profile.username}
+                      {profile.is_verified && <BadgeCheck size={14} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />}
+                    </p>
                     <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                       <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest">{profile.status || 'Active Node'}</p>

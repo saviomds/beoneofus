@@ -7,7 +7,8 @@ import {
   Paperclip, CheckCheck, UserPlus, Check, X, 
   Trash2, AlertTriangle, MoreHorizontal, ShieldAlert, ShieldCheck,
   ChevronLeft,
-  MessageSquare
+  MessageSquare,
+  BadgeCheck
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -87,7 +88,7 @@ export default function MessagesContent() {
       if (connectedIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, username, status, avatar_url')
+          .select('id, username, status, avatar_url, is_verified')
           .in('id', connectedIds);
         
         if (isMounted) {
@@ -251,7 +252,7 @@ export default function MessagesContent() {
     globalCallsRef.current = supabase.channel('global-calls')
       .on('broadcast', { event: 'call_ring' }, async ({ payload }) => {
         if (payload.targetId === currentUserId) {
-          const { data } = await supabase.from('profiles').select('username, avatar_url').eq('id', payload.callerId).single();
+          const { data } = await supabase.from('profiles').select('username, avatar_url, is_verified').eq('id', payload.callerId).single();
           setIncomingCall({ ...payload, callerInfo: data });
         }
       })
@@ -663,7 +664,10 @@ export default function MessagesContent() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{contact.username}</h4>
+                <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                  {contact.username}
+                  {contact.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                </h4>
                 <div className="flex items-center gap-1 mt-0.5">
                   <div className={`w-1.5 h-1.5 rounded-full ${Object.keys(onlineUsers).includes(contact.id) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                   <p className="text-[10px] text-gray-500 truncate font-mono uppercase tracking-widest">
@@ -697,7 +701,10 @@ export default function MessagesContent() {
                   )}
                 </div>
                 <div className="cursor-pointer group" onClick={() => setSelectedUserId(activeChat.id)}>
-                  <h3 className="text-sm font-bold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors">{activeChat.username}</h3>
+                  <h3 className="text-sm font-bold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                    {activeChat.username}
+                    {activeChat.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                  </h3>
                   <div className="flex items-center gap-1">
                     <div className={`w-1.5 h-1.5 ${connectionStatus === 'blocked' ? 'bg-red-500' : Object.keys(onlineUsers).includes(activeChat.id) ? 'bg-green-500 animate-pulse' : 'bg-gray-300'} rounded-full`}></div>
                     <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
@@ -745,7 +752,10 @@ export default function MessagesContent() {
                         <div className="px-3 pt-1.5 pb-2">
                           {msg.replied_message && (
                             <div className="border-l-2 border-blue-200 pl-2 mb-2 text-xs opacity-80">
-                              <p className="font-bold text-current">@{msg.replied_message.sender_id === currentUserId ? 'You' : activeChat.username}</p>
+                              <p className="font-bold text-current flex items-center gap-1">
+                                @{msg.replied_message.sender_id === currentUserId ? 'You' : activeChat.username}
+                                {msg.replied_message.sender_id !== currentUserId && activeChat.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}
+                              </p>
                               <p className="text-current/80 line-clamp-1">{msg.replied_message.text || 'Image'}</p>
                             </div>
                           )}
@@ -798,7 +808,10 @@ export default function MessagesContent() {
               {replyingTo && (
                 <div className="bg-gray-100 border border-gray-200 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="min-w-0">
-                    <p className="text-gray-500">Replying to <span className="font-bold text-blue-600">@{replyingTo.sender_id === currentUserId ? 'You' : activeChat.username}</span></p>
+                    <p className="text-gray-500 flex items-center gap-1">Replying to <span className="font-bold text-blue-600 flex items-center gap-1">
+                      @{replyingTo.sender_id === currentUserId ? 'You' : activeChat.username}
+                      {replyingTo.sender_id !== currentUserId && activeChat.is_verified && <BadgeCheck size={12} className="text-blue-500" fill="currentColor" stroke="white" />}
+                    </span></p>
                     <p className="text-gray-500 truncate">{replyingTo.text || 'Image'}</p>
                   </div>
                   <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 hover:text-gray-900"><X size={16} /></button>
@@ -835,8 +848,9 @@ export default function MessagesContent() {
               {incomingCall.isVideo ? <Video size={32} /> : <Phone size={32} />}
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Incoming {incomingCall.isVideo ? 'Video' : 'Audio'} Call</h3>
-            <p className="text-gray-500 mb-8 font-medium">
-              @{incomingCall.callerInfo?.username || 'A connection'} is calling you...
+            <p className="text-gray-500 mb-8 font-medium flex items-center justify-center gap-1.5">
+              @{incomingCall.callerInfo?.username || 'A connection'} 
+              {incomingCall.callerInfo?.is_verified && <BadgeCheck size={16} className="text-blue-500 inline" fill="currentColor" stroke="white" />} is calling you...
             </p>
             <div className="flex gap-4 w-full">
               <button onClick={rejectCall} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-xl font-bold transition-all border border-red-200">
@@ -857,7 +871,9 @@ export default function MessagesContent() {
             <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 animate-bounce shadow-inner">
               {activeCall.isVideo ? <Video size={32} /> : <Phone size={32} />}
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Calling @{activeChat?.username}...</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
+              Calling @{activeChat?.username}{activeChat?.is_verified && <BadgeCheck size={20} className="text-blue-500" fill="currentColor" stroke="white" />}...
+            </h3>
             <p className="text-gray-500 mb-8 font-medium">Waiting for them to answer</p>
             <button onClick={endCall} className="w-full bg-red-50 hover:bg-red-100 text-red-600 px-8 py-3 rounded-xl font-bold transition-all border border-red-200">
               Cancel Call
@@ -926,7 +942,9 @@ export default function MessagesContent() {
                      )}
                    </div>
                  </div>
-                 <h2 className="text-white text-2xl font-bold">@{activeChat?.username}</h2>
+                 <h2 className="text-white text-2xl font-bold flex items-center justify-center gap-2">
+                   @{activeChat?.username}{activeChat?.is_verified && <BadgeCheck size={24} className="text-blue-500" fill="currentColor" stroke="white" />}
+                 </h2>
                  <p className="text-gray-400 mt-2 font-medium">Secured Audio Connection</p>
                  <p className="text-gray-400 font-mono text-lg mt-2">{formatDuration(callDuration)}</p>
                </div>

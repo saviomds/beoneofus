@@ -2,13 +2,14 @@
 
 import {
   Home, Users, MessageSquare, Bookmark, FileText,
-  MoreHorizontal, Bell, Settings, LogOut, BadgeCheck
+  MoreHorizontal, Bell, Settings, LogOut
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../supabaseClient'; 
 import { useRouter } from 'next/navigation';
+import VerifiedBadge from './VerifiedBadge';
 
 const SidebarItem = ({ icon: Icon, label, badge, active, onClick }) => (
   <div
@@ -203,7 +204,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
                   <>
                     <p className="text-sm font-bold text-gray-900 truncate flex items-center gap-1">
                       @{profile.username}
-                      {profile.is_verified && <BadgeCheck size={14} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />}
+                      {profile.is_verified && <VerifiedBadge size={14} />}
                     </p>
                     <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>

@@ -27,11 +27,11 @@ import {
   Loader2,
   Search,
   Trash2,
-  Users,
-  BadgeCheck
+  Users
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
+import VerifiedBadge from "../../components/VerifiedBadge";
 
 // --- TOOL COMPONENTS ---
 
@@ -273,7 +273,7 @@ const CommunityHubTool = ({ currentUserId }) => {
            <div className={`flex flex-col ${msg.user_id === currentUserId ? 'items-end' : 'items-start'} max-w-[85%]`}>
              {msg.user_id !== currentUserId && <span className="text-[10px] text-gray-500 font-bold mb-1 pl-1 flex items-center gap-1">
                @{msg.profiles?.username}
-               {msg.profiles?.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}
+               {msg.profiles?.is_verified && <VerifiedBadge size={10} />}
              </span>}
                <div className={`w-full px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm ${msg.user_id === currentUserId ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-50 text-gray-800 border border-gray-200 rounded-tl-none'}`}>
                {msg.text}
@@ -515,7 +515,7 @@ const AdminPanelTool = ({ currentUserId }) => {
                     <div className="min-w-0">
                       <h4 className="text-gray-900 font-bold text-sm flex items-center gap-1 truncate">
                         @{user.username}
-                        {user.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                        {user.is_verified && <VerifiedBadge size={14} />}
                       </h4>
                       <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5 truncate">{user.status || 'Active Node'}</p>
                     </div>

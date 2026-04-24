@@ -5,9 +5,10 @@ import { supabase } from '../../supabaseClient';
 import Image from 'next/image';
 import { 
   MessageSquare, Heart, Share2, MoreHorizontal, 
-  Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark, GitBranch, Link as LinkIcon, BadgeCheck
+  Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark, GitBranch, Link as LinkIcon
 } from 'lucide-react';
 import ProfileContent from "./ProfileContent";
+import VerifiedBadge from "../../components/VerifiedBadge";
 
 export default function FeedContent() {
   const [posts, setPosts] = useState([]);
@@ -346,7 +347,7 @@ export default function FeedContent() {
                   <div className="cursor-pointer group" onClick={() => setSelectedUserId(post.user_id)}>
                     <div className="flex items-center gap-2">
                       <h4 className="text-gray-900 font-bold text-sm group-hover:text-blue-600 transition-colors">{post.profiles?.username || 'Unknown User'}</h4>
-                      {post.profiles?.is_verified && <BadgeCheck size={16} className="text-blue-500" fill="currentColor" stroke="white" />}
+                      {post.profiles?.is_verified && <VerifiedBadge size={16} />}
                       {post.profiles?.github && (
                         <a href={`https://github.com/${post.profiles.github}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-900 transition-colors" title="GitHub Profile">
                           <GitBranch size={14} />
@@ -419,7 +420,7 @@ export default function FeedContent() {
                       <div key={comment.id} className="bg-gray-50 p-3 rounded-xl border border-gray-200">
                         <div className="flex items-center gap-1 mb-1">
                           <p className="text-[10px] font-bold text-blue-600">@{comment.profiles?.username}</p>
-                          {comment.profiles?.is_verified && <BadgeCheck size={12} className="text-blue-500" fill="currentColor" stroke="white" />}
+                          {comment.profiles?.is_verified && <VerifiedBadge size={12} />}
                         </div>
                         <p className="text-xs text-gray-700">{comment.content}</p>
                       </div>

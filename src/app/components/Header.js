@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { supabase } from '../supabaseClient';
 import ProfileContent from '../dash/contect/ProfileContent';
 import { useDashboard } from '../dash/contect/DashboardContext';
+import VerifiedBadge from './VerifiedBadge';
 
 // Dynamically import the modal to keep the Header bundle lightweight for the end user
 const QuickViewModal = dynamic(() => import('./QuickViewModal'), { ssr: false });
@@ -68,7 +69,7 @@ export default function Header({ setActiveTab }) {
           // Fetch Connections
           const { data: connectionsData } = await supabase.from('connections').select('sender_id, receiver_id').or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`).eq('status', 'accepted');
           const connectedIds = connectionsData ? connectionsData.map(c => c.sender_id === currentUserId ? c.receiver_id : c.sender_id) : [];
-          const { data: profiles } = connectedIds.length > 0 ? await supabase.from('profiles').select('id, username, status, avatar_url').in('id', connectedIds) : { data: [] };
+          const { data: profiles } = connectedIds.length > 0 ? await supabase.from('profiles').select('id, username, status, avatar_url, is_verified').in('id', connectedIds) : { data: [] };
 
           // Fetch Groups
           const { data: groupMemberships } = await supabase.from('group_members').select('group_id').eq('user_id', currentUserId);
@@ -104,7 +105,7 @@ export default function Header({ setActiveTab }) {
         const [postsRes, groupsRes, usersRes] = await Promise.all([
           supabase.from('posts').select('id, title, content').ilike('title', `%${searchQuery}%`).limit(3),
           supabase.from('groups').select('id, name, description').ilike('name', `%${searchQuery}%`).eq('is_private', false).limit(3),
-          supabase.from('profiles').select('id, username, status, avatar_url').ilike('username', `%${searchQuery}%`).limit(3)
+            supabase.from('profiles').select('id, username, status, avatar_url, is_verified').ilike('username', `%${searchQuery}%`).limit(3)
         ]);
 
         setSearchResults({
@@ -202,7 +203,10 @@ export default function Header({ setActiveTab }) {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">@{user.username}</p>
+                            <p className="text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                              @{user.username}
+                              {user.is_verified && <VerifiedBadge size={14} />}
+                            </p>
                             <p className="text-[10px] text-gray-500 line-clamp-1 mt-0.5 uppercase tracking-widest font-black">{user.status || 'Active Node'}</p>
                           </div>
                         </div>
@@ -306,7 +310,10 @@ export default function Header({ setActiveTab }) {
                               {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : (user.username?.substring(0, 2) || '??')}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">@{user.username}</p>
+                              <p className="text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                                @{user.username}
+                                {user.is_verified && <VerifiedBadge size={14} />}
+                              </p>
                               <p className="text-[10px] text-gray-500 line-clamp-1 mt-0.5 uppercase tracking-widest font-black">{user.status || 'Active'}</p>
                             </div>
                           </div>

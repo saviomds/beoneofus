@@ -271,7 +271,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                         <div className="flex flex-col min-w-0">
                           <span className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors flex items-center gap-1">
                             @{user.username}
-                            {user.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                            {user.is_verified && <BadgeCheck size={14} className="text-blue-500 drop-shadow-sm hover:scale-110 hover:-rotate-3 transition-all duration-300" fill="currentColor" stroke="white" />}
                           </span>
                           <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest truncate">{user.status || 'Active Node'}</span>
                         </div>

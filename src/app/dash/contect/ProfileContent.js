@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, BadgeCheck } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
+import VerifiedBadge from "../../components/VerifiedBadge";
 
 // --- Image Cropping Helper ---
 const createImage = (url) =>
@@ -597,7 +598,7 @@ export default function ProfileContent({ viewUserId }) {
             <div className="animate-in fade-in duration-300 pt-2">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
                 {profile?.username || 'Unknown User'}
-                {profile?.is_verified && <BadgeCheck size={28} className="text-blue-500" fill="currentColor" stroke="white" />}
+                {profile?.is_verified && <VerifiedBadge size={28} />}
               </h2>
               <p className="text-gray-700 text-base sm:text-lg mt-1.5 font-medium max-w-2xl">
                 {profile?.status || 'Software Engineer'}
@@ -637,7 +638,7 @@ export default function ProfileContent({ viewUserId }) {
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors flex items-center gap-1">
                                 @{user.username}
-                                {user.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                                {user.is_verified && <VerifiedBadge size={14} />}
                               </p>
                               <p className="text-[9px] text-gray-500 truncate uppercase tracking-widest">{user.status || 'Active Node'}</p>
                             </div>
@@ -671,7 +672,7 @@ export default function ProfileContent({ viewUserId }) {
                     <div>
                       <p className="text-sm font-bold text-gray-900">Security Clearance</p>
                       {profile?.is_verified ? (
-                        <p className="text-sm text-blue-600 font-bold flex items-center gap-1 mt-0.5"><BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" /> Verified Identity</p>
+                        <p className="text-sm text-blue-600 font-bold flex items-center gap-1 mt-0.5"><VerifiedBadge size={14} /> Verified Identity</p>
                       ) : (
                         <p className="text-sm text-gray-500 font-medium mt-0.5">Standard Node</p>
                       )}

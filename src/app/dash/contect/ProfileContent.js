@@ -3,7 +3,38 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link } from "lucide-react";
+import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
+
+// --- Image Cropping Helper ---
+const createImage = (url) =>
+  new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.setAttribute('crossOrigin', 'anonymous');
+    image.src = url;
+  });
+
+async function getCroppedImg(imageSrc, pixelCrop) {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
+    0, 0, pixelCrop.width, pixelCrop.height
+  );
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.9);
+  });
+}
 
 export default function ProfileContent({ viewUserId }) {
   const [loading, setLoading] = useState(true);
@@ -29,6 +60,12 @@ export default function ProfileContent({ viewUserId }) {
   const [bannerFile, setBannerFile] = useState(null);
   const [bannerPreview, setBannerPreview] = useState(null);
   const bannerInputRef = useRef(null);
+
+  // Cropper States
+  const [showBannerCropper, setShowBannerCropper] = useState(false);
+  const [bannerCrop, setBannerCrop] = useState({ x: 0, y: 0 });
+  const [bannerZoom, setBannerZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -111,10 +148,25 @@ export default function ProfileContent({ viewUserId }) {
   const handleBannerFileChange = (event) => {
     const file = event.target.files?.[0];
     if (file) {
-      setBannerFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => setBannerPreview(reader.result);
+      reader.onloadend = () => {
+        setBannerPreview(reader.result);
+        setShowBannerCropper(true);
+      };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropComplete = async () => {
+    try {
+      const croppedImageBlob = await getCroppedImg(bannerPreview, croppedAreaPixels);
+      setBannerFile(new File([croppedImageBlob], "banner.jpg", { type: "image/jpeg" }));
+      setBannerPreview(URL.createObjectURL(croppedImageBlob));
+      setShowBannerCropper(false);
+    } catch (e) {
+      console.error(e);
+      setToast("Failed to crop image");
+      setTimeout(() => setToast(""), 3000);
     }
   };
 
@@ -216,6 +268,7 @@ export default function ProfileContent({ viewUserId }) {
     setImagePreview(null);
     setBannerFile(null);
     setBannerPreview(null);
+    setShowBannerCropper(false);
   };
 
   const handleFollow = async () => {
@@ -330,11 +383,41 @@ export default function ProfileContent({ viewUserId }) {
         <p className="text-gray-500 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your professional identity and network status." : "Viewing professional network identity."}</p>
       </div>
 
+      {/* --- BANNER CROPPER MODAL --- */}
+      {showBannerCropper && bannerPreview && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm" />
+          <div className="relative w-full max-w-3xl bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col h-[75vh] animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-200 flex justify-between items-center bg-gray-50 z-10 shrink-0">
+              <h3 className="font-bold text-gray-900">Adjust Cover Image</h3>
+              <button onClick={() => { setShowBannerCropper(false); setBannerPreview(profile?.banner_url || null); setBannerFile(null); }} className="text-gray-500 hover:text-gray-900 transition-colors p-1 rounded-full hover:bg-gray-200">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="relative flex-1 bg-black">
+              <Cropper
+                image={bannerPreview}
+                crop={bannerCrop}
+                zoom={bannerZoom}
+                aspect={4 / 1} 
+                onCropChange={setBannerCrop}
+                onZoomChange={setBannerZoom}
+                onCropComplete={(croppedArea, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)}
+              />
+            </div>
+            <div className="p-5 bg-gray-50 border-t border-gray-200 z-10 flex flex-col sm:flex-row items-center gap-4 shrink-0">
+              <input type="range" value={bannerZoom} min={1} max={3} step={0.1} aria-labelledby="Zoom" onChange={(e) => setBannerZoom(e.target.value)} className="w-full accent-blue-600" />
+              <button onClick={handleCropComplete} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all shrink-0">Apply Crop</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl bg-white border border-gray-200 rounded-[2rem] relative overflow-visible shadow-sm mb-10">
         {/* Banner Section */}
         <div className="h-32 sm:h-48 w-full bg-gradient-to-r from-slate-800 via-blue-900 to-slate-900 rounded-t-[2rem] relative overflow-hidden group">
           {displayBanner ? (
-            <Image src={displayBanner} alt="Profile Banner" fill priority quality={90} className="object-cover object-center" />
+            <Image src={displayBanner} alt="Profile Banner" fill priority quality={75} className="object-cover object-center" />
           ) : (
             <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
           )}

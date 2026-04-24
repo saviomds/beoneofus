@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { 
-  FileText, Plus, X, Loader2, Globe, Send, ChevronRight, ChevronLeft, LayoutTemplate, Trash2
+  FileText, Plus, X, Loader2, Globe, Send, ChevronRight, ChevronLeft, LayoutTemplate, Trash2, Pencil
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -20,6 +20,8 @@ export default function PagesContent() {
   const [pagePosts, setPagePosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [postInput, setPostInput] = useState("");
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editContent, setEditContent] = useState("");
   
   useEffect(() => {
     const init = async () => {
@@ -126,6 +128,19 @@ export default function PagesContent() {
     }
   };
 
+  const handleUpdatePost = async (postId) => {
+    if (!editContent.trim()) return;
+    try {
+      const { error } = await supabase.from('page_posts').update({ content: editContent }).eq('id', postId);
+      if (error) throw error;
+      
+      setPagePosts(prev => prev.map(p => p.id === postId ? { ...p, content: editContent } : p));
+      setEditingPostId(null);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto relative animate-in fade-in slide-in-from-bottom-4 duration-700">
       {activePage ? (
@@ -168,6 +183,7 @@ export default function PagesContent() {
             ) : (
               pagePosts.map(post => {
                 const canDelete = post.user_id === currentUserId || activePage?.created_by === currentUserId;
+                const isEditing = editingPostId === post.id;
                 return (
                 <div key={post.id} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-2 relative group">
                   <div className="relative w-10 h-10 rounded-xl bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-xs uppercase shrink-0 overflow-hidden">
@@ -177,23 +193,47 @@ export default function PagesContent() {
                       post.profiles?.username?.substring(0, 2) || "??"
                     )}
                   </div>
-                  <div className="flex-1 min-w-0 pr-8">
+                  <div className="flex-1 min-w-0 pr-16">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-bold text-gray-900 truncate">@{post.profiles?.username}</span>
                       <span className="text-[9px] text-gray-500 uppercase tracking-widest shrink-0">
                         {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-700 leading-relaxed">{post.content}</p>
+                    {isEditing ? (
+                      <div className="mt-2 animate-in fade-in">
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="w-full bg-white border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 mb-2 resize-none"
+                          rows={3}
+                        />
+                        <div className="flex gap-2">
+                          <button onClick={() => handleUpdatePost(post.id)} className="bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-purple-700 transition">Save</button>
+                          <button onClick={() => setEditingPostId(null)} className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-300 transition">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-700 leading-relaxed">{post.content}</p>
+                    )}
                   </div>
-                  {canDelete && (
-                    <button 
-                      onClick={() => handleDeletePost(post.id)}
-                      className="absolute top-3 right-3 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                      title="Delete Post"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                  {canDelete && !isEditing && (
+                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button 
+                        onClick={() => { setEditingPostId(post.id); setEditContent(post.content); }}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                        title="Edit Post"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeletePost(post.id)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                        title="Delete Post"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   )}
                 </div>
                 );

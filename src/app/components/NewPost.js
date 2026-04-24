@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { 
   Code2, Image as ImageIcon, 
@@ -8,9 +8,10 @@ import {
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
-export default function NewPost({ onPostCreated }) {
+export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCancelEdit }) {
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false); // New Success State
+  const [successMessage, setSuccessMessage] = useState('Post Deployed!');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [codeSnippet, setCodeSnippet] = useState('');
@@ -19,6 +20,20 @@ export default function NewPost({ onPostCreated }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const fileInputRef = useRef(null);
+
+  const isEditMode = Boolean(postToEdit);
+
+  useEffect(() => {
+    if (isEditMode) {
+      setTitle(postToEdit.title || '');
+      setContent(postToEdit.content || '');
+      setCodeSnippet(postToEdit.code_snippet || '');
+      setSelectedImage(postToEdit.image_url || null);
+      setImageFile(null); // Reset any selected file
+      setShowCodeInput(!!postToEdit.code_snippet);
+    }
+    // No 'else' needed; component state handles create mode reset
+  }, [postToEdit, isEditMode]);
 
   const onFileChange = (e) => {
     const file = e.target.files[0];
@@ -42,50 +57,70 @@ export default function NewPost({ onPostCreated }) {
       }
 
       const user = session.user;
-      let publicImageUrl = null;
+      let publicImageUrl = isEditMode ? postToEdit.image_url : null;
 
-      if (imageFile) {
+      // Handle image upload only if a new file is selected
+      if (imageFile) { 
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('post-images')
           .upload(fileName, imageFile);
 
         if (uploadError) throw uploadError;
-        
+
         const { data: urlData } = supabase.storage
           .from('post-images')
           .getPublicUrl(fileName);
         
         publicImageUrl = urlData.publicUrl;
+      } else if (isEditMode && !selectedImage) {
+        // Handle image removal in edit mode
+        publicImageUrl = null;
       }
 
-      const { error: postError } = await supabase
-        .from('posts')
-        .insert({
-          user_id: user.id,
-          title: title,
-          content: content,
-          image_url: publicImageUrl,
-          code_snippet: codeSnippet
-        });
+      const postData = {
+        title,
+        content,
+        image_url: publicImageUrl,
+        code_snippet: codeSnippet,
+      };
 
-      if (postError) throw postError;
+      if (isEditMode) {
+        const { error: updateError } = await supabase
+          .from('posts')
+          .update(postData)
+          .eq('id', postToEdit.id);
+        if (updateError) throw updateError;
+        setSuccessMessage('Post Updated!');
+      } else {
+        const { error: postError } = await supabase
+          .from('posts')
+          .insert({ ...postData, user_id: user.id });
+        if (postError) throw postError;
+        setSuccessMessage('Post Deployed!');
+      }
 
-      // Reset Form
-      setTitle('');
-      setContent('');
-      setCodeSnippet('');
-      setSelectedImage(null);
-      setImageFile(null);
-      setShowCodeInput(false);
+      // Reset Form only in create mode
+      if (!isEditMode) {
+        setTitle('');
+        setContent('');
+        setCodeSnippet('');
+        setSelectedImage(null);
+        setImageFile(null);
+        setShowCodeInput(false);
+      }
 
       // SHOW CUSTOM SUCCESS CARD
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
-        if (onPostCreated) onPostCreated();
+        if (isEditMode) {
+          if (onPostUpdated) onPostUpdated();
+        } else {
+          if (onPostCreated) onPostCreated();
+        }
       }, 2000); // Auto-hide after 2 seconds and close modal if applicable
 
     } catch (error) {
@@ -109,7 +144,7 @@ export default function NewPost({ onPostCreated }) {
             <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
               <CheckCircle2 size={40} className="animate-bounce" />
             </div>
-            <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Post Deployed!</h3>
+            <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">{successMessage}</h3>
             <p className="text-gray-500 text-sm leading-relaxed mb-6">
               Your update is now live on the <span className="text-blue-500 font-bold">beoneofus</span> network.
             </p>
@@ -124,7 +159,7 @@ export default function NewPost({ onPostCreated }) {
       )}
 
       {/* --- MAIN POST FORM --- */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 shadow-sm relative">
+      <div className={`bg-white border ${isEditMode ? 'border-blue-300' : 'border-gray-200'} rounded-xl p-4 mb-6 shadow-sm relative`}>
         <div className="flex flex-col gap-4">
           
           <input 
@@ -184,18 +219,28 @@ export default function NewPost({ onPostCreated }) {
               </button>
             </div>
 
-            <button 
-              type="button"
-              onClick={handlePostSubmit}
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white p-2 px-4 rounded-lg transition-all active:scale-95 shadow-sm flex items-center gap-2 disabled:opacity-50"
-            >
-              {loading ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
-                <Send size={18} fill="currentColor" />
+            <div className="flex items-center gap-2">
+              {isEditMode && (
+                <button
+                  type="button"
+                  onClick={onCancelEdit}
+                  disabled={loading}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 px-4 rounded-lg transition-all font-semibold"
+                >
+                  Cancel
+                </button>
               )}
-            </button>
+              <button 
+                type="button"
+                onClick={handlePostSubmit}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 text-white p-2 px-4 rounded-lg transition-all active:scale-95 shadow-sm flex items-center gap-2 disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : isEditMode ? 'Save Changes' : <Send size={18} fill="currentColor" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>

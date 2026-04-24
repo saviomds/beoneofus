@@ -40,6 +40,8 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
 
   const [isCopied, setIsCopied] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState(false);
 
   const handleCopyInvite = () => {
     navigator.clipboard.writeText(`${window.location.origin}/auth`);
@@ -47,14 +49,28 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleEmailInvite = (e) => {
+  const handleEmailInvite = async (e) => {
     e.preventDefault();
     if (!inviteEmail) return;
-    const inviteLink = `${window.location.origin}/auth`;
-    const subject = encodeURIComponent("You're invited to join beoneofus!");
-    const body = encodeURIComponent(`Hi there,\n\nI'd like to invite you to join the beoneofus developer network.\n\nJoin here: ${inviteLink}\n\nSee you inside!`);
-    window.open(`mailto:${inviteEmail}?subject=${subject}&body=${body}`);
-    setInviteEmail('');
+    setSendingEmail(true);
+    
+    try {
+      const inviteLink = `${window.location.origin}/auth`;
+      const response = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inviteEmail, inviteLink })
+      });
+      if (!response.ok) throw new Error('Failed to send invite');
+      
+      setEmailSuccess(true);
+      setInviteEmail('');
+      setTimeout(() => setEmailSuccess(false), 3000);
+    } catch (error) {
+      alert('Failed to send email. Please try again.');
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   useEffect(() => {
@@ -377,8 +393,8 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                 required
                 className="flex-1 w-full bg-gray-50 border border-gray-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all min-w-0"
               />
-              <button type="submit" className="bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-xl transition-colors flex items-center justify-center shrink-0" title="Send Email">
-                <Mail size={14} />
+              <button type="submit" disabled={sendingEmail} className="bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-xl transition-colors flex items-center justify-center shrink-0 disabled:opacity-50" title="Send Email">
+                {sendingEmail ? <Loader2 size={14} className="animate-spin" /> : emailSuccess ? <Check size={14} className="text-green-400" /> : <Mail size={14} />}
               </button>
             </form>
           </div>

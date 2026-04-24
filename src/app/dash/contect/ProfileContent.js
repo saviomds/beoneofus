@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
 export default function ProfileContent({ viewUserId }) {
@@ -12,7 +12,7 @@ export default function ProfileContent({ viewUserId }) {
   const [profile, setProfile] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({ username: "", status: "" });
+  const [formData, setFormData] = useState({ username: "", status: "", location: "", github: "", website: "" });
   const [toast, setToast] = useState("");
   const [followersCount, setFollowersCount] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState('none');
@@ -25,6 +25,10 @@ export default function ProfileContent({ viewUserId }) {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
+
+  const [bannerFile, setBannerFile] = useState(null);
+  const [bannerPreview, setBannerPreview] = useState(null);
+  const bannerInputRef = useRef(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -78,7 +82,10 @@ export default function ProfileContent({ viewUserId }) {
         if (own) {
           setFormData({ 
             username: profileData.username || "", 
-            status: profileData.status || "" 
+            status: profileData.status || "",
+            location: profileData.location || "",
+            github: profileData.github || "",
+            website: profileData.website || ""
           });
         }
       } catch (error) {
@@ -101,6 +108,16 @@ export default function ProfileContent({ viewUserId }) {
     }
   };
 
+  const handleBannerFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setBannerFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setBannerPreview(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     const cleanUsername = formData.username.trim().replace(/\s+/g, '_').toLowerCase();
     if (!cleanUsername) {
@@ -111,6 +128,7 @@ export default function ProfileContent({ viewUserId }) {
     setSaving(true);
     try {
       let avatarUrl = profile?.avatar_url;
+      let bannerUrl = profile?.banner_url;
 
       // Upload new image if selected
       if (imageFile) {
@@ -124,12 +142,28 @@ export default function ProfileContent({ viewUserId }) {
         avatarUrl = urlData.publicUrl;
       }
 
+      // Upload new banner if selected
+      if (bannerFile) {
+        const fileExt = bannerFile.name.split('.').pop();
+        const fileName = `banner-${currentUser.id}-${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, bannerFile);
+        if (uploadError) throw uploadError;
+        
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+        bannerUrl = urlData.publicUrl;
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
           username: cleanUsername,
           status: formData.status.trim(),
-          avatar_url: avatarUrl
+          location: formData.location.trim(),
+          github: formData.github.trim(),
+          website: formData.website.trim(),
+          avatar_url: avatarUrl,
+          banner_url: bannerUrl
         })
         .eq('id', currentUser.id);
 
@@ -138,10 +172,26 @@ export default function ProfileContent({ viewUserId }) {
         throw error;
       }
 
-      setProfile({ ...profile, username: cleanUsername, status: formData.status.trim(), avatar_url: avatarUrl });
-      setFormData({ username: cleanUsername, status: formData.status.trim() });
+      setProfile({ 
+        ...profile, 
+        username: cleanUsername, 
+        status: formData.status.trim(), 
+        location: formData.location.trim(), 
+        github: formData.github.trim(), 
+        website: formData.website.trim(), 
+        avatar_url: avatarUrl,
+        banner_url: bannerUrl
+      });
+      setFormData({ 
+        username: cleanUsername, 
+        status: formData.status.trim(), 
+        location: formData.location.trim(), 
+        github: formData.github.trim(), 
+        website: formData.website.trim() 
+      });
       setIsEditing(false);
       setImageFile(null);
+      setBannerFile(null);
       setToast("Profile updated successfully");
       setTimeout(() => setToast(""), 3000);
     } catch (error) {
@@ -155,9 +205,17 @@ export default function ProfileContent({ viewUserId }) {
 
   const handleCancel = () => {
     setIsEditing(false);
-    setFormData({ username: profile?.username || "", status: profile?.status || "" });
+    setFormData({ 
+      username: profile?.username || "", 
+      status: profile?.status || "",
+      location: profile?.location || "",
+      github: profile?.github || "",
+      website: profile?.website || ""
+    });
     setImageFile(null);
     setImagePreview(null);
+    setBannerFile(null);
+    setBannerPreview(null);
   };
 
   const handleFollow = async () => {
@@ -261,208 +319,306 @@ export default function ProfileContent({ viewUserId }) {
 
   const userInitial = profile?.username?.[0]?.toUpperCase() || currentUser?.email?.[0]?.toUpperCase() || "I";
   const displayAvatar = imagePreview || profile?.avatar_url;
+  const displayBanner = bannerPreview || profile?.banner_url;
   
   const isError = toast && !toast.includes("successfully");
 
   return (
     <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 pt-4 px-2">
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-gray-900 tracking-tighter">Identity Profile</h1>
-        <p className="text-gray-500 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your personal information and network status." : "Viewing network identity data."}</p>
+        <h1 className="text-3xl font-black text-gray-900 tracking-tighter">Profile</h1>
+        <p className="text-gray-500 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your professional identity and network status." : "Viewing professional network identity."}</p>
       </div>
 
-      <div className="max-w-4xl bg-white border border-gray-200 rounded-[2rem] p-6 sm:p-10 relative overflow-hidden shadow-lg">
-        {/* Background Accents */}
-        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-blue-50 to-purple-50" />
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent" />
+      <div className="max-w-4xl bg-white border border-gray-200 rounded-[2rem] relative overflow-visible shadow-sm mb-10">
+        {/* Banner Section */}
+        <div className="h-32 sm:h-48 w-full bg-gradient-to-r from-slate-800 via-blue-900 to-slate-900 rounded-t-[2rem] relative overflow-hidden group">
+          {displayBanner ? (
+            <Image src={displayBanner} alt="Profile Banner" fill priority quality={90} className="object-cover object-center" />
+          ) : (
+            <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
+          )}
+          
+          {isEditing && (
+            <div 
+              onClick={() => bannerInputRef.current?.click()}
+              className="absolute inset-0 bg-gray-900/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+            >
+              <Camera size={32} className="text-white mb-2" />
+              <span className="text-xs font-bold uppercase tracking-widest text-white bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/20">Change Cover</span>
+            </div>
+          )}
+        </div>
+        <input type="file" ref={bannerInputRef} onChange={handleBannerFileChange} accept="image/*" className="hidden" />
         
-        <div className="relative flex flex-col md:flex-row gap-8 items-start md:items-center pt-4">
-          {/* Avatar Section */}
-          <div className="relative w-24 h-24 rounded-3xl bg-gray-100 flex items-center justify-center text-4xl font-black text-gray-700 shadow-sm shrink-0 border border-gray-200 overflow-hidden group z-10">
-            {displayAvatar ? (
-              <Image src={displayAvatar} alt="Profile Avatar" fill sizes="96px" className="object-cover" />
-            ) : (
-              userInitial
-            )}
-            
-            {isEditing && (
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
-              >
-                <Camera size={24} className="text-white mb-1" />
-                <span className="text-[9px] font-bold uppercase tracking-widest text-white">Change</span>
-              </div>
-            )}
-          </div>
-          <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+        <div className="px-6 sm:px-10 relative pb-10">
+          {/* Header Area with Avatar and Actions */}
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 -mt-12 sm:-mt-16 mb-6">
+            {/* Avatar */}
+            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white bg-white flex items-center justify-center text-4xl font-black text-gray-700 shadow-md shrink-0 overflow-hidden group z-10">
+              {displayAvatar ? (
+                <Image src={displayAvatar} alt="Profile Avatar" fill sizes="128px" className="object-cover object-center" />
+              ) : (
+                userInitial
+              )}
+              
+              {isEditing && (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                >
+                  <Camera size={24} className="text-white mb-1" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-white">Change</span>
+                </div>
+              )}
+            </div>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
 
-          <div className="flex-1 w-full">
-            {isEditing ? (
-              <div className="space-y-4 max-w-md animate-in fade-in zoom-in-95 duration-200">
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 pt-2 sm:pt-0 z-10">
+              {isOwnProfile ? (
+                !isEditing && (
+                  <button 
+                    onClick={() => setIsEditing(true)} 
+                    className="flex items-center gap-2 text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 px-6 py-2.5 rounded-full border border-gray-300 transition-all shadow-sm active:scale-95"
+                  >
+                    <Edit3 size={16} /> Edit Profile
+                  </button>
+                )
+              ) : (
+                <>
+                  {connectionStatus === 'none' && (
+                    <button 
+                      onClick={handleFollow}
+                      disabled={connectionProcessing}
+                      className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-full transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                    >
+                      {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Follow
+                    </button>
+                  )}
+                  {connectionStatus === 'pending_sent' && (
+                    <button 
+                      onClick={handleUnfollow}
+                      disabled={connectionProcessing}
+                      className="flex items-center gap-2 text-sm font-bold text-gray-600 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-200 border border-gray-300 px-6 py-2.5 rounded-full transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Pending
+                    </button>
+                  )}
+                  {connectionStatus === 'pending_received' && (
+                     <button 
+                      disabled
+                      className="flex items-center gap-2 text-sm font-bold text-amber-600 bg-amber-50 px-6 py-2.5 rounded-full border border-amber-200 transition-all cursor-default"
+                    >
+                      <Users size={16} /> Review Request
+                    </button>
+                  )}
+                  {connectionStatus === 'accepted' && (
+                    <button 
+                      onClick={handleUnfollow}
+                      disabled={connectionProcessing}
+                      className="flex items-center gap-2 text-sm font-bold text-gray-600 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-6 py-2.5 rounded-full border border-gray-300 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Unfollow
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Content Area */}
+          {isEditing ? (
+            <div className="pt-2 pb-6 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Username</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">@</span>
-                    <input 
-                      type="text" 
-                      value={formData.username} 
-                      onChange={(e) => setFormData({...formData, username: e.target.value})}
-                      className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
-                    />
-                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Edit Details</h3>
+                  <p className="text-sm text-gray-500">Update your professional identity.</p>
                 </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Status / Bio</label>
-                  <input 
-                    type="text" 
-                    value={formData.status} 
-                    onChange={(e) => setFormData({...formData, status: e.target.value})}
-                    placeholder="e.g. Maintenance & Limited"
-                    className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button onClick={handleSave} disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-sm">
+                <div className="flex items-center gap-2">
+                  <button onClick={handleCancel} className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors">Cancel</button>
+                  <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-sm disabled:opacity-50">
                     {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} Save
                   </button>
-                  <button onClick={handleCancel} className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 py-3 rounded-xl font-bold transition-all border border-gray-200">
-                    Cancel
-                  </button>
                 </div>
               </div>
-            ) : (
-              <div className="animate-in fade-in duration-300">
-                <h2 className="text-2xl font-black text-gray-900 mb-1 flex items-center gap-2">
-                  @{profile?.username || 'I am robot'}
-                </h2>
-                <div className="flex items-center gap-4 mb-6">
-                  <p className="text-blue-400 font-mono text-sm flex items-center gap-2">
-                    <Activity size={14} className="animate-pulse" />
-                    {profile?.status || 'Bio not set'}
-                  </p>
-                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full" />
-                  
-                  <div className="relative">
-                    <p 
-                      onClick={handleViewFollowers}
-                      className={`text-gray-500 text-sm font-bold flex items-center gap-1.5 transition-colors ${followersCount > 0 ? 'cursor-pointer hover:text-gray-900' : ''}`}
-                    >
-                      <Users size={14} className="text-gray-400" />
-                      <span className="text-gray-900">
-                        {Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(followersCount)}
-                      </span> Followers
-                    </p>
-
-                    {showFollowersList && (
-                      <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Network Nodes</span>
-                          <button onClick={() => setShowFollowersList(false)} className="text-gray-400 hover:text-gray-900 transition-colors"><X size={14}/></button>
-                        </div>
-                        {/* max-h-[170px] perfectly fits 3 items of ~50px height before initiating the scrollbar */}
-                        <div className="max-h-[170px] overflow-y-auto custom-scrollbar p-2 space-y-1">
-                          {loadingFollowers ? (
-                            <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-blue-500" /></div>
-                          ) : followersData.map(user => (
-                            <div key={`follower-${user.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer group">
-                              <div className="relative w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-bold uppercase text-gray-500 shrink-0 overflow-hidden">
-                                {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : user.username?.substring(0, 2)}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">@{user.username}</p>
-                                <p className="text-[9px] text-gray-500 truncate uppercase tracking-widest">{user.status || 'Active Node'}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                  <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-500/30 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-500 shrink-0"><Mail size={18} /></div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">{isOwnProfile ? "Email Address" : "Email Visibility"}</p>
-                      <p className="text-sm text-gray-700 truncate font-medium">{isOwnProfile ? (currentUser?.email || 'N/A') : 'Protected by User'}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Username</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">@</span>
+                      <input 
+                        type="text" 
+                        value={formData.username} 
+                        onChange={(e) => setFormData({...formData, username: e.target.value})}
+                        className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                      />
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-500/30 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-500 shrink-0"><Calendar size={18} /></div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Node Registered</p>
-                      <p className="text-sm text-gray-700 font-medium">{isOwnProfile && currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Active Member'}</p>
-                    </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Headline / Bio</label>
+                    <input 
+                      type="text" 
+                      value={formData.status} 
+                      onChange={(e) => setFormData({...formData, status: e.target.value})}
+                      placeholder="e.g. Senior Software Engineer"
+                      className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                    />
                   </div>
-                  <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-500/30 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center text-green-600 shrink-0"><Shield size={18} /></div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Security Clearance</p>
-                      <p className="text-sm text-green-600 font-bold tracking-tight">Verified Member</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200 hover:border-blue-500/30 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-500 shrink-0"><User size={18} /></div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Account ID</p>
-                      <p className="text-xs text-gray-400 font-mono truncate">{profile?.id || 'N/A'}</p>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Location</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><MapPin size={14} /></span>
+                      <input 
+                        type="text" 
+                        value={formData.location} 
+                        onChange={(e) => setFormData({...formData, location: e.target.value})}
+                        placeholder="City, Country"
+                        className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                      />
                     </div>
                   </div>
                 </div>
-
-                {isOwnProfile ? (
-                  <div className="mt-8 pt-6 border-t border-gray-200 flex">
-                    <button 
-                      onClick={() => setIsEditing(true)} 
-                      className="flex items-center gap-2 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 px-6 py-3 rounded-xl border border-gray-200 transition-all shadow-sm active:scale-95"
-                    >
-                      <Edit3 size={16} /> Edit Identity
-                    </button>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">GitHub Username</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><GitBranch size={14} /></span>
+                      <input 
+                        type="text" 
+                        value={formData.github} 
+                        onChange={(e) => setFormData({...formData, github: e.target.value})}
+                        placeholder="octocat"
+                        className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <div className="mt-8 pt-6 border-t border-gray-200 flex">
-                    {connectionStatus === 'none' && (
-                      <button 
-                        onClick={handleFollow}
-                        disabled={connectionProcessing}
-                        className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
-                      >
-                        {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Follow
-                      </button>
-                    )}
-                    {connectionStatus === 'pending_sent' && (
-                      <button 
-                        onClick={handleUnfollow}
-                        disabled={connectionProcessing}
-                        className="flex items-center gap-2 text-sm font-bold text-gray-600 bg-gray-50 hover:bg-red-50 hover:text-red-600 px-6 py-3 rounded-xl border border-gray-200 transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Cancel Request
-                      </button>
-                    )}
-                    {connectionStatus === 'pending_received' && (
-                       <button 
-                        disabled
-                        className="flex items-center gap-2 text-sm font-bold text-amber-600 bg-amber-50 px-6 py-3 rounded-xl border border-amber-200 transition-all cursor-default"
-                      >
-                        <Users size={16} /> Review in Notifications
-                      </button>
-                    )}
-                    {connectionStatus === 'accepted' && (
-                      <button 
-                        onClick={handleUnfollow}
-                        disabled={connectionProcessing}
-                        className="flex items-center gap-2 text-sm font-bold text-gray-600 bg-gray-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-6 py-3 rounded-xl border border-gray-200 transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Unfollow
-                      </button>
-                    )}
+                  <div>
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Website URL</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Link size={14} /></span>
+                      <input 
+                        type="text" 
+                        value={formData.website} 
+                        onChange={(e) => setFormData({...formData, website: e.target.value})}
+                        placeholder="https://yourdomain.com"
+                        className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                      />
+                    </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="animate-in fade-in duration-300 pt-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                {profile?.username || 'Unknown User'}
+              </h2>
+              <p className="text-gray-700 text-base sm:text-lg mt-1.5 font-medium max-w-2xl">
+                {profile?.status || 'Software Engineer'}
+              </p>
+              
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm text-gray-500 font-medium">
+                {profile?.location && (
+                  <span className="flex items-center gap-1.5">
+                    <MapPin size={16} className="text-gray-400" /> {profile.location}
+                  </span>
                 )}
+                <div className="relative">
+                  <span 
+                    onClick={handleViewFollowers}
+                    className={`flex items-center gap-1.5 transition-colors ${followersCount > 0 ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                  >
+                    <Users size={16} className="text-gray-400" /> 
+                    <span className={followersCount > 0 ? "font-bold text-blue-600" : ""}>
+                      {Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(followersCount)}
+                    </span> connections
+                  </span>
+
+                  {showFollowersList && (
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Network Nodes</span>
+                        <button onClick={() => setShowFollowersList(false)} className="text-gray-400 hover:text-gray-900 transition-colors"><X size={14}/></button>
+                      </div>
+                      <div className="max-h-[170px] overflow-y-auto custom-scrollbar p-2 space-y-1">
+                        {loadingFollowers ? (
+                          <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-blue-500" /></div>
+                        ) : followersData.map(user => (
+                          <div key={`follower-${user.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer group">
+                            <div className="relative w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-bold uppercase text-gray-500 shrink-0 overflow-hidden">
+                              {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : user.username?.substring(0, 2)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">@{user.username}</p>
+                              <p className="text-[9px] text-gray-500 truncate uppercase tracking-widest">{user.status || 'Active Node'}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+
+              <div className="mt-8 pt-8 border-t border-gray-100">
+                <h3 className="text-lg font-bold text-gray-900 mb-6">Contact & Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-gray-400"><Mail size={20} /></div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{isOwnProfile ? "Email" : "Email Visibility"}</p>
+                      <p className="text-sm text-gray-600">{isOwnProfile ? (currentUser?.email || 'N/A') : 'Protected by User'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-gray-400"><Calendar size={20} /></div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">Date Joined</p>
+                      <p className="text-sm text-gray-600">{isOwnProfile && currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Active Member'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-gray-400"><Shield size={20} /></div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">Security Clearance</p>
+                      <p className="text-sm text-green-600 font-medium">Verified Identity</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-gray-400"><User size={20} /></div>
+                    <div className="min-w-0 pr-4">
+                      <p className="text-sm font-bold text-gray-900">Account Node ID</p>
+                      <p className="text-xs text-gray-500 font-mono truncate" title={profile?.id || 'N/A'}>{profile?.id || 'N/A'}</p>
+                    </div>
+                  </div>
+                  {profile?.github && (
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 text-gray-400"><GitBranch size={20} /></div>
+                      <div className="min-w-0 pr-4">
+                        <p className="text-sm font-bold text-gray-900">GitHub</p>
+                        <a href={`https://github.com/${profile.github}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline truncate block">
+                          github.com/{profile.github}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  {profile?.website && (
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 text-gray-400"><Link size={20} /></div>
+                      <div className="min-w-0 pr-4">
+                        <p className="text-sm font-bold text-gray-900">Website</p>
+                        <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline truncate block">
+                          {profile.website.replace(/^https?:\/\//, '')}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

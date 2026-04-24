@@ -5,7 +5,7 @@ import { supabase } from '../../supabaseClient';
 import Image from 'next/image';
 import { 
   MessageSquare, Heart, Share2, MoreHorizontal, 
-  Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark
+  Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark, GitBranch, Link as LinkIcon
 } from 'lucide-react';
 import ProfileContent from "./ProfileContent";
 
@@ -68,7 +68,7 @@ export default function FeedContent() {
         .from('posts')
         .select(`
           *,
-          profiles:user_id (username, status, avatar_url),
+          profiles:user_id (username, status, avatar_url, github, website),
           likes (user_id),
           comments (
             id, content, created_at, user_id,
@@ -344,7 +344,19 @@ export default function FeedContent() {
                     )}
                   </div>
                   <div className="cursor-pointer group" onClick={() => setSelectedUserId(post.user_id)}>
-                    <h4 className="text-gray-900 font-bold text-sm group-hover:text-blue-600 transition-colors">{post.profiles?.username || 'Unknown User'}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-gray-900 font-bold text-sm group-hover:text-blue-600 transition-colors">{post.profiles?.username || 'Unknown User'}</h4>
+                      {post.profiles?.github && (
+                        <a href={`https://github.com/${post.profiles.github}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-900 transition-colors" title="GitHub Profile">
+                          <GitBranch size={14} />
+                        </a>
+                      )}
+                      {post.profiles?.website && (
+                        <a href={post.profiles.website.startsWith('http') ? post.profiles.website : `https://${post.profiles.website}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-900 transition-colors" title="Personal Website">
+                          <LinkIcon size={14} />
+                        </a>
+                      )}
+                    </div>
                     <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">{post.profiles?.status || 'Active Node'}</p>
                   </div>
                 </div>

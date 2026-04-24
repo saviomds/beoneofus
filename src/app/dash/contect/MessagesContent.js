@@ -20,6 +20,7 @@ export default function MessagesContent() {
   const [inputValue, setInputValue] = useState("");
   const [currentUserId, setCurrentUserId] = useState(null);
   const { targetChatUser, setTargetChatUser } = useDashboard();
+  const [onlineUsers, setOnlineUsers] = useState({});
   
   // UI & Connection States
   const [searchQuery, setSearchQuery] = useState("");
@@ -130,6 +131,32 @@ export default function MessagesContent() {
       setTargetChatUser(null);
     }
   }, [targetChatUser, setTargetChatUser]);
+
+  // Real-time Online Presence Tracking
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const presenceChannel = supabase.channel('online-users', {
+      config: {
+        presence: {
+          key: currentUserId,
+        },
+      },
+    });
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        setOnlineUsers(state);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.track({ online_at: new Date().toISOString() });
+        }
+      });
+
+    return () => { supabase.removeChannel(presenceChannel); };
+  }, [currentUserId]);
 
   // 2. Fetch Messages and Connection Logic
   useEffect(() => {
@@ -637,7 +664,12 @@ export default function MessagesContent() {
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{contact.username}</h4>
-                <p className="text-[10px] text-gray-500 truncate font-mono uppercase tracking-widest">{contact.status || 'Active'}</p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${Object.keys(onlineUsers).includes(contact.id) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <p className="text-[10px] text-gray-500 truncate font-mono uppercase tracking-widest">
+                    {Object.keys(onlineUsers).includes(contact.id) ? 'Online' : 'Offline'}
+                  </p>
+                </div>
               </div>
             </div>
           ))}
@@ -667,8 +699,10 @@ export default function MessagesContent() {
                 <div className="cursor-pointer group" onClick={() => setSelectedUserId(activeChat.id)}>
                   <h3 className="text-sm font-bold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors">{activeChat.username}</h3>
                   <div className="flex items-center gap-1">
-                    <div className={`w-1.5 h-1.5 ${connectionStatus === 'blocked' ? 'bg-red-500' : 'bg-green-500'} rounded-full animate-pulse`}></div>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">{connectionStatus === 'blocked' ? 'Severed' : 'Online'}</p>
+                    <div className={`w-1.5 h-1.5 ${connectionStatus === 'blocked' ? 'bg-red-500' : Object.keys(onlineUsers).includes(activeChat.id) ? 'bg-green-500 animate-pulse' : 'bg-gray-300'} rounded-full`}></div>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
+                      {connectionStatus === 'blocked' ? 'Severed' : Object.keys(onlineUsers).includes(activeChat.id) ? 'Online' : 'Offline'}
+                    </p>
                   </div>
                 </div>
               </div>

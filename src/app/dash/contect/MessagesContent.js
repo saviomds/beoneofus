@@ -199,6 +199,14 @@ export default function MessagesContent() {
         .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`)
         .order('created_at', { ascending: true });
       setMessages(data || []);
+
+      // Mark incoming messages as read when the chat is opened
+      await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('receiver_id', currentUserId)
+        .eq('sender_id', activeChat.id)
+        .eq('is_read', false);
     };
 
     checkConnectionAndFetch();
@@ -216,6 +224,11 @@ export default function MessagesContent() {
             setMessages((prev) => prev.find(m => m.id === data.id) ? prev : [...prev, data]);
           } else {
             setMessages((prev) => prev.find(m => m.id === newMessage.id) ? prev : [...prev, newMessage]);
+          }
+
+          // Mark the message as read immediately if it was sent to us while the chat is actively open
+          if (newMessage.receiver_id === currentUserId) {
+            await supabase.from('messages').update({ is_read: true }).eq('id', newMessage.id);
           }
         }
       })

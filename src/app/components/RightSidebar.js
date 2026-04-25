@@ -208,7 +208,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
   };
 
   return (
-    <aside className="w-full flex flex-col p-6 space-y-8 h-screen sticky top-0 overflow-y-auto no-scrollbar bg-transparent border-l border-gray-200 relative">
+    <aside className="w-full flex flex-col p-6 space-y-8 h-screen sticky top-0 overflow-y-auto custom-scrollbar bg-transparent border-l border-gray-200 relative">
       
       {/* Primary Action Button */}
       <div className="shrink-0 pt-1">
@@ -464,7 +464,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
       {selectedUserId && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
               className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full text-gray-500 transition-colors"
@@ -490,7 +490,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                 <X size={20} />
               </button>
             </div>
-            <div className="p-4 sm:p-6 overflow-y-auto no-scrollbar bg-gray-50 rounded-b-[2rem]">
+            <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar bg-gray-50 rounded-b-[2rem]">
               <NewPost onPostCreated={() => setShowBroadcastModal(false)} />
             </div>
           </div>

@@ -683,7 +683,7 @@ export default function MoreContent() {
                {copiedProfile ? <Check size={18} className="text-green-500" /> : <Share2 size={18} />}
                <span className="text-sm font-bold">{copiedProfile ? "Copied to clipboard!" : "Share Profile"}</span>
             </div>
-            <span className="text-[10px] font-black text-gray-600 group-hover:text-blue-500 transition-colors">SAVIOMDS.DEV</span>
+            <span className="text-[10px] font-black text-gray-600 group-hover:text-blue-500 transition-colors">Profile.DEV</span>
          </button>
          
          <button 

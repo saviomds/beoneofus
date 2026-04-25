@@ -59,7 +59,8 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         const { count: msgCount } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
-          .eq('receiver_id', uid);
+          .eq('receiver_id', uid)
+          .eq('is_read', false);
         
         setUnreadMessages(msgCount || 0);
 
@@ -146,7 +147,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         </div>
 
         {/* Navigation Groups */}
-        <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar pb-2">
+        <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pb-2">
           <p className="text-[10px] font-black text-gray-600 uppercase tracking-[2px] mb-4 px-3">Main Menu</p>
           {sidebarItems.map((item) => (
             <SidebarItem

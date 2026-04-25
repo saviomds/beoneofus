@@ -105,16 +105,8 @@ export default function Dashboard() {
               </button>
             </div>
           )}
-          
-          {/* 2. Tabs Navigation */}
-          <div className="flex gap-6 border-b border-gray-200 mt-8 mb-6">
-            <button className="text-blue-600 border-b-2 border-blue-600 pb-3 text-sm font-bold flex items-center gap-2 transition-all">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-              Following
-            </button>
-            <button className="text-gray-500 pb-3 text-sm font-bold hover:text-gray-900 transition-all border-b-2 border-transparent hover:border-gray-300">Featured</button>
-            <button className="text-gray-500 pb-3 text-sm font-bold hover:text-gray-900 transition-all border-b-2 border-transparent hover:border-gray-300">Rising</button>
-          </div>
+  
+        
         </div>
       )}
 

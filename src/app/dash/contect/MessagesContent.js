@@ -22,6 +22,7 @@ export default function MessagesContent() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const { targetChatUser, setTargetChatUser } = useDashboard();
   const [onlineUsers, setOnlineUsers] = useState({});
+  const [unreadCounts, setUnreadCounts] = useState({});
   
   // UI & Connection States
   const [searchQuery, setSearchQuery] = useState("");
@@ -132,6 +133,37 @@ export default function MessagesContent() {
       setTargetChatUser(null);
     }
   }, [targetChatUser, setTargetChatUser]);
+
+  // Real-time Unread Messages Tracking
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const fetchUnread = async () => {
+      const { data } = await supabase
+        .from('messages')
+        .select('sender_id')
+        .eq('receiver_id', currentUserId)
+        .eq('is_read', false);
+        
+      const counts = {};
+      if (data) {
+        data.forEach(msg => {
+          counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1;
+        });
+      }
+      setUnreadCounts(counts);
+    };
+
+    fetchUnread();
+
+    const unreadChannel = supabase.channel('messages-unread-update')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUserId}` }, () => {
+        fetchUnread();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(unreadChannel); };
+  }, [currentUserId]);
 
   // Real-time Online Presence Tracking
   useEffect(() => {
@@ -688,6 +720,11 @@ export default function MessagesContent() {
                   </p>
                 </div>
               </div>
+              {unreadCounts[contact.id] > 0 && (
+                <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-sm">
+                  {unreadCounts[contact.id] > 99 ? '99+' : unreadCounts[contact.id]}
+                </div>
+              )}
             </div>
           ))}
         </div>

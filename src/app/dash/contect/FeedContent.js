@@ -16,6 +16,7 @@ export default function FeedContent() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [activeTab, setActiveTab] = useState('following');
 
   // Interaction States
   const [expandedComments, setExpandedComments] = useState({});
@@ -86,6 +87,28 @@ export default function FeedContent() {
       setLoading(false);
     }
   };
+
+  // --- SORTING LOGIC ---
+  const displayedPosts = React.useMemo(() => {
+    const sorted = [...posts];
+    if (activeTab === 'following' || activeTab === 'latest') {
+      return sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else if (activeTab === 'featured') {
+      return sorted.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
+    } else if (activeTab === 'rising') {
+      const now = new Date();
+      return sorted.sort((a, b) => {
+        const aScore = (a.likes?.length || 0) * 2 + (a.comments?.length || 0) * 3;
+        const bScore = (b.likes?.length || 0) * 2 + (b.comments?.length || 0) * 3;
+        const aAge = Math.max(1, (now - new Date(a.created_at)) / 3600000); 
+        const bAge = Math.max(1, (now - new Date(b.created_at)) / 3600000);
+        const aVelocity = aScore / Math.pow(aAge, 1.5);
+        const bVelocity = bScore / Math.pow(bAge, 1.5);
+        return bVelocity - aVelocity;
+      });
+    }
+    return sorted;
+  }, [posts, activeTab]);
 
   // --- SHARE LOGIC ---
   const handleShareClick = (postId) => {
@@ -239,6 +262,27 @@ export default function FeedContent() {
   return (
     <div className="space-y-6">
       
+      {/* --- FEED TABS --- */}
+      <div className="flex items-center gap-6 border-b border-gray-200 px-2 sm:px-4 mb-2">
+        {['Following', 'Featured', 'Rising'].map((tab) => {
+          const isActive = activeTab === tab.toLowerCase();
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab.toLowerCase())}
+              className={`pb-3 text-sm font-bold transition-all relative ${
+                isActive ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab}
+              {isActive && (
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-t-full shadow-md shadow-gray-900/60" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+      
       {/* --- SHARE MODAL --- */}
       {showShareModal && (
         <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
@@ -323,10 +367,10 @@ export default function FeedContent() {
       )}
 
       {/* --- FEED LIST --- */}
-      {posts.length === 0 ? (
+      {displayedPosts.length === 0 ? (
         <div className="h-64 border border-dashed border-gray-300 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-500">No posts yet. Be the first to share!</div>
       ) : (
-        posts.map((post) => {
+        displayedPosts.map((post) => {
           const hasLiked = post.likes?.some(l => l.user_id === currentUserId);
           return (
             <div key={post.id} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative">

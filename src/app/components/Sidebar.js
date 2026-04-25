@@ -2,7 +2,7 @@
 
 import {
   Home, Users, MessageSquare, Bookmark, FileText,
-  MoreHorizontal, Bell, Settings, LogOut
+  MoreHorizontal, Bell, Settings, LogOut, Terminal
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
@@ -142,8 +142,11 @@ export default function Sidebar({ activeSection, onSectionChange }) {
       <aside className="w-full h-full bg-transparent p-4 md:p-6 flex flex-col">
         
         {/* Logo Area */}
-        <div className="flex items-center gap-2 mb-6 md:mb-10 px-2 shrink-0">
-          <Image src="/logo.png" alt="beoneofus" width={100} height={24} />
+        <div className="flex items-center mb-6 md:mb-10 px-3 shrink-0 w-full text-gray-900">
+          <div className="font-black text-2xl tracking-tighter flex items-center gap-2">
+            <Terminal className="text-blue-500" size={28} />
+            <span>beone<span className="text-blue-600">of</span>us</span>
+          </div>
         </div>
 
         {/* Navigation Groups */}

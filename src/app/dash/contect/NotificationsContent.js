@@ -123,6 +123,20 @@ export default function NotificationsContent() {
     e.stopPropagation();
     if (!currentUserId) return;
 
+    // If the user who sent the request was deleted, gracefully clear the notification
+    if (!notif.actor_id) {
+      await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+      return;
+    }
+
+    // If the user who sent the request was deleted, gracefully clear the notification
+    if (!notif.actor_id) {
+      await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+      return;
+    }
+
     await supabase.from('connections')
       .delete()
       .eq('sender_id', notif.actor_id)
@@ -135,6 +149,13 @@ export default function NotificationsContent() {
   const handleAcceptGroupJoin = async (e, notif, groupId, groupName) => {
     e.stopPropagation();
     if (!currentUserId || !groupId) return;
+
+    // If the user who sent the request was deleted, gracefully clear the notification
+    if (!notif.actor_id) {
+      await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+      return;
+    }
 
     const { error } = await supabase.from('group_members').insert({
       group_id: groupId,

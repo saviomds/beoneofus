@@ -8,7 +8,8 @@ import {
   Trash2, AlertTriangle, MoreHorizontal, ShieldAlert, ShieldCheck,
   ChevronLeft,
   MessageSquare,
-  BadgeCheck
+  BadgeCheck,
+  Pencil
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -38,6 +39,8 @@ export default function MessagesContent() {
   const [imagePreview, setImagePreview] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
   const imageInputRef = useRef(null);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editInputValue, setEditInputValue] = useState("");
 
   // Call States
   const [activeCall, setActiveCall] = useState(null);
@@ -94,8 +97,11 @@ export default function MessagesContent() {
         
         if (isMounted) {
           setContacts(profiles || []);
-          // Keep active chat if already set, otherwise pick the first
-          setActiveChat(prev => prev || (profiles?.length > 0 ? profiles[0] : null));
+          // Keep active chat if it still exists, otherwise pick the first
+          setActiveChat(prev => {
+            if (prev && profiles?.some(p => p.id === prev.id)) return prev;
+            return profiles?.length > 0 ? profiles[0] : null;
+          });
         }
       } else {
         if (isMounted) {
@@ -110,6 +116,9 @@ export default function MessagesContent() {
     // Listen for new connections globally to update the sidebar contacts live
     const channel = supabase.channel('messages-contacts-update')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'connections' }, () => {
+         fetchContacts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
          fetchContacts();
       })
       .subscribe();
@@ -509,15 +518,24 @@ export default function MessagesContent() {
       status: 'pending'
     });
     
-    if (!error) {
-      setConnectionStatus('waiting'); // Optimistic UI update
-      await supabase.from('notifications').insert({
-        receiver_id: activeChat.id,
-        actor_id: currentUserId,
-        type: 'connection_request',
-        content: 'wants to connect'
-      });
+    if (error) {
+      if (error.code === '23503') {
+        alert("This user no longer exists.");
+        setContacts(prev => prev.filter(c => c.id !== activeChat.id));
+        setActiveChat(null);
+      } else {
+        alert("Failed to send request: " + error.message);
+      }
+      return;
     }
+
+    setConnectionStatus('waiting'); // Optimistic UI update
+    await supabase.from('notifications').insert({
+      receiver_id: activeChat.id,
+      actor_id: currentUserId,
+      type: 'connection_request',
+      content: 'wants to connect'
+    });
   };
 
   const handleAcceptRequest = async () => {
@@ -574,6 +592,35 @@ export default function MessagesContent() {
     } catch (error) { 
         console.error("Unblock error:", error.message);
     } finally { setIsProcessing(false); }
+  };
+
+  // Delete Message
+  const handleDeleteMessage = async (messageId) => {
+    if (!confirm("Are you sure you want to delete this message?")) return;
+    try {
+      const { error } = await supabase.from('messages').delete().eq('id', messageId);
+      if (error) throw error;
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } catch (err) {
+      alert("Failed to delete message: " + err.message);
+    }
+  };
+
+  // Edit Message
+  const handleEditMessage = async (e, messageId) => {
+    e.preventDefault();
+    if (!editInputValue.trim()) return;
+
+    setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, text: editInputValue.trim(), is_edited: true } : m));
+    setEditingMessageId(null);
+    setEditInputValue("");
+
+    try {
+      const { error } = await supabase.from('messages').update({ text: editInputValue.trim(), is_edited: true }).eq('id', messageId);
+      if (error) throw error;
+    } catch (err) {
+      alert("Failed to edit message: " + err.message);
+    }
   };
 
   // 7. Send Message
@@ -644,9 +691,18 @@ export default function MessagesContent() {
     if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
-  const filteredContacts = contacts.filter(c => 
-    c.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+  };
+
+  const filteredContacts = contacts
+    .filter(c => c.username.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      // Pin contacts with unread messages to the top
+      const aUnread = unreadCounts[a.id] > 0 ? 1 : 0;
+      const bUnread = unreadCounts[b.id] > 0 ? 1 : 0;
+      return bUnread - aUnread;
+    });
 
   const formatDuration = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -685,7 +741,7 @@ export default function MessagesContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search connections..." 
-              className="w-full bg-white border border-gray-300 rounded-xl py-2 pl-9 text-base md:text-xs text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+              className="w-full bg-white border border-gray-300 rounded-full py-2 pl-9 text-base md:text-xs text-gray-900 outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all" 
             />
           </div>
         </div>
@@ -696,9 +752,9 @@ export default function MessagesContent() {
             </div>
           )}
           {filteredContacts.map((contact) => (
-            <div key={contact.id} onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-xl border ${activeChat?.id === contact.id ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50 border-transparent'}`}>
+            <div key={contact.id} onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-2xl border ${activeChat?.id === contact.id ? 'bg-violet-50 border-violet-200 shadow-sm' : 'hover:bg-gray-50 border-transparent'}`}>
               <div 
-                className="relative w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-blue-600 font-bold hover:bg-blue-50 transition-colors overflow-hidden shrink-0"
+                className="relative w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-violet-600 font-bold hover:bg-violet-50 transition-colors overflow-hidden shrink-0"
                 onClick={(e) => { e.stopPropagation(); setSelectedUserId(contact.id); }}
                 title={`View @${contact.username}'s Profile`}
               >
@@ -709,9 +765,9 @@ export default function MessagesContent() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-violet-600 transition-colors flex items-center gap-1">
                   {contact.username}
-                  {contact.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                  {contact.is_verified && <BadgeCheck size={14} className="text-violet-500" fill="currentColor" stroke="white" />}
                 </h4>
                 <div className="flex items-center gap-1 mt-0.5">
                   <div className={`w-1.5 h-1.5 rounded-full ${Object.keys(onlineUsers).includes(contact.id) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
@@ -721,7 +777,7 @@ export default function MessagesContent() {
                 </div>
               </div>
               {unreadCounts[contact.id] > 0 && (
-                <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-sm">
+                <div className="w-5 h-5 rounded-full bg-violet-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-sm">
                   {unreadCounts[contact.id] > 99 ? '99+' : unreadCounts[contact.id]}
                 </div>
               )}
@@ -740,7 +796,7 @@ export default function MessagesContent() {
                   <ChevronLeft size={22} />
                 </button>
                 <div 
-                  className="relative w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 font-bold cursor-pointer hover:bg-blue-100 transition-colors overflow-hidden shrink-0"
+                  className="relative w-9 h-9 rounded-full bg-violet-50 border border-violet-200 flex items-center justify-center text-violet-600 font-bold cursor-pointer hover:bg-violet-100 transition-colors overflow-hidden shrink-0"
                   onClick={() => setSelectedUserId(activeChat.id)}
                   title={`View @${activeChat.username}'s Profile`}
                 >
@@ -751,9 +807,9 @@ export default function MessagesContent() {
                   )}
                 </div>
                 <div className="cursor-pointer group" onClick={() => setSelectedUserId(activeChat.id)}>
-                  <h3 className="text-sm font-bold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                  <h3 className="text-sm font-bold text-gray-900 leading-tight group-hover:text-violet-600 transition-colors flex items-center gap-1">
                     {activeChat.username}
-                    {activeChat.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
+                    {activeChat.is_verified && <BadgeCheck size={14} className="text-violet-500" fill="currentColor" stroke="white" />}
                   </h3>
                   <div className="flex items-center gap-1">
                     <div className={`w-1.5 h-1.5 ${connectionStatus === 'blocked' ? 'bg-red-500' : Object.keys(onlineUsers).includes(activeChat.id) ? 'bg-green-500 animate-pulse' : 'bg-gray-300'} rounded-full`}></div>
@@ -765,12 +821,7 @@ export default function MessagesContent() {
               </div>
               
               <div className="flex items-center gap-1 text-gray-500 relative">
-                {connectionStatus === 'accepted' && (
-                  <>
-                    <button onClick={() => startCall(false)} className="p-1.5 hover:text-gray-900 transition-colors" title="Start Audio Call"><Phone size={16} /></button>
-                    <button onClick={() => startCall(true)} className="p-1.5 hover:text-gray-900 transition-colors" title="Start Video Call"><Video size={16} /></button>
-                  </>
-                )}
+               
                 <div className="relative">
                   <button onClick={() => setShowMoreMenu(!showMoreMenu)} className={`p-1.5 transition-colors ${showMoreMenu ? 'text-gray-900' : 'hover:text-gray-900'}`}><MoreHorizontal size={18} /></button>
                   {showMoreMenu && (
@@ -792,16 +843,16 @@ export default function MessagesContent() {
                   <div key={msg.id} className={`flex gap-2 group ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
                     {msg.sender_id !== currentUserId && (
                       <div className="flex items-end">
-                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Reply">
                           <MessageSquare size={14} />
                         </button>
                       </div>
                     )}
                     <div className={`max-w-[85%] ${msg.sender_id === currentUserId ? "text-right" : "text-left"}`}>
-                      <div className={`inline-block p-1 rounded-2xl text-[13px] break-words text-left shadow-sm ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-none" : "bg-gray-100 text-gray-800 border border-gray-200 rounded-tl-none"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>
+                      <div className={`inline-block p-1 rounded-2xl text-[13px] break-words text-left shadow-sm ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-sm" : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>
                         <div className="px-3 pt-1.5 pb-2">
                           {msg.replied_message && (
-                            <div className="border-l-2 border-blue-200 pl-2 mb-2 text-xs opacity-80">
+                            <div className="border-l-2 border-blue-300 pl-2 mb-2 text-xs opacity-80">
                               <p className="font-bold text-current flex items-center gap-1">
                                 @{msg.replied_message.sender_id === currentUserId ? 'You' : activeChat.username}
                                 {msg.replied_message.sender_id !== currentUserId && activeChat.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}
@@ -814,7 +865,25 @@ export default function MessagesContent() {
                               <Image src={msg.image_url} alt="attachment" fill sizes="(max-width: 768px) 100vw, 400px" className="object-cover" />
                             </div>
                           )}
-                          {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+                          {editingMessageId === msg.id ? (
+                            <form onSubmit={(e) => handleEditMessage(e, msg.id)} className="flex items-center gap-1.5 mt-1">
+                              <input 
+                                value={editInputValue} 
+                                onChange={(e) => setEditInputValue(e.target.value)} 
+                                className="text-xs text-gray-900 px-2 py-1 rounded-md border border-gray-300 focus:outline-none w-full min-w-[120px]"
+                                autoFocus
+                              />
+                              <button type="submit" className="bg-green-500 hover:bg-green-400 text-white rounded p-1 transition-colors"><Check size={12} /></button>
+                              <button type="button" onClick={() => setEditingMessageId(null)} className="bg-white/20 hover:bg-white/30 text-white rounded p-1 transition-colors"><X size={12} /></button>
+                            </form>
+                          ) : (
+                            (msg.text || msg.is_edited) && (
+                              <p className="whitespace-pre-wrap leading-relaxed">
+                                {msg.text}
+                                {msg.is_edited && <span className={`text-[10px] italic ml-1.5 ${msg.sender_id === currentUserId ? 'text-blue-200' : 'text-gray-400'}`}>(edited)</span>}
+                              </p>
+                            )
+                          )}
                         </div>
                       </div>
                       <div className={`mt-1 flex items-center gap-1.5 text-[9px] text-gray-600 px-1 ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
@@ -824,8 +893,14 @@ export default function MessagesContent() {
                     </div>
                     {msg.sender_id === currentUserId && (
                       <div className="flex items-end">
-                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => { setEditingMessageId(msg.id); setEditInputValue(msg.text || ""); }} className="p-2 text-gray-400 hover:text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Edit">
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Reply">
                           <MessageSquare size={14} />
+                        </button>
+                        <button onClick={() => handleDeleteMessage(msg.id)} className="p-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     )}
@@ -844,7 +919,7 @@ export default function MessagesContent() {
                       )}
                     </>
                   ) : connectionStatus === 'none' ? (
-                    <><div className="w-16 h-16 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center text-blue-600"><UserPlus size={32} /></div><p className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Transmission blocked</p><button onClick={handleSendRequest} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold">Send Request</button></>
+                    <><div className="w-16 h-16 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center text-blue-600"><UserPlus size={32} /></div><p className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Transmission blocked</p><button onClick={handleSendRequest} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 shadow-blue-500/20">Send Request</button></>
                   ) : connectionStatus === 'waiting' ? (
                     <><div className="w-16 h-16 bg-gray-50 border border-gray-200 rounded-full flex items-center justify-center text-gray-400 animate-pulse"><Send size={32} /></div><p className="text-gray-500 text-xs italic font-mono uppercase tracking-tighter">Syncing... waiting for peer authorization.</p></>
                   ) : (
@@ -875,13 +950,13 @@ export default function MessagesContent() {
                   </div>
                 </div>
               )}
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-white border border-gray-300 rounded-2xl p-1.5 pl-4 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-sm">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-white border border-gray-300 rounded-full p-1.5 pl-4 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-md">
                 <input type="file" ref={imageInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                 <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 hover:text-blue-600 transition-colors p-2">
                   <Paperclip size={18} />
                 </button>
-                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-base md:text-xs text-gray-900 py-2" />
-                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
+                <input value={inputValue} onChange={handleInputChange} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-base md:text-xs text-gray-900 py-2" />
+                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-full transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
               </form>
             </div>
           </>
@@ -889,119 +964,6 @@ export default function MessagesContent() {
           <div className="flex-1 flex items-center justify-center text-gray-600 text-xs font-black uppercase tracking-[4px] italic animate-pulse">Waiting for selection...</div>
         )}
       </div>
-
-      {/* INCOMING CALL OVERLAY */}
-      {incomingCall && (
-        <div className="fixed inset-0 z-[300] bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-3xl flex flex-col items-center shadow-2xl animate-in zoom-in duration-300 w-full max-w-sm text-center">
-            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 animate-pulse shadow-inner">
-              {incomingCall.isVideo ? <Video size={32} /> : <Phone size={32} />}
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Incoming {incomingCall.isVideo ? 'Video' : 'Audio'} Call</h3>
-            <p className="text-gray-500 mb-8 font-medium flex items-center justify-center gap-1.5">
-              @{incomingCall.callerInfo?.username || 'A connection'} 
-              {incomingCall.callerInfo?.is_verified && <BadgeCheck size={16} className="text-blue-500 inline" fill="currentColor" stroke="white" />} is calling you...
-            </p>
-            <div className="flex gap-4 w-full">
-              <button onClick={rejectCall} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-3 rounded-xl font-bold transition-all border border-red-200">
-                Decline
-              </button>
-              <button onClick={acceptCall} className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/30">
-                <Check size={20} /> Answer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* OUTGOING CALL RINGING OVERLAY */}
-      {activeCall?.status === 'ringing' && (
-        <div className="fixed inset-0 z-[300] bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-3xl flex flex-col items-center shadow-2xl animate-in zoom-in duration-300 w-full max-w-sm text-center">
-            <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 animate-bounce shadow-inner">
-              {activeCall.isVideo ? <Video size={32} /> : <Phone size={32} />}
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
-              Calling @{activeChat?.username}{activeChat?.is_verified && <BadgeCheck size={20} className="text-blue-500" fill="currentColor" stroke="white" />}...
-            </h3>
-            <p className="text-gray-500 mb-8 font-medium">Waiting for them to answer</p>
-            <button onClick={endCall} className="w-full bg-red-50 hover:bg-red-100 text-red-600 px-8 py-3 rounded-xl font-bold transition-all border border-red-200">
-              Cancel Call
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ACTIVE CALL OVERLAY (JITSI IFRAME) */}
-      {activeCall?.status === 'connected' && (
-        <div className="fixed inset-0 z-[300] bg-gray-900 flex flex-col animate-in fade-in">
-          <div className="p-4 bg-gray-900 border-b border-gray-800 text-white flex justify-between items-center shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center">
-                {activeCall.isVideo ? <Video size={20} className="text-blue-400" /> : <Phone size={20} className="text-green-400" />}
-              </div>
-              <div>
-                <h3 className="font-bold text-sm tracking-tight text-white">{activeCall.isVideo ? 'Secure Video Link' : 'Secure Audio Link'}</h3>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-[10px] font-mono text-green-400 uppercase tracking-widest">End-to-End Encrypted</span>
-                </div>
-              </div>
-            </div>
-            <button onClick={endCall} className="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs transition-colors shadow-lg shadow-red-500/20">
-              Disconnect
-            </button>
-          </div>
-          <div className="flex-1 bg-gray-950 relative flex items-center justify-center overflow-hidden">
-            {/* Remote Video (Full Screen) */}
-            <video 
-              ref={remoteVideoRef}
-              autoPlay 
-              playsInline 
-              className="w-full h-full object-cover absolute inset-0 z-0"
-            />
-
-            {/* Local Video (PIP) */}
-            <div className="absolute bottom-8 right-8 w-32 md:w-48 aspect-[3/4] md:aspect-video bg-gray-900 rounded-2xl overflow-hidden border-2 border-gray-700 shadow-2xl z-10">
-              <video 
-                ref={localVideoRef}
-                autoPlay 
-                playsInline 
-                muted
-                className={`w-full h-full object-cover ${activeCall.isVideo ? '-scale-x-100' : ''}`}
-              />
-              {!activeCall.isVideo && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-                  <div className="w-12 h-12 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center">
-                    <Phone size={24} />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Audio Only Avatar Placeholder */}
-            {!activeCall.isVideo && (
-               <div className="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center z-0">
-                 <div className="relative w-32 h-32 mb-6">
-                   <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20"></div>
-                   <div className="w-full h-full bg-gray-800 rounded-full flex items-center justify-center text-4xl font-bold text-gray-500 border-4 border-red-500/80 shadow-[0_0_30px_rgba(239,68,68,0.3)] overflow-hidden relative z-10">
-                     {activeChat?.avatar_url ? (
-                        <Image src={activeChat.avatar_url} alt="avatar" fill sizes="128px" className="object-cover" />
-                     ) : (
-                        activeChat?.username?.[0]?.toUpperCase()
-                     )}
-                   </div>
-                 </div>
-                 <h2 className="text-white text-2xl font-bold flex items-center justify-center gap-2">
-                   @{activeChat?.username}{activeChat?.is_verified && <BadgeCheck size={24} className="text-blue-500" fill="currentColor" stroke="white" />}
-                 </h2>
-                 <p className="text-gray-400 mt-2 font-medium">Secured Audio Connection</p>
-                 <p className="text-gray-400 font-mono text-lg mt-2">{formatDuration(callDuration)}</p>
-               </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* USER PROFILE MODAL */}
       {selectedUserId && (

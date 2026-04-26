@@ -821,7 +821,7 @@ export default function GroupsContent() {
                 <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Username</label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">@</span>
-                  <input type="text" required value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} placeholder="tech_ninja_99" className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                  <input type="text" required value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} placeholder="john_doe" className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                 </div>
               </div>
               <button type="submit" disabled={isProcessing} className="w-full flex justify-center py-3.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50">
@@ -911,6 +911,10 @@ export default function GroupsContent() {
                 onClick={async () => {
                   setIsProcessing(true);
                   try {
+                    if (!groupToJoin.created_by) {
+                      throw new Error("This channel has no assigned administrator to receive requests.");
+                    }
+                    
                     const { error } = await supabase.from('notifications').insert({
                       receiver_id: groupToJoin.created_by,
                       actor_id: currentUserId,

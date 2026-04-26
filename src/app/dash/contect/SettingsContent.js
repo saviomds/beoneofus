@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Palette, Check, AlertTriangle, Trash2, X, Loader2, BadgeCheck, Shield } from "lucide-react";
+import { Moon, Sun, Monitor, Palette, Check, AlertTriangle, Trash2, X, Loader2, BadgeCheck, Shield, Bell } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
@@ -21,17 +21,48 @@ export default function SettingsContent() {
   // Error message state for the delete operation
   const [deleteError, setDeleteError] = useState("");
   const [requestingVerification, setRequestingVerification] = useState(false);
+  // Push Notification States
+  const [isPushSupported, setIsPushSupported] = useState(false);
+  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
+  const [isPushLoading, setIsPushLoading] = useState(false);
 
   // Effect to handle client-side-only logic
   useEffect(() => {
     // Set mounted to true to avoid hydration mismatch with theme logic
     setMounted(true);
+    
+    // Check for push notification support
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      setIsPushSupported(true);
+      navigator.serviceWorker.register('/sw.js').catch(err => console.error("SW registration failed", err));
+    }
+
     // Fetch user profile to get username for delete confirmation
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const { data } = await supabase.from('profiles').select('username, is_verified, verification_status').eq('id', session.user.id).single();
+        const { data } = await supabase.from('profiles').select('username, is_verified, verification_status, push_subscription').eq('id', session.user.id).single();
         setProfile(data);
+        if (data?.push_subscription) {
+          // Check if the browser still considers the subscription valid
+          if ('serviceWorker' in navigator && 'PushManager' in window) {
+            try {
+              const registration = await navigator.serviceWorker.ready;
+              const sub = await registration.pushManager.getSubscription();
+              if (!sub) {
+                // Subscription revoked or expired locally. Clean up the DB.
+                await supabase.from('profiles').update({ push_subscription: null }).eq('id', session.user.id);
+                setIsPushSubscribed(false);
+              } else {
+                setIsPushSubscribed(true);
+              }
+            } catch (err) {
+              setIsPushSubscribed(true); // Fallback to DB state
+            }
+          } else {
+             setIsPushSubscribed(true);
+          }
+        }
       }
     };
     fetchProfile();
@@ -99,6 +130,45 @@ export default function SettingsContent() {
       alert(error.message);
     } finally {
       setRequestingVerification(false);
+    }
+  };
+
+  // Helper to convert VAPID key for PushManager
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const handleSubscribeToPush = async () => {
+    setIsPushLoading(true);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const sub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
+      });
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { error } = await supabase.from('profiles').update({
+          push_subscription: JSON.parse(JSON.stringify(sub))
+        }).eq('id', session.user.id);
+        if (error) throw error;
+      }
+      
+      setIsPushSubscribed(true);
+      alert("Successfully subscribed to notifications!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to subscribe: " + err.message);
+    } finally {
+      setIsPushLoading(false);
     }
   };
 

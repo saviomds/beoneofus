@@ -1,6 +1,5 @@
 {
-    "recommendations": [
-        "google.geminicodeassist",
-        "openai.chatgpt"
-    ]
+  "recommendations": [
+    "denoland.vscode-deno"
+  ]
 }

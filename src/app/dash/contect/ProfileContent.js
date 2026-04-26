@@ -280,7 +280,10 @@ export default function ProfileContent({ viewUserId }) {
         receiver_id: profile.id,
         status: 'pending'
       });
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503') throw new Error("This profile no longer exists.");
+        throw error;
+      }
       setConnectionStatus('pending_sent');
       
       await supabase.from('notifications').insert({

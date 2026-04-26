@@ -8,7 +8,8 @@ import {
   Trash2, AlertTriangle, MoreHorizontal, ShieldAlert, ShieldCheck,
   ChevronLeft,
   MessageSquare,
-  BadgeCheck
+  BadgeCheck,
+  Sparkles, Loader2
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -36,6 +37,7 @@ export default function MessagesContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false); // Mobile view toggle
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
@@ -624,6 +626,40 @@ export default function MessagesContent() {
     } finally { setIsProcessing(false); }
   };
 
+  // --- AI SUGGEST REPLY LOGIC ---
+  const handleSuggestReply = async () => {
+    if (isSuggesting || !activeChat) return;
+
+    // Find the last message sent by the other user to gain context
+    const lastMessage = [...messages].reverse().find(m => m.sender_id === activeChat.id);
+    const contextText = lastMessage ? lastMessage.text : null;
+    
+    const prompt = contextText 
+      ? `Draft a very brief, friendly, and natural direct message reply (1-2 sentences maximum) to this message from a developer: "${contextText}". Return ONLY the exact message text, without any quotes, filler, or intro.`
+      : `Draft a friendly, very brief initial greeting (1 sentence) to another developer to start a chat. Return ONLY the exact message text, without any quotes.`;
+
+    setIsSuggesting(true);
+    try {
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+      });
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
+      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
+
+      const cleanReply = data.message.content.replace(/^["']|["']$/g, '').trim();
+      setInputValue(cleanReply);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
   // 7. Send Message
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -921,7 +957,7 @@ export default function MessagesContent() {
               )}
             </div>
 
-            <div className={`p-3 pb-6 md:p-0 md:pt-3 bg-white/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none border-t border-gray-200 md:border-transparent shrink-0 sticky bottom-0 z-20 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
+            <div className={`p-3 md:p-0 md:pt-3 bg-white md:bg-transparent border-t border-gray-200 md:border-transparent shrink-0 w-full z-20 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
               {replyingTo && (
                 <div className="bg-gray-100 border border-gray-200 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="min-w-0">
@@ -942,13 +978,22 @@ export default function MessagesContent() {
                   </div>
                 </div>
               )}
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-white border border-gray-300 rounded-full p-1.5 pl-4 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-md">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2 bg-white border border-gray-300 rounded-full p-1.5 pl-3 sm:pl-4 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-md w-full">
                 <input type="file" ref={imageInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 hover:text-blue-600 transition-colors p-2">
+                <button 
+                  type="button" 
+                  onClick={handleSuggestReply} 
+                  disabled={isSuggesting} 
+                  className="text-gray-400 hover:text-violet-600 transition-colors p-2 disabled:opacity-50 shrink-0"
+                  title="Suggest AI Reply"
+                >
+                  {isSuggesting ? <Loader2 size={18} className="animate-spin text-violet-500" /> : <Sparkles size={18} />}
+                </button>
+                <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 hover:text-blue-600 transition-colors p-2 shrink-0">
                   <Paperclip size={18} />
                 </button>
-                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-base md:text-xs text-gray-900 py-2" />
-                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-full transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
+                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-base md:text-sm text-gray-900 py-2" />
+                <button type="submit" className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-full transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
               </form>
             </div>
           </>

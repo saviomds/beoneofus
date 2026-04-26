@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { 
   Zap, 
@@ -622,6 +623,8 @@ export default function MoreContent() {
   const [activeItem, setActiveItem] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [copiedProfile, setCopiedProfile] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const getSession = async () => {
@@ -631,10 +634,35 @@ export default function MoreContent() {
     getSession();
   }, []);
 
+  // Sync modal state with the URL query parameters
+  useEffect(() => {
+    const toolParam = searchParams?.get('tool');
+    if (toolParam) {
+      const tool = MORE_TOOLS.find(t => t.id === toolParam);
+      setActiveItem(tool || null);
+    } else {
+      setActiveItem(null);
+    }
+  }, [searchParams]);
+
+  const handleOpenTool = (tool) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.set('tool', tool.id);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  const handleCloseTool = () => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.delete('tool');
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
   const handleShareProfile = () => {
-    navigator.clipboard.writeText(window.location.origin);
-    setCopiedProfile(true);
-    setTimeout(() => setCopiedProfile(false), 2000);
+    if (currentUserId) {
+      navigator.clipboard.writeText(`${window.location.origin}/u/${currentUserId}`);
+      setCopiedProfile(true);
+      setTimeout(() => setCopiedProfile(false), 2000);
+    }
   };
 
   const handleSignOut = async () => {
@@ -656,7 +684,7 @@ export default function MoreContent() {
         {MORE_TOOLS.map((tool) => (
           <div 
             key={tool.id}
-            onClick={() => setActiveItem(tool)}
+        onClick={() => handleOpenTool(tool)}
             className="group flex items-center justify-between p-5 bg-white border border-gray-200 rounded-[1.5rem] hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center gap-4">
@@ -700,7 +728,7 @@ export default function MoreContent() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div 
             className="absolute inset-0 bg-gray-900/50 backdrop-blur-md"
-            onClick={() => setActiveItem(null)}
+            onClick={handleCloseTool}
           />
           
           <div className="relative w-full max-w-4xl h-[85vh] bg-white border border-gray-200 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
@@ -716,7 +744,7 @@ export default function MoreContent() {
                    <p className="text-xs text-gray-500 font-medium">{activeItem.desc}</p>
                  </div>
                </div>
-               <button onClick={() => setActiveItem(null)} className="p-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-all rounded-xl">
+               <button onClick={handleCloseTool} className="p-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-all rounded-xl">
                  <X size={20} />
                </button>
             </div>

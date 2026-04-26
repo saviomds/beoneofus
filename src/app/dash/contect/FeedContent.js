@@ -113,7 +113,7 @@ export default function FeedContent() {
   // --- SHARE LOGIC ---
   const handleShareClick = (postId) => {
     const baseUrl = window.location.origin;
-    setShareLink(`${baseUrl}/posts/${postId}`);
+    setShareLink(`${baseUrl}/p/${postId}`);
     setShowShareModal(true);
     setCopied(false);
   };
@@ -158,7 +158,7 @@ export default function FeedContent() {
   const handleBookmark = async (post) => {
     if (!currentUserId) return;
     try {
-      const postUrl = `${window.location.origin}/posts/${post.id}`;
+      const postUrl = `${window.location.origin}/p/${post.id}`;
       
       // 1. Check if already bookmarked (Toggle behavior)
       const { data: existing } = await supabase

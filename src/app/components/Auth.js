@@ -217,14 +217,14 @@ export default function AuthForm() {
           {view === 'forgot-password' && (
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-2">Reset Password</h2>
-              <p className="text-sm text-gray-500">Enter your email address and we'll send you a link to reset your password.</p>
+              <p className="text-sm text-gray-500">Enter your email address and we will send you a link to reset your password.</p>
             </div>
           )}
 
           {view === 'magic-link' && (
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-2">Passwordless Sign-In</h2>
-              <p className="text-sm text-gray-500">Enter your email address and we'll send you a secure magic link to log in.</p>
+              <p className="text-sm text-gray-500">Enter your email address and we will send you a secure magic link to log in.</p>
             </div>
           )}
 

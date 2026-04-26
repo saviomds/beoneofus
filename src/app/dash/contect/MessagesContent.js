@@ -8,8 +8,7 @@ import {
   Trash2, AlertTriangle, MoreHorizontal, ShieldAlert, ShieldCheck,
   ChevronLeft,
   MessageSquare,
-  BadgeCheck,
-  Pencil
+  BadgeCheck
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -24,9 +23,11 @@ export default function MessagesContent() {
   const { targetChatUser, setTargetChatUser } = useDashboard();
   const [onlineUsers, setOnlineUsers] = useState({});
   const [unreadCounts, setUnreadCounts] = useState({});
+  const [lastMessagePreviews, setLastMessagePreviews] = useState({});
   
   // UI & Connection States
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterUnread, setFilterUnread] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState(null); 
   const [blockerId, setBlockerId] = useState(null);
   const [activeConnectionId, setActiveConnectionId] = useState(null); // Track the row ID for reliable updates
@@ -39,8 +40,6 @@ export default function MessagesContent() {
   const [imagePreview, setImagePreview] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
   const imageInputRef = useRef(null);
-  const [editingMessageId, setEditingMessageId] = useState(null);
-  const [editInputValue, setEditInputValue] = useState("");
 
   // Call States
   const [activeCall, setActiveCall] = useState(null);
@@ -594,35 +593,6 @@ export default function MessagesContent() {
     } finally { setIsProcessing(false); }
   };
 
-  // Delete Message
-  const handleDeleteMessage = async (messageId) => {
-    if (!confirm("Are you sure you want to delete this message?")) return;
-    try {
-      const { error } = await supabase.from('messages').delete().eq('id', messageId);
-      if (error) throw error;
-      setMessages((prev) => prev.filter((m) => m.id !== messageId));
-    } catch (err) {
-      alert("Failed to delete message: " + err.message);
-    }
-  };
-
-  // Edit Message
-  const handleEditMessage = async (e, messageId) => {
-    e.preventDefault();
-    if (!editInputValue.trim()) return;
-
-    setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, text: editInputValue.trim(), is_edited: true } : m));
-    setEditingMessageId(null);
-    setEditInputValue("");
-
-    try {
-      const { error } = await supabase.from('messages').update({ text: editInputValue.trim(), is_edited: true }).eq('id', messageId);
-      if (error) throw error;
-    } catch (err) {
-      alert("Failed to edit message: " + err.message);
-    }
-  };
-
   // 7. Send Message
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -691,18 +661,11 @@ export default function MessagesContent() {
     if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
-  const handleInputChange = (e) => {
-    setInputValue(e.target.value);
-  };
-
-  const filteredContacts = contacts
-    .filter(c => c.username.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => {
-      // Pin contacts with unread messages to the top
-      const aUnread = unreadCounts[a.id] > 0 ? 1 : 0;
-      const bUnread = unreadCounts[b.id] > 0 ? 1 : 0;
-      return bUnread - aUnread;
-    });
+  const filteredContacts = contacts.filter(c => {
+    const matchesSearch = c.username.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesUnread = filterUnread ? unreadCounts[c.id] > 0 : true;
+    return matchesSearch && matchesUnread;
+  });
 
   const formatDuration = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -734,52 +697,69 @@ export default function MessagesContent() {
       <div className={`w-full md:w-64 lg:w-72 border-r-0 md:border-r border-gray-200 flex-col md:pr-2 shrink-0 ${isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
         <div className="pb-4 px-2">
           <h2 className="text-2xl font-black text-gray-900 tracking-tighter mb-3">Messages</h2>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+          <div className="flex items-center p-1 bg-gray-100 rounded-xl mb-3">
+            <button onClick={() => setFilterUnread(false)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${!filterUnread ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>All</button>
+            <button onClick={() => setFilterUnread(true)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 ${filterUnread ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>
+              Unread
+              {Object.values(unreadCounts).some(count => count > 0) && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+            </button>
+          </div>
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={14} />
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search connections..." 
-              className="w-full bg-white border border-gray-300 rounded-full py-2 pl-9 text-base md:text-xs text-gray-900 outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all" 
+              className="w-full bg-white border border-gray-200 hover:border-gray-300 rounded-xl py-2 pl-9 pr-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" 
             />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar px-2">
+        <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar px-2 pb-2">
           {filteredContacts.length === 0 && (
-            <div className="text-center text-xs text-gray-500 font-bold mt-10 px-4">
-              No connections found. Follow nodes to open channels.
+            <div className="text-center text-xs text-gray-500 font-bold mt-10 px-4 animate-in fade-in">
+              {filterUnread ? "No unread messages." : "No connections found. Follow nodes to open channels."}
             </div>
           )}
-          {filteredContacts.map((contact) => (
-            <div key={contact.id} onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} className={`flex items-center gap-3 p-3 cursor-pointer transition-all rounded-2xl border ${activeChat?.id === contact.id ? 'bg-violet-50 border-violet-200 shadow-sm' : 'hover:bg-gray-50 border-transparent'}`}>
+          {filteredContacts.map((contact, index) => (
+            <div 
+              key={contact.id} 
+              onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} 
+              className={`group flex items-center gap-3 p-3 cursor-pointer transition-all duration-300 rounded-2xl border animate-in fade-in slide-in-from-left-4 ${activeChat?.id === contact.id ? 'bg-blue-50 border-blue-200 shadow-md scale-[1.02] z-10 relative' : 'bg-white hover:bg-gray-50 border-gray-100 hover:border-gray-200 hover:shadow-sm'}`}
+              style={{ animationDelay: `${index * 40}ms`, animationFillMode: 'both' }}
+            >
               <div 
-                className="relative w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-violet-600 font-bold hover:bg-violet-50 transition-colors overflow-hidden shrink-0"
+                className={`relative w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all overflow-hidden shrink-0 border-2 ${activeChat?.id === contact.id ? 'border-blue-300 bg-blue-100 text-blue-600' : 'border-transparent bg-gray-100 text-gray-500 group-hover:border-blue-100 group-hover:text-blue-500'}`}
                 onClick={(e) => { e.stopPropagation(); setSelectedUserId(contact.id); }}
                 title={`View @${contact.username}'s Profile`}
               >
                 {contact.avatar_url ? (
-                  <Image src={contact.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
+                  <Image src={contact.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
                 ) : (
                   contact.username[0].toUpperCase()
                 )}
+                {Object.keys(onlineUsers).includes(contact.id) && (
+                   <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-violet-600 transition-colors flex items-center gap-1">
-                  {contact.username}
-                  {contact.is_verified && <BadgeCheck size={14} className="text-violet-500" fill="currentColor" stroke="white" />}
-                </h4>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${Object.keys(onlineUsers).includes(contact.id) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <p className="text-[10px] text-gray-500 truncate font-mono uppercase tracking-widest">
-                    {Object.keys(onlineUsers).includes(contact.id) ? 'Online' : 'Offline'}
-                  </p>
+                <div className="flex items-center justify-between mb-0.5">
+                  <h4 className={`text-sm font-bold truncate transition-colors flex items-center gap-1 ${activeChat?.id === contact.id ? 'text-blue-700' : 'text-gray-900 group-hover:text-blue-600'}`}>
+                    {contact.username}
+                    {contact.is_verified && <BadgeCheck size={14} className={activeChat?.id === contact.id ? 'text-blue-600' : 'text-blue-500'} fill="currentColor" stroke="white" />}
+                  </h4>
+                  {unreadCounts[contact.id] > 0 && (
+                    <span className="text-[9px] font-black text-white bg-blue-600 px-1.5 py-0.5 rounded-md shrink-0 animate-pulse shadow-sm shadow-blue-600/30">{unreadCounts[contact.id]} NEW</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                   <p className={`text-xs truncate ${unreadCounts[contact.id] > 0 ? 'text-blue-600 font-bold' : 'text-gray-500 font-medium'}`}>
+                     {lastMessagePreviews[contact.id] || (Object.keys(onlineUsers).includes(contact.id) ? 'Online now' : 'Tap to open transmission')}
+                   </p>
                 </div>
               </div>
               {unreadCounts[contact.id] > 0 && (
-                <div className="w-5 h-5 rounded-full bg-violet-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-sm">
-                  {unreadCounts[contact.id] > 99 ? '99+' : unreadCounts[contact.id]}
-                </div>
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] shrink-0"></div>
               )}
             </div>
           ))}
@@ -846,6 +826,9 @@ export default function MessagesContent() {
                         <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Reply">
                           <MessageSquare size={14} />
                         </button>
+                        <button onClick={() => handleDeleteMessage(msg.id)} className="p-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     )}
                     <div className={`max-w-[85%] ${msg.sender_id === currentUserId ? "text-right" : "text-left"}`}>
@@ -865,25 +848,7 @@ export default function MessagesContent() {
                               <Image src={msg.image_url} alt="attachment" fill sizes="(max-width: 768px) 100vw, 400px" className="object-cover" />
                             </div>
                           )}
-                          {editingMessageId === msg.id ? (
-                            <form onSubmit={(e) => handleEditMessage(e, msg.id)} className="flex items-center gap-1.5 mt-1">
-                              <input 
-                                value={editInputValue} 
-                                onChange={(e) => setEditInputValue(e.target.value)} 
-                                className="text-xs text-gray-900 px-2 py-1 rounded-md border border-gray-300 focus:outline-none w-full min-w-[120px]"
-                                autoFocus
-                              />
-                              <button type="submit" className="bg-green-500 hover:bg-green-400 text-white rounded p-1 transition-colors"><Check size={12} /></button>
-                              <button type="button" onClick={() => setEditingMessageId(null)} className="bg-white/20 hover:bg-white/30 text-white rounded p-1 transition-colors"><X size={12} /></button>
-                            </form>
-                          ) : (
-                            (msg.text || msg.is_edited) && (
-                              <p className="whitespace-pre-wrap leading-relaxed">
-                                {msg.text}
-                                {msg.is_edited && <span className={`text-[10px] italic ml-1.5 ${msg.sender_id === currentUserId ? 'text-blue-200' : 'text-gray-400'}`}>(edited)</span>}
-                              </p>
-                            )
-                          )}
+                          {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
                         </div>
                       </div>
                       <div className={`mt-1 flex items-center gap-1.5 text-[9px] text-gray-600 px-1 ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
@@ -893,14 +858,8 @@ export default function MessagesContent() {
                     </div>
                     {msg.sender_id === currentUserId && (
                       <div className="flex items-end">
-                        <button onClick={() => { setEditingMessageId(msg.id); setEditInputValue(msg.text || ""); }} className="p-2 text-gray-400 hover:text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Edit">
-                          <Pencil size={14} />
-                        </button>
-                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Reply">
+                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
                           <MessageSquare size={14} />
-                        </button>
-                        <button onClick={() => handleDeleteMessage(msg.id)} className="p-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">
-                          <Trash2 size={14} />
                         </button>
                       </div>
                     )}
@@ -913,13 +872,13 @@ export default function MessagesContent() {
                       <div className="w-16 h-16 bg-red-50 border border-red-100 rounded-full flex items-center justify-center text-red-600"><ShieldAlert size={32} /></div>
                       <p className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Connection Severed</p>
                       {blockerId === currentUserId ? (
-                        <button onClick={handleUnblockUser} className="text-blue-500 text-xs font-black uppercase hover:underline">Re-authorize Link</button>
+                        <button onClick={handleUnblockUser} className="text-violet-500 text-xs font-black uppercase hover:underline">Re-authorize Link</button>
                       ) : (
                         <p className="text-gray-500 text-xs italic font-mono">Channel locked by peer user.</p>
                       )}
                     </>
                   ) : connectionStatus === 'none' ? (
-                    <><div className="w-16 h-16 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center text-blue-600"><UserPlus size={32} /></div><p className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Transmission blocked</p><button onClick={handleSendRequest} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 shadow-blue-500/20">Send Request</button></>
+                    <><div className="w-16 h-16 bg-violet-50 border border-violet-100 rounded-full flex items-center justify-center text-violet-600"><UserPlus size={32} /></div><p className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Transmission blocked</p><button onClick={handleSendRequest} className="bg-violet-600 hover:bg-violet-500 text-white px-8 py-3 rounded-xl font-bold">Send Request</button></>
                   ) : connectionStatus === 'waiting' ? (
                     <><div className="w-16 h-16 bg-gray-50 border border-gray-200 rounded-full flex items-center justify-center text-gray-400 animate-pulse"><Send size={32} /></div><p className="text-gray-500 text-xs italic font-mono uppercase tracking-tighter">Syncing... waiting for peer authorization.</p></>
                   ) : (
@@ -955,7 +914,7 @@ export default function MessagesContent() {
                 <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 hover:text-blue-600 transition-colors p-2">
                   <Paperclip size={18} />
                 </button>
-                <input value={inputValue} onChange={handleInputChange} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-base md:text-xs text-gray-900 py-2" />
+                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 bg-transparent border-none focus:outline-none text-base md:text-xs text-gray-900 py-2" />
                 <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-full transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
               </form>
             </div>

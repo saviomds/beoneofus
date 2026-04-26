@@ -22,5 +22,9 @@
     "net"
   ],
   "geminicodeassist.agentDebugMode": true,
-  "geminicodeassist.agentYoloMode": true
+  "geminicodeassist.agentYoloMode": true,
+  "deno.codeLens.implementations": true,
+  "deno.codeLens.references": true,
+  "deno.codeLens.referencesAllFunctions": true,
+  "deno.codeLens.test": true
 }

@@ -60,6 +60,11 @@ export default function MessagesContent() {
   const scrollRef = useRef(null);
   const channelRef = useRef(null);
 
+  const activeChatRef = useRef(null);
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       ringAudioRef.current = new Audio("https://actions.google.com/sounds/v1/alarms/phone_ringing.ogg");
@@ -142,31 +147,48 @@ export default function MessagesContent() {
     }
   }, [targetChatUser, setTargetChatUser]);
 
-  // Real-time Unread Messages Tracking
+  // Real-time Unread Messages & Previews Tracking
   useEffect(() => {
     if (!currentUserId) return;
 
-    const fetchUnread = async () => {
+    const fetchUnreadAndPreviews = async () => {
       const { data } = await supabase
         .from('messages')
-        .select('sender_id')
-        .eq('receiver_id', currentUserId)
-        .eq('is_read', false);
+        .select('sender_id, receiver_id, is_read, text, image_url, created_at')
+        .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
+        .order('created_at', { ascending: false });
         
       const counts = {};
+      const previews = {};
+      
       if (data) {
         data.forEach(msg => {
-          counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1;
+          const otherId = msg.sender_id === currentUserId ? msg.receiver_id : msg.sender_id;
+          
+          if (msg.receiver_id === currentUserId && !msg.is_read) {
+            if (activeChatRef.current?.id !== msg.sender_id) {
+              counts[otherId] = (counts[otherId] || 0) + 1;
+            }
+          }
+          
+          if (!previews[otherId]) {
+            const prefix = msg.sender_id === currentUserId ? 'You: ' : '';
+            previews[otherId] = prefix + (msg.text || (msg.image_url ? 'Sent an image' : 'New transmission'));
+          }
         });
       }
       setUnreadCounts(counts);
+      setLastMessagePreviews(previews);
     };
 
-    fetchUnread();
+    fetchUnreadAndPreviews();
 
     const unreadChannel = supabase.channel('messages-unread-update')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUserId}` }, () => {
-        fetchUnread();
+        fetchUnreadAndPreviews();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `sender_id=eq.${currentUserId}` }, () => {
+        fetchUnreadAndPreviews();
       })
       .subscribe();
 
@@ -240,6 +262,9 @@ export default function MessagesContent() {
         .order('created_at', { ascending: true });
       setMessages(data || []);
 
+      // Optimistically clear unread count
+      setUnreadCounts(prev => ({ ...prev, [activeChat.id]: 0 }));
+
       // Mark incoming messages as read when the chat is opened
       await supabase
         .from('messages')
@@ -270,6 +295,12 @@ export default function MessagesContent() {
           if (newMessage.receiver_id === currentUserId) {
             await supabase.from('messages').update({ is_read: true }).eq('id', newMessage.id);
           }
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
+        const updatedMessage = payload.new;
+        if (updatedMessage.sender_id === activeChat.id || updatedMessage.receiver_id === activeChat.id) {
+           setMessages((prev) => prev.map(m => m.id === updatedMessage.id ? { ...m, is_read: updatedMessage.is_read } : m));
         }
       })
       .subscribe();
@@ -607,6 +638,8 @@ export default function MessagesContent() {
     const optimisticId = Date.now(); 
     setMessages((prev) => [...prev, { id: optimisticId, sender_id: currentUserId, receiver_id: activeChat.id, text: msgText, image_url: imagePreview, replied_message: replyingTo, created_at: new Date().toISOString(), isSending: true }]);
     
+    setLastMessagePreviews(prev => ({ ...prev, [activeChat.id]: `You: ${msgText.trim() || (imageToUpload ? 'Sent an image' : 'New transmission')}` }));
+
     setInputValue("");
     setImageFile(null);
     setImagePreview(null);
@@ -853,7 +886,7 @@ export default function MessagesContent() {
                       </div>
                       <div className={`mt-1 flex items-center gap-1.5 text-[9px] text-gray-600 px-1 ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {msg.sender_id === currentUserId && <CheckCheck size={12} className={msg.isSending ? "text-gray-600" : "text-blue-500"} />}
+                        {msg.sender_id === currentUserId && <CheckCheck size={12} className={msg.isSending ? "text-gray-300" : msg.is_read ? "text-blue-500" : "text-gray-400"} />}
                       </div>
                     </div>
                     {msg.sender_id === currentUserId && (

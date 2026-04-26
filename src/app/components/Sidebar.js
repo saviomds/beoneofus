@@ -5,7 +5,7 @@ import {
   MoreHorizontal, Bell, Settings, LogOut, Terminal
 } from 'lucide-react';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '../supabaseClient'; 
 import { useRouter } from 'next/navigation';
@@ -36,10 +36,29 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   const [unreadNotifs, setUnreadNotifs] = useState(0); // State for real notification count
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const router = useRouter();
+  const channelRef = useRef(null);
 
   // 1. Fetch Profile & Real Counts (Messages + Notifications)
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCounts = async (uid) => {
+      // Fetch Real Message Count (Incoming to the user)
+      const { count: msgCount } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', uid)
+        .eq('is_read', false);
+      setUnreadMessages(msgCount || 0);
+
+      // Fetch Real Notification Count (Unread packets only)
+      const { count: notifCount } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', uid)
+        .eq('unread', true);
+      setUnreadNotifs(notifCount || 0);
+    };
+
+    const initData = async () => {
       setIsProfileLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -55,23 +74,37 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         
         if (profileData) setProfile(profileData);
 
-        // Fetch Real Message Count (Incoming to the user)
-        const { count: msgCount } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('receiver_id', uid)
-          .eq('is_read', false);
-        
-        setUnreadMessages(msgCount || 0);
+        await fetchCounts(uid);
 
-        // Fetch Real Notification Count (Unread packets only)
-        const { count: notifCount } = await supabase
-          .from('notifications')
-          .select('*', { count: 'exact', head: true })
-          .eq('receiver_id', uid)
-          .eq('unread', true);
-        
-        setUnreadNotifs(notifCount || 0);
+        // Remove existing subscription if any
+        if (channelRef.current) supabase.removeChannel(channelRef.current);
+
+        // Set up targeted real-time listeners using the user's ID
+        channelRef.current = supabase
+          .channel(`sidebar-updates-${uid}-${Date.now()}`)
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'messages',
+            filter: `receiver_id=eq.${uid}`
+          }, () => fetchCounts(uid))
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'notifications',
+            filter: `receiver_id=eq.${uid}`
+          }, () => fetchCounts(uid))
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${uid}`
+          }, async () => {
+            const { data: updatedProfile } = await supabase.from('profiles').select('*').eq('id', uid).single();
+            if (updatedProfile) setProfile(updatedProfile);
+          })
+          .subscribe();
+
       } else {
         setProfile(null);
         setUnreadMessages(0);
@@ -80,35 +113,16 @@ export default function Sidebar({ activeSection, onSectionChange }) {
       setIsProfileLoading(false);
     };
 
-    fetchData();
+    initData();
 
     // 2. Real-time Listener for Auth, Messages, and Notifications
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(() => {
-      fetchData();
+      initData();
     });
-
-    const sidebarSub = supabase
-      .channel('sidebar-live-updates')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'messages' 
-      }, () => fetchData())
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'notifications' 
-      }, () => fetchData())
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'profiles'
-      }, () => fetchData())
-      .subscribe();
 
     return () => {
       authSub.unsubscribe();
-      supabase.removeChannel(sidebarSub);
+      if (channelRef.current) supabase.removeChannel(channelRef.current);
     };
   }, []);
 

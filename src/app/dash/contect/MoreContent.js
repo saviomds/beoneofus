@@ -28,12 +28,15 @@ import {
   Loader2,
   Search,
   Trash2,
-  Users,
-  Bot
+  Bot,
+  UserCog
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
 import VerifiedBadge from "../../components/VerifiedBadge";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 // --- TOOL COMPONENTS ---
 
@@ -456,6 +459,10 @@ const AdminPanelTool = ({ currentUserId }) => {
     }
   };
 
+  const handleImpersonateUser = (userId, username) => {
+    alert(`Impersonation for @${username} requires a secure backend Edge Function using your Supabase Service Role key to generate an auth token. (Not implemented in client-side)`);
+  };
+
   if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>;
 
   if (!isAdmin) return (
@@ -563,7 +570,8 @@ const AdminPanelTool = ({ currentUserId }) => {
                       <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5 truncate">{user.status || 'Active Node'}</p>
                     </div>
                   </div>
-                  <div className="flex items-center shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => handleImpersonateUser(user.id, user.username)} className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white rounded-xl transition-colors border border-purple-200 hover:border-purple-600" title="Impersonate User"><UserCog size={16} /></button>
                     <button onClick={() => handleDeleteUser(user.id, user.username)} className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition-colors border border-red-200 hover:border-red-600" title="Delete User"><Trash2 size={16} /></button>
                   </div>
                 </div>
@@ -623,17 +631,87 @@ const AdminPanelTool = ({ currentUserId }) => {
   );
 };
 
-const SupportTool = () => {
-  const [submitted, setSubmitted] = useState(false);
-  const [issue, setIssue] = useState('');
+const supportMarkdownComponents = {
+  p: ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+  ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
+  ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
+  li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+  h1: ({ node, ...props }) => <h1 className="text-sm font-black mb-2 mt-3" {...props} />,
+  h2: ({ node, ...props }) => <h2 className="text-sm font-bold mb-2 mt-3" {...props} />,
+  h3: ({ node, ...props }) => <h3 className="text-xs font-bold mb-1 mt-2" {...props} />,
+  strong: ({ node, ...props }) => <strong className="font-bold text-blue-950" {...props} />,
+  code({ node, inline, className, children, ...props }) {
+    const match = /language-(\w+)/.exec(className || "");
+    return !inline && match ? (
+      <div className="rounded-lg overflow-hidden my-3 border border-blue-200 shadow-sm bg-[#1E1E1E]">
+        <div className="bg-gray-800/80 px-3 py-1.5 text-[9px] font-mono text-gray-400 uppercase tracking-widest flex justify-between items-center border-b border-white/5">
+          <span>{match[1]}</span>
+        </div>
+        <SyntaxHighlighter
+          {...props}
+          style={vscDarkPlus}
+          language={match[1]}
+          PreTag="div"
+          customStyle={{ margin: 0, padding: '0.75rem', background: 'transparent', fontSize: '0.75rem' }}
+        >
+          {String(children).replace(/\n$/, "")}
+        </SyntaxHighlighter>
+      </div>
+    ) : (
+      <code {...props} className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-mono text-[10px] border border-blue-200">
+        {children}
+      </code>
+    );
+  }
+};
 
-  const handleSubmit = (e) => {
+function SupportTypewriterMessage({ content }) {
+  const [displayedContent, setDisplayedContent] = useState("");
+  useEffect(() => {
+    let i = 0;
+    const timer = setInterval(() => {
+      setDisplayedContent(content.slice(0, i + 1));
+      i++;
+      if (i >= content.length) clearInterval(timer);
+    }, 15);
+    return () => clearInterval(timer);
+  }, [content]);
+  return <ReactMarkdown components={supportMarkdownComponents}>{displayedContent}</ReactMarkdown>;
+}
+
+const SupportTool = () => {
+  const [issue, setIssue] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [tickets, setTickets] = useState([]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setIssue('');
-    }, 3000);
+    if (!issue.trim() || isProcessing) return;
+    
+    const currentIssue = issue;
+    setIssue('');
+    setIsProcessing(true);
+    
+    try {
+      const prompt = `You are the official technical support engineering AI for the beoneofus platform. A user has submitted the following support ticket: "${currentIssue}". Please provide a helpful, concise, and highly technical resolution to their issue.`;
+      
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+      });
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
+      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
+
+      setTickets(prev => [{ id: Date.now(), issue: currentIssue, reply: data.message.content.replace(/^["']|["']$/g, '').trim(), isNew: true }, ...prev]);
+    } catch (error) {
+      setTickets(prev => [{ id: Date.now(), issue: currentIssue, reply: "Error contacting support AI: " + error.message, isNew: true }, ...prev]);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -645,7 +723,7 @@ const SupportTool = () => {
         <div>
           <h3 className="text-blue-700 font-bold text-lg mb-2">Need Technical Assistance?</h3>
           <p className="text-sm text-blue-600/80 leading-relaxed">
-            Our engineering team is ready to help you with architecture reviews, debugging, and platform guidance. Expected response time: &lt; 2 hours.
+            Our AI support engineering team is ready to help you instantly with architecture reviews, debugging, and platform guidance.
           </p>
         </div>
       </div>
@@ -654,18 +732,46 @@ const SupportTool = () => {
         <div>
           <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-3 pl-2">Describe your issue</label>
           <textarea 
-            rows={6}
+            rows={4}
             required
             value={issue}
             onChange={e => setIssue(e.target.value)}
             placeholder="E.g., I am getting a 500 error when trying to invoke a serverless function..."
             className="w-full bg-gray-50 border border-gray-300 rounded-2xl p-5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none transition-all placeholder:text-gray-400 custom-scrollbar"
+            disabled={isProcessing}
           />
         </div>
-        <button disabled={submitted || !issue.trim()} type="submit" className="w-full py-4 bg-blue-600 text-white font-black uppercase tracking-widest text-xs rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
-          {submitted ? 'Ticket Submitted Successfully' : 'Open Support Ticket'}
+        <button disabled={isProcessing || !issue.trim()} type="submit" className="w-full flex items-center justify-center gap-2 py-4 bg-blue-600 text-white font-black uppercase tracking-widest text-xs rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+          {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Analyzing Issue...</> : 'Submit Support Ticket'}
         </button>
       </form>
+
+      {tickets.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="text-gray-900 font-bold text-sm pl-2 mt-8">Recent Tickets</h4>
+          {tickets.map(ticket => (
+            <div key={ticket.id} className="bg-white border border-gray-200 rounded-[2rem] p-6 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-4">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Your Issue</p>
+                <p className="text-sm text-gray-800">{ticket.issue}</p>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Bot size={14} className="text-blue-600" />
+                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Support AI Reply</p>
+                </div>
+                <div className="text-sm text-blue-900 leading-relaxed">
+                  {ticket.isNew ? (
+                    <SupportTypewriterMessage content={ticket.reply} />
+                  ) : (
+                    <ReactMarkdown components={supportMarkdownComponents}>{ticket.reply}</ReactMarkdown>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -710,18 +816,26 @@ const MORE_TOOLS = [
 
 export default function MoreContent() {
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [copiedProfile, setCopiedProfile] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Filter tools so non-admins never even see the Admin Panel option
+  const visibleTools = MORE_TOOLS.filter(t => t.id !== 'admin' || isAdmin);
+
   // Derive active tool directly from search parameters without needing useEffect or state
   const toolParam = searchParams?.get('tool');
-  const activeItem = toolParam ? MORE_TOOLS.find(t => t.id === toolParam) || null : null;
+  const activeItem = toolParam ? visibleTools.find(t => t.id === toolParam) || null : null;
 
   useEffect(() => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setCurrentUserId(session?.user?.id || null);
+      if (session?.user?.id) {
+        setCurrentUserId(session.user.id);
+        const { data } = await supabase.from('profiles').select('is_admin').eq('id', session.user.id).single();
+        if (data?.is_admin) setIsAdmin(true);
+      }
     };
     getSession();
   }, []);
@@ -762,7 +876,7 @@ export default function MoreContent() {
 
       {/* Grid Layout - 2 Columns on desktop to use the mid-section width better */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {MORE_TOOLS.map((tool) => (
+        {visibleTools.map((tool) => (
           <div 
             key={tool.id}
         onClick={() => handleOpenTool(tool)}

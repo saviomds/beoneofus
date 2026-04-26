@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Palette, Check, AlertTriangle, Trash2, X, Loader2, BadgeCheck, Shield } from "lucide-react";
+import { Moon, Sun, Monitor, Palette, Check, AlertTriangle, Trash2, X, Loader2, BadgeCheck, Shield, Volume2, VolumeX } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "../../supabaseClient";
 
@@ -24,6 +24,8 @@ export default function SettingsContent() {
   // Toast state
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
+  // Local preferences state
+  const [isMuted, setIsMuted] = useState(false);
 
   const showToast = (msg, type = "success") => {
     setToastMessage(msg);
@@ -35,6 +37,8 @@ export default function SettingsContent() {
   useEffect(() => {
     // Set mounted to true to avoid hydration mismatch with theme logic
     setMounted(true);
+    // Load local preferences
+    setIsMuted(localStorage.getItem('beoneofus_muted') === 'true');
     // Fetch user profile to get username for delete confirmation
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -111,6 +115,13 @@ export default function SettingsContent() {
     }
   };
 
+  const toggleMute = () => {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    localStorage.setItem('beoneofus_muted', newMuted.toString());
+    showToast(newMuted ? "Notification sounds muted" : "Notification sounds enabled", "success");
+  };
+
   return (
     <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
       {/* Page Header */}
@@ -166,6 +177,33 @@ export default function SettingsContent() {
           </div>
         </div>
         */}
+
+        {/* App Preferences Section */}
+        <div className="bg-white border border-gray-200 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
+              <Volume2 size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">App Preferences</h2>
+              <p className="text-xs text-gray-500 font-medium">Customize your local client experience.</p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Notification Sounds</h3>
+              <p className="text-xs text-gray-500 mt-1">Play audio alerts for incoming messages and calls.</p>
+            </div>
+            <button 
+              onClick={toggleMute}
+              className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm shrink-0 flex items-center justify-center gap-2 border ${isMuted ? 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'}`}
+            >
+              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              {isMuted ? 'Sounds Muted' : 'Sounds Enabled'}
+            </button>
+          </div>
+        </div>
 
         {/* Verification Section */}
         <div className="bg-white border border-gray-200 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">

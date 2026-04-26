@@ -76,8 +76,10 @@ export default function Sidebar({ activeSection, onSectionChange }) {
     if (unreadMessages > prevMessagesRef.current) {
       setIsBouncing(true);
       if (messagePopAudioRef.current) {
-        messagePopAudioRef.current.currentTime = 0;
-        messagePopAudioRef.current.play().catch(e => console.error("Audio playback blocked:", e));
+        if (localStorage.getItem('beoneofus_muted') !== 'true') {
+          messagePopAudioRef.current.currentTime = 0;
+          messagePopAudioRef.current.play().catch(e => console.warn("Audio playback blocked (requires user interaction first)"));
+        }
       }
       const timer = setTimeout(() => setIsBouncing(false), 800);
       prevMessagesRef.current = unreadMessages;

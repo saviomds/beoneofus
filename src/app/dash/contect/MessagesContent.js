@@ -507,8 +507,10 @@ export default function MessagesContent() {
   // Outgoing Call Ringing Sound
   useEffect(() => {
     if (activeCall?.status === 'ringing' && ringAudioRef.current) {
-      ringAudioRef.current.loop = true;
-      ringAudioRef.current.play().catch(e => console.error("Audio playback failed:", e));
+      if (localStorage.getItem('beoneofus_muted') !== 'true') {
+        ringAudioRef.current.loop = true;
+        ringAudioRef.current.play().catch(e => console.warn("Audio playback blocked (requires user interaction first)"));
+      }
     } else if (ringAudioRef.current) {
       ringAudioRef.current.pause();
       ringAudioRef.current.currentTime = 0;
@@ -518,8 +520,10 @@ export default function MessagesContent() {
   // Incoming Call Ringing Sound
   useEffect(() => {
     if (incomingCall && incomingRingAudioRef.current) {
-      incomingRingAudioRef.current.loop = true;
-      incomingRingAudioRef.current.play().catch(e => console.error("Audio playback failed:", e));
+      if (localStorage.getItem('beoneofus_muted') !== 'true') {
+        incomingRingAudioRef.current.loop = true;
+        incomingRingAudioRef.current.play().catch(e => console.warn("Audio playback blocked (requires user interaction first)"));
+      }
     } else if (incomingRingAudioRef.current) {
       incomingRingAudioRef.current.pause();
       incomingRingAudioRef.current.currentTime = 0;

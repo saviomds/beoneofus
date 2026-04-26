@@ -5,10 +5,12 @@ import { supabase } from '../../supabaseClient';
 import Image from 'next/image';
 import { 
   MessageSquare, Heart, Share2, MoreHorizontal, 
-  Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark, GitBranch, Link as LinkIcon
+  Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark, GitBranch, Link as LinkIcon,
+  Sparkles, Loader2, ShieldAlert
 } from 'lucide-react';
 import ProfileContent from "./ProfileContent";
 import VerifiedBadge from "../../components/VerifiedBadge";
+import ReactMarkdown from "react-markdown";
 
 export default function FeedContent() {
   const [posts, setPosts] = useState([]);
@@ -21,6 +23,11 @@ export default function FeedContent() {
   // Interaction States
   const [expandedComments, setExpandedComments] = useState({});
   const [newComments, setNewComments] = useState({});
+  const [isSuggesting, setIsSuggesting] = useState({});
+  const [postSummaries, setPostSummaries] = useState({});
+  const [isSummarizing, setIsSummarizing] = useState({});
+  const [postAnalyses, setPostAnalyses] = useState({});
+  const [isAnalyzing, setIsAnalyzing] = useState({});
 
   // Edit State
   const [isEditing, setIsEditing] = useState(false);
@@ -91,7 +98,10 @@ export default function FeedContent() {
   // --- SORTING LOGIC ---
   const displayedPosts = React.useMemo(() => {
     const sorted = [...posts];
-    if (activeTab === 'following' || activeTab === 'latest') {
+    if (activeTab === 'code review') {
+      return sorted.filter(p => p.code_snippet && p.code_snippet.trim().length > 0)
+                   .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else if (activeTab === 'following' || activeTab === 'latest') {
       return sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     } else if (activeTab === 'featured') {
       return sorted.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
@@ -152,6 +162,105 @@ export default function FeedContent() {
       fetchPosts();
       showToast("Comment added");
     } catch (err) { alert("Error adding comment: " + err.message); }
+  };
+
+  // --- AI SUGGEST REPLY LOGIC ---
+  const handleSuggestReply = async (post) => {
+    if (isSuggesting[post.id]) return;
+    setIsSuggesting(prev => ({ ...prev, [post.id]: true }));
+    try {
+      const prompt = `Draft a very brief, friendly, and insightful reply (1-2 sentences maximum) to this developer's post. Return ONLY the exact comment text, without any quotes, filler, or intro. Post content: "${post.title ? post.title + ' - ' : ''}${post.content || post.code_snippet || 'Media post'}"`;
+
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+      });
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
+      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
+
+      // Strip any accidental quotes from the start/end of the AI response
+      const cleanReply = data.message.content.replace(/^["']|["']$/g, '').trim();
+      setNewComments(prev => ({ ...prev, [post.id]: cleanReply }));
+      
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      setIsSuggesting(prev => ({ ...prev, [post.id]: false }));
+    }
+  };
+
+  // --- AI SUMMARIZE LOGIC ---
+  const handleSummarize = async (post) => {
+    if (isSummarizing[post.id]) return;
+    
+    // Toggle summary off if it's already generated
+    if (postSummaries[post.id]) {
+      const newSummaries = { ...postSummaries };
+      delete newSummaries[post.id];
+      setPostSummaries(newSummaries);
+      return;
+    }
+
+    setIsSummarizing(prev => ({ ...prev, [post.id]: true }));
+    try {
+      const prompt = `Analyze and summarize the following developer post in 1-2 short, concise bullet points. Return ONLY the summary without any conversational filler. Post content: "${post.title ? post.title + ' - ' : ''}${post.content || post.code_snippet || 'Media post'}"`;
+
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+      });
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
+      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
+
+      setPostSummaries(prev => ({ ...prev, [post.id]: data.message.content.trim() }));
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      setIsSummarizing(prev => ({ ...prev, [post.id]: false }));
+    }
+  };
+
+  // --- AI ANALYZE CODE LOGIC ---
+  const handleAnalyzeCode = async (post) => {
+    if (isAnalyzing[post.id]) return;
+    
+    // Toggle analysis off if it's already generated
+    if (postAnalyses[post.id]) {
+      const newAnalyses = { ...postAnalyses };
+      delete newAnalyses[post.id];
+      setPostAnalyses(newAnalyses);
+      return;
+    }
+
+    setIsAnalyzing(prev => ({ ...prev, [post.id]: true }));
+    try {
+      const prompt = `Analyze this code snippet for potential bugs, performance issues, or security vulnerabilities. Return ONLY a concise bulleted list of findings. If it looks perfectly fine, just say "No obvious issues found." Code:\n\n${post.code_snippet}`;
+
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+      });
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
+      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
+
+      setPostAnalyses(prev => ({ ...prev, [post.id]: data.message.content.trim() }));
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      setIsAnalyzing(prev => ({ ...prev, [post.id]: false }));
+    }
   };
 
   // --- BOOKMARK LOGIC ---
@@ -263,14 +372,14 @@ export default function FeedContent() {
     <div className="space-y-6">
       
       {/* --- FEED TABS --- */}
-      <div className="flex items-center gap-6 border-b border-gray-200 px-2 sm:px-4 mb-2">
-        {['Following', 'Featured', 'Rising'].map((tab) => {
+      <div className="flex items-center gap-6 border-b border-gray-200 px-2 sm:px-4 mb-2 overflow-x-auto custom-scrollbar">
+        {['Following', 'Featured', 'Rising', 'Code Review'].map((tab) => {
           const isActive = activeTab === tab.toLowerCase();
           return (
             <button
               key={tab}
               onClick={() => setActiveTab(tab.toLowerCase())}
-              className={`pb-3 text-sm font-bold transition-all relative ${
+              className={`pb-3 text-sm font-bold transition-all relative whitespace-nowrap ${
                 isActive ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -425,6 +534,17 @@ export default function FeedContent() {
                 <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{post.content}</p>
                 {post.code_snippet && (
                   <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 font-mono text-sm text-blue-600 overflow-x-auto relative">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(post.code_snippet);
+                        showToast("Code copied to clipboard");
+                      }}
+                      className="absolute top-3 right-3 p-1.5 text-gray-500 hover:text-blue-600 bg-white border border-gray-200 hover:border-blue-200 rounded-lg transition-all shadow-sm"
+                      title="Copy Code"
+                    >
+                      <Copy size={14} />
+                    </button>
                     <pre><code>{post.code_snippet}</code></pre>
                   </div>
                 )}
@@ -434,6 +554,64 @@ export default function FeedContent() {
                   </div>
                 )}
               </div>
+
+              {/* AI Summary Box */}
+              {postSummaries[post.id] && (
+                <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-xl animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2 mb-2 text-purple-700 font-bold text-xs uppercase tracking-widest">
+                    <Sparkles size={14} /> AI Summary
+                  </div>
+                  <div className="text-sm text-purple-900 leading-relaxed">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                        ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
+                        li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                        strong: ({ node, ...props }) => <strong className="font-bold text-purple-950" {...props} />,
+                        code: ({ node, inline, ...props }) => (
+                          <code className={`${inline ? 'bg-purple-200/50 px-1 py-0.5 rounded' : 'block bg-purple-200/50 p-2 rounded-lg my-2'} font-mono text-[11px]`} {...props} />
+                        )
+                      }}
+                    >{postSummaries[post.id]}</ReactMarkdown>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Analysis Box */}
+              {postAnalyses[post.id] && (
+                <div className="mt-4 p-4 bg-orange-50 border border-orange-100 rounded-xl animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-orange-700 font-bold text-xs uppercase tracking-widest">
+                      <ShieldAlert size={14} /> Security & Bug Analysis
+                    </div>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(postAnalyses[post.id]);
+                        showToast("Analysis copied to clipboard");
+                      }}
+                      className="p-1.5 text-orange-600 hover:text-orange-800 bg-orange-100/50 hover:bg-orange-100 rounded-lg transition-colors"
+                      title="Copy Analysis"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                  <div className="text-sm text-orange-900 leading-relaxed">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                        ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
+                        li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                        strong: ({ node, ...props }) => <strong className="font-bold text-orange-950" {...props} />,
+                        code: ({ node, inline, ...props }) => (
+                          <code className={`${inline ? 'bg-orange-200/50 px-1 py-0.5 rounded' : 'block bg-orange-200/50 p-2 rounded-lg my-2'} font-mono text-[11px]`} {...props} />
+                        )
+                      }}
+                    >{postAnalyses[post.id]}</ReactMarkdown>
+                  </div>
+                </div>
+              )}
 
               {/* Interaction Bar */}
               <div className="flex items-center gap-6 mt-6 pt-4 border-t border-gray-100 text-gray-500">
@@ -447,6 +625,12 @@ export default function FeedContent() {
                 </button>
             
             <div className="flex items-center gap-4 ml-auto">
+              <button onClick={() => handleAnalyzeCode(post)} className={`flex items-center gap-2 transition-colors text-sm ${postAnalyses[post.id] ? 'text-orange-600' : 'hover:text-orange-500'}`} title="Analyze Code">
+                {isAnalyzing[post.id] ? <Loader2 size={18} className="animate-spin text-orange-500" /> : <ShieldAlert size={18} />}
+              </button>
+              <button onClick={() => handleSummarize(post)} className={`flex items-center gap-2 transition-colors text-sm ${postSummaries[post.id] ? 'text-purple-600' : 'hover:text-purple-500'}`} title="Summarize Post">
+                {isSummarizing[post.id] ? <Loader2 size={18} className="animate-spin text-purple-500" /> : <Sparkles size={18} />}
+              </button>
               <button onClick={() => handleBookmark(post)} className="flex items-center gap-2 hover:text-amber-500 transition-colors text-sm" title="Save to Bookmarks">
                 <Bookmark size={18} />
               </button>
@@ -471,7 +655,10 @@ export default function FeedContent() {
                     ))}
                   </div>
                   <div className="flex gap-2 items-center bg-gray-50 rounded-xl px-3 py-1 border border-gray-200">
-            <input type="text" placeholder="Write a comment..." value={newComments[post.id] || ""} onChange={(e) => setNewComments({...newComments, [post.id]: e.target.value})} className="flex-1 bg-transparent border-none py-2 text-sm text-gray-900 focus:ring-0 outline-none" onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)} />
+                    <button onClick={() => handleSuggestReply(post)} disabled={isSuggesting[post.id]} className="text-gray-400 hover:text-blue-600 transition-colors p-1 disabled:opacity-50" title="Suggest AI Reply">
+                      {isSuggesting[post.id] ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Sparkles size={16} />}
+                    </button>
+                    <input type="text" placeholder="Write a comment..." value={newComments[post.id] || ""} onChange={(e) => setNewComments({...newComments, [post.id]: e.target.value})} className="flex-1 bg-transparent border-none py-2 text-sm text-gray-900 focus:ring-0 outline-none" onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)} />
                     <button onClick={() => handleAddComment(post.id)} className="text-blue-600 hover:text-blue-700 p-1"><Send size={16} /></button>
                   </div>
                 </div>

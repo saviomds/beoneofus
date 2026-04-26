@@ -21,6 +21,15 @@ export default function SettingsContent() {
   // Error message state for the delete operation
   const [deleteError, setDeleteError] = useState("");
   const [requestingVerification, setRequestingVerification] = useState(false);
+  // Toast state
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
+
+  const showToast = (msg, type = "success") => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
 
   // Effect to handle client-side-only logic
   useEffect(() => {
@@ -93,10 +102,10 @@ export default function SettingsContent() {
       if (error) throw error;
       
       setProfile(prev => ({ ...prev, verification_status: 'pending' }));
-      alert("Verification request sent to beoneofus!");
+      showToast("Verification request sent to beoneofus!", "success");
     } catch (error) {
       console.error(error);
-      alert(error.message);
+      showToast(error.message, "error");
     } finally {
       setRequestingVerification(false);
     }
@@ -276,6 +285,14 @@ export default function SettingsContent() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Custom Toast Popup */}
+      {toastMessage && (
+        <div className={`fixed bottom-10 right-10 z-[300] flex items-center gap-3 bg-white border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 max-w-md ${toastType === 'error' ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
+          {toastType === 'error' ? <AlertTriangle size={18} className="text-red-500 shrink-0" /> : <Check size={18} className="text-green-500 shrink-0" />}
+          <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
         </div>
       )}
     </div>

@@ -28,7 +28,8 @@ import {
   Loader2,
   Search,
   Trash2,
-  Users
+  Users,
+  Bot
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -321,10 +322,12 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminTab, setAdminTab] = useState('requests'); // 'requests' | 'users'
+  const [adminTab, setAdminTab] = useState('requests'); // 'requests' | 'users' | 'ai_logs'
   const [allUsers, setAllUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState("");
+  const [aiLogs, setAiLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
 
   useEffect(() => {
     const checkAdminAndFetch = async () => {
@@ -373,6 +376,44 @@ const AdminPanelTool = ({ currentUserId }) => {
       fetchAllUsers();
     }
   }, [adminTab, isAdmin, allUsers.length]);
+
+  // Fetch AI Logs when the 'AI Logs' tab is opened
+  useEffect(() => {
+    if (adminTab === 'ai_logs' && isAdmin && aiLogs.length === 0) {
+      const fetchLogs = async () => {
+        setLogsLoading(true);
+        const { data, error } = await supabase
+          .from('ai_chat_messages')
+          .select('id, role, content, created_at, user_id')
+          .order('created_at', { ascending: false })
+          .limit(100);
+          
+        if (error) {
+          console.error("Error fetching AI logs:", error);
+        } else if (data) {
+          const userIds = [...new Set(data.map(log => log.user_id).filter(Boolean))];
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url, is_verified')
+            .in('id', userIds);
+            
+          const profileMap = (profileData || []).reduce((acc, p) => {
+            acc[p.id] = p;
+            return acc;
+          }, {});
+          
+          const logsWithProfiles = data.map(log => ({
+            ...log,
+            profiles: profileMap[log.user_id] || null
+          }));
+          
+          setAiLogs(logsWithProfiles);
+        }
+        setLogsLoading(false);
+      };
+      fetchLogs();
+    }
+  }, [adminTab, isAdmin, aiLogs.length]);
 
   const handleAction = async (userId, action) => {
     try {
@@ -442,9 +483,10 @@ const AdminPanelTool = ({ currentUserId }) => {
             <p className="text-sm text-blue-600/80 leading-relaxed">Manage the platform and verify nodes.</p>
           </div>
         </div>
-        <div className="flex bg-white p-1 rounded-xl border border-blue-200 shadow-sm shrink-0">
-          <button onClick={() => setAdminTab('requests')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${adminTab === 'requests' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>Requests</button>
-          <button onClick={() => setAdminTab('users')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${adminTab === 'users' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>Users</button>
+        <div className="flex bg-white p-1 rounded-xl border border-blue-200 shadow-sm shrink-0 overflow-x-auto">
+          <button onClick={() => setAdminTab('requests')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'requests' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>Requests</button>
+          <button onClick={() => setAdminTab('users')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'users' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>Users</button>
+          <button onClick={() => setAdminTab('ai_logs')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'ai_logs' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>AI Logs</button>
         </div>
       </div>
 
@@ -523,6 +565,53 @@ const AdminPanelTool = ({ currentUserId }) => {
                   </div>
                   <div className="flex items-center shrink-0">
                     <button onClick={() => handleDeleteUser(user.id, user.username)} className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition-colors border border-red-200 hover:border-red-600" title="Delete User"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* AI Logs Tab */}
+      {adminTab === 'ai_logs' && (
+        <div className="bg-white border border-gray-200 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
+          <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+            <h4 className="text-gray-900 font-bold text-sm pl-2">Recent AI Interactions</h4>
+            <button onClick={() => setAiLogs([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all">Refresh</button>
+          </div>
+          
+          {logsLoading ? (
+            <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
+          ) : aiLogs.length === 0 ? (
+            <div className="p-10 text-center text-gray-500 text-sm font-medium">No AI logs found.</div>
+          ) : (
+            <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto custom-scrollbar">
+              {aiLogs.map(log => (
+                <div key={log.id} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 transition-all gap-4">
+                  {/* Avatar & User Info */}
+                  <div className="flex items-center sm:items-start sm:w-48 shrink-0 gap-3">
+                    {log.role === 'assistant' ? (
+                      <div className="w-10 h-10 rounded-xl bg-gray-900 border border-gray-800 text-white flex items-center justify-center shrink-0">
+                        <Bot size={20} />
+                      </div>
+                    ) : (
+                      <div className="relative w-10 h-10 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center font-bold text-gray-500 uppercase">
+                        {log.profiles?.avatar_url ? <Image src={log.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : log.profiles?.username?.substring(0, 2) || "??"}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <h4 className="text-gray-900 font-bold text-sm flex items-center gap-1 truncate">
+                        {log.role === 'assistant' ? 'beoneofus AI' : `@${log.profiles?.username || 'Unknown'}`}
+                        {log.profiles?.is_verified && log.role !== 'assistant' && <VerifiedBadge size={14} />}
+                      </h4>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5 truncate">{new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', month:'short', day:'numeric'})}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Message Content */}
+                  <div className={`flex-1 text-sm p-4 rounded-2xl whitespace-pre-wrap ${log.role === 'assistant' ? 'bg-white border border-gray-200 text-gray-800' : 'bg-blue-600 text-white shadow-md shadow-blue-500/20'}`}>
+                    {log.content}
                   </div>
                 </div>
               ))}
@@ -620,11 +709,14 @@ const MORE_TOOLS = [
 ];
 
 export default function MoreContent() {
-  const [activeItem, setActiveItem] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [copiedProfile, setCopiedProfile] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Derive active tool directly from search parameters without needing useEffect or state
+  const toolParam = searchParams?.get('tool');
+  const activeItem = toolParam ? MORE_TOOLS.find(t => t.id === toolParam) || null : null;
 
   useEffect(() => {
     const getSession = async () => {
@@ -633,17 +725,6 @@ export default function MoreContent() {
     };
     getSession();
   }, []);
-
-  // Sync modal state with the URL query parameters
-  useEffect(() => {
-    const toolParam = searchParams?.get('tool');
-    if (toolParam) {
-      const tool = MORE_TOOLS.find(t => t.id === toolParam);
-      setActiveItem(tool || null);
-    } else {
-      setActiveItem(null);
-    }
-  }, [searchParams]);
 
   const handleOpenTool = (tool) => {
     const params = new URLSearchParams(searchParams?.toString() || "");

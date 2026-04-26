@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "./supabaseClient";
-import { Terminal, Zap, Shield, Cpu, ChevronRight, ArrowRight, Code2, Users, Globe } from "lucide-react";
+import { Terminal, Zap, Shield, Cpu, ChevronRight, ArrowRight, Code2, Users, Globe, Bot } from "lucide-react";
+import FloatingAiAssistant from "./components/FloatingAiAssistant";
 
 export default function LandingPage() {
   const [session, setSession] = useState(null);
@@ -111,7 +112,7 @@ export default function LandingPage() {
 
       {/* Features Grid */}
       <section className="max-w-7xl mx-auto px-6 py-24 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white backdrop-blur-sm p-8 rounded-[2rem] border border-gray-200 hover:border-blue-500/30 hover:shadow-lg transition-all group">
             <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform shadow-sm">
               <Shield size={28} />
@@ -139,6 +140,16 @@ export default function LandingPage() {
             <h3 className="text-xl font-bold text-gray-900 mb-3">Public Broadcasts</h3>
             <p className="text-gray-600 leading-relaxed text-sm font-medium">
               Share code snippets, debug issues, and broadcast updates to the entire global developer feed.
+            </p>
+          </div>
+          
+          <div className="bg-white backdrop-blur-sm p-8 rounded-[2rem] border border-gray-200 hover:border-gray-500/30 hover:shadow-lg transition-all group">
+            <div className="w-14 h-14 bg-gray-900 rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform shadow-sm">
+              <Bot size={28} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">beoneofus AI</h3>
+            <p className="text-gray-600 leading-relaxed text-sm font-medium">
+              Leverage beoneofus AI to help generate project ideas, break down tasks, and receive instant code suggestions.
             </p>
           </div>
         </div>
@@ -304,6 +315,7 @@ export default function LandingPage() {
       <footer className="border-t border-gray-200 py-10 text-center text-gray-500 text-xs font-mono uppercase tracking-widest relative z-10">
         beoneofus platform v1.0 © {new Date().getFullYear()}
       </footer>
+      <FloatingAiAssistant />
     </div>
   );
 }

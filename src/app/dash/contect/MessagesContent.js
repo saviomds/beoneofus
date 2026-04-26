@@ -707,7 +707,7 @@ export default function MessagesContent() {
   };
 
   return (
-    <div className="w-full flex h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
+    <div className="w-full flex h-[calc(100dvh-180px)] md:h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
       
       {/* BLOCK MODAL */}
       {showBlockConfirm && (
@@ -800,10 +800,10 @@ export default function MessagesContent() {
       </div>
 
       {/* Main Chat Area */}
-      <div className={`flex-1 flex-col min-w-0 md:pl-4 md:mr-2 ${!isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex-1 flex-col min-w-0 min-h-0 md:pl-4 md:mr-2 ${!isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
         {activeChat ? (
           <>
-            <div className="pb-3 border-b border-gray-200 flex items-center justify-between relative overflow-visible">
+            <div className="pb-3 pt-2 md:pt-0 border-b border-gray-200 flex items-center justify-between relative overflow-visible shrink-0 z-10">
               <div className="flex items-center gap-3">
                 <button onClick={() => setIsMobileChatOpen(false)} className="md:hidden p-1.5 -ml-1.5 text-gray-500 hover:text-gray-900 transition-colors">
                   <ChevronLeft size={22} />
@@ -850,7 +850,7 @@ export default function MessagesContent() {
               </div>
             </div>
 
-            <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 space-y-4 no-scrollbar scroll-smooth flex flex-col">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 space-y-4 no-scrollbar scroll-smooth flex flex-col relative z-0">
               {connectionStatus === 'accepted' ? (
                 messages.map((msg) => (
                   <div key={msg.id} className={`flex gap-2 group ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
@@ -921,7 +921,7 @@ export default function MessagesContent() {
               )}
             </div>
 
-            <div className={`pt-3 pb-2 md:pb-0 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
+            <div className={`p-3 pb-6 md:p-0 md:pt-3 bg-white/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none border-t border-gray-200 md:border-transparent shrink-0 sticky bottom-0 z-20 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
               {replyingTo && (
                 <div className="bg-gray-100 border border-gray-200 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="min-w-0">

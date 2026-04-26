@@ -703,16 +703,7 @@ export default function MoreContent() {
 
       {/* Secondary Actions */}
       <div className="mt-8 space-y-2">
-         <button 
-           onClick={handleShareProfile}
-           className="w-full flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all group"
-         >
-            <div className="flex items-center gap-3">
-               {copiedProfile ? <Check size={18} className="text-green-500" /> : <Share2 size={18} />}
-               <span className="text-sm font-bold">{copiedProfile ? "Copied to clipboard!" : "Share Profile"}</span>
-            </div>
-            <span className="text-[10px] font-black text-gray-600 group-hover:text-blue-500 transition-colors">Profile.DEV</span>
-         </button>
+         
          
          <button 
            onClick={handleSignOut}

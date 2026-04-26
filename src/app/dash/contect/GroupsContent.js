@@ -21,7 +21,8 @@ import {
   Paperclip,
   MessageSquare,
   Hash,
-  BadgeCheck
+  BadgeCheck,
+  Smile
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -72,6 +73,7 @@ export default function GroupsContent() {
   const [chatImageFile, setChatImageFile] = useState(null);
   const [chatImagePreview, setChatImagePreview] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [reactionPickerId, setReactionPickerId] = useState(null);
 
   // Fetch Groups
   useEffect(() => {
@@ -108,7 +110,7 @@ export default function GroupsContent() {
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('group_messages')
-        .select('*, profiles(username, avatar_url, is_verified), replied_message:reply_to_message_id(*, text, image_url, profiles(username, is_verified))')
+        .select('*, profiles(username, avatar_url, is_verified), replied_message:reply_to_message_id(*, text, image_url, profiles(username, is_verified)), group_message_reactions(id, user_id, emoji)')
         .eq('group_id', activeWorkspace.id)
         .order('created_at', { ascending: true });
       
@@ -120,7 +122,7 @@ export default function GroupsContent() {
     const channel = supabase.channel(`group-${activeWorkspace.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_messages', filter: `group_id=eq.${activeWorkspace.id}` }, (payload) => {
         const fetchNewMsg = async () => {
-           const { data } = await supabase.from('group_messages').select('*, profiles(username, avatar_url, is_verified), replied_message:reply_to_message_id(*, text, image_url, profiles(username, is_verified))').eq('id', payload.new.id).maybeSingle();
+           const { data } = await supabase.from('group_messages').select('*, profiles(username, avatar_url, is_verified), replied_message:reply_to_message_id(*, text, image_url, profiles(username, is_verified)), group_message_reactions(id, user_id, emoji)').eq('id', payload.new.id).maybeSingle();
            if (data) {
              setWorkspaceMessages(prev => {
                if (prev.some(m => m.id === data.id)) return prev;
@@ -129,6 +131,9 @@ export default function GroupsContent() {
            }
         };
         fetchNewMsg();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_message_reactions' }, () => {
+        fetchMessages();
       })
       .subscribe();
 
@@ -437,6 +442,26 @@ export default function GroupsContent() {
     }
   };
 
+  // --- HANDLE REACTION ---
+  const handleReaction = async (messageId, emoji) => {
+    setReactionPickerId(null);
+    const msg = workspaceMessages.find(m => m.id === messageId);
+    if (!msg) return;
+    
+    const existing = msg.group_message_reactions?.find(r => r.user_id === currentUserId && r.emoji === emoji);
+    
+    try {
+      if (existing) {
+         await supabase.from('group_message_reactions').delete().eq('id', existing.id);
+      } else {
+         const { error } = await supabase.from('group_message_reactions').insert({ message_id: messageId, user_id: currentUserId, emoji });
+         if (error) throw error;
+      }
+    } catch (err) {
+      showToast("Reaction failed. Make sure the 'group_message_reactions' table exists.", "error");
+    }
+  };
+
   const filteredGroups = groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
@@ -497,10 +522,22 @@ export default function GroupsContent() {
                         )}
                       </div>
                     ) : (
-                      <div className="flex items-end">
+                      <div className="flex items-end relative">
+                        <button onClick={() => setReactionPickerId(reactionPickerId === msg.id ? null : msg.id)} className="p-2 text-gray-600 hover:text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Smile size={14} />
+                        </button>
                         <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
                           <MessageSquare size={14} />
                         </button>
+                        {reactionPickerId === msg.id && (
+                          <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 shadow-xl rounded-xl p-1.5 flex gap-1 z-50 animate-in zoom-in-95 duration-200">
+                            {["👍", "❤️", "🔥", "🚀", "👀", "💯"].map(emoji => (
+                              <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg text-lg transition-colors">
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className={`flex flex-col group ${isMe ? "items-end" : "items-start"} max-w-[80%]`}>
@@ -524,15 +561,50 @@ export default function GroupsContent() {
                           {msg.text && <p className="text-[13px] whitespace-pre-wrap break-words">{msg.text}</p>}
                         </div>
                       </div>
+                      
+                      {msg.group_message_reactions && msg.group_message_reactions.length > 0 && (
+                        <div className={`flex flex-wrap gap-1 mt-1 relative z-10 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          {Object.entries(
+                            msg.group_message_reactions.reduce((acc, r) => {
+                               acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                               return acc;
+                            }, {})
+                          ).map(([emoji, count]) => {
+                             const hasReacted = msg.group_message_reactions.some(r => r.user_id === currentUserId && r.emoji === emoji);
+                             return (
+                               <button 
+                                 key={emoji}
+                                 onClick={() => handleReaction(msg.id, emoji)}
+                                 className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-lg border transition-all ${hasReacted ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                               >
+                                 <span>{emoji}</span> <span>{count}</span>
+                               </button>
+                             )
+                          })}
+                        </div>
+                      )}
+
                       <span className="text-[9px] text-gray-600 mt-1 mx-1">
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                     {!isMe && (
-                      <div className="flex items-end">
+                      <div className="flex items-end relative">
+                        <button onClick={() => setReactionPickerId(reactionPickerId === msg.id ? null : msg.id)} className="p-2 text-gray-600 hover:text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Smile size={14} />
+                        </button>
                         <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
                           <MessageSquare size={14} />
                         </button>
+                        {reactionPickerId === msg.id && (
+                          <div className="absolute bottom-full left-0 mb-1 bg-white border border-gray-200 shadow-xl rounded-xl p-1.5 flex gap-1 z-50 animate-in zoom-in-95 duration-200">
+                            {["👍", "❤️", "🔥", "🚀", "👀", "💯"].map(emoji => (
+                              <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg text-lg transition-colors">
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                   )}
                   </div>

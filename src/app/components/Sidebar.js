@@ -2,7 +2,7 @@
 
 import {
   Home, Users, MessageSquare, Bookmark, FileText,
-  MoreHorizontal, Bell, Settings, LogOut, Terminal
+  MoreHorizontal, Bell, Settings, LogOut, Terminal, CheckCheck
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -11,22 +11,33 @@ import { supabase } from '../supabaseClient';
 import { useRouter } from 'next/navigation';
 import VerifiedBadge from './VerifiedBadge';
 
-const SidebarItem = ({ icon: Icon, label, badge, active, onClick }) => (
+const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing }) => (
   <div
-    className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
+    className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
       active ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
     }`}
     onClick={onClick}
   >
     <div className="flex items-center gap-4">
-      <Icon size={20} />
+      <Icon size={20} className={`${isRinging ? 'animate-ring text-blue-500' : ''} ${isBouncing ? 'animate-message-bounce text-blue-500' : ''}`} />
       <span className="font-bold text-sm tracking-tight">{label}</span>
     </div>
-    {badge > 0 && (
-      <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-lg">
-        {badge > 99 ? '99+' : badge}
-      </span>
-    )}
+    <div className="flex items-center gap-2">
+      {onBadgeAction && badge > 0 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onBadgeAction(); }}
+          className="text-gray-400 hover:text-blue-600 md:opacity-0 group-hover:opacity-100 transition-all p-1"
+          title="Mark all as read"
+        >
+          <CheckCheck size={16} />
+        </button>
+      )}
+      {badge > 0 && (
+        <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-lg shrink-0 shadow-sm">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </div>
   </div>
 );
 
@@ -35,21 +46,77 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0); // State for real notification count
   const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [isRinging, setIsRinging] = useState(false);
+  const [isBouncing, setIsBouncing] = useState(false);
+  const prevNotifsRef = useRef(0);
+  const prevMessagesRef = useRef(0);
+  const messagePopAudioRef = useRef(null);
   const router = useRouter();
   const channelRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      messagePopAudioRef.current = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
+    }
+  }, []);
+
+  // Trigger ringing animation when unread count goes up
+  useEffect(() => {
+    if (unreadNotifs > prevNotifsRef.current) {
+      setIsRinging(true);
+      const timer = setTimeout(() => setIsRinging(false), 500);
+      prevNotifsRef.current = unreadNotifs;
+      return () => clearTimeout(timer);
+    }
+    prevNotifsRef.current = unreadNotifs;
+  }, [unreadNotifs]);
+
+  // Trigger bouncing animation when unread messages count goes up
+  useEffect(() => {
+    if (unreadMessages > prevMessagesRef.current) {
+      setIsBouncing(true);
+      if (messagePopAudioRef.current) {
+        messagePopAudioRef.current.currentTime = 0;
+        messagePopAudioRef.current.play().catch(e => console.error("Audio playback blocked:", e));
+      }
+      const timer = setTimeout(() => setIsBouncing(false), 800);
+      prevMessagesRef.current = unreadMessages;
+      return () => clearTimeout(timer);
+    }
+    prevMessagesRef.current = unreadMessages;
+  }, [unreadMessages]);
 
   // 1. Fetch Profile & Real Counts (Messages + Notifications)
   useEffect(() => {
     const fetchCounts = async (uid) => {
-      // Fetch Real Message Count (Incoming to the user)
-      const { count: msgCount } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('receiver_id', uid)
-        .eq('is_read', false);
-      setUnreadMessages(msgCount || 0);
+      // 1. Get active connections to prevent counting messages from blocked/severed nodes
+      const { data: connections } = await supabase
+        .from('connections')
+        .select('sender_id, receiver_id')
+        .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`)
+        .eq('status', 'accepted');
 
-      // Fetch Real Notification Count (Unread packets only)
+      let validSenderIds = [];
+      if (connections && connections.length > 0) {
+        validSenderIds = connections.map(c => c.sender_id === uid ? c.receiver_id : c.sender_id);
+      }
+
+      // 2. Fetch unread conversations (unique senders) instead of total raw messages
+      if (validSenderIds.length > 0) {
+        const { data: unreadData } = await supabase
+          .from('messages')
+          .select('sender_id')
+          .eq('receiver_id', uid)
+          .eq('is_read', false)
+          .in('sender_id', validSenderIds);
+          
+        const uniqueSenders = new Set(unreadData?.map(m => m.sender_id)).size;
+        setUnreadMessages(uniqueSenders || 0);
+      } else {
+        setUnreadMessages(0);
+      }
+
+      // 3. Fetch Real Notification Count (Unread packets only)
       const { count: notifCount } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
@@ -94,6 +161,18 @@ export default function Sidebar({ activeSection, onSectionChange }) {
             table: 'notifications',
             filter: `receiver_id=eq.${uid}`
           }, () => fetchCounts(uid))
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'connections',
+            filter: `receiver_id=eq.${uid}`
+          }, () => fetchCounts(uid))
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'connections',
+            filter: `sender_id=eq.${uid}`
+          }, () => fetchCounts(uid))
           .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
@@ -126,10 +205,76 @@ export default function Sidebar({ activeSection, onSectionChange }) {
     };
   }, []);
 
+  // Update browser tab title and favicon with unread count
+  useEffect(() => {
+    const totalUnread = unreadMessages + unreadNotifs;
+    
+    // Find or create the favicon link element
+    let favicon = document.querySelector("link[rel~='icon']");
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      document.head.appendChild(favicon);
+    }
+
+    // Remember the original favicon so we can restore it when all messages are read
+    if (!favicon.dataset.originalHref) {
+      favicon.dataset.originalHref = favicon.href || '/favicon.ico';
+    }
+
+    if (totalUnread > 0) {
+      document.title = `(${totalUnread}) beoneofus`;
+      // Swap to a dynamic SVG favicon that features a red notification dot!
+      favicon.href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%233b82f6'/%3E%3Ccircle cx='85' cy='15' r='15' fill='%23ef4444'/%3E%3C/svg%3E";
+    } else {
+      document.title = 'beoneofus';
+      // Restore original favicon
+      favicon.href = favicon.dataset.originalHref;
+    } 
+  }, [unreadMessages, unreadNotifs]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setProfile(null);
     router.push('/auth');
+  };
+
+  const handleMarkAllMessagesRead = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const uid = session.user.id;
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('receiver_id', uid)
+        .eq('is_read', false);
+      
+      if (error) throw error;
+      setUnreadMessages(0);
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  };
+
+  const handleMarkAllNotifsRead = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const uid = session.user.id;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ unread: false })
+        .eq('receiver_id', uid)
+        .eq('unread', true);
+      
+      if (error) throw error;
+      setUnreadNotifs(0);
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
   };
 
   const handleNavClick = (id) => {
@@ -152,6 +297,21 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
   return (
     <>
+      <style>{`
+        @keyframes ring {
+          0%, 100% { transform: rotate(0deg); }
+          25% { transform: rotate(15deg) scale(1.15); }
+          50% { transform: rotate(-15deg) scale(1.15); }
+          75% { transform: rotate(15deg) scale(1.15); }
+        }
+        .animate-ring { animation: ring 0.5s ease-in-out; transform-origin: top center; }
+
+        @keyframes message-bounce {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-4px) scale(1.1); }
+        }
+        .animate-message-bounce { animation: message-bounce 0.4s ease-in-out 2; }
+      `}</style>
       {/* SIDEBAR ASIDE */}
       <aside className="w-full h-full bg-transparent p-4 md:p-6 flex flex-col">
         
@@ -174,6 +334,8 @@ export default function Sidebar({ activeSection, onSectionChange }) {
               badge={item.badge}
               active={activeSection === item.id}
               onClick={() => handleNavClick(item.id)}
+              onBadgeAction={item.id === 'messages' ? handleMarkAllMessagesRead : undefined}
+              isBouncing={item.id === 'messages' ? isBouncing : false}
             />
           ))}
 
@@ -187,6 +349,8 @@ export default function Sidebar({ activeSection, onSectionChange }) {
                 badge={item.badge}
                 active={activeSection === item.id}
                 onClick={() => handleNavClick(item.id)}
+                onBadgeAction={item.id === 'notifications' ? handleMarkAllNotifsRead : undefined}
+                isRinging={item.id === 'notifications' ? isRinging : false}
               />
             ))}
           </div>

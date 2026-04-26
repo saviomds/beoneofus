@@ -14,7 +14,7 @@ export default function NotificationsContent() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
-  const { setActiveSection } = useDashboard();
+  const { setActiveSection, setTargetChatUser } = useDashboard();
 
   useEffect(() => {
     const init = async () => {
@@ -90,6 +90,11 @@ export default function NotificationsContent() {
       case 'comment':
       case 'like': 
         setActiveSection('feed'); break;
+      case 'message':
+        if (setTargetChatUser && notif.actor_id) {
+          setTargetChatUser({ id: notif.actor_id, ...notif.actor });
+        }
+        setActiveSection('messages'); break;
       case 'connection_request':
       case 'handshake': 
       case 'blocked':
@@ -181,6 +186,7 @@ export default function NotificationsContent() {
     switch (type) {
       case 'like': return <Heart size={14} className="text-rose-500" />;
       case 'comment': return <MessageSquare size={14} className="text-blue-500" />;
+      case 'message': return <MessageSquare size={14} className="text-violet-500" />;
       case 'handshake': return <Check size={14} className="text-emerald-500" />;
       case 'blocked': return <ShieldAlert size={14} className="text-orange-500" />;
       case 'unblocked': return <ShieldCheck size={14} className="text-green-500" />;
@@ -270,13 +276,14 @@ export default function NotificationsContent() {
                     {notif.actor?.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
                   </span> 
                   {notif.type === 'like' && 'liked your post.'}
+                  {notif.type === 'message' && <>sent you a message: <span className="text-gray-700 italic">{displayContent}</span></>}
                   {notif.type === 'comment' && <>replied: <span className="text-gray-700 italic">{notif.content}</span></>}
                   {notif.type === 'handshake' && 'accepted your connection request.'}
                   {notif.type === 'connection_request' && 'sent you a connection request.'}
                   {notif.type === 'blocked' && 'severed the connection.'}
                   {notif.type === 'group_join_request' && <>requested to join <span className="font-bold text-gray-900">{displayContent}</span>.</>}
                   {notif.type === 'group_invite' && <>granted you access to <span className="font-bold text-gray-900">{displayContent}</span>.</>}
-                  {!['like', 'comment', 'handshake', 'connection_request', 'blocked', 'unblocked', 'group_invite', 'group_join_request'].includes(notif.type) && `${displayContent}`}
+                  {!['like', 'comment', 'message', 'handshake', 'connection_request', 'blocked', 'unblocked', 'group_invite', 'group_join_request'].includes(notif.type) && `${displayContent}`}
                 </div>
                 
                 <div className="flex items-center gap-3 mt-3">

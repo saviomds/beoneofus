@@ -704,6 +704,14 @@ export default function MessagesContent() {
         reply_to_message_id: replyToId
       });
       if (error) throw error;
+
+      // Generate a notification for the recipient
+      await supabase.from('notifications').insert({
+        receiver_id: activeChat.id,
+        actor_id: currentUserId,
+        type: 'message',
+        content: msgText.trim() ? (msgText.trim().length > 100 ? msgText.trim().substring(0, 100) + '...' : msgText.trim()) : 'Sent an image'
+      });
     } catch (err) {
       setMessages((prev) => prev.filter(m => m.id !== optimisticId));
       alert("Failed to send message: " + err.message);

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Compass, MessageCircle, X, Loader2, Users, Hash } from 'lucide-react';
+import { Search, Compass, MessageCircle, X, Loader2, Users, Hash, Sun, Moon } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { supabase } from '../supabaseClient';
 import ProfileContent from '../dash/contect/ProfileContent';
 import { useDashboard } from '../dash/contect/DashboardContext';
+import { useTheme } from 'next-themes';
 import VerifiedBadge from './VerifiedBadge';
 
 // Dynamically import the modal to keep the Header bundle lightweight for the end user
@@ -25,6 +26,8 @@ export default function Header({ setActiveTab }) {
   const [isNetworkLoading, setIsNetworkLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [networkTab, setNetworkTab] = useState('connections'); // 'connections' or 'groups'
+  const { theme, setTheme, systemTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   const closeQuickView = () => setShowQuickView(null);
 
@@ -48,6 +51,8 @@ export default function Header({ setActiveTab }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => setMounted(true), []);
 
   // Get current user ID
   useEffect(() => {
@@ -221,6 +226,18 @@ export default function Header({ setActiveTab }) {
 
         {/* Right: Nav Links */}
         <nav className="flex items-center gap-6 ml-8">
+          {mounted && (
+            <button 
+              onClick={() => {
+                const currentTheme = theme === 'system' ? systemTheme : theme;
+                setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+              }}
+              className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
+              title="Toggle Theme"
+            >
+              {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          )}
           <button 
             onClick={() => setShowNetworkModal(true)}
             className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-gray-900 transition-all"

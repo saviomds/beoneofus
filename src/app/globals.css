@@ -3,7 +3,12 @@
 
 @layer base {
   body {
-    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300;
+    @apply bg-white dark:bg-[#0D0D0D] text-gray-900 dark:text-gray-100 transition-colors duration-300;
+  }
+
+  /* Smooth global transition for light/dark mode switching */
+  *, ::before, ::after {
+    @apply transition-colors duration-300 ease-in-out;
   }
 
   /* 1. Global: Hide scrollbars for all elements but keep functionality */

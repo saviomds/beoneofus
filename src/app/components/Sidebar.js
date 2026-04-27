@@ -47,11 +47,14 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   const [profile, setProfile] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0); // State for real notification count
+  const [unreadGroups, setUnreadGroups] = useState(0);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [isRinging, setIsRinging] = useState(false);
+  const [isGroupRinging, setIsGroupRinging] = useState(false);
   const [isBouncing, setIsBouncing] = useState(false);
   const prevNotifsRef = useRef(0);
   const prevMessagesRef = useRef(0);
+  const prevGroupsRef = useRef(0);
   const messagePopAudioRef = useRef(null);
   const router = useRouter();
   const channelRef = useRef(null);
@@ -90,6 +93,17 @@ export default function Sidebar({ activeSection, onSectionChange }) {
     prevMessagesRef.current = unreadMessages;
   }, [unreadMessages]);
 
+  // Trigger ringing animation when unread groups count goes up
+  useEffect(() => {
+    if (unreadGroups > prevGroupsRef.current) {
+      setIsGroupRinging(true);
+      const timer = setTimeout(() => setIsGroupRinging(false), 500);
+      prevGroupsRef.current = unreadGroups;
+      return () => clearTimeout(timer);
+    }
+    prevGroupsRef.current = unreadGroups;
+  }, [unreadGroups]);
+
   // 1. Fetch Profile & Real Counts (Messages + Notifications)
   useEffect(() => {
     const fetchCounts = async (uid) => {
@@ -120,13 +134,28 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         setUnreadMessages(0);
       }
 
-      // 3. Fetch Real Notification Count (Unread packets only)
-      const { count: notifCount } = await supabase
+      // 3. Fetch Notifications and separate by type
+      const { data: notifications } = await supabase
         .from('notifications')
-        .select('*', { count: 'exact', head: true })
+        .select('id, type')
         .eq('receiver_id', uid)
         .eq('unread', true);
-      setUnreadNotifs(notifCount || 0);
+
+      let notifsCount = 0;
+      let groupsCount = 0;
+
+      if (notifications) {
+        notifications.forEach(n => {
+          if (n.type === 'group_invite' || n.type === 'group_join_request') {
+            groupsCount++;
+          } else {
+            notifsCount++;
+          }
+        });
+      }
+
+      setUnreadNotifs(notifsCount);
+      setUnreadGroups(groupsCount);
     };
 
     const initData = async () => {
@@ -192,6 +221,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         setProfile(null);
         setUnreadMessages(0);
         setUnreadNotifs(0);
+        setUnreadGroups(0);
       }
       setIsProfileLoading(false);
     };
@@ -211,7 +241,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
   // Update browser tab title and favicon with unread count
   useEffect(() => {
-    const totalUnread = unreadMessages + unreadNotifs;
+    const totalUnread = unreadMessages + unreadNotifs + unreadGroups;
     
     // Find or create the favicon link element
     let favicon = document.querySelector("link[rel~='icon']");
@@ -235,7 +265,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
       // Restore original favicon
       favicon.href = favicon.dataset.originalHref;
     } 
-  }, [unreadMessages, unreadNotifs]);
+  }, [unreadMessages, unreadNotifs, unreadGroups]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -268,16 +298,47 @@ export default function Sidebar({ activeSection, onSectionChange }) {
     const uid = session.user.id;
 
     try {
-      const { error } = await supabase
+      const { data: notifs } = await supabase
         .from('notifications')
-        .update({ unread: false })
+        .select('id, type')
         .eq('receiver_id', uid)
         .eq('unread', true);
       
-      if (error) throw error;
+      if (notifs) {
+        const idsToMark = notifs
+          .filter(n => n.type !== 'group_invite' && n.type !== 'group_join_request')
+          .map(n => n.id);
+          
+        if (idsToMark.length > 0) {
+          await supabase.from('notifications').update({ unread: false }).in('id', idsToMark);
+        }
+      }
       setUnreadNotifs(0);
     } catch (error) {
       console.error('Error marking notifications as read:', error);
+    }
+  };
+
+  const handleMarkAllGroupsRead = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const uid = session.user.id;
+
+    try {
+      const { data: notifs } = await supabase
+        .from('notifications')
+        .select('id, type')
+        .eq('receiver_id', uid)
+        .eq('unread', true)
+        .in('type', ['group_invite', 'group_join_request']);
+        
+      if (notifs && notifs.length > 0) {
+        const ids = notifs.map(n => n.id);
+        await supabase.from('notifications').update({ unread: false }).in('id', ids);
+      }
+      setUnreadGroups(0);
+    } catch (error) {
+      console.error('Error marking group notifications as read:', error);
     }
   };
 
@@ -287,7 +348,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
   const sidebarItems = [
     { id: 'feed', icon: Home, label: 'My Feed' },
-    { id: 'groups', icon: Users, label: 'Groups' },
+    { id: 'groups', icon: Users, label: 'Groups', badge: unreadGroups },
     { id: 'pages', icon: FileText, label: 'Pages' },
     { id: 'messages', icon: MessageSquare, label: 'Messages', badge: unreadMessages },
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks' },
@@ -338,8 +399,12 @@ export default function Sidebar({ activeSection, onSectionChange }) {
               badge={item.badge}
               active={activeSection === item.id}
               onClick={() => handleNavClick(item.id)}
-              onBadgeAction={item.id === 'messages' ? handleMarkAllMessagesRead : undefined}
+              onBadgeAction={
+                item.id === 'messages' ? handleMarkAllMessagesRead : 
+                item.id === 'groups' ? handleMarkAllGroupsRead : undefined
+              }
               isBouncing={item.id === 'messages' ? isBouncing : false}
+              isRinging={item.id === 'groups' ? isGroupRinging : false}
             />
           ))}
 

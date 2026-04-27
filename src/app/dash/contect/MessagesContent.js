@@ -745,14 +745,21 @@ export default function MessagesContent() {
         imageUrl = urlData.publicUrl;
       }
 
-      const { error } = await supabase.from('messages').insert({ 
+      const { data: insertedMsg, error } = await supabase.from('messages').insert({ 
         sender_id: currentUserId, 
         receiver_id: activeChat.id, 
         text: msgText.trim() || "",
         image_url: imageUrl,
         reply_to_message_id: replyToId
-      });
+      }).select().single();
       if (error) throw error;
+
+      setMessages((prev) => {
+        if (prev.some(m => m.id === insertedMsg.id)) {
+          return prev.filter(m => m.id !== optimisticId);
+        }
+        return prev.map(m => m.id === optimisticId ? { ...m, id: insertedMsg.id, isSending: false } : m);
+      });
 
       // Generate a notification for the recipient
       await supabase.from('notifications').insert({
@@ -992,9 +999,19 @@ export default function MessagesContent() {
                         </div>
                       )}
 
-                      <div className={`mt-1 flex items-center gap-1.5 text-[9px] text-gray-600 px-1 ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
+                      <div className={`mt-1 flex items-center gap-1.5 text-[10px] text-gray-600 px-1 ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {msg.sender_id === currentUserId && <CheckCheck size={12} className={msg.isSending ? "text-gray-300" : msg.is_read ? "text-blue-500" : "text-gray-400"} />}
+                        {msg.sender_id === currentUserId && (
+                          <span className="flex items-center gap-0.5">
+                            {msg.isSending ? (
+                              <span className="text-gray-400 italic">Sending...</span>
+                            ) : msg.is_read ? (
+                              <><CheckCheck size={14} className="text-blue-500" /><span className="text-blue-500 font-bold">Seen</span></>
+                            ) : (
+                              <><Check size={14} className="text-gray-400" /><span className="text-gray-500 font-medium">Delivered</span></>
+                            )}
+                          </span>
+                        )}
                       </div>
                     </div>
                     {msg.sender_id === currentUserId && (

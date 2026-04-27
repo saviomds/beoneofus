@@ -137,14 +137,31 @@ export default function FeedContent() {
   // --- LIKES LOGIC ---
   const handleLike = async (postId, hasLiked) => {
     if (!currentUserId) return;
+    
+    // Optimistically update the UI instantly
+    setPosts(prevPosts => prevPosts.map(post => {
+      if (post.id === postId) {
+        return {
+          ...post,
+          likes: hasLiked 
+            ? (post.likes || []).filter(l => l.user_id !== currentUserId)
+            : [...(post.likes || []), { user_id: currentUserId }]
+        };
+      }
+      return post;
+    }));
+
     try {
       if (hasLiked) {
         await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', currentUserId);
       } else {
         await supabase.from('likes').insert({ post_id: postId, user_id: currentUserId });
       }
-      fetchPosts();
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err);
+      // Revert to the true database state if the request fails
+      fetchPosts(); 
+    }
   };
 
   // --- COMMENTS LOGIC ---

@@ -22,7 +22,7 @@ import {
   MessageSquare,
   Hash,
   BadgeCheck,
-  Smile
+  ThumbsUp
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -73,7 +73,6 @@ export default function GroupsContent() {
   const [chatImageFile, setChatImageFile] = useState(null);
   const [chatImagePreview, setChatImagePreview] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
-  const [reactionPickerId, setReactionPickerId] = useState(null);
 
   // Fetch Groups
   useEffect(() => {
@@ -115,6 +114,11 @@ export default function GroupsContent() {
         .order('created_at', { ascending: true });
       
       if (!error) setWorkspaceMessages(data || []);
+      if (error) {
+        showToast(`Failed to load messages: ${error.message}`, "error");
+      } else {
+        setWorkspaceMessages(data || []);
+      }
     };
 
     fetchMessages();
@@ -403,6 +407,8 @@ export default function GroupsContent() {
 
     if (!text.trim() && !imageToUpload) return;
 
+    setIsProcessing(true);
+
     // Store values and reset UI immediately for responsiveness
     setMessageInput('');
     setChatImageFile(null);
@@ -439,17 +445,31 @@ export default function GroupsContent() {
       if (error) throw error;
     } catch (err) {
       showToast('Failed to send message: ' + err.message, 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   // --- HANDLE REACTION ---
   const handleReaction = async (messageId, emoji) => {
-    setReactionPickerId(null);
     const msg = workspaceMessages.find(m => m.id === messageId);
     if (!msg) return;
     
     const existing = msg.group_message_reactions?.find(r => r.user_id === currentUserId && r.emoji === emoji);
     
+    // Optimistic UI Update: Instantly update the local state
+    setWorkspaceMessages(prev => prev.map(m => {
+      if (m.id === messageId) {
+        const reactions = m.group_message_reactions || [];
+        if (existing) {
+          return { ...m, group_message_reactions: reactions.filter(r => r.id !== existing.id) };
+        } else {
+          return { ...m, group_message_reactions: [...reactions, { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, emoji }] };
+        }
+      }
+      return m;
+    }));
+
     try {
       if (existing) {
          await supabase.from('group_message_reactions').delete().eq('id', existing.id);
@@ -507,6 +527,7 @@ export default function GroupsContent() {
             ) : (
               workspaceMessages.map(msg => {
                 const isMe = msg.user_id === currentUserId;
+                const hasLiked = msg.group_message_reactions?.some(r => r.user_id === currentUserId && r.emoji === '👍');
                 return (
                   <div key={msg.id} className={`flex gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
                     {!isMe ? (
@@ -522,22 +543,13 @@ export default function GroupsContent() {
                         )}
                       </div>
                     ) : (
-                      <div className="flex items-end relative">
-                        <button onClick={() => setReactionPickerId(reactionPickerId === msg.id ? null : msg.id)} className="p-2 text-gray-600 hover:text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Smile size={14} />
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all px-2">
+                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 ${hasLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} title="Like">
+                          <ThumbsUp size={14} className={hasLiked ? "fill-current" : ""} />
                         </button>
-                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-gray-100 transition-all" title="Reply">
                           <MessageSquare size={14} />
                         </button>
-                        {reactionPickerId === msg.id && (
-                          <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 shadow-xl rounded-xl p-1.5 flex gap-1 z-50 animate-in zoom-in-95 duration-200">
-                            {["👍", "❤️", "🔥", "🚀", "👀", "💯"].map(emoji => (
-                              <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg text-lg transition-colors">
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     )}
                     <div className={`flex flex-col group ${isMe ? "items-end" : "items-start"} max-w-[80%]`}>
@@ -562,25 +574,15 @@ export default function GroupsContent() {
                         </div>
                       </div>
                       
-                      {msg.group_message_reactions && msg.group_message_reactions.length > 0 && (
+                      {msg.group_message_reactions && msg.group_message_reactions.filter(r => r.emoji === '👍').length > 0 && (
                         <div className={`flex flex-wrap gap-1 mt-1 relative z-10 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          {Object.entries(
-                            msg.group_message_reactions.reduce((acc, r) => {
-                               acc[r.emoji] = (acc[r.emoji] || 0) + 1;
-                               return acc;
-                            }, {})
-                          ).map(([emoji, count]) => {
-                             const hasReacted = msg.group_message_reactions.some(r => r.user_id === currentUserId && r.emoji === emoji);
-                             return (
-                               <button 
-                                 key={emoji}
-                                 onClick={() => handleReaction(msg.id, emoji)}
-                                 className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-lg border transition-all ${hasReacted ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                               >
-                                 <span>{emoji}</span> <span>{count}</span>
-                               </button>
-                             )
-                          })}
+                          <button 
+                            onClick={() => handleReaction(msg.id, '👍')}
+                            className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all shadow-sm ${hasLiked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                          >
+                            <ThumbsUp size={10} className={hasLiked ? "fill-current text-white" : "text-gray-400"} /> 
+                            <span>{msg.group_message_reactions.filter(r => r.emoji === '👍').length}</span>
+                          </button>
                         </div>
                       )}
 
@@ -589,22 +591,13 @@ export default function GroupsContent() {
                       </span>
                     </div>
                     {!isMe && (
-                      <div className="flex items-end relative">
-                        <button onClick={() => setReactionPickerId(reactionPickerId === msg.id ? null : msg.id)} className="p-2 text-gray-600 hover:text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Smile size={14} />
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all px-2">
+                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 ${hasLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} title="Like">
+                          <ThumbsUp size={14} className={hasLiked ? "fill-current" : ""} />
                         </button>
-                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-600 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-gray-100 transition-all" title="Reply">
                           <MessageSquare size={14} />
                         </button>
-                        {reactionPickerId === msg.id && (
-                          <div className="absolute bottom-full left-0 mb-1 bg-white border border-gray-200 shadow-xl rounded-xl p-1.5 flex gap-1 z-50 animate-in zoom-in-95 duration-200">
-                            {["👍", "❤️", "🔥", "🚀", "👀", "💯"].map(emoji => (
-                              <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-lg text-lg transition-colors">
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        )}
                       </div>
                   )}
                   </div>
@@ -625,6 +618,7 @@ export default function GroupsContent() {
                   <p className="text-gray-500 truncate">{replyingTo.text || 'Image'}</p>
                 </div>
                 <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 hover:text-white"><X size={16} /></button>
+                <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 hover:text-gray-900"><X size={16} /></button>
               </div>
             )}
             {chatImagePreview && (

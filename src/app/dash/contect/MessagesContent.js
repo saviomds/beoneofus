@@ -9,7 +9,8 @@ import {
   ChevronLeft,
   MessageSquare,
   BadgeCheck,
-  Sparkles, Loader2
+  Sparkles, Loader2,
+  ThumbsUp
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -42,6 +43,15 @@ export default function MessagesContent() {
   const [imagePreview, setImagePreview] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
   const imageInputRef = useRef(null);
+  
+  // Toast State
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
+  const showToast = (msg, type = "success") => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
 
   // Call States
   const [activeCall, setActiveCall] = useState(null);
@@ -259,7 +269,7 @@ export default function MessagesContent() {
     const fetchMessages = async () => {
       const { data } = await supabase
         .from('messages')
-        .select('*, replied_message:reply_to_message_id(*)')
+        .select('*, replied_message:reply_to_message_id(*), message_reactions(id, user_id, emoji)')
         .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`)
         .order('created_at', { ascending: true });
       setMessages(data || []);
@@ -286,7 +296,7 @@ export default function MessagesContent() {
         const newMessage = payload.new;
         if (newMessage.sender_id === activeChat.id || newMessage.receiver_id === activeChat.id) {
           // Fetch the joined replied message data immediately
-          const { data } = await supabase.from('messages').select('*, replied_message:reply_to_message_id(*)').eq('id', newMessage.id).maybeSingle();
+          const { data } = await supabase.from('messages').select('*, replied_message:reply_to_message_id(*), message_reactions(id, user_id, emoji)').eq('id', newMessage.id).maybeSingle();
           if (data) {
             setMessages((prev) => prev.find(m => m.id === data.id) ? prev : [...prev, data]);
           } else {
@@ -304,6 +314,9 @@ export default function MessagesContent() {
         if (updatedMessage.sender_id === activeChat.id || updatedMessage.receiver_id === activeChat.id) {
            setMessages((prev) => prev.map(m => m.id === updatedMessage.id ? { ...m, is_read: updatedMessage.is_read } : m));
         }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, () => {
+        checkConnectionAndFetch();
       })
       .subscribe();
 
@@ -497,7 +510,7 @@ export default function MessagesContent() {
         })
         .catch(err => {
           console.error("Media access denied:", err);
-          alert("Camera or Microphone access is required for calls.");
+          showToast("Camera or Microphone access is required for calls.", "error");
           endCall();
         });
     }
@@ -556,11 +569,11 @@ export default function MessagesContent() {
     
     if (error) {
       if (error.code === '23503') {
-        alert("This user no longer exists.");
+        showToast("This user no longer exists.", "error");
         setContacts(prev => prev.filter(c => c.id !== activeChat.id));
         setActiveChat(null);
       } else {
-        alert("Failed to send request: " + error.message);
+        showToast("Failed to send request: " + error.message, "error");
       }
       return;
     }
@@ -607,7 +620,7 @@ export default function MessagesContent() {
       setShowMoreMenu(false);
     } catch (error) { 
         console.error("Block error:", error.message);
-        alert("System failure: Could not sever link.");
+        showToast("System failure: Could not sever link.", "error");
     } finally { setIsProcessing(false); }
   };
 
@@ -658,9 +671,41 @@ export default function MessagesContent() {
       const cleanReply = data.message.content.replace(/^["']|["']$/g, '').trim();
       setInputValue(cleanReply);
     } catch (error) {
-      alert(error.message);
+      showToast(error.message, "error");
     } finally {
       setIsSuggesting(false);
+    }
+  };
+
+  // --- HANDLE REACTION ---
+  const handleReaction = async (messageId, emoji) => {
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg) return;
+    
+    const existing = msg.message_reactions?.find(r => r.user_id === currentUserId && r.emoji === emoji);
+    
+    // Optimistic UI Update: Instantly update the local state
+    setMessages(prev => prev.map(m => {
+      if (m.id === messageId) {
+        const reactions = m.message_reactions || [];
+        if (existing) {
+          return { ...m, message_reactions: reactions.filter(r => r.id !== existing.id) };
+        } else {
+          return { ...m, message_reactions: [...reactions, { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, emoji }] };
+        }
+      }
+      return m;
+    }));
+
+    try {
+      if (existing) {
+         await supabase.from('message_reactions').delete().eq('id', existing.id);
+      } else {
+         const { error } = await supabase.from('message_reactions').insert({ message_id: messageId, user_id: currentUserId, emoji });
+         if (error) throw error;
+      }
+    } catch (err) {
+      showToast("Reaction failed. Make sure the 'message_reactions' table exists.", "error");
     }
   };
 
@@ -718,7 +763,7 @@ export default function MessagesContent() {
       });
     } catch (err) {
       setMessages((prev) => prev.filter(m => m.id !== optimisticId));
-      alert("Failed to send message: " + err.message);
+      showToast("Failed to send message: " + err.message, "error");
     }
   };
 
@@ -900,15 +945,17 @@ export default function MessagesContent() {
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 space-y-4 no-scrollbar scroll-smooth flex flex-col relative z-0">
               {connectionStatus === 'accepted' ? (
-                messages.map((msg) => (
+                messages.map((msg) => {
+                  const hasLiked = msg.message_reactions?.some(r => r.user_id === currentUserId && r.emoji === '👍');
+                  return (
                   <div key={msg.id} className={`flex gap-2 group ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
                     {msg.sender_id !== currentUserId && (
-                      <div className="flex items-end">
-                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Reply">
-                          <MessageSquare size={14} />
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all px-2">
+                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 ${hasLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} title="Like">
+                          <ThumbsUp size={14} className={hasLiked ? "fill-current" : ""} />
                         </button>
-                        <button onClick={() => handleDeleteMessage(msg.id)} className="p-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">
-                          <Trash2 size={14} />
+                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-gray-100 transition-all" title="Reply">
+                          <MessageSquare size={14} />
                         </button>
                       </div>
                     )}
@@ -932,20 +979,37 @@ export default function MessagesContent() {
                           {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
                         </div>
                       </div>
+                      
+                      {msg.message_reactions && msg.message_reactions.filter(r => r.emoji === '👍').length > 0 && (
+                        <div className={`flex flex-wrap gap-1 mt-1 relative z-10 ${msg.sender_id === currentUserId ? 'justify-end' : 'justify-start'}`}>
+                          <button 
+                            onClick={() => handleReaction(msg.id, '👍')}
+                            className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all shadow-sm ${hasLiked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                          >
+                            <ThumbsUp size={10} className={hasLiked ? "fill-current text-white" : "text-gray-400"} /> 
+                            <span>{msg.message_reactions.filter(r => r.emoji === '👍').length}</span>
+                          </button>
+                        </div>
+                      )}
+
                       <div className={`mt-1 flex items-center gap-1.5 text-[9px] text-gray-600 px-1 ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {msg.sender_id === currentUserId && <CheckCheck size={12} className={msg.isSending ? "text-gray-300" : msg.is_read ? "text-blue-500" : "text-gray-400"} />}
                       </div>
                     </div>
                     {msg.sender_id === currentUserId && (
-                      <div className="flex items-end">
-                        <button onClick={() => setReplyingTo(msg)} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all px-2">
+                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 ${hasLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} title="Like">
+                          <ThumbsUp size={14} className={hasLiked ? "fill-current" : ""} />
+                        </button>
+                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-gray-100 transition-all" title="Reply">
                           <MessageSquare size={14} />
                         </button>
                       </div>
                     )}
                   </div>
-                ))
+                );
+              })
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
                   {connectionStatus === 'blocked' ? (
@@ -1029,6 +1093,14 @@ export default function MessagesContent() {
               <ProfileContent viewUserId={selectedUserId} />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Custom Toast Popup */}
+      {toastMessage && (
+        <div className={`fixed bottom-10 right-10 z-[300] flex items-center gap-3 bg-white border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 max-w-md ${toastType === 'error' ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
+          {toastType === 'error' ? <AlertTriangle size={18} className="text-red-500 shrink-0" /> : <Check size={18} className="text-green-500 shrink-0" />}
+          <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
         </div>
       )}
     </div>

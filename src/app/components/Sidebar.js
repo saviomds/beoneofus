@@ -19,7 +19,14 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction,
     onClick={onClick}
   >
     <div className="flex items-center gap-4">
-      <Icon size={20} className={`${isRinging ? 'animate-ring text-blue-500' : ''} ${isBouncing ? 'animate-message-bounce text-blue-500' : ''}`} />
+      <div className="relative flex items-center justify-center">
+        <Icon size={20} className={`${isRinging ? 'animate-ring text-blue-500' : ''} ${isBouncing ? 'animate-message-bounce text-blue-500' : ''}`} />
+        {badge > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white shadow-sm shrink-0">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </div>
       <span className="font-bold text-sm tracking-tight">{label}</span>
     </div>
     <div className="flex items-center gap-2">
@@ -31,11 +38,6 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction,
         >
           <CheckCheck size={16} />
         </button>
-      )}
-      {badge > 0 && (
-        <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-lg shrink-0 shadow-sm">
-          {badge > 99 ? '99+' : badge}
-        </span>
       )}
     </div>
   </div>

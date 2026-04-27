@@ -43,6 +43,9 @@ export default function MessagesContent() {
   const [imagePreview, setImagePreview] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
   const imageInputRef = useRef(null);
+  const [typingUsers, setTypingUsers] = useState({});
+  const typingTimeoutsRef = useRef({});
+  const lastTypingSentRef = useRef(0);
   
   // Toast State
   const [toastMessage, setToastMessage] = useState("");
@@ -184,8 +187,13 @@ export default function MessagesContent() {
           }
           
           if (!previews[otherId]) {
-            const prefix = msg.sender_id === currentUserId ? 'You: ' : '';
-            previews[otherId] = prefix + (msg.text || (msg.image_url ? 'Sent an image' : 'New transmission'));
+            const isSender = msg.sender_id === currentUserId;
+            const prefix = isSender ? 'You: ' : '';
+            previews[otherId] = {
+              text: prefix + (msg.text || (msg.image_url ? 'Sent an image' : 'New transmission')),
+              isSender,
+              isRead: msg.is_read
+            };
           }
         });
       }
@@ -288,7 +296,7 @@ export default function MessagesContent() {
 
     checkConnectionAndFetch();
 
-    const channelId = `chat-${activeChat.id}`;
+    const channelId = `chat-${[currentUserId, activeChat.id].sort().join('-')}`;
     channelRef.current = supabase
       .channel(channelId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'connections' }, () => checkConnectionAndFetch())
@@ -365,6 +373,15 @@ export default function MessagesContent() {
       })
       .on('broadcast', { event: 'call_end' }, ({ payload }) => {
         if (payload.targetId === currentUserId) cleanupLocalMedia();
+      })
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.targetId === currentUserId) {
+          setTypingUsers(prev => ({ ...prev, [payload.senderId]: true }));
+          if (typingTimeoutsRef.current[payload.senderId]) clearTimeout(typingTimeoutsRef.current[payload.senderId]);
+          typingTimeoutsRef.current[payload.senderId] = setTimeout(() => {
+            setTypingUsers(prev => ({ ...prev, [payload.senderId]: false }));
+          }, 3000);
+        }
       })
       .on('broadcast', { event: 'webrtc_offer' }, async ({ payload }) => {
         if (payload.targetId === currentUserId) {
@@ -709,6 +726,19 @@ export default function MessagesContent() {
     }
   };
 
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+    const now = Date.now();
+    if (now - lastTypingSentRef.current > 1500) {
+      globalCallsRef.current?.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { targetId: activeChat.id, senderId: currentUserId }
+      });
+      lastTypingSentRef.current = now;
+    }
+  };
+
   // 7. Send Message
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -723,7 +753,14 @@ export default function MessagesContent() {
     const optimisticId = Date.now(); 
     setMessages((prev) => [...prev, { id: optimisticId, sender_id: currentUserId, receiver_id: activeChat.id, text: msgText, image_url: imagePreview, replied_message: replyingTo, created_at: new Date().toISOString(), isSending: true }]);
     
-    setLastMessagePreviews(prev => ({ ...prev, [activeChat.id]: `You: ${msgText.trim() || (imageToUpload ? 'Sent an image' : 'New transmission')}` }));
+    setLastMessagePreviews(prev => ({ 
+      ...prev, 
+      [activeChat.id]: {
+        text: `You: ${msgText.trim() || (imageToUpload ? 'Sent an image' : 'New transmission')}`,
+        isSender: true,
+        isRead: false
+      }
+    }));
 
     setInputValue("");
     setImageFile(null);
@@ -885,10 +922,21 @@ export default function MessagesContent() {
                     <span className="text-[9px] font-black text-white bg-blue-600 px-1.5 py-0.5 rounded-md shrink-0 animate-pulse shadow-sm shadow-blue-600/30">{unreadCounts[contact.id]} NEW</span>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
-                   <p className={`text-xs truncate ${unreadCounts[contact.id] > 0 ? 'text-blue-600 font-bold' : 'text-gray-500 font-medium'}`}>
-                     {lastMessagePreviews[contact.id] || (Object.keys(onlineUsers).includes(contact.id) ? 'Online now' : 'Tap to open transmission')}
+                <div className="flex items-center gap-1 min-w-0">
+                   <p className={`text-xs truncate flex-1 ${typingUsers[contact.id] ? 'text-blue-500 italic font-bold' : unreadCounts[contact.id] > 0 ? 'text-blue-600 font-bold' : 'text-gray-500 font-medium'}`}>
+                     {typingUsers[contact.id] ? (
+                       'typing...'
+                     ) : (
+                       lastMessagePreviews[contact.id]?.text || (typeof lastMessagePreviews[contact.id] === 'string' ? lastMessagePreviews[contact.id] : (Object.keys(onlineUsers).includes(contact.id) ? 'Online now' : 'Tap to open transmission'))
+                     )}
                    </p>
+                   {!typingUsers[contact.id] && lastMessagePreviews[contact.id]?.isSender && (
+                     lastMessagePreviews[contact.id].isRead ? (
+                       <CheckCheck size={14} className="text-blue-500 shrink-0" />
+                     ) : (
+                       <Check size={14} className="text-gray-400 shrink-0" />
+                     )
+                   )}
                 </div>
               </div>
               {unreadCounts[contact.id] > 0 && (
@@ -952,7 +1000,8 @@ export default function MessagesContent() {
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 space-y-4 no-scrollbar scroll-smooth flex flex-col relative z-0">
               {connectionStatus === 'accepted' ? (
-                messages.map((msg) => {
+                <>
+                {messages.map((msg) => {
                   const hasLiked = msg.message_reactions?.some(r => r.user_id === currentUserId && r.emoji === '👍');
                   return (
                   <div key={msg.id} className={`flex gap-2 group ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
@@ -1026,7 +1075,19 @@ export default function MessagesContent() {
                     )}
                   </div>
                 );
-              })
+              })}
+              {typingUsers[activeChat.id] && (
+                <div className="flex gap-2 group justify-start animate-in fade-in slide-in-from-bottom-2">
+                  <div className="bg-gray-100 border border-gray-200 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-sm w-max">
+                    <span className="flex gap-1">
+                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </span>
+                  </div>
+                </div>
+              )}
+              </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
                   {connectionStatus === 'blocked' ? (
@@ -1085,7 +1146,7 @@ export default function MessagesContent() {
                 <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 hover:text-blue-600 transition-colors p-2 shrink-0">
                   <Paperclip size={18} />
                 </button>
-                <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-base md:text-sm text-gray-900 py-2" />
+                <input value={inputValue} onChange={handleInputChange} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-base md:text-sm text-gray-900 py-2" />
                 <button type="submit" className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-full transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
               </form>
             </div>

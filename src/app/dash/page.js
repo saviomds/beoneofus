@@ -5,15 +5,33 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '../supabaseClient';
 import NewPost from '../components/NewPost';
 import { useDashboard } from './contect/DashboardContext';
-import FeedContent from './contect/FeedContent';
-import GroupsContent from './contect/GroupsContent';
-import MessagesContent from './contect/MessagesContent';
-import BookmarksContent from './contect/BookmarksContent';
-import MoreContent from './contect/MoreContent';
-import NotificationsContent from './contect/NotificationsContent';
-import SettingsContent from './contect/SettingsContent';
-import ProfileContent from './contect/ProfileContent';
-import DocsContent from './contect/DocsContent';
+import dynamic from 'next/dynamic';
+
+// Generic loading skeleton to display while tab components are being dynamically fetched
+const TabSkeleton = () => (
+  <div className="w-full h-full animate-pulse space-y-6">
+    <div className="flex items-center gap-4 mb-6">
+      <div className="w-12 h-12 bg-gray-200 rounded-2xl"></div>
+      <div className="space-y-2">
+        <div className="h-5 bg-gray-200 rounded-lg w-40"></div>
+        <div className="h-3 bg-gray-200 rounded-lg w-24"></div>
+      </div>
+    </div>
+    <div className="w-full h-40 bg-gray-100 rounded-[2rem] border border-gray-200"></div>
+    <div className="w-full h-40 bg-gray-100 rounded-[2rem] border border-gray-200"></div>
+    <div className="w-full h-40 bg-gray-100 rounded-[2rem] border border-gray-200"></div>
+  </div>
+);
+
+const FeedContent = dynamic(() => import('./contect/FeedContent'), { loading: () => <TabSkeleton /> });
+const GroupsContent = dynamic(() => import('./contect/GroupsContent'), { loading: () => <TabSkeleton /> });
+const MessagesContent = dynamic(() => import('./contect/MessagesContent'), { loading: () => <TabSkeleton /> });
+const BookmarksContent = dynamic(() => import('./contect/BookmarksContent'), { loading: () => <TabSkeleton /> });
+const MoreContent = dynamic(() => import('./contect/MoreContent'), { loading: () => <TabSkeleton /> });
+const NotificationsContent = dynamic(() => import('./contect/NotificationsContent'), { loading: () => <TabSkeleton /> });
+const SettingsContent = dynamic(() => import('./contect/SettingsContent'), { loading: () => <TabSkeleton /> });
+const ProfileContent = dynamic(() => import('./contect/ProfileContent'), { loading: () => <TabSkeleton /> });
+const DocsContent = dynamic(() => import('./contect/DocsContent'), { loading: () => <TabSkeleton /> });
 
 function DashboardTabHandler() {
   const { setActiveSection } = useDashboard();
@@ -21,10 +39,10 @@ function DashboardTabHandler() {
   const router = useRouter();
 
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && setActiveSection) {
-      setActiveSection(tab);
-      // Clear the tab from URL so we aren't trapped when clicking other sidebar links
+    const section = searchParams.get('section') || searchParams.get('tab');
+    if (section && setActiveSection) {
+      setActiveSection(section);
+      // Clear the param from URL so we aren't trapped when clicking other sidebar links
       router.replace('/dash', { scroll: false });
     }
   }, [searchParams, setActiveSection, router]);
@@ -47,6 +65,27 @@ export default function Dashboard() {
     });
 
     return () => authListener.subscription?.unsubscribe();
+  }, []);
+
+  // Preload heavy tabs in the background when the browser is idle
+  useEffect(() => {
+    const preloadTabs = () => {
+      // Manually calling import() fetches and caches the JS chunks
+      import('./contect/GroupsContent');
+      import('./contect/MessagesContent');
+      import('./contect/MoreContent');
+      import('./contect/NotificationsContent');
+      import('./contect/ProfileContent');
+      import('./contect/SettingsContent');
+    };
+
+    if (typeof window !== 'undefined') {
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(preloadTabs);
+      } else {
+        setTimeout(preloadTabs, 2000);
+      }
+    }
   }, []);
 
   const renderContent = () => {
@@ -111,7 +150,7 @@ export default function Dashboard() {
       )}
 
       {/* 3. Dynamic Content Based on Active Section */}
-      <div className="w-full h-full">
+      <div key={activeSection} className="w-full h-full animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
         {renderContent()}
       </div>
     </div>

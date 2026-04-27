@@ -52,10 +52,10 @@ export default function QuickViewModal({ type, onClose, onNavigate }) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-xl" onClick={onClose} />
+      <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-xl" onClick={onClose} />
       
-      <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-[3rem] p-10 shadow-xl animate-in zoom-in-95 duration-200">
-        <button onClick={onClose} className="absolute top-8 right-8 text-gray-400 hover:text-gray-900 transition-colors">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[3rem] p-10 shadow-xl animate-in zoom-in-95 duration-200">
+        <button onClick={onClose} className="absolute top-8 right-8 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
           <X size={24} />
         </button>
 
@@ -63,7 +63,7 @@ export default function QuickViewModal({ type, onClose, onNavigate }) {
           <span className="text-[10px] font-black text-blue-500 uppercase tracking-[4px] mb-2">
             {isDiscuss ? 'Community Forums' : 'Global Projects'}
           </span>
-          <h2 className="text-4xl font-black text-gray-900 tracking-tighter mb-6">
+          <h2 className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tighter mb-6">
             {isDiscuss ? 'Live Discussions' : 'Discover New Nodes'}
           </h2>
 
@@ -71,19 +71,19 @@ export default function QuickViewModal({ type, onClose, onNavigate }) {
             {loading ? (
               <>
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="p-4 bg-gray-50 rounded-2xl border border-gray-200">
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                  <div key={i} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2"></div>
                   </div>
                 ))}
               </>
             ) : items.length > 0 ? items.map(item => (
-              <div key={item.id} onClick={() => onNavigate(isDiscuss ? 'feed' : 'groups')} className="p-4 bg-gray-50 rounded-2xl border border-gray-200 hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer group">
-                <p className="text-sm font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">{item.title || item.name || 'Untitled Node'}</p>
-                <span className="text-[10px] text-gray-500 font-bold uppercase line-clamp-1">{item.content || item.description || 'Join the conversation...'}</span>
+              <div key={item.id} onClick={() => onNavigate(isDiscuss ? 'feed' : 'groups')} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-blue-500/30 dark:hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer group">
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">{item.title || item.name || 'Untitled Node'}</p>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase line-clamp-1">{item.content || item.description || 'Join the conversation...'}</span>
               </div>
             )) : (
-              <p className="text-gray-500 text-sm col-span-2 text-center py-4">
+              <p className="text-gray-500 dark:text-gray-400 text-sm col-span-2 text-center py-4">
                 {isDiscuss ? 'No live discussions found.' : 'No public nodes found.'}
               </p>
             )}

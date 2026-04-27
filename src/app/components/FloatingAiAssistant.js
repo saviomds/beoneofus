@@ -15,12 +15,12 @@ const floatingMarkdownComponents = {
   h1: ({ node, ...props }) => <h1 className="text-sm font-black mb-2 mt-3" {...props} />,
   h2: ({ node, ...props }) => <h2 className="text-sm font-bold mb-2 mt-3" {...props} />,
   h3: ({ node, ...props }) => <h3 className="text-xs font-bold mb-1 mt-2" {...props} />,
-  a: ({ node, ...props }) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-  strong: ({ node, ...props }) => <strong className="font-bold text-gray-900" {...props} />,
+  a: ({ node, ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+  strong: ({ node, ...props }) => <strong className="font-bold text-gray-900 dark:text-gray-100" {...props} />,
   code({ node, inline, className, children, ...props }) {
     const match = /language-(\w+)/.exec(className || "");
     return !inline && match ? (
-      <div className="rounded-lg overflow-hidden my-3 border border-gray-200 shadow-sm bg-[#1E1E1E]">
+      <div className="rounded-lg overflow-hidden my-3 border border-gray-200 dark:border-gray-700 shadow-sm bg-[#1E1E1E]">
         <div className="bg-gray-800/80 px-3 py-1.5 text-[9px] font-mono text-gray-400 uppercase tracking-widest flex justify-between items-center border-b border-white/5">
           <span>{match[1]}</span>
         </div>
@@ -35,7 +35,7 @@ const floatingMarkdownComponents = {
         </SyntaxHighlighter>
       </div>
     ) : (
-      <code {...props} className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded font-mono text-[10px] border border-gray-200">
+      <code {...props} className="bg-gray-100 dark:bg-gray-800 dark:text-gray-200 px-1 py-0.5 rounded font-mono text-[10px] border border-gray-200 dark:border-gray-700">
         {children}
       </code>
     );
@@ -161,27 +161,27 @@ export default function FloatingAiAssistant() {
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end">
       {/* Chat Window */}
       {isOpen && (
-        <div className="w-[350px] sm:w-[400px] h-[500px] max-h-[80vh] bg-white border border-gray-200 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col mb-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
+        <div className="w-[350px] sm:w-[400px] h-[500px] max-h-[80vh] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col mb-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
           {/* Header */}
-          <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50/90 backdrop-blur-md z-10">
+          <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-md z-10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center text-white shadow-sm border border-gray-800">
+              <div className="w-10 h-10 rounded-xl bg-gray-900 dark:bg-gray-700 flex items-center justify-center text-white shadow-sm border border-gray-800 dark:border-gray-600">
                 <Bot size={20} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-gray-900">beoneofus AI</h3>
-                <p className="text-[10px] text-gray-500 font-medium uppercase tracking-widest">Online</p>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">beoneofus AI</h3>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-widest">Online</p>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-900 hover:bg-gray-200 p-2 rounded-full transition-colors">
+            <button onClick={() => setIsOpen(false)} className="text-gray-400 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors">
               <X size={18} />
             </button>
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-white">
+          <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-white dark:bg-gray-900">
             {isFetchingHistory ? (
-              <div className="flex flex-col items-center justify-center h-full space-y-3 text-gray-400">
+              <div className="flex flex-col items-center justify-center h-full space-y-3 text-gray-400 dark:text-gray-500">
                 <Loader2 size={24} className="animate-spin text-blue-500" />
                 <span className="text-xs font-medium">Loading history...</span>
               </div>
@@ -189,10 +189,10 @@ export default function FloatingAiAssistant() {
               <>
                 {messages.map((msg, index) => (
                   <div key={index} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${msg.role === "user" ? "bg-blue-100 text-blue-600" : "bg-gray-900 text-white"}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${msg.role === "user" ? "bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" : "bg-gray-900 dark:bg-gray-700 text-white"}`}>
                       {msg.role === "user" ? <User size={14} /> : <Bot size={14} />}
                     </div>
-                    <div className={`max-w-[80%] rounded-2xl p-3.5 text-xs ${msg.role === "user" ? "bg-blue-600 text-white shadow-md shadow-blue-500/20 whitespace-pre-wrap" : "bg-gray-50 border border-gray-100 text-gray-800"}`}>
+                    <div className={`max-w-[80%] rounded-2xl p-3.5 text-xs ${msg.role === "user" ? "bg-blue-600 text-white shadow-md shadow-blue-500/20 whitespace-pre-wrap" : "bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200"}`}>
                       {msg.role === "user" ? (
                         msg.content
                       ) : msg.isNew ? (
@@ -205,11 +205,11 @@ export default function FloatingAiAssistant() {
                 ))}
                 {isLoading && (
                   <div className="flex gap-3 flex-row">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-gray-900 text-white shadow-sm">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-gray-900 dark:bg-gray-700 text-white shadow-sm">
                       <Bot size={14} />
                     </div>
-                    <div className="rounded-2xl p-3.5 bg-gray-50 border border-gray-100 text-gray-800 flex items-center gap-2">
-                      <Loader2 size={14} className="animate-spin text-gray-900" /> <span className="text-[10px] text-gray-500 font-medium">Thinking...</span>
+                    <div className="rounded-2xl p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                      <Loader2 size={14} className="animate-spin text-gray-900 dark:text-gray-100" /> <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Thinking...</span>
                     </div>
                   </div>
                 )}
@@ -219,20 +219,20 @@ export default function FloatingAiAssistant() {
           </div>
 
           {/* Input Area */}
-          <div className="p-4 bg-white border-t border-gray-100">
+          <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
             <form onSubmit={sendMessage} className="flex items-center gap-2">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask beoneofus AI..."
-                className="flex-1 bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 text-xs rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/10 transition-all"
                 disabled={isLoading || isFetchingHistory}
               />
               <button
                 type="submit"
                 disabled={!input.trim() || isLoading || isFetchingHistory}
-                className="bg-gray-900 hover:bg-gray-800 disabled:opacity-50 disabled:hover:bg-gray-900 text-white rounded-xl p-3 transition-all shadow-sm shrink-0"
+                className="bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 disabled:opacity-50 disabled:hover:bg-gray-900 dark:disabled:hover:bg-gray-700 text-white rounded-xl p-3 transition-all shadow-sm shrink-0"
               >
                 <Send size={16} className={isLoading ? "opacity-50" : ""} />
               </button>
@@ -244,7 +244,7 @@ export default function FloatingAiAssistant() {
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-105 active:scale-95 transition-all border-[3px] border-white ${isOpen ? 'bg-gray-900' : 'bg-blue-600 hover:bg-blue-500'}`}
+        className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-105 active:scale-95 transition-all border-[3px] border-white dark:border-gray-800 ${isOpen ? 'bg-gray-900 dark:bg-gray-700' : 'bg-blue-600 hover:bg-blue-500'}`}
       >
         {isOpen ? <X size={24} /> : <Sparkles size={24} />}
       </button>

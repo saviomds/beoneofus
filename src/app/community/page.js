@@ -13,16 +13,16 @@ export default function Community() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 selection:bg-blue-500/30 overflow-x-hidden relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 selection:bg-blue-500/30 overflow-x-hidden relative">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000008_1px,transparent_1px),linear-gradient(to_bottom,#00000008_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
       
-      <nav className="fixed top-0 w-full border-b border-gray-200 bg-white/80 backdrop-blur-xl z-50">
+      <nav className="fixed top-0 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl z-50">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="font-black text-2xl tracking-tighter flex items-center gap-2">
-            <Terminal className="text-blue-500" size={28} />
-            <span>beone<span className="text-blue-600">of</span>us</span>
+          <Link href="/" className="font-black text-2xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <Terminal className="text-blue-500 dark:text-blue-400" size={28} />
+            <span>beone<span className="text-blue-600 dark:text-blue-400">of</span>us</span>
           </Link>
-          <Link href="/" className="text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors flex items-center gap-2">
+          <Link href="/" className="text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2">
             <ArrowLeft size={16} /> Back to Home
           </Link>
         </div>
@@ -30,23 +30,23 @@ export default function Community() {
 
       <main className="pt-32 pb-20 px-6 relative z-10 max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm border border-blue-100">
+          <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm border border-blue-100 dark:border-blue-800/50">
             <Users size={40} />
           </div>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-4">The Global Community</h1>
-          <p className="text-lg text-gray-600 font-medium max-w-2xl mx-auto">Join thousands of developers in real-time discussions across specialized technological spaces.</p>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 text-gray-900 dark:text-gray-100">The Global Community</h1>
+          <p className="text-lg text-gray-600 dark:text-gray-400 font-medium max-w-2xl mx-auto">Join thousands of developers in real-time discussions across specialized technological spaces.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
           {communities.map((space, i) => (
-            <div key={i} className="bg-white border border-gray-200 rounded-[2rem] p-8 hover:border-blue-500/50 hover:shadow-xl transition-all cursor-pointer group flex items-start gap-6">
-              <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-700 shrink-0 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors border border-gray-100">
+            <div key={i} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-8 hover:border-blue-500/50 dark:hover:border-blue-500/50 hover:shadow-xl transition-all cursor-pointer group flex items-start gap-6">
+              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800/50 rounded-2xl flex items-center justify-center text-gray-700 dark:text-gray-300 shrink-0 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors border border-gray-100 dark:border-gray-700">
                 {space.icon}
               </div>
               <div>
-                <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">{space.name}</h4>
-                <p className="text-sm text-gray-600 leading-relaxed mb-4">{space.desc}</p>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                <h4 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{space.name}</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">{space.desc}</p>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">
                   <Users size={12} /> {space.members} Active
                 </span>
               </div>
@@ -84,7 +84,7 @@ export default function Community() {
         </div>
       </main>
 
-      <footer className="border-t border-gray-200 py-10 text-center text-gray-500 text-xs font-mono uppercase tracking-widest relative z-10 bg-white mt-10">
+      <footer className="border-t border-gray-200 dark:border-gray-800 py-10 text-center text-gray-500 dark:text-gray-400 text-xs font-mono uppercase tracking-widest relative z-10 bg-white dark:bg-gray-900 mt-10">
         beoneofus platform v1.0 © {new Date().getFullYear()}
       </footer>
       <FloatingAiAssistant />

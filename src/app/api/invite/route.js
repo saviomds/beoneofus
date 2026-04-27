@@ -16,20 +16,35 @@ export async function POST(request) {
         to: email,
         subject: "You're invited to join beoneofus!",
         html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f9fafb;">
-            <div style="background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #f3f4f6;">
-              <h2 style="color: #111827; margin-top: 0; font-size: 24px; font-weight: 800;">You've been invited!</h2>
-              <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">Hi there,</p>
-              <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">I'd like to invite you to join the <span style="color: #2563eb; font-weight: bold;">beoneofus</span> developer network. It's an exclusive space to connect, discuss, and discover new nodes.</p>
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              @media (prefers-color-scheme: dark) {
+                .email-bg { background-color: #111827 !important; }
+                .card-bg { background-color: #1f2937 !important; border-color: #374151 !important; }
+                .text-main { color: #f9fafb !important; }
+                .text-muted { color: #d1d5db !important; }
+              }
+            </style>
+          </head>
+          <body style="margin: 0; padding: 0;">
+          <div class="email-bg" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f9fafb;">
+            <div class="card-bg" style="background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #f3f4f6;">
+              <h2 class="text-main" style="color: #111827; margin-top: 0; font-size: 24px; font-weight: 800;">You've been invited!</h2>
+              <p class="text-muted" style="color: #4b5563; font-size: 16px; line-height: 1.6;">Hi there,</p>
+              <p class="text-muted" style="color: #4b5563; font-size: 16px; line-height: 1.6;">I'd like to invite you to join the <span style="color: #2563eb; font-weight: bold;">beoneofus</span> developer network. It's an exclusive space to connect, discuss, and discover new nodes.</p>
               <div style="margin: 32px 0;">
                 <a href="${inviteLink}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">Accept Invitation</a>
               </div>
-              <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 0;">See you inside!</p>
+              <p class="text-muted" style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 0;">See you inside!</p>
             </div>
             <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">
               © ${new Date().getFullYear()} beoneofus network. All systems operational.
             </p>
           </div>
+          </body>
+          </html>
         `
       })
     });

@@ -14,11 +14,11 @@ import NewPost from "./NewPost";
 const SectionHeader = ({ title, icon: Icon, isCollapsible, isOpen, onToggle }) => (
   <div className={`flex items-center justify-between mb-4 ${isCollapsible ? 'cursor-pointer group' : ''}`} onClick={isCollapsible ? onToggle : undefined}>
     <div className="flex items-center gap-2">
-      <h3 className={`text-[10px] font-black text-gray-600 uppercase tracking-[2.5px] ${isCollapsible ? 'group-hover:text-blue-600 transition-colors' : ''}`}>
+      <h3 className={`text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-[2.5px] ${isCollapsible ? 'group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors' : ''}`}>
         {title}
       </h3>
     </div>
-    <div className="flex items-center gap-2 text-gray-700">
+    <div className="flex items-center gap-2 text-gray-700 dark:text-gray-400">
       {Icon && <Icon size={14} />}
       {isCollapsible && <ChevronRight size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />}
     </div>
@@ -208,7 +208,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
   };
 
   return (
-    <aside className="w-full flex flex-col p-6 space-y-8 h-screen sticky top-0 overflow-y-auto custom-scrollbar bg-transparent border-l border-gray-200 relative">
+    <aside className="w-full flex flex-col p-6 space-y-8 h-screen sticky top-0 overflow-y-auto custom-scrollbar bg-transparent border-l border-gray-200 dark:border-gray-800 relative">
       
       {/* Primary Action Button */}
       <div className="shrink-0 pt-1">
@@ -236,18 +236,18 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex items-center justify-between p-2 -mx-2">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-gray-200 animate-pulse shrink-0"></div>
+                      <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse shrink-0"></div>
                       <div className="flex flex-col gap-2 flex-1">
-                        <div className="h-3.5 bg-gray-200 rounded animate-pulse w-24"></div>
-                        <div className="h-2 bg-gray-200 rounded animate-pulse w-16"></div>
+                        <div className="h-3.5 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-24"></div>
+                        <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-16"></div>
                       </div>
                     </div>
-                    <div className="w-8 h-8 rounded-xl bg-gray-200 animate-pulse shrink-0 ml-2"></div>
+                    <div className="w-8 h-8 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse shrink-0 ml-2"></div>
                   </div>
                 ))}
               </div>
             ) : suggestions.length === 0 ? (
-              <div className="text-xs text-gray-600 font-medium">No suggestions right now.</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">No suggestions right now.</div>
             ) : (
               <div className="space-y-3 max-h-[190px] overflow-y-auto custom-scrollbar pr-2">
                 {suggestions.map((user) => {
@@ -256,10 +256,10 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                     <div 
                       key={user.id} 
                       onClick={() => setSelectedUserId(user.id)}
-                      className="flex items-center justify-between group cursor-pointer p-2 -mx-2 rounded-xl hover:bg-gray-50 transition-all"
+                      className="flex items-center justify-between group cursor-pointer p-2 -mx-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative w-10 h-10 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
+                        <div className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
                           {user.avatar_url ? (
                             <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                           ) : (
@@ -269,7 +269,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                           )}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                          <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
                             @{user.username}
                             {user.is_verified && <BadgeCheck size={14} className="text-blue-500 drop-shadow-sm hover:scale-110 hover:-rotate-3 transition-all duration-300" fill="currentColor" stroke="white" />}
                           </span>
@@ -278,7 +278,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                       </div>
                       <button 
                         onClick={(e) => handleFollowToggle(e, user.id, isFollowed)}
-                        className={`group/btn shrink-0 p-2 rounded-xl transition-all border ${isFollowed ? 'bg-green-50 border-green-200 text-green-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
+                        className={`group/btn shrink-0 p-2 rounded-xl transition-all border ${isFollowed ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 text-green-600 dark:text-green-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800/50 hover:text-red-600 dark:hover:text-red-500' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                         title={isFollowed ? "Unfollow" : "Follow"}
                       >
                         {isFollowed ? (
@@ -313,38 +313,38 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
             {loading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex flex-col p-3 rounded-2xl bg-white border border-gray-100">
+                  <div key={i} className="flex flex-col p-3 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2 flex-1">
-                        <div className="h-3.5 bg-gray-200 rounded animate-pulse w-24"></div>
-                        <div className="w-2.5 h-2.5 bg-gray-200 rounded-full animate-pulse"></div>
+                        <div className="h-3.5 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-24"></div>
+                        <div className="w-2.5 h-2.5 bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse"></div>
                       </div>
-                      <div className="w-3 h-3 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="w-3 h-3 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
                     </div>
                     <div className="space-y-1.5 mt-1">
-                        <div className="h-2 bg-gray-200 rounded animate-pulse w-full"></div>
-                        <div className="h-2 bg-gray-200 rounded animate-pulse w-4/5"></div>
+                        <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-full"></div>
+                        <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-4/5"></div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : groups.length === 0 ? (
-              <div className="text-xs text-gray-600 font-medium">No active channels.</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">No active channels.</div>
             ) : (
               <div className="space-y-3">
                 {groups.map((group) => (
                   <div 
                     key={group.id} 
-                    className="flex flex-col group cursor-pointer p-3 rounded-2xl bg-white border border-gray-200 hover:shadow-sm hover:border-blue-500/30 transition-all"
+                    className="flex flex-col group cursor-pointer p-3 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-sm hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-bold text-gray-900 truncate">{group.name}</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{group.name}</span>
                         {group.is_private ? <Lock size={10} className="text-amber-500 shrink-0" /> : <Globe size={10} className="text-blue-500 shrink-0" />}
                       </div>
-                      <ChevronRight size={14} className="text-gray-700 group-hover:text-blue-500 transition-all shrink-0" />
+                      <ChevronRight size={14} className="text-gray-700 dark:text-gray-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all shrink-0" />
                     </div>
-                    <p className="text-xs text-gray-500 line-clamp-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
                       {group.description || "A community node on beoneofus."}
                     </p>
                   </div>
@@ -365,16 +365,16 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
           onToggle={() => setIsInviteDevelopersOpen(!isInviteDevelopersOpen)} 
         />
         {isInviteDevelopersOpen && (
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md hover:border-blue-500/30 transition-all group space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-            <p className="text-xs text-gray-500 leading-relaxed">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 hover:shadow-md hover:border-blue-500/30 transition-all group space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
               Know someone who belongs here? Share your unique invite link or send them an email to grow the network.
             </p>
             <button 
               onClick={handleCopyInvite}
               className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
                 isCopied 
-                  ? 'bg-green-50 text-green-600 border border-green-200' 
-                  : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:text-gray-900 group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-600'
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-500 border border-green-200 dark:border-green-800/50' 
+                  : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 group-hover:border-blue-200 dark:group-hover:border-blue-800/50 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-600 dark:group-hover:text-blue-400'
               }`}
             >
               {isCopied ? <Check size={14} /> : <Copy size={14} />}
@@ -382,9 +382,9 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
             </button>
 
             <div className="relative flex items-center gap-2">
-              <div className="flex-grow border-t border-gray-100"></div>
-              <span className="text-[9px] uppercase font-black text-gray-300 tracking-[2px]">OR</span>
-              <div className="flex-grow border-t border-gray-100"></div>
+              <div className="flex-grow border-t border-gray-100 dark:border-gray-800"></div>
+              <span className="text-[9px] uppercase font-black text-gray-300 dark:text-gray-600 tracking-[2px]">OR</span>
+              <div className="flex-grow border-t border-gray-100 dark:border-gray-800"></div>
             </div>
 
             <form onSubmit={handleEmailInvite} className="flex gap-2">
@@ -394,9 +394,9 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 required
-                className="flex-1 w-full bg-gray-50 border border-gray-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all min-w-0"
+                className="flex-1 w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all min-w-0"
               />
-              <button type="submit" disabled={sendingEmail} className="bg-gray-900 hover:bg-gray-800 text-white px-3 py-2 rounded-xl transition-colors flex items-center justify-center shrink-0 disabled:opacity-50" title="Send Email">
+              <button type="submit" disabled={sendingEmail} className="bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white px-3 py-2 rounded-xl transition-colors flex items-center justify-center shrink-0 disabled:opacity-50" title="Send Email">
                 {sendingEmail ? <Loader2 size={14} className="animate-spin" /> : emailSuccess ? <Check size={14} className="text-green-400" /> : <Mail size={14} />}
               </button>
             </form>
@@ -414,7 +414,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
           onToggle={() => setIsWhatsNewOpen(!isWhatsNewOpen)} 
         />
         {isWhatsNewOpen && (
-          <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-blue-500/20 rounded-2xl p-5 relative overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-blue-500/20 dark:border-blue-500/10 rounded-2xl p-5 relative overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full" />
             <div className="relative z-10 space-y-4">
               <div className="flex gap-3 items-start">
@@ -422,8 +422,8 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                   <Zap size={12} className="text-blue-400" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-gray-900 mb-0.5">End-to-End Workspaces</h4>
-                  <p className="text-[10px] text-gray-600 leading-relaxed">Secure, private channel chats are now active. Create a node to begin.</p>
+                  <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-0.5">End-to-End Workspaces</h4>
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 leading-relaxed">Secure, private channel chats are now active. Create a node to begin.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
@@ -431,8 +431,8 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
                   <Users size={12} className="text-purple-400" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-gray-900 mb-0.5">Global Connections</h4>
-                  <p className="text-[10px] text-gray-600 leading-relaxed">Follow other developers and build your custom network feed.</p>
+                  <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-0.5">Global Connections</h4>
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 leading-relaxed">Follow other developers and build your custom network feed.</p>
                 </div>
               </div>
             </div>
@@ -445,29 +445,29 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
         <SectionHeader title="Resources" icon={BookOpen} />
         <div
           onClick={handleDocsClick}
-          className="flex items-center justify-between group cursor-pointer p-4 rounded-2xl bg-white border border-gray-200 hover:shadow-md hover:border-blue-500/30 transition-all"
+          className="flex items-center justify-between group cursor-pointer p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-md hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all"
         >
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
               <BookOpen size={16} />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">Platform Docs</span>
-              <span className="text-[10px] text-gray-500 line-clamp-1">Read the network reference manual</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Platform Docs</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1">Read the network reference manual</span>
             </div>
           </div>
-          <ChevronRight size={14} className="text-gray-700 group-hover:text-blue-500 transition-all shrink-0" />
+          <ChevronRight size={14} className="text-gray-700 dark:text-gray-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all shrink-0" />
         </div>
       </div>
 
       {/* USER PROFILE MODAL */}
       {selectedUserId && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full text-gray-500 transition-colors"
+              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-full text-gray-500 dark:text-gray-400 transition-colors"
             >
               <X size={20} />
             </button>
@@ -482,15 +482,15 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
       {/* CREATE BROADCAST MODAL */}
       {showBroadcastModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setShowBroadcastModal(false)} />
-          <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-[2rem] shadow-xl animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50 rounded-t-[2rem] shrink-0">
-              <h2 className="text-xl font-bold text-gray-900">Create Broadcast</h2>
-              <button onClick={() => setShowBroadcastModal(false)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowBroadcastModal(false)} />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-xl animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 rounded-t-[2rem] shrink-0">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Create Broadcast</h2>
+              <button onClick={() => setShowBroadcastModal(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors">
                 <X size={20} />
               </button>
             </div>
-            <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar bg-gray-50 rounded-b-[2rem]">
+            <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar bg-gray-50 dark:bg-gray-800/50 rounded-b-[2rem]">
               <NewPost onPostCreated={() => setShowBroadcastModal(false)} />
             </div>
           </div>
@@ -500,7 +500,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
 
       {/* Footer/About Section */}
       <div className="mt-auto pt-8 text-center">
-        <p className="text-[10px] text-gray-500 font-mono">
+        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">
           beoneofus network v1.0<br/>
           All systems operational.
         </p>

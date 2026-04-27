@@ -14,7 +14,7 @@ import VerifiedBadge from './VerifiedBadge';
 const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing }) => (
   <div
     className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
-      active ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+      active ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/50'
     }`}
     onClick={onClick}
   >
@@ -33,7 +33,7 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction,
       {onBadgeAction && badge > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); onBadgeAction(); }}
-          className="text-gray-400 hover:text-blue-600 md:opacity-0 group-hover:opacity-100 transition-all p-1"
+          className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 md:opacity-0 group-hover:opacity-100 transition-all p-1"
           title="Mark all as read"
         >
           <CheckCheck size={16} />
@@ -382,7 +382,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         
         {/* Logo Area */}
         <div className="flex items-center mb-6 md:mb-10 px-3 shrink-0 w-full text-gray-900">
-          <div className="font-black text-2xl tracking-tighter flex items-center gap-2">
+          <div className="font-black text-2xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <Terminal className="text-blue-500" size={28} />
             <span>beone<span className="text-blue-600">of</span>us</span>
           </div>
@@ -390,7 +390,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
         {/* Navigation Groups */}
         <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pb-2">
-          <p className="text-[10px] font-black text-gray-600 uppercase tracking-[2px] mb-4 px-3">Main Menu</p>
+          <p className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-[2px] mb-4 px-3">Main Menu</p>
           {sidebarItems.map((item) => (
             <SidebarItem
               key={item.id}
@@ -409,7 +409,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
           ))}
 
           <div className="pt-8 space-y-1">
-            <p className="text-[10px] font-black text-gray-600 uppercase tracking-[2px] mb-4 px-3">System</p>
+            <p className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-[2px] mb-4 px-3">System</p>
             {bottomItems.map((item) => (
               <SidebarItem
                 key={item.id}
@@ -426,18 +426,18 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         </nav>
 
         {/* User Profile Section */}
-        <div className="mt-auto pt-4 md:pt-6 border-t border-gray-200 flex flex-col gap-4 px-2 shrink-0">
+        <div className="mt-auto pt-4 md:pt-6 border-t border-gray-200 dark:border-gray-800 flex flex-col gap-4 px-2 shrink-0">
           {isProfileLoading ? (
             <div className="flex items-center gap-3 p-2 -mx-2">
-              <div className="w-10 h-10 rounded-xl bg-gray-200 animate-pulse shrink-0"></div>
+              <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse shrink-0"></div>
               <div className="space-y-2 flex-1">
-                <div className="h-3 bg-gray-200 rounded animate-pulse w-24"></div>
-                <div className="h-2 bg-gray-200 rounded animate-pulse w-16"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-24"></div>
+                <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-16"></div>
               </div>
             </div>
           ) : (
             <div 
-              className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 -mx-2 rounded-xl transition-all"
+              className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 p-2 -mx-2 rounded-xl transition-all"
               onClick={() => { if (profile) handleNavClick('profile'); }}
             >
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10 shrink-0">
@@ -453,7 +453,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
               <div className="flex-1 min-w-0">
                 {profile ? (
                   <>
-                    <p className="text-sm font-bold text-gray-900 truncate flex items-center gap-1">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-1">
                       @{profile.username}
                       {profile.is_verified && <VerifiedBadge size={14} />}
                     </p>
@@ -464,7 +464,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
                   </>
                 ) : (
                   <Link href="/auth" className="block hover:opacity-80 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                    <p className="text-sm font-bold text-gray-900 uppercase italic">Guest_Node</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase italic">Guest_Node</p>
                     <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Authorize Access</p>
                   </Link>
                 )}
@@ -475,7 +475,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
           {profile && (
             <button 
               onClick={handleLogout}
-              className="flex items-center gap-3 p-3 w-full rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all group border border-transparent hover:border-red-100"
+              className="flex items-center gap-3 p-3 w-full rounded-xl text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group border border-transparent hover:border-red-100 dark:hover:border-red-800/50"
             >
               <LogOut size={18} className="group-hover:translate-x-1 transition-transform" />
               <span className="text-[10px] font-black uppercase tracking-tighter">Terminate Session</span>

@@ -73,20 +73,20 @@ const SystemStatusTool = () => {
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-         <div className="p-6 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col justify-between shadow-sm">
+         <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col justify-between shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <Activity size={18} className="text-gray-500" />
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Network Latency</p>
+              <Activity size={18} className="text-gray-500 dark:text-gray-400" />
+              <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest">Network Latency</p>
             </div>
             <div className="flex items-end gap-2">
-               <span className="text-5xl font-black text-gray-900 tracking-tighter">{ping}</span>
-               <span className="text-gray-500 mb-1 font-bold">ms</span>
+               <span className="text-5xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">{ping}</span>
+               <span className="text-gray-500 dark:text-gray-400 mb-1 font-bold">ms</span>
             </div>
          </div>
-         <div className="p-6 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col justify-between shadow-sm">
+         <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col justify-between shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <Database size={18} className="text-gray-500" />
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Platform Health</p>
+              <Database size={18} className="text-gray-500 dark:text-gray-400" />
+              <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest">Platform Health</p>
             </div>
             <div className="flex items-center gap-3 mt-2">
                <div className={`w-4 h-4 rounded-full shadow-lg ${status === 'Operational' ? 'bg-green-500 shadow-green-500/50 animate-pulse' : 'bg-red-500 shadow-red-500/50'}`} />
@@ -95,8 +95,8 @@ const SystemStatusTool = () => {
          </div>
       </div>
 
-      <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 shadow-sm">
-        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-6">Real-Time Packet Monitor</p>
+      <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
+        <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest mb-6">Real-Time Packet Monitor</p>
         <div className="h-40 flex items-end gap-1.5 w-full">
           {history.map((val, i) => {
             const height = Math.min(100, Math.max(2, (val / 500) * 100));
@@ -141,34 +141,34 @@ const ApiAccessTool = () => {
     <div className="space-y-8 max-w-3xl mx-auto py-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-gray-900 font-bold text-lg">Active Secret Keys</h3>
-          <p className="text-gray-500 text-sm mt-1">Do not share your API keys in publicly accessible areas.</p>
+          <h3 className="text-gray-900 dark:text-gray-100 font-bold text-lg">Active Secret Keys</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Do not share your API keys in publicly accessible areas.</p>
         </div>
         <button onClick={generateKey} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/20 shrink-0">
           <Plus size={16} /> Create New Key
         </button>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-sm">
         {keys.length === 0 ? (
-           <div className="p-10 text-center text-gray-500 text-sm">No API keys found. Generate one to get started.</div>
+           <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm">No API keys found. Generate one to get started.</div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {keys.map(k => (
-              <div key={k.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-gray-50 transition-all gap-4">
+              <div key={k.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
                 <div>
-                  <h4 className="text-gray-900 font-bold text-sm flex items-center gap-2 mb-1">
+                  <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-2 mb-1">
                     <Key size={14} className={k.key.startsWith('sk_live') ? 'text-green-500' : 'text-amber-500'} /> 
                     {k.name}
                   </h4>
-                  <p className="text-xs text-gray-600 font-mono tracking-wider bg-gray-100 px-2 py-1 rounded inline-block border border-gray-200">{k.key.substring(0, 12)}••••••••••••••••</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 font-mono tracking-wider bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded inline-block border border-gray-200 dark:border-gray-700">{k.key.substring(0, 12)}••••••••••••••••</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest hidden sm:block mr-2">{k.created}</span>
-                  <button onClick={() => handleCopy(k.key)} className="p-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-gray-900 transition-all border border-gray-200" title="Copy Key">
+                  <span className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-widest hidden sm:block mr-2">{k.created}</span>
+                  <button onClick={() => handleCopy(k.key)} className="p-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-all border border-gray-200 dark:border-gray-700" title="Copy Key">
                     {copied === k.key ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
                   </button>
-                  <button onClick={() => deleteKey(k.id)} className="p-2.5 bg-gray-50 hover:bg-red-50 rounded-xl text-gray-500 hover:text-red-600 transition-all border border-gray-200" title="Revoke Key">
+                  <button onClick={() => deleteKey(k.id)} className="p-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all border border-gray-200 dark:border-gray-700" title="Revoke Key">
                     <X size={16} />
                   </button>
                 </div>
@@ -251,10 +251,10 @@ const CommunityHubTool = ({ currentUserId }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white border border-gray-200 rounded-[2rem] overflow-hidden max-w-4xl mx-auto shadow-lg">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] overflow-hidden max-w-4xl mx-auto shadow-lg">
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar" ref={scrollRef}>
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
              <Globe size={48} className="mb-4 opacity-30 text-blue-500" />
              <p className="font-bold text-sm uppercase tracking-widest mb-1">Global Chat Initialized</p>
              <p className="text-xs font-mono">Say hello to the network.</p>
@@ -265,7 +265,7 @@ const CommunityHubTool = ({ currentUserId }) => {
            {msg.user_id !== currentUserId && (
              <div 
                onClick={() => setSelectedUserId(msg.user_id)}
-               className="relative w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 transition-colors overflow-hidden"
+               className="relative w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors overflow-hidden"
                title={`View @${msg.profiles?.username}'s Profile`}
              >
                {msg.profiles?.avatar_url ? (
@@ -276,11 +276,11 @@ const CommunityHubTool = ({ currentUserId }) => {
              </div>
            )}
            <div className={`flex flex-col ${msg.user_id === currentUserId ? 'items-end' : 'items-start'} max-w-[85%]`}>
-             {msg.user_id !== currentUserId && <span className="text-[10px] text-gray-500 font-bold mb-1 pl-1 flex items-center gap-1">
+             {msg.user_id !== currentUserId && <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 pl-1 flex items-center gap-1">
                @{msg.profiles?.username}
                {msg.profiles?.is_verified && <VerifiedBadge size={10} />}
              </span>}
-               <div className={`w-full px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm ${msg.user_id === currentUserId ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-50 text-gray-800 border border-gray-200 rounded-tl-none'}`}>
+               <div className={`w-full px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm ${msg.user_id === currentUserId ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-none'}`}>
                {msg.text}
              </div>
            </div>
@@ -292,11 +292,11 @@ const CommunityHubTool = ({ currentUserId }) => {
       {/* USER PROFILE MODAL */}
       {selectedUserId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full text-gray-500 transition-colors"
+              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-full text-gray-500 dark:text-gray-400 transition-colors"
             >
               <X size={20} />
             </button>
@@ -306,12 +306,12 @@ const CommunityHubTool = ({ currentUserId }) => {
           </div>
         </div>
       )}
-      <form onSubmit={handleSend} className="p-3 bg-gray-50 border-t border-gray-200 flex gap-2 shrink-0">
+      <form onSubmit={handleSend} className="p-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-800 flex gap-2 shrink-0">
         <input 
           value={input} 
           onChange={e => setInput(e.target.value)} 
           placeholder="Broadcast to community..." 
-          className="flex-1 bg-white border border-gray-300 rounded-2xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+          className="flex-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
         />
         <button type="submit" disabled={!input.trim()} className="px-5 bg-blue-600 text-white hover:bg-blue-700 rounded-2xl font-black disabled:opacity-50 transition-all">
           <Send size={18} />
@@ -480,34 +480,34 @@ const AdminPanelTool = ({ currentUserId }) => {
   return (
     <div className="space-y-6 max-w-3xl mx-auto py-4">
       {/* Header + Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-blue-50 border border-blue-200 rounded-[2rem]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-[2rem]">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-blue-200">
+          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-blue-200 dark:border-blue-800/50">
             <ShieldCheck size={24} />
           </div>
           <div>
-            <h3 className="text-blue-700 font-bold text-lg mb-1">Admin Dashboard</h3>
-            <p className="text-sm text-blue-600/80 leading-relaxed">Manage the platform and verify nodes.</p>
+            <h3 className="text-blue-700 dark:text-blue-400 font-bold text-lg mb-1">Admin Dashboard</h3>
+            <p className="text-sm text-blue-600/80 dark:text-blue-400/80 leading-relaxed">Manage the platform and verify nodes.</p>
           </div>
         </div>
-        <div className="flex bg-white p-1 rounded-xl border border-blue-200 shadow-sm shrink-0 overflow-x-auto">
-          <button onClick={() => setAdminTab('requests')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'requests' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>Requests</button>
-          <button onClick={() => setAdminTab('users')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'users' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>Users</button>
-          <button onClick={() => setAdminTab('ai_logs')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'ai_logs' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>AI Logs</button>
+        <div className="flex bg-white dark:bg-gray-900 p-1 rounded-xl border border-blue-200 dark:border-blue-800/50 shadow-sm shrink-0 overflow-x-auto">
+          <button onClick={() => setAdminTab('requests')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'requests' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Requests</button>
+          <button onClick={() => setAdminTab('users')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'users' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Users</button>
+          <button onClick={() => setAdminTab('ai_logs')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'ai_logs' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>AI Logs</button>
         </div>
       </div>
 
       {/* Requests Tab */}
       {adminTab === 'requests' && (
-        <div className="bg-white border border-gray-200 rounded-[2.5rem] overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm">
         {requests.length === 0 ? (
-          <div className="p-10 text-center text-gray-500 text-sm font-medium">No pending verification requests.</div>
+          <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No pending verification requests.</div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {requests.map(req => (
-              <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-gray-50 transition-all gap-4">
+              <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="relative w-12 h-12 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center font-bold text-gray-500 uppercase">
+                  <div className="relative w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
                     {req.avatar_url ? (
                       <Image src={req.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
                     ) : (
@@ -515,12 +515,12 @@ const AdminPanelTool = ({ currentUserId }) => {
                     )}
                   </div>
                   <div>
-                    <h4 className="text-gray-900 font-bold text-sm">@{req.username}</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">{req.status || 'Active Node'}</p>
+                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm">@{req.username}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{req.status || 'Active Node'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => handleAction(req.id, 'reject')} className="px-5 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold text-xs transition-colors border border-red-200">
+                  <button onClick={() => handleAction(req.id, 'reject')} className="px-5 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold text-xs transition-colors border border-red-200 dark:border-red-800/50">
                     Deny
                   </button>
                   <button onClick={() => handleAction(req.id, 'approve')} className="px-5 py-2.5 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-bold text-xs transition-colors shadow-sm">
@@ -536,16 +536,16 @@ const AdminPanelTool = ({ currentUserId }) => {
 
       {/* Manage Users Tab */}
       {adminTab === 'users' && (
-        <div className="bg-white border border-gray-200 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
-          <div className="p-4 border-b border-gray-100 bg-gray-50">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
               <input 
                 type="text" 
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 placeholder="Search users by username..." 
-                className="w-full bg-white border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 pr-4 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
           </div>
@@ -553,26 +553,26 @@ const AdminPanelTool = ({ currentUserId }) => {
           {usersLoading ? (
             <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
           ) : allUsers.length === 0 ? (
-            <div className="p-10 text-center text-gray-500 text-sm font-medium">No users found.</div>
+            <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No users found.</div>
           ) : (
-            <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto custom-scrollbar">
+            <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
               {allUsers.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase())).map(user => (
-                <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50 transition-all gap-4">
+                <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-10 h-10 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center font-bold text-gray-500 uppercase">
+                    <div className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
                       {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : user.username?.substring(0, 2) || "??"}
                     </div>
                     <div className="min-w-0">
-                      <h4 className="text-gray-900 font-bold text-sm flex items-center gap-1 truncate">
+                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate">
                         @{user.username}
                         {user.is_verified && <VerifiedBadge size={14} />}
                       </h4>
-                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5 truncate">{user.status || 'Active Node'}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">{user.status || 'Active Node'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => handleImpersonateUser(user.id, user.username)} className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white rounded-xl transition-colors border border-purple-200 hover:border-purple-600" title="Impersonate User"><UserCog size={16} /></button>
-                    <button onClick={() => handleDeleteUser(user.id, user.username)} className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition-colors border border-red-200 hover:border-red-600" title="Delete User"><Trash2 size={16} /></button>
+                    <button onClick={() => handleImpersonateUser(user.id, user.username)} className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-600 dark:hover:bg-purple-500 hover:text-white rounded-xl transition-colors border border-purple-200 dark:border-purple-800/50 hover:border-purple-600 dark:hover:border-purple-500" title="Impersonate User"><UserCog size={16} /></button>
+                    <button onClick={() => handleDeleteUser(user.id, user.username)} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-600 dark:hover:bg-red-500 hover:text-white rounded-xl transition-colors border border-red-200 dark:border-red-800/50 hover:border-red-600 dark:hover:border-red-500" title="Delete User"><Trash2 size={16} /></button>
                   </div>
                 </div>
               ))}
@@ -583,20 +583,20 @@ const AdminPanelTool = ({ currentUserId }) => {
 
       {/* AI Logs Tab */}
       {adminTab === 'ai_logs' && (
-        <div className="bg-white border border-gray-200 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
-          <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-            <h4 className="text-gray-900 font-bold text-sm pl-2">Recent AI Interactions</h4>
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
+            <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2">Recent AI Interactions</h4>
             <button onClick={() => setAiLogs([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all">Refresh</button>
           </div>
           
           {logsLoading ? (
             <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
           ) : aiLogs.length === 0 ? (
-            <div className="p-10 text-center text-gray-500 text-sm font-medium">No AI logs found.</div>
+            <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No AI logs found.</div>
           ) : (
-            <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto custom-scrollbar">
+            <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
               {aiLogs.map(log => (
-                <div key={log.id} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 transition-all gap-4">
+                <div key={log.id} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
                   {/* Avatar & User Info */}
                   <div className="flex items-center sm:items-start sm:w-48 shrink-0 gap-3">
                     {log.role === 'assistant' ? (
@@ -604,21 +604,21 @@ const AdminPanelTool = ({ currentUserId }) => {
                         <Bot size={20} />
                       </div>
                     ) : (
-                      <div className="relative w-10 h-10 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center font-bold text-gray-500 uppercase">
+                      <div className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
                         {log.profiles?.avatar_url ? <Image src={log.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : log.profiles?.username?.substring(0, 2) || "??"}
                       </div>
                     )}
                     <div className="min-w-0">
-                      <h4 className="text-gray-900 font-bold text-sm flex items-center gap-1 truncate">
+                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate">
                         {log.role === 'assistant' ? 'beoneofus AI' : `@${log.profiles?.username || 'Unknown'}`}
                         {log.profiles?.is_verified && log.role !== 'assistant' && <VerifiedBadge size={14} />}
                       </h4>
-                      <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5 truncate">{new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', month:'short', day:'numeric'})}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">{new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', month:'short', day:'numeric'})}</p>
                     </div>
                   </div>
                   
                   {/* Message Content */}
-                  <div className={`flex-1 text-sm p-4 rounded-2xl whitespace-pre-wrap ${log.role === 'assistant' ? 'bg-white border border-gray-200 text-gray-800' : 'bg-blue-600 text-white shadow-md shadow-blue-500/20'}`}>
+                  <div className={`flex-1 text-sm p-4 rounded-2xl whitespace-pre-wrap ${log.role === 'assistant' ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100' : 'bg-blue-600 text-white shadow-md shadow-blue-500/20'}`}>
                     {log.content}
                   </div>
                 </div>
@@ -639,11 +639,11 @@ const supportMarkdownComponents = {
   h1: ({ node, ...props }) => <h1 className="text-sm font-black mb-2 mt-3" {...props} />,
   h2: ({ node, ...props }) => <h2 className="text-sm font-bold mb-2 mt-3" {...props} />,
   h3: ({ node, ...props }) => <h3 className="text-xs font-bold mb-1 mt-2" {...props} />,
-  strong: ({ node, ...props }) => <strong className="font-bold text-blue-950" {...props} />,
+  strong: ({ node, ...props }) => <strong className="font-bold text-blue-950 dark:text-blue-50" {...props} />,
   code({ node, inline, className, children, ...props }) {
     const match = /language-(\w+)/.exec(className || "");
     return !inline && match ? (
-      <div className="rounded-lg overflow-hidden my-3 border border-blue-200 shadow-sm bg-[#1E1E1E]">
+      <div className="rounded-lg overflow-hidden my-3 border border-blue-200 dark:border-blue-800/50 shadow-sm bg-[#1E1E1E]">
         <div className="bg-gray-800/80 px-3 py-1.5 text-[9px] font-mono text-gray-400 uppercase tracking-widest flex justify-between items-center border-b border-white/5">
           <span>{match[1]}</span>
         </div>
@@ -658,7 +658,7 @@ const supportMarkdownComponents = {
         </SyntaxHighlighter>
       </div>
     ) : (
-      <code {...props} className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-mono text-[10px] border border-blue-200">
+      <code {...props} className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-1 py-0.5 rounded font-mono text-[10px] border border-blue-200 dark:border-blue-800/50">
         {children}
       </code>
     );
@@ -716,28 +716,28 @@ const SupportTool = () => {
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto py-4">
-      <div className="p-6 bg-blue-50 border border-blue-200 rounded-[2rem] flex items-start gap-5">
-        <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-blue-200">
+      <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-[2rem] flex items-start gap-5">
+        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-blue-200 dark:border-blue-800/50">
           <HelpCircle size={24} />
         </div>
         <div>
-          <h3 className="text-blue-700 font-bold text-lg mb-2">Need Technical Assistance?</h3>
-          <p className="text-sm text-blue-600/80 leading-relaxed">
+          <h3 className="text-blue-700 dark:text-blue-400 font-bold text-lg mb-2">Need Technical Assistance?</h3>
+          <p className="text-sm text-blue-600/80 dark:text-blue-400/80 leading-relaxed">
             Our AI support engineering team is ready to help you instantly with architecture reviews, debugging, and platform guidance.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-gray-200 shadow-xl">
+      <form onSubmit={handleSubmit} className="space-y-4 bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-[2.5rem] border border-gray-200 dark:border-gray-800 shadow-xl">
         <div>
-          <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-3 pl-2">Describe your issue</label>
+          <label className="block text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3 pl-2">Describe your issue</label>
           <textarea 
             rows={4}
             required
             value={issue}
             onChange={e => setIssue(e.target.value)}
             placeholder="E.g., I am getting a 500 error when trying to invoke a serverless function..."
-            className="w-full bg-gray-50 border border-gray-300 rounded-2xl p-5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none transition-all placeholder:text-gray-400 custom-scrollbar"
+            className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-700 rounded-2xl p-5 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 custom-scrollbar"
             disabled={isProcessing}
           />
         </div>
@@ -748,19 +748,19 @@ const SupportTool = () => {
 
       {tickets.length > 0 && (
         <div className="space-y-4">
-          <h4 className="text-gray-900 font-bold text-sm pl-2 mt-8">Recent Tickets</h4>
+          <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2 mt-8">Recent Tickets</h4>
           {tickets.map(ticket => (
-            <div key={ticket.id} className="bg-white border border-gray-200 rounded-[2rem] p-6 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-4">
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Your Issue</p>
-                <p className="text-sm text-gray-800">{ticket.issue}</p>
+            <div key={ticket.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-4">
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Your Issue</p>
+                <p className="text-sm text-gray-800 dark:text-gray-200">{ticket.issue}</p>
               </div>
-              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
                 <div className="flex items-center gap-2 mb-2">
-                  <Bot size={14} className="text-blue-600" />
-                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Support AI Reply</p>
+                  <Bot size={14} className="text-blue-600 dark:text-blue-400" />
+                  <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Support AI Reply</p>
                 </div>
-                <div className="text-sm text-blue-900 leading-relaxed">
+                <div className="text-sm text-blue-900 dark:text-blue-100 leading-relaxed">
                   {ticket.isNew ? (
                     <SupportTypewriterMessage content={ticket.reply} />
                   ) : (
@@ -870,8 +870,8 @@ export default function MoreContent() {
       
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-gray-900 tracking-tighter">Resources</h1>
-        <p className="text-gray-500 text-sm mt-1 font-medium">Extra tools for your development workflow.</p>
+        <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Resources</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">Extra tools for your development workflow.</p>
       </div>
 
       {/* Grid Layout - 2 Columns on desktop to use the mid-section width better */}
@@ -880,18 +880,18 @@ export default function MoreContent() {
           <div 
             key={tool.id}
         onClick={() => handleOpenTool(tool)}
-            className="group flex items-center justify-between p-5 bg-white border border-gray-200 rounded-[1.5rem] hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer"
+            className="group flex items-center justify-between p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[1.5rem] hover:border-blue-500/30 dark:hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-500 group-hover:text-blue-600 transition-colors">
+              <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 {tool.icon}
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-bold text-gray-900 tracking-tight">{tool.label}</span>
-                <span className="text-[11px] text-gray-600 font-bold uppercase tracking-wider">{tool.desc}</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 tracking-tight">{tool.label}</span>
+                <span className="text-[11px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider">{tool.desc}</span>
               </div>
             </div>
-            <ChevronRight size={16} className="text-gray-400 group-hover:text-blue-600 transition-all" />
+            <ChevronRight size={16} className="text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all" />
           </div>
         ))}
       </div>
@@ -913,30 +913,30 @@ export default function MoreContent() {
       {activeItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div 
-            className="absolute inset-0 bg-gray-900/50 backdrop-blur-md"
+            className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-md"
             onClick={handleCloseTool}
           />
           
-          <div className="relative w-full max-w-4xl h-[85vh] bg-white border border-gray-200 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-4xl h-[85vh] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             
             {/* Header */}
-            <div className="p-6 border-b border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between shrink-0">
                <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-sm">
+                 <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
                    {activeItem.icon}
                  </div>
                  <div>
-                   <h2 className="text-xl font-black text-gray-900">{activeItem.label}</h2>
-                   <p className="text-xs text-gray-500 font-medium">{activeItem.desc}</p>
+                   <h2 className="text-xl font-black text-gray-900 dark:text-gray-100">{activeItem.label}</h2>
+                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{activeItem.desc}</p>
                  </div>
                </div>
-               <button onClick={handleCloseTool} className="p-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-all rounded-xl">
+               <button onClick={handleCloseTool} className="p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-all rounded-xl">
                  <X size={20} />
                </button>
             </div>
 
             {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white custom-scrollbar relative">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white dark:bg-gray-900 custom-scrollbar relative">
                {activeItem.id === 'status' && <SystemStatusTool />}
                {activeItem.id === 'api' && <ApiAccessTool />}
                {activeItem.id === 'community' && <CommunityHubTool currentUserId={currentUserId} />}

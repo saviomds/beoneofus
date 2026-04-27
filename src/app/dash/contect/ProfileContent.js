@@ -368,8 +368,8 @@ export default function ProfileContent({ viewUserId }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-20">
-        <Loader2 className="animate-spin text-blue-500 mb-4" size={32} />
-        <p className="text-gray-500 font-black text-xs uppercase tracking-widest">Decrypting Identity...</p>
+        <Loader2 className="animate-spin text-blue-500 dark:text-blue-400 mb-4" size={32} />
+        <p className="text-gray-500 dark:text-gray-400 font-black text-xs uppercase tracking-widest">Decrypting Identity...</p>
       </div>
     );
   }
@@ -383,18 +383,18 @@ export default function ProfileContent({ viewUserId }) {
   return (
     <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 pt-4 px-2">
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-gray-900 tracking-tighter">Profile</h1>
-        <p className="text-gray-500 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your professional identity and network status." : "Viewing professional network identity."}</p>
+        <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Profile</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your professional identity and network status." : "Viewing professional network identity."}</p>
       </div>
 
       {/* --- BANNER CROPPER MODAL --- */}
       {showBannerCropper && bannerPreview && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm" />
-          <div className="relative w-full max-w-3xl bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col h-[75vh] animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-gray-200 flex justify-between items-center bg-gray-50 z-10 shrink-0">
-              <h3 className="font-bold text-gray-900">Adjust Cover Image</h3>
-              <button onClick={() => { setShowBannerCropper(false); setBannerPreview(profile?.banner_url || null); setBannerFile(null); }} className="text-gray-500 hover:text-gray-900 transition-colors p-1 rounded-full hover:bg-gray-200">
+          <div className="absolute inset-0 bg-gray-900/80 dark:bg-black/80 backdrop-blur-sm" />
+          <div className="relative w-full max-w-3xl bg-white dark:bg-gray-900 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col h-[75vh] animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800 z-10 shrink-0">
+              <h3 className="font-bold text-gray-900 dark:text-gray-100">Adjust Cover Image</h3>
+              <button onClick={() => { setShowBannerCropper(false); setBannerPreview(profile?.banner_url || null); setBannerFile(null); }} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
                 <X size={20} />
               </button>
             </div>
@@ -409,7 +409,7 @@ export default function ProfileContent({ viewUserId }) {
                 onCropComplete={(croppedArea, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)}
               />
             </div>
-            <div className="p-5 bg-gray-50 border-t border-gray-200 z-10 flex flex-col sm:flex-row items-center gap-4 shrink-0">
+            <div className="p-5 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-800 z-10 flex flex-col sm:flex-row items-center gap-4 shrink-0">
               <input type="range" value={bannerZoom} min={1} max={3} step={0.1} aria-labelledby="Zoom" onChange={(e) => setBannerZoom(e.target.value)} className="w-full accent-blue-600" />
               <button onClick={handleCropComplete} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all shrink-0">Apply Crop</button>
             </div>
@@ -417,7 +417,7 @@ export default function ProfileContent({ viewUserId }) {
         </div>
       )}
 
-      <div className="max-w-4xl bg-white border border-gray-200 rounded-[2rem] relative overflow-visible shadow-sm mb-10">
+      <div className="max-w-4xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] relative overflow-visible shadow-sm mb-10">
         {/* Banner Section */}
         <div className="h-32 sm:h-48 w-full bg-gradient-to-r from-slate-800 via-blue-900 to-slate-900 rounded-t-[2rem] relative overflow-hidden group">
           {displayBanner ? (
@@ -442,7 +442,7 @@ export default function ProfileContent({ viewUserId }) {
           {/* Header Area with Avatar and Actions */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 -mt-12 sm:-mt-16 mb-6">
             {/* Avatar */}
-            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white bg-white flex items-center justify-center text-4xl font-black text-gray-700 shadow-md shrink-0 overflow-hidden group z-10">
+            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white dark:border-gray-900 bg-white dark:bg-gray-900 flex items-center justify-center text-4xl font-black text-gray-700 dark:text-gray-300 shadow-md shrink-0 overflow-hidden group z-10">
               {displayAvatar ? (
                 <Image src={displayAvatar} alt="Profile Avatar" fill sizes="128px" className="object-cover object-center" />
               ) : (
@@ -467,7 +467,7 @@ export default function ProfileContent({ viewUserId }) {
                 !isEditing && (
                   <button 
                     onClick={() => setIsEditing(true)} 
-                    className="flex items-center gap-2 text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 px-6 py-2.5 rounded-full border border-gray-300 transition-all shadow-sm active:scale-95"
+                    className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 px-6 py-2.5 rounded-full border border-gray-300 dark:border-gray-700 transition-all shadow-sm active:scale-95"
                   >
                     <Edit3 size={16} /> Edit Profile
                   </button>
@@ -487,7 +487,7 @@ export default function ProfileContent({ viewUserId }) {
                     <button 
                       onClick={handleUnfollow}
                       disabled={connectionProcessing}
-                      className="flex items-center gap-2 text-sm font-bold text-gray-600 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-200 border border-gray-300 px-6 py-2.5 rounded-full transition-all active:scale-95 disabled:opacity-50"
+                      className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/50 border border-gray-300 dark:border-gray-700 px-6 py-2.5 rounded-full transition-all active:scale-95 disabled:opacity-50"
                     >
                       {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Pending
                     </button>
@@ -495,7 +495,7 @@ export default function ProfileContent({ viewUserId }) {
                   {connectionStatus === 'pending_received' && (
                      <button 
                       disabled
-                      className="flex items-center gap-2 text-sm font-bold text-amber-600 bg-amber-50 px-6 py-2.5 rounded-full border border-amber-200 transition-all cursor-default"
+                      className="flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-6 py-2.5 rounded-full border border-amber-200 dark:border-amber-800/50 transition-all cursor-default"
                     >
                       <Users size={16} /> Review Request
                     </button>
@@ -504,7 +504,7 @@ export default function ProfileContent({ viewUserId }) {
                     <button 
                       onClick={handleUnfollow}
                       disabled={connectionProcessing}
-                      className="flex items-center gap-2 text-sm font-bold text-gray-600 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-6 py-2.5 rounded-full border border-gray-300 transition-all active:scale-95 disabled:opacity-50"
+                      className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/50 px-6 py-2.5 rounded-full border border-gray-300 dark:border-gray-700 transition-all active:scale-95 disabled:opacity-50"
                     >
                       {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Unfollow
                     </button>
@@ -519,78 +519,78 @@ export default function ProfileContent({ viewUserId }) {
             <div className="pt-2 pb-6 animate-in fade-in zoom-in-95 duration-200">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">Edit Details</h3>
-                  <p className="text-sm text-gray-500">Update your professional identity.</p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Edit Details</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Update your professional identity.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={handleCancel} className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors">Cancel</button>
+                  <button onClick={handleCancel} className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">Cancel</button>
                   <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-sm disabled:opacity-50">
                     {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} Save
                   </button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-3xl border border-gray-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 dark:bg-gray-800/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-800">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Username</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Username</label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">@</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 font-bold">@</span>
                       <input 
                         type="text" 
                         value={formData.username} 
                         onChange={(e) => setFormData({...formData, username: e.target.value})}
-                        className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Headline / Bio</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Headline / Bio</label>
                     <input 
                       type="text" 
                       value={formData.status} 
                       onChange={(e) => setFormData({...formData, status: e.target.value})}
                       placeholder="e.g. Senior Software Engineer"
-                      className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                      className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Location</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Location</label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><MapPin size={14} /></span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><MapPin size={14} /></span>
                       <input 
                         type="text" 
                         value={formData.location} 
                         onChange={(e) => setFormData({...formData, location: e.target.value})}
                         placeholder="City, Country"
-                        className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">GitHub Username</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">GitHub Username</label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><GitBranch size={14} /></span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><GitBranch size={14} /></span>
                       <input 
                         type="text" 
                         value={formData.github} 
                         onChange={(e) => setFormData({...formData, github: e.target.value})}
                         placeholder="octocat"
-                        className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block pl-1">Website URL</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Website URL</label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><Link size={14} /></span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><Link size={14} /></span>
                       <input 
                         type="text" 
                         value={formData.website} 
                         onChange={(e) => setFormData({...formData, website: e.target.value})}
                         placeholder="https://yourdomain.com"
-                        className="w-full bg-white border border-gray-300 rounded-xl py-3 pl-10 pr-4 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
@@ -599,51 +599,51 @@ export default function ProfileContent({ viewUserId }) {
             </div>
           ) : (
             <div className="animate-in fade-in duration-300 pt-2">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 {profile?.username || 'Unknown User'}
                 {profile?.is_verified && <VerifiedBadge size={28} />}
               </h2>
-              <p className="text-gray-700 text-base sm:text-lg mt-1.5 font-medium max-w-2xl">
+              <p className="text-gray-700 dark:text-gray-300 text-base sm:text-lg mt-1.5 font-medium max-w-2xl">
                 {profile?.status || 'Software Engineer'}
               </p>
               
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm text-gray-500 font-medium">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm text-gray-500 dark:text-gray-400 font-medium">
                 {profile?.location && (
                   <span className="flex items-center gap-1.5">
-                    <MapPin size={16} className="text-gray-400" /> {profile.location}
+                    <MapPin size={16} className="text-gray-400 dark:text-gray-500" /> {profile.location}
                   </span>
                 )}
                 <div className="relative">
                   <span 
                     onClick={handleViewFollowers}
-                    className={`flex items-center gap-1.5 transition-colors ${followersCount > 0 ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                    className={`flex items-center gap-1.5 transition-colors ${followersCount > 0 ? 'cursor-pointer hover:text-blue-600 dark:hover:text-blue-400' : ''}`}
                   >
-                    <Users size={16} className="text-gray-400" /> 
+                    <Users size={16} className="text-gray-400 dark:text-gray-500" /> 
                     <span className={followersCount > 0 ? "font-bold text-blue-600" : ""}>
                       {Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(followersCount)}
                     </span> connections
                   </span>
 
                   {showFollowersList && (
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Network Nodes</span>
-                        <button onClick={() => setShowFollowersList(false)} className="text-gray-400 hover:text-gray-900 transition-colors"><X size={14}/></button>
+                        <button onClick={() => setShowFollowersList(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"><X size={14}/></button>
                       </div>
                       <div className="max-h-[170px] overflow-y-auto custom-scrollbar p-2 space-y-1">
                         {loadingFollowers ? (
                           <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-blue-500" /></div>
                         ) : followersData.map(user => (
-                          <div key={`follower-${user.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer group">
-                            <div className="relative w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-bold uppercase text-gray-500 shrink-0 overflow-hidden">
+                          <div key={`follower-${user.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors cursor-pointer group">
+                            <div className="relative w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-bold uppercase text-gray-500 dark:text-gray-400 shrink-0 overflow-hidden">
                               {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : user.username?.substring(0, 2)}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                              <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
                                 @{user.username}
                                 {user.is_verified && <VerifiedBadge size={14} />}
                               </p>
-                              <p className="text-[9px] text-gray-500 truncate uppercase tracking-widest">{user.status || 'Active Node'}</p>
+                              <p className="text-[9px] text-gray-500 dark:text-gray-400 truncate uppercase tracking-widest">{user.status || 'Active Node'}</p>
                             </div>
                           </div>
                         ))}
@@ -653,47 +653,47 @@ export default function ProfileContent({ viewUserId }) {
                 </div>
               </div>
 
-              <div className="mt-8 pt-8 border-t border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900 mb-6">Contact & Details</h3>
+              <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">Contact & Details</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
                   <div className="flex items-start gap-3">
-                    <div className="mt-0.5 text-gray-400"><Mail size={20} /></div>
+                    <div className="mt-0.5 text-gray-400 dark:text-gray-500"><Mail size={20} /></div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900">{isOwnProfile ? "Email" : "Email Visibility"}</p>
-                      <p className="text-sm text-gray-600">{isOwnProfile ? (currentUser?.email || 'N/A') : 'Protected by User'}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{isOwnProfile ? "Email" : "Email Visibility"}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{isOwnProfile ? (currentUser?.email || 'N/A') : 'Protected by User'}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="mt-0.5 text-gray-400"><Calendar size={20} /></div>
+                    <div className="mt-0.5 text-gray-400 dark:text-gray-500"><Calendar size={20} /></div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900">Date Joined</p>
-                      <p className="text-sm text-gray-600">{isOwnProfile && currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Active Member'}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Date Joined</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{isOwnProfile && currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Active Member'}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="mt-0.5 text-gray-400"><Shield size={20} /></div>
+                    <div className="mt-0.5 text-gray-400 dark:text-gray-500"><Shield size={20} /></div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900">Security Clearance</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Security Clearance</p>
                       {profile?.is_verified ? (
-                        <p className="text-sm text-blue-600 font-bold flex items-center gap-1 mt-0.5"><VerifiedBadge size={14} /> Verified Identity</p>
+                        <p className="text-sm text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 mt-0.5"><VerifiedBadge size={14} /> Verified Identity</p>
                       ) : (
-                        <p className="text-sm text-gray-500 font-medium mt-0.5">Standard Node</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-0.5">Standard Node</p>
                       )}
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="mt-0.5 text-gray-400"><User size={20} /></div>
+                    <div className="mt-0.5 text-gray-400 dark:text-gray-500"><User size={20} /></div>
                     <div className="min-w-0 pr-4">
-                      <p className="text-sm font-bold text-gray-900">Account Node ID</p>
-                      <p className="text-xs text-gray-500 font-mono truncate" title={profile?.id || 'N/A'}>{profile?.id || 'N/A'}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Account Node ID</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate" title={profile?.id || 'N/A'}>{profile?.id || 'N/A'}</p>
                     </div>
                   </div>
                   {profile?.github && (
                     <div className="flex items-start gap-3">
-                      <div className="mt-0.5 text-gray-400"><GitBranch size={20} /></div>
+                      <div className="mt-0.5 text-gray-400 dark:text-gray-500"><GitBranch size={20} /></div>
                       <div className="min-w-0 pr-4">
-                        <p className="text-sm font-bold text-gray-900">GitHub</p>
-                        <a href={`https://github.com/${profile.github}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline truncate block">
+                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">GitHub</p>
+                        <a href={`https://github.com/${profile.github}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate block">
                           github.com/{profile.github}
                         </a>
                       </div>
@@ -701,10 +701,10 @@ export default function ProfileContent({ viewUserId }) {
                   )}
                   {profile?.website && (
                     <div className="flex items-start gap-3">
-                      <div className="mt-0.5 text-gray-400"><Link size={20} /></div>
+                      <div className="mt-0.5 text-gray-400 dark:text-gray-500"><Link size={20} /></div>
                       <div className="min-w-0 pr-4">
-                        <p className="text-sm font-bold text-gray-900">Website</p>
-                        <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline truncate block">
+                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Website</p>
+                        <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate block">
                           {profile.website.replace(/^https?:\/\//, '')}
                         </a>
                       </div>
@@ -719,7 +719,7 @@ export default function ProfileContent({ viewUserId }) {
 
       {/* Custom Toast Popup */}
       {toast && (
-        <div className={`fixed bottom-10 right-10 z-[150] flex items-center gap-3 bg-white border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 ${isError ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
+        <div className={`fixed bottom-10 right-10 z-[150] flex items-center gap-3 bg-white dark:bg-gray-900 border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 ${isError ? 'border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-500' : 'border-green-200 dark:border-green-900/50 text-green-600 dark:text-green-500'}`}>
           {isError ? <AlertTriangle size={18} className="text-red-500" /> : <Check size={18} className="text-green-500" />}
           <span className="text-sm font-bold tracking-tight">{toast}</span>
         </div>

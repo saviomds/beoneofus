@@ -365,20 +365,20 @@ export default function FeedContent() {
   if (loading) return (
     <div className="space-y-6">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+        <div key={i} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-3 w-full">
-              <div className="w-10 h-10 rounded-xl bg-gray-200 animate-pulse shrink-0"></div>
+              <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse shrink-0"></div>
               <div className="space-y-2 flex-1">
-                <div className="h-3 bg-gray-200 rounded animate-pulse w-32"></div>
-                <div className="h-2 bg-gray-200 rounded animate-pulse w-20"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-32"></div>
+                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20"></div>
               </div>
             </div>
           </div>
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-5/6"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-full"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-5/6"></div>
           </div>
         </div>
       ))}
@@ -389,7 +389,7 @@ export default function FeedContent() {
     <div className="space-y-6">
       
       {/* --- FEED TABS --- */}
-      <div className="flex items-center gap-6 border-b border-gray-200 px-2 sm:px-4 mb-2 overflow-x-auto custom-scrollbar">
+      <div className="flex items-center gap-6 border-b border-gray-200 dark:border-gray-800 px-2 sm:px-4 mb-2 overflow-x-auto custom-scrollbar">
         {['Following', 'Featured', 'Rising', 'Code Review'].map((tab) => {
           const isActive = activeTab === tab.toLowerCase();
           return (
@@ -397,7 +397,7 @@ export default function FeedContent() {
               key={tab}
               onClick={() => setActiveTab(tab.toLowerCase())}
               className={`pb-3 text-sm font-bold transition-all relative whitespace-nowrap ${
-                isActive ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                isActive ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               {tab}
@@ -411,14 +411,14 @@ export default function FeedContent() {
       
       {/* --- SHARE MODAL --- */}
       {showShareModal && (
-        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 w-full max-w-sm rounded-2xl p-6 shadow-xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full max-w-sm rounded-2xl p-6 shadow-xl animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-gray-900">Share Entry</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Share Entry</h3>
               <button onClick={() => setShowShareModal(false)} className="text-gray-400 hover:text-gray-900"><X size={20}/></button>
             </div>
-            <p className="text-xs text-gray-500 mb-4 uppercase font-black tracking-widest">Post Protocol Link</p>
-            <div className="flex gap-2 items-center bg-gray-50 rounded-xl p-2 border border-gray-200 mb-6">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 uppercase font-black tracking-widest">Post Protocol Link</p>
+            <div className="flex gap-2 items-center bg-gray-50 dark:bg-gray-800 rounded-xl p-2 border border-gray-200 dark:border-gray-700 mb-6">
               <input 
                 readOnly 
                 value={shareLink} 
@@ -433,7 +433,7 @@ export default function FeedContent() {
             </div>
             <button 
               onClick={() => setShowShareModal(false)}
-              className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold py-3 rounded-xl transition border border-gray-200"
+              className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700"
             >
               Close
             </button>
@@ -443,20 +443,20 @@ export default function FeedContent() {
 
       {/* --- CUSTOM DELETE CONFIRMATION MODAL --- */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+        <div className="fixed inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100 dark:border-red-900/50">
               <AlertTriangle size={32} />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Post?</h3>
-            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Post?</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-8 leading-relaxed">
               This action cannot be undone. This will permanently remove your post from the beoneofus network.
             </p>
             <div className="flex flex-col gap-3">
               <button onClick={confirmDelete} disabled={deleteLoading} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
                 {deleteLoading ? 'Deleting...' : 'Confirm Delete'}
               </button>
-              <button onClick={() => setShowDeleteConfirm(false)} className="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold py-3 rounded-xl transition border border-gray-200">Cancel</button>
+              <button onClick={() => setShowDeleteConfirm(false)} className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700">Cancel</button>
             </div>
           </div>
         </div>
@@ -464,25 +464,25 @@ export default function FeedContent() {
 
       {/* --- EDIT MODAL OVERLAY --- */}
       {isEditing && editingPost && (
-        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 w-full max-w-lg rounded-2xl p-6 shadow-xl relative animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full max-w-lg rounded-2xl p-6 shadow-xl relative animate-in fade-in zoom-in duration-200">
             <button onClick={() => setIsEditing(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 transition"><X size={20} /></button>
-            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2"><Edit3 size={18} className="text-blue-600" /> Edit Post</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2"><Edit3 size={18} className="text-blue-600" /> Edit Post</h2>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Title</label>
-                <input type="text" value={editingPost.title || ''} onChange={(e) => setEditingPost({...editingPost, title: e.target.value})} className="w-full bg-white border border-gray-300 rounded-xl p-3 text-gray-900 focus:ring-2 focus:ring-blue-500/50 outline-none" />
+                <input type="text" value={editingPost.title || ''} onChange={(e) => setEditingPost({...editingPost, title: e.target.value})} className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl p-3 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none" />
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Content</label>
-                <textarea rows="4" value={editingPost.content || ''} onChange={(e) => setEditingPost({...editingPost, content: e.target.value})} className="w-full bg-white border border-gray-300 rounded-xl p-3 text-gray-900 focus:ring-2 focus:ring-blue-500/50 outline-none resize-none" />
+                <textarea rows="4" value={editingPost.content || ''} onChange={(e) => setEditingPost({...editingPost, content: e.target.value})} className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl p-3 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none resize-none" />
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Code Snippet</label>
-                <textarea rows="3" value={editingPost.code_snippet || ''} onChange={(e) => setEditingPost({...editingPost, code_snippet: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-blue-600 font-mono text-sm focus:ring-2 focus:ring-blue-500/50 outline-none" />
+                <textarea rows="3" value={editingPost.code_snippet || ''} onChange={(e) => setEditingPost({...editingPost, code_snippet: e.target.value})} className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl p-3 text-blue-600 dark:text-blue-400 font-mono text-sm focus:ring-2 focus:ring-blue-500/50 outline-none" />
               </div>
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 font-bold py-3 rounded-xl transition">Cancel</button>
+                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 font-bold py-3 rounded-xl transition">Cancel</button>
                 <button type="submit" disabled={editLoading} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
                   {editLoading ? 'Saving...' : <><Save size={18} /> Save Changes</>}
                 </button>
@@ -494,17 +494,17 @@ export default function FeedContent() {
 
       {/* --- FEED LIST --- */}
       {displayedPosts.length === 0 ? (
-        <div className="h-64 border border-dashed border-gray-300 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-500">No posts yet. Be the first to share!</div>
+        <div className="h-64 border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-2xl flex items-center justify-center text-gray-500 dark:text-gray-400">No posts yet. Be the first to share!</div>
       ) : (
         displayedPosts.map((post) => {
           const hasLiked = post.likes?.some(l => l.user_id === currentUserId);
           return (
-            <div key={post.id} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative">
+            <div key={post.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm relative">
               
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div 
-                    className="relative w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-700 uppercase cursor-pointer hover:opacity-80 hover:shadow-lg transition-all overflow-hidden shrink-0 border border-gray-200"
+                    className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase cursor-pointer hover:opacity-80 hover:shadow-lg transition-all overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700"
                     onClick={() => setSelectedUserId(post.user_id)}
                     title={`View @${post.profiles?.username}'s Profile`}
                   >
@@ -516,7 +516,7 @@ export default function FeedContent() {
                   </div>
                   <div className="cursor-pointer group" onClick={() => setSelectedUserId(post.user_id)}>
                     <div className="flex items-center gap-2">
-                      <h4 className="text-gray-900 font-bold text-sm group-hover:text-blue-600 transition-colors">{post.profiles?.username || 'Unknown User'}</h4>
+                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm group-hover:text-blue-600 transition-colors">{post.profiles?.username || 'Unknown User'}</h4>
                       {post.profiles?.is_verified && <VerifiedBadge size={16} />}
                       {post.profiles?.github && (
                         <a href={`https://github.com/${post.profiles.github}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-900 transition-colors" title="GitHub Profile">
@@ -537,9 +537,9 @@ export default function FeedContent() {
                   <div className="relative">
                     <button onClick={() => setActiveMenu(activeMenu === post.id ? null : post.id)} className="text-gray-400 hover:text-gray-900 transition p-1"><MoreHorizontal size={20} /></button>
                     {activeMenu === post.id && (
-                      <div className="absolute right-0 mt-2 w-36 bg-white border border-gray-200 rounded-xl shadow-xl z-50 py-2">
-                        <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition" onClick={() => openEditModal(post)}><Edit3 size={14} /> Edit Post</button>
-                        <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 hover:bg-red-50 transition" onClick={() => openDeleteModal(post)}><Trash2 size={14} /> Delete</button>
+                      <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-50 py-2">
+                        <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition" onClick={() => openEditModal(post)}><Edit3 size={14} /> Edit Post</button>
+                        <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition" onClick={() => openDeleteModal(post)}><Trash2 size={14} /> Delete</button>
                       </div>
                     )}
                   </div>
@@ -547,17 +547,17 @@ export default function FeedContent() {
               </div>
 
               <div className="space-y-3">
-                {post.title && <h3 className="text-xl font-bold text-gray-900 tracking-tight">{post.title}</h3>}
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+                {post.title && <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{post.title}</h3>}
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</p>
                 {post.code_snippet && (
-                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 font-mono text-sm text-blue-600 overflow-x-auto relative">
+                  <div className="bg-gray-50 dark:bg-gray-950 rounded-xl p-4 border border-gray-200 dark:border-gray-800 font-mono text-sm text-blue-600 overflow-x-auto relative">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         navigator.clipboard.writeText(post.code_snippet);
                         showToast("Code copied to clipboard");
                       }}
-                      className="absolute top-3 right-3 p-1.5 text-gray-500 hover:text-blue-600 bg-white border border-gray-200 hover:border-blue-200 rounded-lg transition-all shadow-sm"
+                      className="absolute top-3 right-3 p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-500/50 rounded-lg transition-all shadow-sm"
                       title="Copy Code"
                     >
                       <Copy size={14} />
@@ -566,7 +566,7 @@ export default function FeedContent() {
                   </div>
                 )}
                 {post.image_url && (
-                  <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200">
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
                     <Image src={post.image_url} alt="Post media" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                   </div>
                 )}
@@ -574,20 +574,20 @@ export default function FeedContent() {
 
               {/* AI Summary Box */}
               {postSummaries[post.id] && (
-                <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-xl animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-center gap-2 mb-2 text-purple-700 font-bold text-xs uppercase tracking-widest">
+                <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2 mb-2 text-purple-700 dark:text-purple-400 font-bold text-xs uppercase tracking-widest">
                     <Sparkles size={14} /> AI Summary
                   </div>
-                  <div className="text-sm text-purple-900 leading-relaxed">
+                  <div className="text-sm text-purple-900 dark:text-purple-100 leading-relaxed">
                     <ReactMarkdown
                       components={{
                         p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
                         ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
                         ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
                         li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                        strong: ({ node, ...props }) => <strong className="font-bold text-purple-950" {...props} />,
+                        strong: ({ node, ...props }) => <strong className="font-bold text-purple-950 dark:text-purple-50" {...props} />,
                         code: ({ node, inline, ...props }) => (
-                          <code className={`${inline ? 'bg-purple-200/50 px-1 py-0.5 rounded' : 'block bg-purple-200/50 p-2 rounded-lg my-2'} font-mono text-[11px]`} {...props} />
+                          <code className={`${inline ? 'bg-purple-200/50 dark:bg-purple-800/50 px-1 py-0.5 rounded' : 'block bg-purple-200/50 dark:bg-purple-800/50 p-2 rounded-lg my-2'} font-mono text-[11px]`} {...props} />
                         )
                       }}
                     >{postSummaries[post.id]}</ReactMarkdown>
@@ -597,9 +597,9 @@ export default function FeedContent() {
 
               {/* AI Analysis Box */}
               {postAnalyses[post.id] && (
-                <div className="mt-4 p-4 bg-orange-50 border border-orange-100 rounded-xl animate-in fade-in slide-in-from-top-2">
+                <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/50 rounded-xl animate-in fade-in slide-in-from-top-2">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2 text-orange-700 font-bold text-xs uppercase tracking-widest">
+                    <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 font-bold text-xs uppercase tracking-widest">
                       <ShieldAlert size={14} /> Security & Bug Analysis
                     </div>
                     <button 
@@ -607,22 +607,22 @@ export default function FeedContent() {
                         navigator.clipboard.writeText(postAnalyses[post.id]);
                         showToast("Analysis copied to clipboard");
                       }}
-                      className="p-1.5 text-orange-600 hover:text-orange-800 bg-orange-100/50 hover:bg-orange-100 rounded-lg transition-colors"
+                      className="p-1.5 text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 bg-orange-100/50 dark:bg-orange-800/50 hover:bg-orange-100 dark:hover:bg-orange-800 rounded-lg transition-colors"
                       title="Copy Analysis"
                     >
                       <Copy size={14} />
                     </button>
                   </div>
-                  <div className="text-sm text-orange-900 leading-relaxed">
+                  <div className="text-sm text-orange-900 dark:text-orange-100 leading-relaxed">
                     <ReactMarkdown
                       components={{
                         p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
                         ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
                         ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
                         li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                        strong: ({ node, ...props }) => <strong className="font-bold text-orange-950" {...props} />,
+                        strong: ({ node, ...props }) => <strong className="font-bold text-orange-950 dark:text-orange-50" {...props} />,
                         code: ({ node, inline, ...props }) => (
-                          <code className={`${inline ? 'bg-orange-200/50 px-1 py-0.5 rounded' : 'block bg-orange-200/50 p-2 rounded-lg my-2'} font-mono text-[11px]`} {...props} />
+                          <code className={`${inline ? 'bg-orange-200/50 dark:bg-orange-800/50 px-1 py-0.5 rounded' : 'block bg-orange-200/50 dark:bg-orange-800/50 p-2 rounded-lg my-2'} font-mono text-[11px]`} {...props} />
                         )
                       }}
                     >{postAnalyses[post.id]}</ReactMarkdown>
@@ -631,7 +631,7 @@ export default function FeedContent() {
               )}
 
               {/* Interaction Bar */}
-              <div className="flex items-center gap-6 mt-6 pt-4 border-t border-gray-100 text-gray-500">
+              <div className="flex items-center gap-6 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800/50 text-gray-500 dark:text-gray-400">
                 <button onClick={() => handleLike(post.id, hasLiked)} className={`flex items-center gap-2 transition-colors text-sm ${hasLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
                   <Heart size={18} fill={hasLiked ? "currentColor" : "none"} />
                   <span>{post.likes?.length || 0}</span>
@@ -659,23 +659,23 @@ export default function FeedContent() {
 
               {/* Comments Section */}
               {expandedComments[post.id] && (
-                <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50 space-y-4 animate-in slide-in-from-top-2 duration-200">
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                     {post.comments?.map((comment) => (
-                      <div key={comment.id} className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                      <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-1 mb-1">
                           <p className="text-[10px] font-bold text-blue-600">@{comment.profiles?.username}</p>
                           {comment.profiles?.is_verified && <VerifiedBadge size={12} />}
                         </div>
-                        <p className="text-xs text-gray-700">{comment.content}</p>
+                        <p className="text-xs text-gray-700 dark:text-gray-300">{comment.content}</p>
                       </div>
                     ))}
                   </div>
-                  <div className="flex gap-2 items-center bg-gray-50 rounded-xl px-3 py-1 border border-gray-200">
+                  <div className="flex gap-2 items-center bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-1 border border-gray-200 dark:border-gray-700">
                     <button onClick={() => handleSuggestReply(post)} disabled={isSuggesting[post.id]} className="text-gray-400 hover:text-blue-600 transition-colors p-1 disabled:opacity-50" title="Suggest AI Reply">
                       {isSuggesting[post.id] ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Sparkles size={16} />}
                     </button>
-                    <input type="text" placeholder="Write a comment..." value={newComments[post.id] || ""} onChange={(e) => setNewComments({...newComments, [post.id]: e.target.value})} className="flex-1 bg-transparent border-none py-2 text-sm text-gray-900 focus:ring-0 outline-none" onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)} />
+                    <input type="text" placeholder="Write a comment..." value={newComments[post.id] || ""} onChange={(e) => setNewComments({...newComments, [post.id]: e.target.value})} className="flex-1 bg-transparent border-none py-2 text-sm text-gray-900 dark:text-gray-100 focus:ring-0 outline-none" onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)} />
                     <button onClick={() => handleAddComment(post.id)} className="text-blue-600 hover:text-blue-700 p-1"><Send size={16} /></button>
                   </div>
                 </div>
@@ -688,11 +688,11 @@ export default function FeedContent() {
       {/* USER PROFILE MODAL */}
       {selectedUserId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full text-gray-500 transition-colors"
+              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 rounded-full text-gray-500 dark:text-gray-400 transition-colors"
             >
               <X size={20} />
             </button>
@@ -705,7 +705,7 @@ export default function FeedContent() {
 
       {/* Custom Toast Popup */}
       {toastMessage && (
-        <div className="fixed bottom-10 right-10 z-[150] flex items-center gap-3 bg-white border border-green-200 text-green-600 px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300">
+        <div className="fixed bottom-10 right-10 z-[150] flex items-center gap-3 bg-white dark:bg-gray-900 border border-green-200 dark:border-green-900/50 text-green-600 dark:text-green-500 px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300">
           <Check size={18} className="text-green-500" />
           <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
         </div>

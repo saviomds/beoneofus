@@ -848,46 +848,46 @@ export default function MessagesContent() {
       
       {/* BLOCK MODAL */}
       {showBlockConfirm && (
-        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-orange-50 border border-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="fixed inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/50 text-orange-600 dark:text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <ShieldAlert size={32} />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Sever Connection?</h3>
-            <p className="text-gray-600 text-sm mb-8 leading-relaxed">Block @{activeChat.username}. Connection will be terminated until you re-authorize this node.</p>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Sever Connection?</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-8 leading-relaxed">Block @{activeChat.username}. Connection will be terminated until you re-authorize this node.</p>
             <div className="flex flex-col gap-3">
               <button onClick={handleBlockUser} disabled={isProcessing} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition">{isProcessing ? 'Terminating...' : 'Confirm Block'}</button>
-              <button onClick={() => setShowBlockConfirm(false)} className="w-full bg-gray-50 text-gray-700 font-bold py-3 rounded-xl transition border border-gray-200 hover:bg-gray-100">Cancel</button>
+              <button onClick={() => setShowBlockConfirm(false)} className="w-full bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
             </div>
           </div>
         </div>
       )}
 
       {/* Sidebar: Contacts */}
-      <div className={`w-full md:w-64 lg:w-72 border-r-0 md:border-r border-gray-200 flex-col md:pr-2 shrink-0 ${isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-64 lg:w-72 border-r-0 md:border-r border-gray-200 dark:border-gray-800 flex-col md:pr-2 shrink-0 ${isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
         <div className="pb-4 px-2">
-          <h2 className="text-2xl font-black text-gray-900 tracking-tighter mb-3">Messages</h2>
-          <div className="flex items-center p-1 bg-gray-100 rounded-xl mb-3">
-            <button onClick={() => setFilterUnread(false)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${!filterUnread ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>All</button>
-            <button onClick={() => setFilterUnread(true)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 ${filterUnread ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>
+          <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter mb-3">Messages</h2>
+          <div className="flex items-center p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-3">
+            <button onClick={() => setFilterUnread(false)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${!filterUnread ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}>All</button>
+            <button onClick={() => setFilterUnread(true)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 ${filterUnread ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}>
               Unread
               {Object.values(unreadCounts).some(count => count > 0) && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
             </button>
           </div>
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={14} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400 transition-colors" size={14} />
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search connections..." 
-              className="w-full bg-white border border-gray-200 hover:border-gray-300 rounded-xl py-2 pl-9 pr-3 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" 
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 rounded-xl py-2 pl-9 pr-3 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" 
             />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar px-2 pb-2">
           {filteredContacts.length === 0 && (
-            <div className="text-center text-xs text-gray-500 font-bold mt-10 px-4 animate-in fade-in">
+            <div className="text-center text-xs text-gray-500 dark:text-gray-400 font-bold mt-10 px-4 animate-in fade-in">
               {filterUnread ? "No unread messages." : "No connections found. Follow nodes to open channels."}
             </div>
           )}
@@ -895,11 +895,11 @@ export default function MessagesContent() {
             <div 
               key={contact.id} 
               onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} 
-              className={`group flex items-center gap-3 p-3 cursor-pointer transition-all duration-300 rounded-2xl border animate-in fade-in slide-in-from-left-4 ${activeChat?.id === contact.id ? 'bg-blue-50 border-blue-200 shadow-md scale-[1.02] z-10 relative' : 'bg-white hover:bg-gray-50 border-gray-100 hover:border-gray-200 hover:shadow-sm'}`}
+              className={`group flex items-center gap-3 p-3 cursor-pointer transition-all duration-300 rounded-2xl border animate-in fade-in slide-in-from-left-4 ${activeChat?.id === contact.id ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 shadow-md scale-[1.02] z-10 relative' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm'}`}
               style={{ animationDelay: `${index * 40}ms`, animationFillMode: 'both' }}
             >
               <div 
-                className={`relative w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all overflow-hidden shrink-0 border-2 ${activeChat?.id === contact.id ? 'border-blue-300 bg-blue-100 text-blue-600' : 'border-transparent bg-gray-100 text-gray-500 group-hover:border-blue-100 group-hover:text-blue-500'}`}
+                className={`relative w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all overflow-hidden shrink-0 border-2 ${activeChat?.id === contact.id ? 'border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'border-transparent bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:border-blue-100 dark:group-hover:border-blue-800 group-hover:text-blue-500 dark:group-hover:text-blue-400'}`}
                 onClick={(e) => { e.stopPropagation(); setSelectedUserId(contact.id); }}
                 title={`View @${contact.username}'s Profile`}
               >
@@ -914,16 +914,16 @@ export default function MessagesContent() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <h4 className={`text-sm font-bold truncate transition-colors flex items-center gap-1 ${activeChat?.id === contact.id ? 'text-blue-700' : 'text-gray-900 group-hover:text-blue-600'}`}>
+                  <h4 className={`text-sm font-bold truncate transition-colors flex items-center gap-1 ${activeChat?.id === contact.id ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400'}`}>
                     {contact.username}
-                    {contact.is_verified && <BadgeCheck size={14} className={activeChat?.id === contact.id ? 'text-blue-600' : 'text-blue-500'} fill="currentColor" stroke="white" />}
+                    {contact.is_verified && <BadgeCheck size={14} className={activeChat?.id === contact.id ? 'text-blue-600 dark:text-blue-400' : 'text-blue-500'} fill="currentColor" stroke="white" />}
                   </h4>
                   {unreadCounts[contact.id] > 0 && (
                     <span className="text-[9px] font-black text-white bg-blue-600 px-1.5 py-0.5 rounded-md shrink-0 animate-pulse shadow-sm shadow-blue-600/30">{unreadCounts[contact.id]} NEW</span>
                   )}
                 </div>
                 <div className="flex items-center gap-1 min-w-0">
-                   <p className={`text-xs truncate flex-1 ${typingUsers[contact.id] ? 'text-blue-500 italic font-bold' : unreadCounts[contact.id] > 0 ? 'text-blue-600 font-bold' : 'text-gray-500 font-medium'}`}>
+                   <p className={`text-xs truncate flex-1 ${typingUsers[contact.id] ? 'text-blue-500 dark:text-blue-400 italic font-bold' : unreadCounts[contact.id] > 0 ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400 font-medium'}`}>
                      {typingUsers[contact.id] ? (
                        'typing...'
                      ) : (
@@ -932,9 +932,9 @@ export default function MessagesContent() {
                    </p>
                    {!typingUsers[contact.id] && lastMessagePreviews[contact.id]?.isSender && (
                      lastMessagePreviews[contact.id].isRead ? (
-                       <CheckCheck size={14} className="text-blue-500 shrink-0" />
+                       <CheckCheck size={14} className="text-blue-500 dark:text-blue-400 shrink-0" />
                      ) : (
-                       <Check size={14} className="text-gray-400 shrink-0" />
+                       <Check size={14} className="text-gray-400 dark:text-gray-500 shrink-0" />
                      )
                    )}
                 </div>
@@ -951,13 +951,13 @@ export default function MessagesContent() {
       <div className={`flex-1 flex-col min-w-0 min-h-0 md:pl-4 md:mr-2 ${!isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
         {activeChat ? (
           <>
-            <div className="pb-3 pt-2 md:pt-0 border-b border-gray-200 flex items-center justify-between relative overflow-visible shrink-0 z-10">
+                <div className="pb-3 pt-2 md:pt-0 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between relative overflow-visible shrink-0 z-10">
               <div className="flex items-center gap-3">
-                <button onClick={() => setIsMobileChatOpen(false)} className="md:hidden p-1.5 -ml-1.5 text-gray-500 hover:text-gray-900 transition-colors">
+                    <button onClick={() => setIsMobileChatOpen(false)} className="md:hidden p-1.5 -ml-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
                   <ChevronLeft size={22} />
                 </button>
                 <div 
-                  className="relative w-9 h-9 rounded-full bg-violet-50 border border-violet-200 flex items-center justify-center text-violet-600 font-bold cursor-pointer hover:bg-violet-100 transition-colors overflow-hidden shrink-0"
+                      className="relative w-9 h-9 rounded-full bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold cursor-pointer hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors overflow-hidden shrink-0"
                   onClick={() => setSelectedUserId(activeChat.id)}
                   title={`View @${activeChat.username}'s Profile`}
                 >
@@ -968,29 +968,29 @@ export default function MessagesContent() {
                   )}
                 </div>
                 <div className="cursor-pointer group" onClick={() => setSelectedUserId(activeChat.id)}>
-                  <h3 className="text-sm font-bold text-gray-900 leading-tight group-hover:text-violet-600 transition-colors flex items-center gap-1">
+                      <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors flex items-center gap-1">
                     {activeChat.username}
                     {activeChat.is_verified && <BadgeCheck size={14} className="text-violet-500" fill="currentColor" stroke="white" />}
                   </h3>
                   <div className="flex items-center gap-1">
-                    <div className={`w-1.5 h-1.5 ${connectionStatus === 'blocked' ? 'bg-red-500' : Object.keys(onlineUsers).includes(activeChat.id) ? 'bg-green-500 animate-pulse' : 'bg-gray-300'} rounded-full`}></div>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
+                        <div className={`w-1.5 h-1.5 ${connectionStatus === 'blocked' ? 'bg-red-500' : Object.keys(onlineUsers).includes(activeChat.id) ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'} rounded-full`}></div>
+                        <p className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-tighter">
                       {connectionStatus === 'blocked' ? 'Severed' : Object.keys(onlineUsers).includes(activeChat.id) ? 'Online' : 'Offline'}
                     </p>
                   </div>
                 </div>
               </div>
               
-              <div className="flex items-center gap-1 text-gray-500 relative">
+              <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 relative">
                
                 <div className="relative">
-                  <button onClick={() => setShowMoreMenu(!showMoreMenu)} className={`p-1.5 transition-colors ${showMoreMenu ? 'text-gray-900' : 'hover:text-gray-900'}`}><MoreHorizontal size={18} /></button>
+                  <button onClick={() => setShowMoreMenu(!showMoreMenu)} className={`p-1.5 transition-colors ${showMoreMenu ? 'text-gray-900 dark:text-gray-100' : 'hover:text-gray-900 dark:hover:text-gray-100'}`}><MoreHorizontal size={18} /></button>
                   {showMoreMenu && (
-                    <div className="absolute top-10 right-0 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-[150] py-2 animate-in fade-in slide-in-from-top-2">
+                    <div className="absolute top-10 right-0 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-[150] py-2 animate-in fade-in slide-in-from-top-2">
                       {connectionStatus === 'blocked' && blockerId === currentUserId ? (
-                         <button onClick={handleUnblockUser} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-green-600 hover:bg-green-50 transition-all font-bold"><ShieldCheck size={14} /> UNBLOCK NODE</button>
+                         <button onClick={handleUnblockUser} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all font-bold"><ShieldCheck size={14} /> UNBLOCK NODE</button>
                       ) : (
-                        <button onClick={() => setShowBlockConfirm(true)} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-orange-600 hover:bg-orange-50 transition-all font-bold"><ShieldAlert size={14} /> BLOCK NODE</button>
+                        <button onClick={() => setShowBlockConfirm(true)} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-orange-600 dark:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all font-bold"><ShieldAlert size={14} /> BLOCK NODE</button>
                       )}
                     </div>
                   )}
@@ -1007,19 +1007,19 @@ export default function MessagesContent() {
                   <div key={msg.id} className={`flex gap-2 group ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
                     {msg.sender_id !== currentUserId && (
                       <div className="flex items-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all px-2">
-                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 ${hasLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} title="Like">
+                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-gray-800 ${hasLiked ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'}`} title="Like">
                           <ThumbsUp size={14} className={hasLiked ? "fill-current" : ""} />
                         </button>
-                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-gray-100 transition-all" title="Reply">
+                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" title="Reply">
                           <MessageSquare size={14} />
                         </button>
                       </div>
                     )}
                     <div className={`max-w-[85%] ${msg.sender_id === currentUserId ? "text-right" : "text-left"}`}>
-                      <div className={`inline-block p-1 rounded-2xl text-[13px] break-words text-left shadow-sm ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-sm" : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>
+                      <div className={`inline-block p-1 rounded-2xl text-[13px] break-words text-left shadow-sm ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-sm" : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-sm"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>
                         <div className="px-3 pt-1.5 pb-2">
                           {msg.replied_message && (
-                            <div className="border-l-2 border-blue-300 pl-2 mb-2 text-xs opacity-80">
+                            <div className="border-l-2 border-blue-300 dark:border-blue-500/50 pl-2 mb-2 text-xs opacity-80">
                               <p className="font-bold text-current flex items-center gap-1">
                                 @{msg.replied_message.sender_id === currentUserId ? 'You' : activeChat.username}
                                 {msg.replied_message.sender_id !== currentUserId && activeChat.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}
@@ -1040,24 +1040,24 @@ export default function MessagesContent() {
                         <div className={`flex flex-wrap gap-1 mt-1 relative z-10 ${msg.sender_id === currentUserId ? 'justify-end' : 'justify-start'}`}>
                           <button 
                             onClick={() => handleReaction(msg.id, '👍')}
-                            className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all shadow-sm ${hasLiked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                            className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all shadow-sm ${hasLiked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                           >
-                            <ThumbsUp size={10} className={hasLiked ? "fill-current text-white" : "text-gray-400"} /> 
+                            <ThumbsUp size={10} className={hasLiked ? "fill-current text-white" : "text-gray-400 dark:text-gray-500"} /> 
                             <span>{msg.message_reactions.filter(r => r.emoji === '👍').length}</span>
                           </button>
                         </div>
                       )}
 
-                      <div className={`mt-1 flex items-center gap-1.5 text-[10px] text-gray-600 px-1 ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
+                      <div className={`mt-1 flex items-center gap-1.5 text-[10px] text-gray-600 dark:text-gray-400 px-1 ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {msg.sender_id === currentUserId && (
                           <span className="flex items-center gap-0.5">
                             {msg.isSending ? (
-                              <span className="text-gray-400 italic">Sending...</span>
+                              <span className="text-gray-400 dark:text-gray-500 italic">Sending...</span>
                             ) : msg.is_read ? (
-                              <><CheckCheck size={14} className="text-blue-500" /><span className="text-blue-500 font-bold">Seen</span></>
+                              <><CheckCheck size={14} className="text-blue-500 dark:text-blue-400" /><span className="text-blue-500 dark:text-blue-400 font-bold">Seen</span></>
                             ) : (
-                              <><Check size={14} className="text-gray-400" /><span className="text-gray-500 font-medium">Delivered</span></>
+                              <><Check size={14} className="text-gray-400 dark:text-gray-500" /><span className="text-gray-500 dark:text-gray-400 font-medium">Delivered</span></>
                             )}
                           </span>
                         )}
@@ -1065,10 +1065,10 @@ export default function MessagesContent() {
                     </div>
                     {msg.sender_id === currentUserId && (
                       <div className="flex items-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all px-2">
-                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 ${hasLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`} title="Like">
+                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-gray-800 ${hasLiked ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'}`} title="Like">
                           <ThumbsUp size={14} className={hasLiked ? "fill-current" : ""} />
                         </button>
-                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-gray-100 transition-all" title="Reply">
+                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" title="Reply">
                           <MessageSquare size={14} />
                         </button>
                       </div>
@@ -1078,11 +1078,11 @@ export default function MessagesContent() {
               })}
               {typingUsers[activeChat.id] && (
                 <div className="flex gap-2 group justify-start animate-in fade-in slide-in-from-bottom-2">
-                  <div className="bg-gray-100 border border-gray-200 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-sm w-max">
+                  <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-sm w-max">
                     <span className="flex gap-1">
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </span>
                   </div>
                 </div>
@@ -1092,78 +1092,78 @@ export default function MessagesContent() {
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
                   {connectionStatus === 'blocked' ? (
                     <>
-                      <div className="w-16 h-16 bg-red-50 border border-red-100 rounded-full flex items-center justify-center text-red-600"><ShieldAlert size={32} /></div>
-                      <p className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Connection Severed</p>
+                      <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-full flex items-center justify-center text-red-600 dark:text-red-500"><ShieldAlert size={32} /></div>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm font-bold uppercase tracking-tighter">Connection Severed</p>
                       {blockerId === currentUserId ? (
-                        <button onClick={handleUnblockUser} className="text-violet-500 text-xs font-black uppercase hover:underline">Re-authorize Link</button>
+                        <button onClick={handleUnblockUser} className="text-violet-500 dark:text-violet-400 text-xs font-black uppercase hover:underline">Re-authorize Link</button>
                       ) : (
-                        <p className="text-gray-500 text-xs italic font-mono">Channel locked by peer user.</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-xs italic font-mono">Channel locked by peer user.</p>
                       )}
                     </>
                   ) : connectionStatus === 'none' ? (
-                    <><div className="w-16 h-16 bg-violet-50 border border-violet-100 rounded-full flex items-center justify-center text-violet-600"><UserPlus size={32} /></div><p className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Transmission blocked</p><button onClick={handleSendRequest} className="bg-violet-600 hover:bg-violet-500 text-white px-8 py-3 rounded-xl font-bold">Send Request</button></>
+                    <><div className="w-16 h-16 bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800/50 rounded-full flex items-center justify-center text-violet-600 dark:text-violet-400"><UserPlus size={32} /></div><p className="text-gray-500 dark:text-gray-400 text-sm font-bold uppercase tracking-tighter">Transmission blocked</p><button onClick={handleSendRequest} className="bg-violet-600 hover:bg-violet-500 text-white px-8 py-3 rounded-xl font-bold">Send Request</button></>
                   ) : connectionStatus === 'waiting' ? (
-                    <><div className="w-16 h-16 bg-gray-50 border border-gray-200 rounded-full flex items-center justify-center text-gray-400 animate-pulse"><Send size={32} /></div><p className="text-gray-500 text-xs italic font-mono uppercase tracking-tighter">Syncing... waiting for peer authorization.</p></>
+                    <><div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500 animate-pulse"><Send size={32} /></div><p className="text-gray-500 dark:text-gray-400 text-xs italic font-mono uppercase tracking-tighter">Syncing... waiting for peer authorization.</p></>
                   ) : (
-                    <><div className="w-16 h-16 bg-green-50 border border-green-100 rounded-full flex items-center justify-center text-green-600"><Check size={32} /></div><p className="text-gray-900 text-sm font-black tracking-tight uppercase">Connection Request Detected</p><div className="flex gap-3"><button onClick={handleAcceptRequest} className="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all"><Check size={18} /> Accept</button><button onClick={() => { supabase.from('connections').delete().eq('id', activeConnectionId); setConnectionStatus('none'); }} className="bg-white border border-gray-300 hover:bg-red-50 text-gray-700 hover:text-red-600 px-6 py-2.5 rounded-xl font-bold transition-all">Ignore</button></div></>
+                    <><div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/50 rounded-full flex items-center justify-center text-green-600 dark:text-green-500"><Check size={32} /></div><p className="text-gray-900 dark:text-gray-100 text-sm font-black tracking-tight uppercase">Connection Request Detected</p><div className="flex gap-3"><button onClick={handleAcceptRequest} className="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all"><Check size={18} /> Accept</button><button onClick={() => { supabase.from('connections').delete().eq('id', activeConnectionId); setConnectionStatus('none'); }} className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 px-6 py-2.5 rounded-xl font-bold transition-all">Ignore</button></div></>
                   )}
                 </div>
               )}
             </div>
 
-            <div className={`p-3 md:p-0 md:pt-3 bg-white md:bg-transparent border-t border-gray-200 md:border-transparent shrink-0 w-full z-20 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
+            <div className={`p-3 md:p-0 md:pt-3 bg-white dark:bg-gray-900 md:bg-transparent dark:md:bg-transparent border-t border-gray-200 dark:border-gray-800 md:border-transparent dark:md:border-transparent shrink-0 w-full z-20 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
               {replyingTo && (
-                <div className="bg-gray-100 border border-gray-200 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="min-w-0">
-                    <p className="text-gray-500 flex items-center gap-1">Replying to <span className="font-bold text-blue-600 flex items-center gap-1">
+                    <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1">Replying to <span className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
                       @{replyingTo.sender_id === currentUserId ? 'You' : activeChat.username}
                       {replyingTo.sender_id !== currentUserId && activeChat.is_verified && <BadgeCheck size={12} className="text-blue-500" fill="currentColor" stroke="white" />}
                     </span></p>
-                    <p className="text-gray-500 truncate">{replyingTo.text || 'Image'}</p>
+                    <p className="text-gray-500 dark:text-gray-400 truncate">{replyingTo.text || 'Image'}</p>
                   </div>
-                  <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 hover:text-gray-900"><X size={16} /></button>
+                  <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><X size={16} /></button>
                 </div>
               )}
               {imagePreview && (
-                <div className="bg-gray-100 border border-gray-200 border-b-0 rounded-t-xl p-2 flex animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-b-0 rounded-t-xl p-2 flex animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="relative w-16 h-16 rounded-lg overflow-hidden">
                     <Image src={imagePreview} alt="preview" fill sizes="64px" className="object-cover" />
-                    <button onClick={handleRemoveImage} className="absolute top-1 right-1 bg-white/80 text-gray-900 rounded-full p-0.5"><X size={12} /></button>
+                    <button onClick={handleRemoveImage} className="absolute top-1 right-1 bg-white/80 dark:bg-black/50 text-gray-900 dark:text-gray-100 rounded-full p-0.5"><X size={12} /></button>
                   </div>
                 </div>
               )}
-              <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2 bg-white border border-gray-300 rounded-full p-1.5 pl-3 sm:pl-4 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-md w-full">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full p-1.5 pl-3 sm:pl-4 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-md w-full">
                 <input type="file" ref={imageInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                 <button 
                   type="button" 
                   onClick={handleSuggestReply} 
                   disabled={isSuggesting} 
-                  className="text-gray-400 hover:text-violet-600 transition-colors p-2 disabled:opacity-50 shrink-0"
+                  className="text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors p-2 disabled:opacity-50 shrink-0"
                   title="Suggest AI Reply"
                 >
                   {isSuggesting ? <Loader2 size={18} className="animate-spin text-violet-500" /> : <Sparkles size={18} />}
                 </button>
-                <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 hover:text-blue-600 transition-colors p-2 shrink-0">
+                <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-2 shrink-0">
                   <Paperclip size={18} />
                 </button>
-                <input value={inputValue} onChange={handleInputChange} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-base md:text-sm text-gray-900 py-2" />
+                <input value={inputValue} onChange={handleInputChange} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-base md:text-sm text-gray-900 dark:text-gray-100 py-2" />
                 <button type="submit" className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-full transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
               </form>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-600 text-xs font-black uppercase tracking-[4px] italic animate-pulse">Waiting for selection...</div>
+          <div className="flex-1 flex items-center justify-center text-gray-600 dark:text-gray-400 text-xs font-black uppercase tracking-[4px] italic animate-pulse">Waiting for selection...</div>
         )}
       </div>
 
       {/* USER PROFILE MODAL */}
       {selectedUserId && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white rounded-[2rem] border border-gray-200 shadow-xl">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[260] p-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full text-gray-500 transition-colors"
+              className="absolute top-6 right-6 z-[260] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 rounded-full text-gray-500 dark:text-gray-400 transition-colors"
             >
               <X size={20} />
             </button>
@@ -1176,7 +1176,7 @@ export default function MessagesContent() {
 
       {/* Custom Toast Popup */}
       {toastMessage && (
-        <div className={`fixed bottom-10 right-10 z-[300] flex items-center gap-3 bg-white border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 max-w-md ${toastType === 'error' ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
+        <div className={`fixed bottom-10 right-10 z-[300] flex items-center gap-3 bg-white dark:bg-gray-900 border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 max-w-md ${toastType === 'error' ? 'border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-500' : 'border-green-200 dark:border-green-900/50 text-green-600 dark:text-green-500'}`}>
           {toastType === 'error' ? <AlertTriangle size={18} className="text-red-500 shrink-0" /> : <Check size={18} className="text-green-500 shrink-0" />}
           <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
         </div>

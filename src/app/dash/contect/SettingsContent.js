@@ -126,21 +126,20 @@ export default function SettingsContent() {
     <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-gray-900 tracking-tighter">Settings</h1>
-        <p className="text-gray-500 text-sm mt-1 font-medium">Manage your preferences and app appearance.</p>
+        <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Settings</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">Manage your preferences and app appearance.</p>
       </div>
 
       <div className="space-y-8 max-w-3xl">
-        {/* Appearance Section - Commented out as per request */}
-        {/*
-        <div className="bg-white border border-gray-200 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
+        {/* Appearance Section */}
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center">
               <Palette size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Appearance</h2>
-              <p className="text-xs text-gray-500 font-medium">Choose how the app looks to you.</p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Appearance</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Choose how the app looks to you.</p>
             </div>
           </div>
 
@@ -152,11 +151,14 @@ export default function SettingsContent() {
               return (
                 <button
                   key={t.id}
-                  onClick={() => setTheme(t.id)}
+                  onClick={() => {
+                    setTheme(t.id);
+                    showToast(`Appearance set to ${t.label}`, "success");
+                  }}
                   className={`relative flex flex-col items-center p-6 rounded-2xl border transition-all duration-300 ${
                     isActive 
-                      ? 'bg-blue-50 border-blue-500 shadow-sm' 
-                      : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 shadow-sm' 
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                   }`}
                 >
                   {isActive && (
@@ -165,10 +167,10 @@ export default function SettingsContent() {
                     </div>
                   )}
                   <Icon size={32} className={`mb-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
-                  <span className={`font-bold text-sm mb-1 ${isActive ? 'text-blue-600' : 'text-gray-900'}`}>
+                  <span className={`font-bold text-sm mb-1 ${isActive ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100'}`}>
                     {t.label}
                   </span>
-                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest text-center">
+                  <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest text-center">
                     {t.desc}
                   </span>
                 </button>
@@ -176,28 +178,27 @@ export default function SettingsContent() {
             })}
           </div>
         </div>
-        */}
 
         {/* App Preferences Section */}
-        <div className="bg-white border border-gray-200 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 dark:text-purple-400 flex items-center justify-center shrink-0">
               <Volume2 size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">App Preferences</h2>
-              <p className="text-xs text-gray-500 font-medium">Customize your local client experience.</p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">App Preferences</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Customize your local client experience.</p>
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl">
             <div>
-              <h3 className="text-sm font-bold text-gray-900">Notification Sounds</h3>
-              <p className="text-xs text-gray-500 mt-1">Play audio alerts for incoming messages and calls.</p>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Notification Sounds</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Play audio alerts for incoming messages and calls.</p>
             </div>
             <button 
               onClick={toggleMute}
-              className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm shrink-0 flex items-center justify-center gap-2 border ${isMuted ? 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'}`}
+              className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm shrink-0 flex items-center justify-center gap-2 border ${isMuted ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'}`}
             >
               {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
               {isMuted ? 'Sounds Muted' : 'Sounds Enabled'}
@@ -206,28 +207,28 @@ export default function SettingsContent() {
         </div>
 
         {/* Verification Section */}
-        <div className="bg-white border border-gray-200 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 dark:text-blue-400 flex items-center justify-center shrink-0">
               <BadgeCheck size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Account Verification</h2>
-              <p className="text-xs text-gray-500 font-medium">Get the blue verified badge on your profile.</p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Account Verification</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Get the blue verified badge on your profile.</p>
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl">
             <div>
-              <h3 className="text-sm font-bold text-gray-900">Verified Node Status</h3>
-              <p className="text-xs text-gray-500 mt-1">Official verification by the beoneofus company.</p>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Verified Node Status</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Official verification by the beoneofus company.</p>
             </div>
             {profile?.is_verified ? (
-              <div className="flex items-center justify-center gap-2 text-blue-600 bg-blue-50 px-5 py-2.5 rounded-xl font-bold text-sm border border-blue-200 shrink-0 w-full sm:w-auto">
+              <div className="flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-5 py-2.5 rounded-xl font-bold text-sm border border-blue-200 dark:border-blue-800/50 shrink-0 w-full sm:w-auto">
                 <BadgeCheck size={18} className="text-blue-600" fill="currentColor" stroke="white" /> Verified
               </div>
             ) : profile?.verification_status === 'pending' ? (
-              <div className="flex items-center justify-center gap-2 text-amber-600 bg-amber-50 px-5 py-2.5 rounded-xl font-bold text-sm border border-amber-200 shrink-0 w-full sm:w-auto">
+              <div className="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-5 py-2.5 rounded-xl font-bold text-sm border border-amber-200 dark:border-amber-800/50 shrink-0 w-full sm:w-auto">
                 <Loader2 size={18} className="animate-spin" /> Pending Review
               </div>
             ) : (
@@ -244,21 +245,21 @@ export default function SettingsContent() {
         </div>
 
         {/* Danger Zone Section for account deletion */}
-        <div className="bg-white border border-red-100 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-900 border border-red-100 dark:border-red-900/50 rounded-[2rem] p-6 sm:p-8 shadow-sm transition-colors duration-300">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 dark:text-red-400 flex items-center justify-center shrink-0">
               <AlertTriangle size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Danger Zone</h2>
-              <p className="text-xs text-gray-500 font-medium">Irreversible actions for your account.</p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Danger Zone</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Irreversible actions for your account.</p>
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl">
             <div>
-              <h3 className="text-sm font-bold text-gray-900">Delete Account</h3>
-              <p className="text-xs text-gray-500 mt-1">Permanently delete your account and all associated data.</p>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Delete Account</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Permanently delete your account and all associated data.</p>
             </div>
             <button 
               onClick={() => setShowDeleteModal(true)}
@@ -274,25 +275,25 @@ export default function SettingsContent() {
       {showDeleteModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           {/* Modal backdrop */}
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => { setShowDeleteModal(false); setDeleteInput(""); }} />
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => { setShowDeleteModal(false); setDeleteInput(""); }} />
           {/* Modal content */}
-          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-3xl shadow-xl p-6 text-center animate-in fade-in zoom-in duration-200">
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-xl p-6 text-center animate-in fade-in zoom-in duration-200">
             <button 
               onClick={() => { setShowDeleteModal(false); setDeleteInput(""); }} 
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 transition-colors"
+              className="absolute top-4 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
             >
               <X size={20} />
             </button>
             
-            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-red-500/10 text-red-500 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 size={32} />
             </div>
             
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Account?</h3>
-            <p className="text-gray-600 text-sm mb-6 leading-relaxed">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Account?</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 leading-relaxed">
               This action cannot be undone. All your posts, messages, and connections will be permanently removed.
               <br /><br />
-              Please type <span className="font-bold text-red-600 select-all">delete {profile?.username}</span> to confirm.
+              Please type <span className="font-bold text-red-600 dark:text-red-400 select-all">delete {profile?.username}</span> to confirm.
             </p>
             
             <div className="space-y-4">
@@ -303,12 +304,12 @@ export default function SettingsContent() {
                 onChange={(e) => setDeleteInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && deleteInput === `delete ${profile?.username}`) handleDeleteAccount(); }}
                 placeholder={`delete ${profile?.username}`}
-                className="w-full bg-white border border-gray-300 rounded-xl py-3 px-4 text-gray-900 focus:outline-none focus:border-red-500/50 transition-all text-center"
+                className="w-full bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-red-500/50 transition-all text-center"
               />
               
               {/* Error message display */}
               {deleteError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-xl text-left">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 text-xs p-3 rounded-xl text-left">
                   <span className="font-bold">Error:</span> {deleteError}
                 </div>
               )}
@@ -328,8 +329,8 @@ export default function SettingsContent() {
 
       {/* Custom Toast Popup */}
       {toastMessage && (
-        <div className={`fixed bottom-10 right-10 z-[300] flex items-center gap-3 bg-white border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 max-w-md ${toastType === 'error' ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
-          {toastType === 'error' ? <AlertTriangle size={18} className="text-red-500 shrink-0" /> : <Check size={18} className="text-green-500 shrink-0" />}
+        <div className={`fixed bottom-10 right-10 z-[300] flex items-center gap-3 bg-white dark:bg-gray-900 border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 max-w-md ${toastType === 'error' ? 'border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-500' : 'border-green-200 dark:border-green-900/50 text-green-600 dark:text-green-500'}`}>
+          {toastType === 'error' ? <AlertTriangle size={18} className="text-red-500 dark:text-red-400 shrink-0" /> : <Check size={18} className="text-green-500 dark:text-green-400 shrink-0" />}
           <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
         </div>
       )}

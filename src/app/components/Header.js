@@ -33,6 +33,10 @@ export default function Header({ setActiveTab }) {
   const [jobs, setJobs] = useState([]);
   const [isJobsLoading, setIsJobsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [resumeFile, setResumeFile] = useState(null);
+  const [portfolioUrl, setPortfolioUrl] = useState('');
+  const [coverLetter, setCoverLetter] = useState('');
+  const [isSubmittingApp, setIsSubmittingApp] = useState(false);
 
   const closeQuickView = () => setShowQuickView(null);
 
@@ -161,6 +165,47 @@ export default function Header({ setActiveTab }) {
     job.company?.toLowerCase().includes(jobSearchQuery.toLowerCase()) || 
     (job.tags || []).some(t => t.toLowerCase().includes(jobSearchQuery.toLowerCase()))
   );
+
+  const handleApplyJob = async (e) => {
+    e.preventDefault();
+    if (!currentUserId) return alert("You must be logged in to apply.");
+    if (!resumeFile && !portfolioUrl) return alert("Please upload a resume or provide a portfolio link.");
+
+    setIsSubmittingApp(true);
+    try {
+      let finalResumeUrl = null;
+      
+      // Upload resume file if provided
+      if (resumeFile) {
+        const fileExt = resumeFile.name.split('.').pop();
+        const fileName = `resume-${currentUserId}-${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage.from('resumes').upload(fileName, resumeFile);
+        if (uploadError) throw uploadError;
+        
+        const { data } = supabase.storage.from('resumes').getPublicUrl(fileName);
+        finalResumeUrl = data.publicUrl;
+      }
+
+      const { error } = await supabase.from('job_applications').insert({
+        job_id: applyingJob.id,
+        user_id: currentUserId,
+        resume_url: finalResumeUrl,
+        portfolio_url: portfolioUrl,
+        cover_letter: coverLetter,
+        status: 'pending'
+      });
+      if (error) throw error;
+      alert('Application submitted successfully!');
+      setApplyingJob(null);
+      setResumeFile(null);
+      setPortfolioUrl('');
+      setCoverLetter('');
+    } catch (err) {
+      alert('Error submitting application: ' + err.message);
+    } finally {
+      setIsSubmittingApp(false);
+    }
+  };
 
   return (
     <>
@@ -549,14 +594,18 @@ export default function Header({ setActiveTab }) {
               </div>
             )}
 
-            <form onSubmit={(e) => { e.preventDefault(); alert('Application submitted successfully!'); setApplyingJob(null); }} className="space-y-4">
+            <form onSubmit={handleApplyJob} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Portfolio / Resume Link</label>
-                <input type="url" required placeholder="https://your-portfolio.com" className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-gray-900 dark:text-gray-100 shadow-sm" />
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Upload Resume (PDF/DOC)</label>
+                <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setResumeFile(e.target.files[0])} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-gray-900 dark:text-gray-100 shadow-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 dark:file:bg-blue-900/20 file:text-blue-700 dark:file:text-blue-400 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/40 cursor-pointer" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Portfolio Link (Optional)</label>
+                <input type="url" value={portfolioUrl} onChange={(e) => setPortfolioUrl(e.target.value)} placeholder="https://your-portfolio.com" className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-gray-900 dark:text-gray-100 shadow-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Cover Letter (Optional)</label>
-                <textarea placeholder="Why are you a great fit for this role?" rows={4} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none resize-none transition-all text-gray-900 dark:text-gray-100 shadow-sm"></textarea>
+                <textarea value={coverLetter} onChange={(e) => setCoverLetter(e.target.value)} placeholder="Why are you a great fit for this role?" rows={4} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none resize-none transition-all text-gray-900 dark:text-gray-100 shadow-sm"></textarea>
               </div>
               
               <div className="pt-4 flex flex-col sm:flex-row gap-3">
@@ -578,8 +627,8 @@ export default function Header({ setActiveTab }) {
                     External Apply
                   </button>
                 )}
-                <button type="submit" className="flex-1 py-3.5 px-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 text-sm active:scale-95">
-                  Submit Quick Apply
+                <button type="submit" disabled={isSubmittingApp} className="flex-1 flex justify-center items-center py-3.5 px-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 text-sm active:scale-95 disabled:opacity-50">
+                  {isSubmittingApp ? <Loader2 size={16} className="animate-spin" /> : "Submit Quick Apply"}
                 </button>
               </div>
             </form>

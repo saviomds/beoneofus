@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, Briefcase, Plus, Building, DollarSign, Trash2 } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
@@ -76,6 +76,13 @@ export default function ProfileContent({ viewUserId }) {
   const [editingJobId, setEditingJobId] = useState(null);
   const [jobToDelete, setJobToDelete] = useState(null);
   const [viewJob, setViewJob] = useState(null);
+  
+  // Applications States
+  const [showApplicantsModal, setShowApplicantsModal] = useState(false);
+  const [jobApplicants, setJobApplicants] = useState([]);
+  const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [selectedApplicant, setSelectedApplicant] = useState(null);
+  const [activeJobForApplicants, setActiveJobForApplicants] = useState(null);
 
   useEffect(() => {
     let channel;
@@ -473,6 +480,56 @@ export default function ProfileContent({ viewUserId }) {
     }
   };
 
+  const handleViewApplicants = async (job) => {
+    setActiveJobForApplicants(job);
+    setShowApplicantsModal(true);
+    setLoadingApplicants(true);
+    setJobApplicants([]);
+    try {
+      const { data, error } = await supabase
+        .from('job_applications')
+        .select('*, profiles(username, avatar_url, is_verified, github, website, location, status, work_status)')
+        .eq('job_id', job.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setJobApplicants(data || []);
+    } catch (err) {
+      setToast({ message: err.message, type: "error" });
+    } finally {
+      setLoadingApplicants(false);
+    }
+  };
+
+  const handleAppAction = async (appId, newStatus, applicantId) => {
+    try {
+      const { error } = await supabase
+        .from('job_applications')
+        .update({ status: newStatus })
+        .eq('id', appId);
+
+      if (error) throw error;
+
+      if (applicantId) {
+        await supabase.from('notifications').insert({
+          receiver_id: applicantId,
+          actor_id: currentUser.id,
+          type: 'message',
+          content: `Your job application was ${newStatus}.`
+        });
+      }
+
+      setJobApplicants(prev => prev.map(app => 
+        app.id === appId ? { ...app, status: newStatus } : app
+      ));
+      if (selectedApplicant && selectedApplicant.id === appId) {
+        setSelectedApplicant(prev => ({...prev, status: newStatus}));
+      }
+    } catch (err) {
+      setToast({ message: "Error updating application: " + err.message, type: "error" });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-20">
@@ -811,6 +868,16 @@ export default function ProfileContent({ viewUserId }) {
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  handleViewApplicants(job);
+                                }}
+                                className="text-gray-400 hover:text-green-500 transition-colors p-1"
+                                title="View Applicants"
+                              >
+                                <Users size={14} />
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setEditingJobId(job.id);
                                   setJobForm({
                                     title: job.title || "", company: job.company || "", location: job.location || "",
@@ -988,6 +1055,177 @@ export default function ProfileContent({ viewUserId }) {
                <button onClick={handlePostJob} disabled={isPostingJob || !jobForm.title} className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
                  {isPostingJob ? <Loader2 size={16} className="animate-spin" /> : (editingJobId ? 'Update Job' : 'Publish Job')}
                </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- VIEW APPLICANTS MODAL --- */}
+      {showApplicantsModal && activeJobForApplicants && (
+        <div className="fixed inset-0 z-[350] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/60 backdrop-blur-sm" onClick={() => { setShowApplicantsModal(false); setActiveJobForApplicants(null); }} />
+          <div className="relative w-full max-w-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 sm:p-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-start shrink-0">
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Applicants</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-bold mt-2">
+                  Reviewing applications for <span className="text-blue-600 dark:text-blue-400">{activeJobForApplicants.title}</span>
+                </p>
+              </div>
+              <button onClick={() => { setShowApplicantsModal(false); setActiveJobForApplicants(null); }} className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 bg-gray-50/50 dark:bg-gray-900/50">
+              {loadingApplicants ? (
+                <div className="flex justify-center py-12"><Loader2 size={32} className="animate-spin text-blue-500" /></div>
+              ) : jobApplicants.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users size={40} className="mx-auto text-gray-300 dark:text-gray-700 mb-4" />
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No Applicants Yet</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Applications for this role will appear here.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {jobApplicants.map(app => (
+                    <div key={app.id} onClick={() => setSelectedApplicant(app)} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[1.5rem] p-5 hover:border-blue-500/40 hover:shadow-lg transition-all cursor-pointer group flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="relative w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+                          {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" /> : app.profiles?.username?.substring(0, 2) || "??"}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-gray-900 dark:text-gray-100 font-bold text-base flex items-center gap-1 truncate">
+                            @{app.profiles?.username}
+                            {app.profiles?.is_verified && <VerifiedBadge size={16} />}
+                          </h4>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                            Applied on {new Date(app.created_at).toLocaleDateString()}
+                          </p>
+                          {app.resume_url && (
+                            <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/50">
+                              <FileText size={10} /> Resume Attached
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col sm:items-end shrink-0 gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+                        <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border text-center ${
+                          app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 
+                          app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 
+                          app.status === 'external_redirect' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' :
+                          'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
+                        }`}>
+                          {app.status === 'external_redirect' ? 'External Redirect' : app.status}
+                        </span>
+                        
+                        {app.status !== 'accepted' && app.status !== 'declined' && app.status !== 'external_redirect' && (
+                          <div className="flex items-center gap-2 mt-1 w-full sm:w-auto">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'declined', app.user_id); }} 
+                              className="flex-1 sm:flex-none px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold text-xs transition-colors border border-red-200 dark:border-red-800/50 uppercase"
+                            >
+                              Decline
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'accepted', app.user_id); }} 
+                              className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white hover:bg-green-500 rounded-xl font-bold text-xs transition-colors shadow-sm uppercase"
+                            >
+                              Accept
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SELECTED APPLICANT DETAILS MODAL --- */}
+      {selectedApplicant && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedApplicant(null)} />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <button onClick={() => setSelectedApplicant(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
+              <X size={18} />
+            </button>
+            
+            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight pr-8 mb-4">Applicant Profile</h2>
+            
+            <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+              <div className="relative w-14 h-14 rounded-2xl bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase border border-gray-200 dark:border-gray-700">
+                {selectedApplicant.profiles?.avatar_url ? <Image src={selectedApplicant.profiles.avatar_url} alt="avatar" fill sizes="56px" className="object-cover" /> : selectedApplicant.profiles?.username?.substring(0, 2) || "??"}
+              </div>
+              <div>
+                <h4 className="text-gray-900 dark:text-gray-100 font-bold text-lg flex items-center gap-1">
+                  @{selectedApplicant.profiles?.username}
+                  {selectedApplicant.profiles?.is_verified && <VerifiedBadge size={16} />}
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {selectedApplicant.profiles?.status && <span className="block text-gray-700 dark:text-gray-300 mb-0.5 font-medium">{selectedApplicant.profiles.status}</span>}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              {(selectedApplicant.cover_letter || selectedApplicant.message || selectedApplicant.notes) && (
+                <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
+                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Cover Letter</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selectedApplicant.cover_letter || selectedApplicant.message || selectedApplicant.notes}</p>
+                </div>
+              )}
+
+              {selectedApplicant.resume_url && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                  <div>
+                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">Attached Document</p>
+                    <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Candidate{`'`}s CV / Resume File</p>
+                  </div>
+                  <a href={selectedApplicant.resume_url} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs transition-colors shadow-sm shrink-0">
+                    <FileText size={16} /> Open Resume
+                  </a>
+                </div>
+              )}
+
+              {(selectedApplicant.resume_url || selectedApplicant.portfolio_url || selectedApplicant.email || selectedApplicant.phone || selectedApplicant.profiles?.github || selectedApplicant.profiles?.website || selectedApplicant.profiles?.location) && (
+                <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl space-y-3">
+                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Contact & Links</p>
+                  {selectedApplicant.email && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">Email:</strong> <a href={`mailto:${selectedApplicant.email}`} className="text-blue-600 hover:underline">{selectedApplicant.email}</a></p>}
+                  {selectedApplicant.phone && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">Phone:</strong> {selectedApplicant.phone}</p>}
+                  {selectedApplicant.profiles?.location && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">Location:</strong> {selectedApplicant.profiles.location}</p>}
+                  {selectedApplicant.portfolio_url && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">Portfolio:</strong> <a href={selectedApplicant.portfolio_url.startsWith('http') ? selectedApplicant.portfolio_url : `https://${selectedApplicant.portfolio_url}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Portfolio Link</a></p>}
+                  {selectedApplicant.profiles?.github && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">GitHub:</strong> <a href={`https://github.com/${selectedApplicant.profiles.github}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">github.com/{selectedApplicant.profiles.github}</a></p>}
+                  {selectedApplicant.profiles?.website && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">Website:</strong> <a href={selectedApplicant.profiles.website.startsWith('http') ? selectedApplicant.profiles.website : `https://${selectedApplicant.profiles.website}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{selectedApplicant.profiles.website.replace(/^https?:\/\//, '')}</a></p>}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+              {selectedApplicant.status !== 'accepted' && selectedApplicant.status !== 'declined' && selectedApplicant.status !== 'external_redirect' ? (
+                <>
+                  <button 
+                    onClick={() => { handleAppAction(selectedApplicant.id, 'declined', selectedApplicant.user_id); setSelectedApplicant(prev => ({...prev, status: 'declined'})); }} 
+                    className="flex-1 py-3.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold transition-colors border border-red-200 dark:border-red-800/50"
+                  >
+                    Decline Application
+                  </button>
+                  <button 
+                    onClick={() => { handleAppAction(selectedApplicant.id, 'accepted', selectedApplicant.user_id); setSelectedApplicant(prev => ({...prev, status: 'accepted'})); }} 
+                    className="flex-1 py-3.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-colors shadow-sm"
+                  >
+                    Accept Application
+                  </button>
+                </>
+              ) : (
+                <div className="flex-1 text-center py-3.5 bg-gray-50 dark:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-xs border border-gray-200 dark:border-gray-700">
+                  Status: {selectedApplicant.status === 'external_redirect' ? 'External Redirect' : selectedApplicant.status}
+                </div>
+              )}
             </div>
           </div>
         </div>

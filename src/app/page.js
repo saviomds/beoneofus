@@ -92,8 +92,9 @@ export default function LandingPage() {
                 <div className="flex items-center gap-6 text-sm font-bold text-gray-600 dark:text-gray-300">
                   <Link href="/Explore_Projects" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Explore</Link>
                   <Link href="/how_it_works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">How It Works</Link>
-                  <Link href="/dash" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Dashboard</Link>
+                 
                   <Link href="#community" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Community</Link>
+                   <Link href="/dash" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Jump In</Link>
                 </div>
                 <div className="h-6 w-px bg-gray-200 dark:bg-gray-800"></div>
                 <div className="flex items-center gap-5">

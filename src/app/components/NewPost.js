@@ -46,7 +46,11 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
   const handleImageClick = () => fileInputRef.current.click();
 
   const handlePostSubmit = async () => {
-    if (!content.trim()) return;
+    // Prevent completely empty posts, but allow posts that have at least one field filled
+    if (!content.trim() && !title.trim() && !codeSnippet.trim() && !imageFile && !selectedImage) {
+      alert("Please add some content, a title, a code snippet, or an image before deploying.");
+      return;
+    }
     
     setLoading(true);
     try {

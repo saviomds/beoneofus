@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Compass, MessageCircle, X, Loader2, Users, Hash, Sun, Moon } from 'lucide-react';
+import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { supabase } from '../supabaseClient';
@@ -27,6 +27,11 @@ export default function Header({ setActiveTab }) {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [networkTab, setNetworkTab] = useState('connections'); // 'connections' or 'groups'
   const { theme, setTheme, systemTheme } = useTheme();
+  const [showJobsModal, setShowJobsModal] = useState(false);
+  const [jobSearchQuery, setJobSearchQuery] = useState('');
+  const [applyingJob, setApplyingJob] = useState(null);
+  const [jobs, setJobs] = useState([]);
+  const [isJobsLoading, setIsJobsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const closeQuickView = () => setShowQuickView(null);
@@ -74,7 +79,7 @@ export default function Header({ setActiveTab }) {
           // Fetch Connections
           const { data: connectionsData } = await supabase.from('connections').select('sender_id, receiver_id').or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`).eq('status', 'accepted');
           const connectedIds = connectionsData ? connectionsData.map(c => c.sender_id === currentUserId ? c.receiver_id : c.sender_id) : [];
-          const { data: profiles } = connectedIds.length > 0 ? await supabase.from('profiles').select('id, username, status, avatar_url, is_verified').in('id', connectedIds) : { data: [] };
+          const { data: profiles } = connectedIds.length > 0 ? await supabase.from('profiles').select('id, username, status, avatar_url, is_verified, work_status').in('id', connectedIds) : { data: [] };
 
           // Fetch Groups
           const { data: groupMemberships } = await supabase.from('group_members').select('group_id').eq('user_id', currentUserId);
@@ -110,7 +115,7 @@ export default function Header({ setActiveTab }) {
         const [postsRes, groupsRes, usersRes] = await Promise.all([
           supabase.from('posts').select('id, title, content').ilike('title', `%${searchQuery}%`).limit(3),
           supabase.from('groups').select('id, name, description').ilike('name', `%${searchQuery}%`).eq('is_private', false).limit(3),
-            supabase.from('profiles').select('id, username, status, avatar_url, is_verified').ilike('username', `%${searchQuery}%`).limit(3)
+          supabase.from('profiles').select('id, username, status, avatar_url, is_verified, work_status').or(`username.ilike.%${searchQuery}%,status.ilike.%${searchQuery}%,work_status.ilike.%${searchQuery}%`).limit(3)
         ]);
 
         setSearchResults({
@@ -127,6 +132,35 @@ export default function Header({ setActiveTab }) {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
+
+  // Fetch jobs from Supabase when the modal is opened
+  useEffect(() => {
+    if (showJobsModal) {
+      const fetchJobs = async () => {
+        setIsJobsLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from('jobs')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          if (error) throw error;
+          setJobs(data || []);
+        } catch (error) {
+          console.error('Error fetching jobs:', error.message || error);
+        } finally {
+          setIsJobsLoading(false);
+        }
+      };
+      fetchJobs();
+    }
+  }, [showJobsModal]);
+
+  const filteredJobs = jobs.filter(job => 
+    job.title?.toLowerCase().includes(jobSearchQuery.toLowerCase()) || 
+    job.company?.toLowerCase().includes(jobSearchQuery.toLowerCase()) || 
+    (job.tags || []).some(t => t.toLowerCase().includes(jobSearchQuery.toLowerCase()))
+  );
 
   return (
     <>
@@ -207,10 +241,15 @@ export default function Header({ setActiveTab }) {
                               user.username?.substring(0, 2) || '??'
                             )}
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
                               @{user.username}
                               {user.is_verified && <VerifiedBadge size={14} />}
+                              {user.work_status && user.work_status !== 'None' && (
+                                <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${user.work_status === 'Hiring' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'}`}>
+                                  {user.work_status}
+                                </span>
+                              )}
                             </p>
                             <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5 uppercase tracking-widest font-black">{user.status || 'Active Node'}</p>
                           </div>
@@ -238,6 +277,13 @@ export default function Header({ setActiveTab }) {
               {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={16} /> : <Moon size={16} />}
             </button>
           )}
+          <button 
+            onClick={() => setShowJobsModal(true)}
+            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all"
+          >
+            <Briefcase size={16} />
+            Jobs
+          </button>
           <button 
             onClick={() => setShowNetworkModal(true)}
             className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-gray-900 transition-all"
@@ -326,10 +372,15 @@ export default function Header({ setActiveTab }) {
                             <div className="relative w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">
                               {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : (user.username?.substring(0, 2) || '??')}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
                                 @{user.username}
                                 {user.is_verified && <VerifiedBadge size={14} />}
+                                {user.work_status && user.work_status !== 'None' && (
+                                  <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${user.work_status === 'Hiring' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'}`}>
+                                    {user.work_status}
+                                  </span>
+                                )}
                               </p>
                               <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5 uppercase tracking-widest font-black">{user.status || 'Active'}</p>
                             </div>
@@ -362,6 +413,176 @@ export default function Header({ setActiveTab }) {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- JOBS MODAL --- */}
+      {showJobsModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowJobsModal(false)} />
+          <div className="relative w-full max-w-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 sm:p-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-start shrink-0">
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Job Opportunities</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-[2px] mt-2">Discover your next professional milestone</p>
+              </div>
+              <button onClick={() => setShowJobsModal(false)} className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
+                <X size={18} />
+              </button>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
+               <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Search size={18} className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Search by role, tech stack, or company..." 
+                    value={jobSearchQuery}
+                    onChange={(e) => setJobSearchQuery(e.target.value)}
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-sm rounded-2xl pl-12 pr-4 py-3.5 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
+                  />
+               </div>
+            </div>
+
+            {/* Jobs List */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-gray-50/50 dark:bg-gray-900/50">
+               <div className="space-y-4">
+                 {isJobsLoading ? (
+                   <div className="flex justify-center py-12">
+                     <Loader2 size={32} className="animate-spin text-blue-500" />
+                   </div>
+                 ) : (
+                   <>
+                     {filteredJobs.map(job => (
+                    <div key={job.id} className="p-6 border border-gray-200 dark:border-gray-800 rounded-[1.5rem] hover:border-blue-500/40 dark:hover:border-blue-500/40 hover:shadow-lg transition-all bg-white dark:bg-gray-900 group">
+                       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+                         <div className="flex-1 min-w-0 pr-3">
+                           <h3 className="text-lg font-black text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">{job.title}</h3>
+                           <p className="text-sm font-bold text-gray-600 dark:text-gray-400 mt-1 truncate">{job.company}</p>
+                         </div>
+                         <div className="flex items-center gap-2 shrink-0">
+                           <span className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800/50">
+                             {job.type}
+                           </span>
+                           {job.featured && (
+                              <span className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                                Featured
+                              </span>
+                           )}
+                         </div>
+                       </div>
+                       
+                       <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 mb-5">
+                         <div className="flex items-center gap-1.5">
+                           <MapPin size={14} /> {job.location}
+                         </div>
+                         <div className="flex items-center gap-1.5">
+                           <DollarSign size={14} /> {job.salary}
+                         </div>
+                         {job.experience_level && (
+                           <div className="flex items-center gap-1.5">
+                             <User size={14} /> {job.experience_level}
+                           </div>
+                         )}
+                       </div>
+
+                       <div className="flex flex-wrap gap-2 mb-6">
+                         {job.tags.map(tag => (
+                            <span key={tag} className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg font-bold border border-transparent group-hover:border-gray-200 dark:group-hover:border-gray-700 transition-colors">{tag}</span>
+                         ))}
+                       </div>
+                       
+                       <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
+                         <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">Posted {job.postedAt}</span>
+                         <button 
+                           onClick={() => setApplyingJob(job)}
+                           className="bg-gray-900 dark:bg-gray-100 hover:bg-blue-600 dark:hover:bg-blue-500 text-white dark:text-gray-900 dark:hover:text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95"
+                         >
+                           Apply Now
+                         </button>
+                       </div>
+                    </div>
+                 ))}
+                     {filteredJobs.length === 0 && (
+                   <div className="text-center py-12">
+                     <Briefcase size={40} className="mx-auto text-gray-300 dark:text-gray-700 mb-4" />
+                     <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No jobs found</h3>
+                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Try adjusting your search query to find more opportunities.</p>
+                   </div>
+                     )}
+                   </>
+                 )}
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- JOB APPLICATION MODAL --- */}
+      {applyingJob && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setApplyingJob(null)} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl p-6 sm:p-8 animate-in fade-in zoom-in-95 duration-200">
+            <button onClick={() => setApplyingJob(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
+              <X size={18} />
+            </button>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 pr-10 tracking-tight">Apply for {applyingJob.title}</h2>
+            <p className="text-sm font-bold text-blue-600 dark:text-blue-400 mb-6 mt-1">{applyingJob.company} • {applyingJob.location}</p>
+            
+            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-300 font-medium mb-6">
+              <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700"><Briefcase size={16}/> {applyingJob.type}</span>
+              {applyingJob.experience_level && <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700"><User size={16}/> {applyingJob.experience_level}</span>}
+              {applyingJob.salary && <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700"><DollarSign size={16}/> {applyingJob.salary}</span>}
+            </div>
+
+            {applyingJob.description && (
+              <div className="mb-6">
+                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Description</p>
+                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto custom-scrollbar p-1">
+                  {applyingJob.description}
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={(e) => { e.preventDefault(); alert('Application submitted successfully!'); setApplyingJob(null); }} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Portfolio / Resume Link</label>
+                <input type="url" required placeholder="https://your-portfolio.com" className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-gray-900 dark:text-gray-100 shadow-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Cover Letter (Optional)</label>
+                <textarea placeholder="Why are you a great fit for this role?" rows={4} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none resize-none transition-all text-gray-900 dark:text-gray-100 shadow-sm"></textarea>
+              </div>
+              
+              <div className="pt-4 flex flex-col sm:flex-row gap-3">
+                {(applyingJob.external_url || applyingJob.externalUrl) && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      window.open(applyingJob.external_url || applyingJob.externalUrl, '_blank', 'noopener,noreferrer');
+                      if (currentUserId) {
+                        supabase.from('job_applications').insert({
+                          job_id: applyingJob.id,
+                          user_id: currentUserId,
+                          status: 'external_redirect'
+                        }).then(({ error }) => { if (error) console.error('Error logging external application:', error); });
+                      }
+                    }} 
+                    className="py-3.5 px-5 bg-transparent border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-colors text-sm text-center shadow-sm"
+                  >
+                    External Apply
+                  </button>
+                )}
+                <button type="submit" className="flex-1 py-3.5 px-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 text-sm active:scale-95">
+                  Submit Quick Apply
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -384,7 +384,9 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         <div className="flex items-center mb-6 md:mb-10 px-3 shrink-0 w-full text-gray-900">
           <div className="font-black text-2xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <Terminal className="text-blue-500" size={28} />
+            <Link href="/" className="hover:opacity-80 transition-opacity">
             <span>beone<span className="text-blue-600">of</span>us</span>
+            </Link>
           </div>
         </div>
 

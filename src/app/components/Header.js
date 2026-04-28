@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign, CheckCircle2, AlertTriangle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
@@ -9,6 +10,19 @@ import ProfileContent from '../dash/contect/ProfileContent';
 import { useDashboard } from '../dash/contect/DashboardContext';
 import { useTheme } from 'next-themes';
 import VerifiedBadge from './VerifiedBadge';
+
+const HighlightMatch = ({ text, query }) => {
+  if (!query || !text) return text || null;
+  const parts = text.toString().split(new RegExp(`(${query})`, 'gi'));
+  return (
+    <>
+      {parts.map((part, i) => 
+        part.toLowerCase() === query.toLowerCase() ? 
+          <span key={i} className="bg-yellow-200 dark:bg-yellow-900/50 text-gray-900 dark:text-yellow-100 rounded-sm px-[2px]">{part}</span> : part
+      )}
+    </>
+  );
+};
 
 // Dynamically import the modal to keep the Header bundle lightweight for the end user
 const QuickViewModal = dynamic(() => import('./QuickViewModal'), { ssr: false });
@@ -19,9 +33,13 @@ export default function Header({ setActiveTab }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState({ posts: [], groups: [], users: [] });
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const searchRef = useRef(null);
+  const searchInputRef = useRef(null);
   const [showNetworkModal, setShowNetworkModal] = useState(false);
+  const [keyboardShortcut, setKeyboardShortcut] = useState(null);
   const [networkData, setNetworkData] = useState({ connections: [], groups: [] });
   const [isNetworkLoading, setIsNetworkLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -39,6 +57,8 @@ export default function Header({ setActiveTab }) {
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
   const [showAppSuccess, setShowAppSuccess] = useState(false);
   const [showAppError, setShowAppError] = useState(null);
+  const [showHeader, setShowHeader] = useState(true);
+  const lastScrollY = useRef(0);
 
   const closeQuickView = () => setShowQuickView(null);
 
@@ -52,15 +72,77 @@ export default function Header({ setActiveTab }) {
     }
   };
 
+  // Listen for custom events to open modals from other components (like RightSidebar on mobile)
+  useEffect(() => {
+    const handleOpenModal = (e) => {
+      const type = e.detail;
+      if (type === 'jobs') setShowJobsModal(true);
+      else if (type === 'network') setShowNetworkModal(true);
+      else if (type === 'discuss') setShowQuickView('discuss');
+      else if (type === 'discover') setShowQuickView('discover');
+    };
+    
+    window.addEventListener('open-header-modal', handleOpenModal);
+    return () => window.removeEventListener('open-header-modal', handleOpenModal);
+  }, []);
+
+  // Broadcast active modal states to sync with external mobile menus
+  useEffect(() => {
+    const sync = () => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sync-header-modals', {
+          detail: { jobs: showJobsModal, network: showNetworkModal, discuss: showQuickView === 'discuss', discover: showQuickView === 'discover' }
+        }));
+      }
+    };
+    sync();
+    window.addEventListener('request-header-modals-sync', sync);
+    return () => window.removeEventListener('request-header-modals-sync', sync);
+  }, [showJobsModal, showNetworkModal, showQuickView]);
+
   // Handle click outside to close search dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setSearchQuery('');
+        setIsMobileSearchOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Handle keyboard shortcut (Ctrl+K / Cmd+K) to focus main search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsMobileSearchOpen(true);
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Update keyboard shortcut string based on OS and screen size
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const shortcut = isMac ? '⌘K' : 'Ctrl+K';
+      
+      const updateShortcut = () => {
+        if (window.innerWidth >= 640) {
+          setKeyboardShortcut(shortcut);
+        } else {
+          setKeyboardShortcut(null);
+        }
+      };
+      
+      updateShortcut();
+      window.addEventListener('resize', updateShortcut);
+      return () => window.removeEventListener('resize', updateShortcut);
+    }
   }, []);
 
   useEffect(() => setMounted(true), []);
@@ -110,13 +192,16 @@ export default function Header({ setActiveTab }) {
 
   // Real-time debounced search function
   useEffect(() => {
+    setFocusedIndex(-1);
     if (!searchQuery.trim()) {
       setSearchResults({ posts: [], groups: [], users: [] });
+      setIsSearching(false);
       return;
     }
 
+    setIsSearching(true);
+
     const delayDebounceFn = setTimeout(async () => {
-      setIsSearching(true);
       try {
         const [postsRes, groupsRes, usersRes] = await Promise.all([
           supabase.from('posts').select('id, title, content').ilike('title', `%${searchQuery}%`).limit(3),
@@ -138,6 +223,42 @@ export default function Header({ setActiveTab }) {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
+
+  const flattenedResults = useMemo(() => {
+    return [
+      ...searchResults.posts.map(p => ({ ...p, _type: 'post' })),
+      ...searchResults.groups.map(g => ({ ...g, _type: 'group' })),
+      ...searchResults.users.map(u => ({ ...u, _type: 'user' }))
+    ];
+  }, [searchResults]);
+
+  const handleSearchKeyDown = (e) => {
+    if (!searchQuery.trim()) return;
+    
+    if (e.key === 'ArrowDown' && flattenedResults.length > 0) {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev < flattenedResults.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp' && flattenedResults.length > 0) {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (flattenedResults.length === 0 || focusedIndex === -1) {
+        setSearchQuery('');
+        setIsMobileSearchOpen(false);
+        handleNavigate('feed');
+      } else {
+        const item = flattenedResults[focusedIndex];
+        setSearchQuery('');
+        if (item._type === 'post') handleNavigate('feed');
+        else if (item._type === 'group') handleNavigate('groups');
+        else if (item._type === 'user') setSelectedUserId(item.id);
+      }
+    } else if (e.key === 'Escape') {
+      setSearchQuery('');
+      setIsMobileSearchOpen(false);
+    }
+  };
 
   // Fetch jobs from Supabase when the modal is opened
   useEffect(() => {
@@ -210,21 +331,102 @@ export default function Header({ setActiveTab }) {
     }
   };
 
+  // Handle hiding header on scroll down and showing on scroll up
+  useEffect(() => {
+    const handleScroll = () => {
+      if (typeof window !== 'undefined') {
+        const currentScrollY = window.scrollY;
+        if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+          setShowHeader(false); // Hide when scrolling down past 50px
+        } else {
+          setShowHeader(true); // Show when scrolling up
+        }
+        lastScrollY.current = currentScrollY;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <>
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md sticky top-0 z-40">
-        {/* Left: Search Bar */}
-        <div className="relative flex-1 max-w-md" ref={searchRef}>
+      <header className={`flex flex-col gap-3 px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md sticky top-0 z-40 transition-transform duration-300 ease-in-out ${showHeader ? 'translate-y-0' : '-translate-y-full'}`}>
+        {/* Top: Nav Links */}
+        <nav className="flex flex-wrap items-center justify-start gap-3 sm:gap-6 w-full pb-1">
+          {mounted && (
+            <button 
+              onClick={() => {
+                const currentTheme = theme === 'system' ? systemTheme : theme;
+                setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+              }}
+              className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all shrink-0"
+              title="Toggle Theme"
+            >
+              {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          )}
+          <button 
+            id="header-btn-jobs"
+            onClick={() => setShowJobsModal(true)}
+            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shrink-0"
+          >
+            <Briefcase size={16} />
+            Jobs
+          </button>
+          <button 
+            id="header-btn-network"
+            onClick={() => setShowNetworkModal(true)}
+            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-all shrink-0"
+          >
+            <Users size={16} />
+            My Network
+          </button>
+          <button 
+            id="header-btn-discuss"
+            onClick={() => setShowQuickView('discuss')}
+            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-all shrink-0"
+          >
+            <MessageCircle size={16} />
+            Discuss
+          </button>
+          <button 
+            id="header-btn-discover"
+            onClick={() => setShowQuickView('discover')}
+            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all shrink-0"
+          >
+            <Compass size={16} />
+            Discover
+          </button>
+          <button 
+            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+            className="sm:hidden flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all shrink-0"
+          >
+            <Search size={16} />
+            Search
+          </button>
+        </nav>
+
+        {/* Bottom: Search Bar */}
+        <div className={`relative transition-all duration-300 ease-in-out w-full sm:w-1/2 lg:w-1/3 sm:focus-within:w-full lg:focus-within:w-full ${isMobileSearchOpen ? 'block animate-in slide-in-from-top-2 fade-in duration-200' : 'hidden sm:block'}`} ref={searchRef}>
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search size={16} className="text-gray-400 dark:text-gray-500" />
+            <Search size={16} className="text-gray-900 dark:text-gray-100" />
           </div>
           <input
+            ref={searchInputRef}
             type="text"
             value={searchQuery}
+            onKeyDown={handleSearchKeyDown}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-900 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            className="block w-full pl-10 pr-12 py-2.5 border border-gray-300 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-900 focus:bg-gray-50 dark:focus:bg-gray-800 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             placeholder="Search the BeOneOfUs ecosystem..."
           />
+          {!searchQuery && keyboardShortcut && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <kbd className="hidden sm:inline-flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 font-mono text-[10px] font-bold text-gray-500 dark:text-gray-400 shadow-sm">
+                {keyboardShortcut}
+              </kbd>
+            </div>
+          )}
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
               <X size={14} />
@@ -247,17 +449,26 @@ export default function Header({ setActiveTab }) {
                   ))}
                 </div>
               ) : (searchResults.posts.length === 0 && searchResults.groups.length === 0 && searchResults.users.length === 0) ? (
-                <div className="p-4 text-center text-xs text-gray-500 dark:text-gray-400 font-medium">No nodes, discussions, or users found.</div>
+                <div 
+                  onClick={() => { setSearchQuery(''); setIsMobileSearchOpen(false); handleNavigate('feed'); }}
+                  className="p-6 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all group"
+                >
+                  <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-500 mx-auto flex items-center justify-center mb-3">
+                    <MessageCircle size={20} className="group-hover:scale-110 transition-transform" />
+                  </div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Nothing found for &quot;{searchQuery}&quot;</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Press <kbd className="mx-1 px-1.5 py-0.5 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 font-mono text-[10px] font-bold text-gray-500 dark:text-gray-400">Enter</kbd> to ask the community</p>
+                </div>
               ) : (
                 <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
                   {/* Posts Results */}
                   {searchResults.posts.length > 0 && (
                     <div className="p-2">
                       <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">Discussions</div>
-                      {searchResults.posts.map(post => (
-                        <div key={`post-${post.id}`} onClick={() => { setSearchQuery(''); handleNavigate('feed'); }} className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group">
-                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{post.title || 'Untitled Node'}</p>
-                          <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{post.content}</p>
+                  {searchResults.posts.map((post, i) => (
+                    <div key={`post-${post.id}`} onClick={() => { setSearchQuery(''); handleNavigate('feed'); }} onMouseEnter={() => setFocusedIndex(i)} className={`p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
+                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={post.title || 'Untitled Node'} query={searchQuery} /></p>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5"><HighlightMatch text={post.content} query={searchQuery} /></p>
                         </div>
                       ))}
                     </div>
@@ -267,10 +478,10 @@ export default function Header({ setActiveTab }) {
                   {searchResults.groups.length > 0 && (
                     <div className={`p-2 ${searchResults.posts.length > 0 ? 'border-t border-gray-100 dark:border-gray-800' : ''}`}>
                       <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">Groups</div>
-                      {searchResults.groups.map(group => (
-                        <div key={`group-${group.id}`} onClick={() => { setSearchQuery(''); handleNavigate('groups'); }} className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group">
-                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{group.name}</p>
-                          <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{group.description}</p>
+                  {searchResults.groups.map((group, i) => (
+                    <div key={`group-${group.id}`} onClick={() => { setSearchQuery(''); handleNavigate('groups'); }} onMouseEnter={() => setFocusedIndex(searchResults.posts.length + i)} className={`p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === searchResults.posts.length + i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
+                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={group.name} query={searchQuery} /></p>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5"><HighlightMatch text={group.description} query={searchQuery} /></p>
                         </div>
                       ))}
                     </div>
@@ -280,8 +491,8 @@ export default function Header({ setActiveTab }) {
                   {searchResults.users.length > 0 && (
                     <div className={`p-2 ${(searchResults.posts.length > 0 || searchResults.groups.length > 0) ? 'border-t border-gray-100 dark:border-gray-800' : ''}`}>
                       <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">Users</div>
-                      {searchResults.users.map(user => (
-                        <div key={`user-${user.id}`} onClick={() => { setSearchQuery(''); setSelectedUserId(user.id); }} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group">
+                  {searchResults.users.map((user, i) => (
+                    <div key={`user-${user.id}`} onClick={() => { setSearchQuery(''); setSelectedUserId(user.id); }} onMouseEnter={() => setFocusedIndex(searchResults.posts.length + searchResults.groups.length + i)} className={`flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === searchResults.posts.length + searchResults.groups.length + i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
                           <div className="relative w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">
                             {user.avatar_url ? (
                               <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" />
@@ -291,7 +502,7 @@ export default function Header({ setActiveTab }) {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
-                              @{user.username}
+                              @<HighlightMatch text={user.username} query={searchQuery} />
                               {user.is_verified && <VerifiedBadge size={14} />}
                               {user.work_status && user.work_status !== 'None' && (
                                 <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${user.work_status === 'Hiring' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'}`}>
@@ -299,7 +510,7 @@ export default function Header({ setActiveTab }) {
                                 </span>
                               )}
                             </p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5 uppercase tracking-widest font-black">{user.status || 'Active Node'}</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5 uppercase tracking-widest font-black"><HighlightMatch text={user.status || 'Active Node'} query={searchQuery} /></p>
                           </div>
                         </div>
                       ))}
@@ -310,50 +521,6 @@ export default function Header({ setActiveTab }) {
             </div>
           )}
         </div>
-
-        {/* Right: Nav Links */}
-        <nav className="flex items-center gap-6 ml-8">
-          {mounted && (
-            <button 
-              onClick={() => {
-                const currentTheme = theme === 'system' ? systemTheme : theme;
-                setTheme(currentTheme === 'dark' ? 'light' : 'dark');
-              }}
-              className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
-              title="Toggle Theme"
-            >
-              {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-          )}
-          <button 
-            onClick={() => setShowJobsModal(true)}
-            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all"
-          >
-            <Briefcase size={16} />
-            Jobs
-          </button>
-          <button 
-            onClick={() => setShowNetworkModal(true)}
-            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-gray-900 transition-all"
-          >
-            <Users size={16} />
-            My Network
-          </button>
-          <button 
-            onClick={() => setShowQuickView('discuss')}
-            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-all"
-          >
-            <MessageCircle size={16} />
-            Discuss
-          </button>
-          <button 
-            onClick={() => setShowQuickView('discover')}
-            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
-          >
-            <Compass size={16} />
-            Discover
-          </button>
-        </nav>
       </header>
 
       {/* --- QUICK VIEW POP-UP TOGGLE --- */}
@@ -366,8 +533,8 @@ export default function Header({ setActiveTab }) {
       )}
 
       {/* --- MY NETWORK MODAL --- */}
-      {showNetworkModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      {showNetworkModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowNetworkModal(false)} />
           <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl flex flex-col max-h-[70vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
@@ -463,11 +630,11 @@ export default function Header({ setActiveTab }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* --- JOBS MODAL --- */}
-      {showJobsModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      {showJobsModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowJobsModal(false)} />
           <div className="relative w-full max-w-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
@@ -483,17 +650,22 @@ export default function Header({ setActiveTab }) {
             
             {/* Search Bar */}
             <div className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
-               <div className="relative group">
+               <div className="relative group transition-all duration-300 ease-in-out w-full sm:w-2/3 lg:w-1/2 sm:focus-within:w-full lg:focus-within:w-full">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Search size={18} className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Search size={18} className="text-gray-900 dark:text-gray-100 group-focus-within:text-blue-500 transition-colors" />
                   </div>
                   <input 
                     type="text" 
                     placeholder="Search by role, tech stack, or company..." 
                     value={jobSearchQuery}
                     onChange={(e) => setJobSearchQuery(e.target.value)}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-sm rounded-2xl pl-12 pr-4 py-3.5 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
+                    className="w-full bg-white dark:bg-gray-900 focus:bg-gray-50 dark:focus:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-sm rounded-2xl pl-12 pr-12 py-3.5 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
                   />
+                  {jobSearchQuery && (
+                    <button onClick={() => setJobSearchQuery('')} className="absolute inset-y-0 right-0 pr-5 flex items-center text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                      <X size={18} />
+                    </button>
+                  )}
                </div>
             </div>
 
@@ -569,11 +741,11 @@ export default function Header({ setActiveTab }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* --- JOB APPLICATION MODAL --- */}
-      {applyingJob && (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+      {applyingJob && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setApplyingJob(null)} />
           <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl p-6 sm:p-8 animate-in fade-in zoom-in-95 duration-200">
             <button onClick={() => setApplyingJob(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
@@ -637,11 +809,11 @@ export default function Header({ setActiveTab }) {
             </form>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* --- APPLICATION SUCCESS MODAL --- */}
-      {showAppSuccess && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+      {showAppSuccess && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowAppSuccess(false)} />
           <div className="bg-white dark:bg-gray-900 border border-green-200 dark:border-green-900/50 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center relative z-10 animate-in fade-in zoom-in duration-300">
             <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
@@ -659,11 +831,11 @@ export default function Header({ setActiveTab }) {
             </button>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* --- APPLICATION ERROR MODAL --- */}
-      {showAppError && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+      {showAppError && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowAppError(null)} />
           <div className="bg-white dark:bg-gray-900 border border-red-200 dark:border-red-900/50 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center relative z-10 animate-in fade-in zoom-in duration-300">
             <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
@@ -681,11 +853,11 @@ export default function Header({ setActiveTab }) {
             </button>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* USER PROFILE MODAL */}
-      {selectedUserId && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      {selectedUserId && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
           <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-2xl animate-in zoom-in-95 duration-200">
             <button 
@@ -699,7 +871,7 @@ export default function Header({ setActiveTab }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 }

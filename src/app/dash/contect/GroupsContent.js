@@ -478,7 +478,7 @@ export default function GroupsContent() {
          if (error) throw error;
       }
     } catch (err) {
-      showToast("Reaction failed. Make sure the 'group_message_reactions' table exists.", "error");
+      showToast("Reaction failed. Make sure the  i wan'group_message_reactions' table exists.", "error");
     }
   };
 
@@ -684,8 +684,13 @@ export default function GroupsContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search channels..." 
-              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl py-4 pl-12 pr-4 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all hover:border-gray-300 dark:hover:border-gray-600"
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl py-4 pl-12 pr-12 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all hover:border-gray-300 dark:hover:border-gray-600"
             />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                <X size={18} />
+              </button>
+            )}
           </div>
 
           {/* Groups List */}

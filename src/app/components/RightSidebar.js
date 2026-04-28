@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import { 
-  Users, X, Loader2, Sparkles, UserPlus, Check, Globe, Lock, ChevronRight, Zap, BookOpen, Copy, Plus, Mail, BadgeCheck
+  Users, X, Loader2, Sparkles, UserPlus, Check, Globe, Lock, ChevronRight, Zap, BookOpen, Copy, Plus, Mail, BadgeCheck, Terminal, Briefcase, MessageCircle, Compass
 } from 'lucide-react';
 import ProfileContent from "../dash/contect/ProfileContent";
 import NewPost from "./NewPost";
@@ -25,7 +26,7 @@ const SectionHeader = ({ title, icon: Icon, isCollapsible, isOpen, onToggle }) =
   </div>
 );
 
-export default function RightSidebar({ onSectionChange, setActiveTab }) {
+export default function RightSidebar({ onSectionChange, setActiveTab, onClose }) {
   const router = useRouter();
   const [suggestions, setSuggestions] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -42,6 +43,15 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
   const [inviteEmail, setInviteEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
+  const [activeModals, setActiveModals] = useState({ jobs: false, network: false, discuss: false, discover: false });
+
+  useEffect(() => {
+    const handleSync = (e) => setActiveModals(e.detail);
+    window.addEventListener('sync-header-modals', handleSync);
+    // Request initial state just in case Header mounted first
+    window.dispatchEvent(new CustomEvent('request-header-modals-sync'));
+    return () => window.removeEventListener('sync-header-modals', handleSync);
+  }, []);
 
   const handleCopyInvite = () => {
     navigator.clipboard.writeText(`${window.location.origin}/auth`);
@@ -71,6 +81,20 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
     } finally {
       setSendingEmail(false);
     }
+  };
+
+  // Foolproof handler to trigger the exact modals from the Header component
+  const handleMobileNav = (type) => {
+    const btn = document.getElementById(`header-btn-${type}`);
+    if (btn) {
+      btn.click();
+    } else {
+      window.dispatchEvent(new CustomEvent('open-header-modal', { detail: type }));
+    }
+
+    setTimeout(() => {
+      if (onClose) onClose();
+    }, 50);
   };
 
   useEffect(() => {
@@ -208,8 +232,34 @@ export default function RightSidebar({ onSectionChange, setActiveTab }) {
   };
 
   return (
-    <aside className="w-full flex flex-col p-6 space-y-8 h-screen sticky top-0 overflow-y-auto custom-scrollbar bg-transparent border-l border-gray-200 dark:border-gray-800 relative">
+    <aside className="w-full flex flex-col p-6 space-y-8 h-screen sticky top-0 overflow-y-auto custom-scrollbar bg-transparent border-l border-gray-200 dark:border-gray-800 relative animate-in fade-in slide-in-from-right-8 duration-300 md:animate-none">
       
+      {/* Mobile-Only Header Info */}
+      <div className="md:hidden flex flex-col shrink-0 gap-1 -mt-2 mb-2">
+        <div className="flex items-center justify-between">
+          <div className="font-black text-2xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <Terminal className="text-blue-500" size={28} />
+            <Link href="/" className="hover:opacity-80 transition-opacity">
+              <span>beone<span className="text-blue-600">of</span>us</span>
+            </Link>
+          </div>
+          <button onClick={() => onClose?.()} className="p-2 -mr-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+          </button>
+        </div>
+        
+        {/* Replicated Header Navigation for Mobile */}
+        <div className="flex flex-wrap gap-2 mt-3 mb-2">
+          <button onClick={() => handleMobileNav('jobs')} className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border transition-all shadow-sm ${activeModals.jobs ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-emerald-600'}`}>
+            <Briefcase size={14} /> Jobs
+          </button>
+          <button onClick={() => handleMobileNav('network')} className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border transition-all shadow-sm ${activeModals.network ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-gray-900 dark:hover:text-gray-100'}`}>
+            <Users size={14} /> Network
+          </button>
+         
+        </div>
+        <div className="w-full h-px bg-gray-200 dark:bg-gray-800 my-2"></div>
+      </div>
+
       {/* Primary Action Button */}
       <div className="shrink-0 pt-1">
         <button 

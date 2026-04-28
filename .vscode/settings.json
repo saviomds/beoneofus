@@ -27,5 +27,7 @@
   "deno.codeLens.references": true,
   "deno.codeLens.referencesAllFunctions": true,
   "deno.codeLens.test": true,
-  "claudeCodeChat.permissions.yoloMode": true
+  "claudeCodeChat.permissions.yoloMode": true,
+  "files.autoSave": "afterDelay",
+  "editor.formatOnSave": true
 }

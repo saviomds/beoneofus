@@ -13,16 +13,24 @@ import ProfileContent from "../dash/contect/ProfileContent";
 import NewPost from "./NewPost";
 
 const SectionHeader = ({ title, icon: Icon, isCollapsible, isOpen, onToggle }) => (
-  <div className={`flex items-center justify-between mb-4 ${isCollapsible ? 'cursor-pointer group' : ''}`} onClick={isCollapsible ? onToggle : undefined}>
-    <div className="flex items-center gap-2">
-      <h3 className={`text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-[2.5px] ${isCollapsible ? 'group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors' : ''}`}>
+  <div 
+    className={`flex items-center justify-between mb-3 py-1.5 px-2 -mx-2 rounded-lg select-none transition-colors ${
+      isCollapsible ? 'cursor-pointer group hover:bg-gray-50 dark:hover:bg-gray-800/40' : ''
+    }`} 
+    onClick={isCollapsible ? onToggle : undefined}
+  >
+    <div className="flex items-center gap-2.5">
+      {Icon && <Icon size={14} className={`text-gray-500 dark:text-gray-400 ${isCollapsible ? 'group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors' : ''}`} />}
+      <h3 className={`text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest ${isCollapsible ? 'group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors' : ''}`}>
         {title}
       </h3>
     </div>
-    <div className="flex items-center gap-2 text-gray-700 dark:text-gray-400">
-      {Icon && <Icon size={14} />}
-      {isCollapsible && <ChevronRight size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />}
-    </div>
+    {isCollapsible && (
+      <ChevronRight 
+        size={14} 
+        className={`text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all duration-200 ${isOpen ? 'rotate-90' : ''}`} 
+      />
+    )}
   </div>
 );
 

@@ -11,23 +11,24 @@ import { supabase } from '../supabaseClient';
 import { useRouter } from 'next/navigation';
 import VerifiedBadge from './VerifiedBadge';
 
-const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing }) => (
+const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index }) => (
   <div
-    className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
-      active ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+    className={`group flex items-center justify-between py-2.5 px-3 rounded-lg cursor-pointer select-none transition-colors animate-in fade-in slide-in-from-left-4 duration-500 ${
+      active ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/40 hover:text-blue-600 dark:hover:text-blue-400'
     }`}
+    style={{ animationDelay: `${(index || 0) * 50}ms`, animationFillMode: 'both' }}
     onClick={onClick}
   >
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
       <div className="relative flex items-center justify-center">
-        <Icon size={20} className={`${isRinging ? 'animate-ring text-blue-500' : ''} ${isBouncing ? 'animate-message-bounce text-blue-500' : ''}`} />
+        <Icon size={18} className={`${isRinging ? 'animate-ring text-blue-500' : ''} ${isBouncing ? 'animate-message-bounce text-blue-500' : ''} transition-colors`} />
         {badge > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white shadow-sm shrink-0">
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 shadow-sm shrink-0">
             {badge > 99 ? '99+' : badge}
           </span>
         )}
       </div>
-      <span className="font-bold text-sm tracking-tight">{label}</span>
+      <span className={`text-[13px] tracking-wide ${active ? 'font-bold' : 'font-semibold'}`}>{label}</span>
     </div>
     <div className="flex items-center gap-2">
       {onBadgeAction && badge > 0 && (
@@ -381,21 +382,20 @@ export default function Sidebar({ activeSection, onSectionChange }) {
       <aside className="w-full h-full bg-transparent p-4 md:p-6 flex flex-col">
         
         {/* Logo Area */}
-        <div className="flex items-center mb-6 md:mb-10 px-3 shrink-0 w-full text-gray-900">
-          <div className="font-black text-2xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Terminal className="text-blue-500" size={28} />
-            <Link href="/" className="hover:opacity-80 transition-opacity">
+        <div className="flex items-center mb-8 px-3 shrink-0 w-full">
+          <Link href="/" title="Go Home" className="font-black text-2xl tracking-tighter flex items-center gap-2.5 text-gray-900 dark:text-gray-100 hover:opacity-80 transition-opacity select-none group">
+            <Terminal className="text-blue-500 group-hover:scale-110 transition-transform duration-300 shrink-0" size={26} />
             <span>beone<span className="text-blue-600">of</span>us</span>
-            </Link>
-          </div>
+          </Link>
         </div>
 
         {/* Navigation Groups */}
         <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pb-2">
           <p className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-[2px] mb-4 px-3">Main Menu</p>
-          {sidebarItems.map((item) => (
+          {sidebarItems.map((item, index) => (
             <SidebarItem
               key={item.id}
+              index={index}
               icon={item.icon}
               label={item.label}
               badge={item.badge}
@@ -412,9 +412,10 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
           <div className="pt-8 space-y-1">
             <p className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-[2px] mb-4 px-3">System</p>
-            {bottomItems.map((item) => (
+            {bottomItems.map((item, index) => (
               <SidebarItem
                 key={item.id}
+                index={sidebarItems.length + index}
                 icon={item.icon}
                 label={item.label}
                 badge={item.badge}
@@ -428,9 +429,12 @@ export default function Sidebar({ activeSection, onSectionChange }) {
         </nav>
 
         {/* User Profile Section */}
-        <div className="mt-auto pt-4 md:pt-6 border-t border-gray-200 dark:border-gray-800 flex flex-col gap-4 px-2 shrink-0">
+        <div 
+          className="mt-auto pt-4 md:pt-6 border-t border-gray-200 dark:border-gray-800 flex flex-col gap-4 px-2 shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500"
+          style={{ animationDelay: '400ms', animationFillMode: 'both' }}
+        >
           {isProfileLoading ? (
-            <div className="flex items-center gap-3 p-2 -mx-2">
+            <div className="flex items-center gap-3 py-2.5 px-3 w-full">
               <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse shrink-0"></div>
               <div className="space-y-2 flex-1">
                 <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-24"></div>
@@ -439,7 +443,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
             </div>
           ) : (
             <div 
-              className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 p-2 -mx-2 rounded-xl transition-all"
+              className="flex items-center gap-3 py-2.5 px-3 w-full rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors select-none"
               onClick={() => { if (profile) handleNavClick('profile'); }}
             >
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10 shrink-0">
@@ -477,7 +481,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
           {profile && (
             <button 
               onClick={handleLogout}
-              className="flex items-center gap-3 p-3 w-full rounded-xl text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group border border-transparent hover:border-red-100 dark:hover:border-red-800/50"
+              className="flex items-center gap-3 py-2.5 px-3 w-full rounded-lg text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group select-none"
             >
               <LogOut size={18} className="group-hover:translate-x-1 transition-transform" />
               <span className="text-[10px] font-black uppercase tracking-tighter">Terminate Session</span>

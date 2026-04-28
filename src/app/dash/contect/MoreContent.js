@@ -496,7 +496,10 @@ const AdminPanelTool = ({ currentUserId }) => {
     alert(`Impersonation for @${username} requires a secure backend Edge Function using your Supabase Service Role key to generate an auth token. (Not implemented in client-side)`);
   };
 
-  const handleAppAction = async (appId, newStatus, applicantId) => {
+  const handleAppAction = async (appId, newStatus, applicantId, jobTitle) => {
+    const customMessage = window.prompt(`Optional: Add a personal message to send to the applicant (leave blank for standard message):`);
+    if (customMessage === null) return; // Cancel if the user clicks 'Cancel' on the prompt
+
     try {
       const { error } = await supabase
         .from('job_applications')
@@ -513,6 +516,18 @@ const AdminPanelTool = ({ currentUserId }) => {
           type: 'message',
           content: `Your job application was ${newStatus}.`
         });
+
+        // Trigger email notification
+        fetch('/api/send-app-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            applicantId,
+            status: newStatus,
+            jobTitle: jobTitle || 'a recent role',
+            customMessage
+          })
+        }).catch(err => console.error('Failed to trigger email API:', err));
       }
 
       setApplications(prev => prev.map(app => 
@@ -763,13 +778,13 @@ const AdminPanelTool = ({ currentUserId }) => {
                     {app.status !== 'accepted' && app.status !== 'declined' && app.status !== 'external_redirect' && (
                       <div className="flex items-center gap-2 mt-2">
                         <button 
-                          onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'declined', app.user_id); }} 
+                          onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'declined', app.user_id, app.jobs?.title); }} 
                           className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg font-bold text-[10px] transition-colors border border-red-200 dark:border-red-800/50 uppercase"
                         >
                           Decline
                         </button>
                         <button 
-                          onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'accepted', app.user_id); }} 
+                          onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'accepted', app.user_id, app.jobs?.title); }} 
                           className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg font-bold text-[10px] transition-colors shadow-sm uppercase"
                         >
                           Accept
@@ -860,13 +875,13 @@ const AdminPanelTool = ({ currentUserId }) => {
               {selectedApp.status !== 'accepted' && selectedApp.status !== 'declined' && selectedApp.status !== 'external_redirect' ? (
                 <>
                   <button 
-                    onClick={() => { handleAppAction(selectedApp.id, 'declined', selectedApp.user_id); setSelectedApp(prev => ({...prev, status: 'declined'})); }} 
+                    onClick={() => { handleAppAction(selectedApp.id, 'declined', selectedApp.user_id, selectedApp.jobs?.title); setSelectedApp(prev => ({...prev, status: 'declined'})); }} 
                     className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold transition-colors border border-red-200 dark:border-red-800/50"
                   >
                     Decline
                   </button>
                   <button 
-                    onClick={() => { handleAppAction(selectedApp.id, 'accepted', selectedApp.user_id); setSelectedApp(prev => ({...prev, status: 'accepted'})); }} 
+                    onClick={() => { handleAppAction(selectedApp.id, 'accepted', selectedApp.user_id, selectedApp.jobs?.title); setSelectedApp(prev => ({...prev, status: 'accepted'})); }} 
                     className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-colors shadow-sm"
                   >
                     Accept

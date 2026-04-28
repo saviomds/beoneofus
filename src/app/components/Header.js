@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign } from 'lucide-react';
+import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign, CheckCircle2, AlertTriangle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { supabase } from '../supabaseClient';
@@ -37,6 +37,8 @@ export default function Header({ setActiveTab }) {
   const [portfolioUrl, setPortfolioUrl] = useState('');
   const [coverLetter, setCoverLetter] = useState('');
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
+  const [showAppSuccess, setShowAppSuccess] = useState(false);
+  const [showAppError, setShowAppError] = useState(null);
 
   const closeQuickView = () => setShowQuickView(null);
 
@@ -168,8 +170,8 @@ export default function Header({ setActiveTab }) {
 
   const handleApplyJob = async (e) => {
     e.preventDefault();
-    if (!currentUserId) return alert("You must be logged in to apply.");
-    if (!resumeFile && !portfolioUrl) return alert("Please upload a resume or provide a portfolio link.");
+    if (!currentUserId) return setShowAppError("You must be logged in to apply.");
+    if (!resumeFile && !portfolioUrl) return setShowAppError("Please upload a resume or provide a portfolio link.");
 
     setIsSubmittingApp(true);
     try {
@@ -195,13 +197,14 @@ export default function Header({ setActiveTab }) {
         status: 'pending'
       });
       if (error) throw error;
-      alert('Application submitted successfully!');
       setApplyingJob(null);
       setResumeFile(null);
       setPortfolioUrl('');
       setCoverLetter('');
+      setShowAppSuccess(true);
+      setTimeout(() => setShowAppSuccess(false), 3000);
     } catch (err) {
-      alert('Error submitting application: ' + err.message);
+      setShowAppError('Error submitting application: ' + err.message);
     } finally {
       setIsSubmittingApp(false);
     }
@@ -632,6 +635,50 @@ export default function Header({ setActiveTab }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- APPLICATION SUCCESS MODAL --- */}
+      {showAppSuccess && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowAppSuccess(false)} />
+          <div className="bg-white dark:bg-gray-900 border border-green-200 dark:border-green-900/50 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center relative z-10 animate-in fade-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
+              <CheckCircle2 size={40} className="animate-bounce" />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2 tracking-tight">Application Sent!</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6">
+              Your application has been successfully submitted to the poster.
+            </p>
+            <button 
+              onClick={() => setShowAppSuccess(false)}
+              className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- APPLICATION ERROR MODAL --- */}
+      {showAppError && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowAppError(null)} />
+          <div className="bg-white dark:bg-gray-900 border border-red-200 dark:border-red-900/50 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center relative z-10 animate-in fade-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+              <AlertTriangle size={40} className="animate-pulse" />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2 tracking-tight">Application Issue</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6">
+              {showAppError}
+            </p>
+            <button 
+              onClick={() => setShowAppError(null)}
+              className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
+            >
+              Dismiss
+            </button>
           </div>
         </div>
       )}

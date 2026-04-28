@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request) {
   try {
@@ -33,26 +31,39 @@ export async function POST(request) {
     // --- SEND YOUR EMAIL HERE ---
     console.log(`Sending email to ${applicantEmail}: Application for ${jobTitle} was ${formattedStatus}. Message: ${customMessage}`);
     
-    // Example using Resend:
+    // Using Resend API directly via fetch to avoid "Module not found" build errors
     
-    await resend.emails.send({
-      from: 'BeOneOfUs notifications@beoneofus.com',
-      to: applicantEmail,
-      subject: `Update on your application for ${jobTitle}`,
-      html: `
-        <div style="font-family: sans-serif; color: #111827; max-width: 600px; margin: 0 auto;">
-          <h2>Application Update</h2>
-          <p>Hi ${candidateName},</p>
-          <p>Your job application for <strong>${jobTitle}</strong> has been <strong>${formattedStatus}</strong>.</p>
-          
-          ${personalNoteHtml}
-
-          <p>Log in to BeOneOfUs to see more details.</p>
-          <br/>
-          <p style="color: #6b7280; font-size: 12px;">The BeOneOfUs Team</p>
-        </div>
-      `
+    const emailResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'BeOneOfUs <notifications@beoneofus.com>',
+        to: applicantEmail,
+        subject: `Update on your application for ${jobTitle}`,
+        html: `
+          <div style="font-family: sans-serif; color: #111827; max-width: 600px; margin: 0 auto;">
+            <h2>Application Update</h2>
+            <p>Hi ${candidateName},</p>
+            <p>Your job application for <strong>${jobTitle}</strong> has been <strong>${formattedStatus}</strong>.</p>
+            
+            ${personalNoteHtml}
+  
+            <p>Log in to BeOneOfUs to see more details.</p>
+            <br/>
+            <p style="color: #6b7280; font-size: 12px;">The BeOneOfUs Team</p>
+          </div>
+        `
+      })
     });
+    
+    if (!emailResponse.ok) {
+      const errorData = await emailResponse.json();
+      console.error('Resend API Error:', errorData);
+      throw new Error('Failed to send email via Resend');
+    }
     
 
     return NextResponse.json({ success: true });

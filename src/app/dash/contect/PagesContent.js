@@ -166,7 +166,7 @@ export default function PagesContent() {
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex gap-3 shadow-sm">
-                    <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0"></div>
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0"></div>
                     <div className="flex-1 space-y-2 py-1">
                       <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/3"></div>
                       <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4"></div>
@@ -187,7 +187,7 @@ export default function PagesContent() {
                 const isEditing = editingPostId === post.id;
                 return (
                 <div key={post.id} className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-2 relative group">
-                  <div className="relative w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center font-bold text-xs uppercase shrink-0 overflow-hidden">
+                  <div className="relative w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center font-bold text-xs uppercase shrink-0 overflow-hidden">
                     {post.profiles?.avatar_url ? (
                       <Image src={post.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                     ) : (

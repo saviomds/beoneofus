@@ -533,7 +533,7 @@ export default function GroupsContent() {
                     {!isMe ? (
                       <div 
                         onClick={() => setSelectedUserId(msg.user_id)}
-                        className="relative w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors overflow-hidden"
+                        className="relative w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors overflow-hidden"
                         title={`View @${msg.profiles?.username}'s Profile`}
                       >
                         {msg.profiles?.avatar_url ? (
@@ -1035,7 +1035,7 @@ export default function GroupsContent() {
                   return (
                     <div key={member.user_id} className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-sm transition-all">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-600 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">
+                        <div className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-600 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">
                           {member.profiles?.avatar_url ? (
                             <Image src={member.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
                           ) : (

@@ -266,7 +266,7 @@ const CommunityHubTool = ({ currentUserId }) => {
            {msg.user_id !== currentUserId && (
              <div 
                onClick={() => setSelectedUserId(msg.user_id)}
-               className="relative w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors overflow-hidden"
+               className="relative w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors overflow-hidden"
                title={`View @${msg.profiles?.username}'s Profile`}
              >
                {msg.profiles?.avatar_url ? (
@@ -595,7 +595,7 @@ const AdminPanelTool = ({ currentUserId }) => {
             {requests.map(req => (
               <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="relative w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+                    <div className="relative w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
                     {req.avatar_url ? (
                       <Image src={req.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
                     ) : (
@@ -652,7 +652,7 @@ const AdminPanelTool = ({ currentUserId }) => {
               {allUsers.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase())).map(user => (
                 <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+                    <div className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
                       {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : user.username?.substring(0, 2) || "??"}
                     </div>
                     <div className="min-w-0">
@@ -697,7 +697,7 @@ const AdminPanelTool = ({ currentUserId }) => {
                         <Bot size={20} />
                       </div>
                     ) : (
-                      <div className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+                      <div className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
                         {log.profiles?.avatar_url ? <Image src={log.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : log.profiles?.username?.substring(0, 2) || "??"}
                       </div>
                     )}
@@ -738,7 +738,7 @@ const AdminPanelTool = ({ currentUserId }) => {
               {applications.map(app => (
                 <div key={app.id} onClick={() => setSelectedApp(app)} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between cursor-pointer group">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+                    <div className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
                       {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : app.profiles?.username?.substring(0, 2) || "??"}
                     </div>
                     <div className="min-w-0">
@@ -816,7 +816,7 @@ const AdminPanelTool = ({ currentUserId }) => {
             <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight pr-8 mb-4">Application Details</h2>
             
             <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
-              <div className="relative w-12 h-12 rounded-xl bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+              <div className="relative w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
                 {selectedApp.profiles?.avatar_url ? <Image src={selectedApp.profiles.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" /> : selectedApp.profiles?.username?.substring(0, 2) || "??"}
               </div>
               <div>

@@ -368,7 +368,7 @@ export default function FeedContent() {
         <div key={i} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-3 w-full">
-              <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse shrink-0"></div>
+                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse shrink-0"></div>
               <div className="space-y-2 flex-1">
                 <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-32"></div>
                 <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20"></div>
@@ -504,7 +504,7 @@ export default function FeedContent() {
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div 
-                    className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase cursor-pointer hover:opacity-80 hover:shadow-lg transition-all overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700"
+                    className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase cursor-pointer hover:opacity-80 hover:shadow-lg transition-all overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700"
                     onClick={() => setSelectedUserId(post.user_id)}
                     title={`View @${post.profiles?.username}'s Profile`}
                   >

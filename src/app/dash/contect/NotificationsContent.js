@@ -258,7 +258,7 @@ export default function NotificationsContent() {
               <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 dark:from-blue-900/0 via-blue-50/50 dark:via-blue-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
               <div className="relative flex-shrink-0 z-10">
-                <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg transition-colors overflow-hidden ${notif.unread ? 'bg-blue-600 shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 group-hover:bg-gray-200 dark:group-hover:bg-gray-700'}`}>
+                <div className={`relative w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg transition-colors overflow-hidden ${notif.unread ? 'bg-blue-600 shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 group-hover:bg-gray-200 dark:group-hover:bg-gray-700'}`}>
                   {notif.actor?.avatar_url ? (
                     <Image src={notif.actor.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
                   ) : (

@@ -1106,7 +1106,7 @@ export default function ProfileContent({ viewUserId }) {
                   {jobApplicants.map(app => (
                     <div key={app.id} onClick={() => setSelectedApplicant(app)} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[1.5rem] p-5 hover:border-blue-500/40 hover:shadow-lg transition-all cursor-pointer group flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                       <div className="flex items-center gap-4 min-w-0">
-                        <div className="relative w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+                        <div className="relative w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
                           {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" /> : app.profiles?.username?.substring(0, 2) || "??"}
                         </div>
                         <div className="min-w-0">
@@ -1173,7 +1173,7 @@ export default function ProfileContent({ viewUserId }) {
             <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight pr-8 mb-4">Applicant Profile</h2>
             
             <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
-              <div className="relative w-14 h-14 rounded-2xl bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase border border-gray-200 dark:border-gray-700">
+              <div className="relative w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase border border-gray-200 dark:border-gray-700">
                 {selectedApplicant.profiles?.avatar_url ? <Image src={selectedApplicant.profiles.avatar_url} alt="avatar" fill sizes="56px" className="object-cover" /> : selectedApplicant.profiles?.username?.substring(0, 2) || "??"}
               </div>
               <div>

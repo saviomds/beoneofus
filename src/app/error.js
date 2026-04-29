@@ -1,42 +1,40 @@
-"use client"; // Error components must be Client Components
+'use client'; // Error components must be Client Components
 
-import { useEffect } from "react";
-import Link from "next/link";
-import { AlertOctagon, RefreshCcw, Home } from "lucide-react";
+import { useEffect } from 'react';
+import { Terminal, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function Error({ error, reset }) {
   useEffect(() => {
     // Log the error to an error reporting service if needed
-    console.error("Runtime Error Caught:", error);
+    console.error("Application Error Caught:", error);
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center px-6 selection:bg-blue-500/30 relative overflow-hidden">
-      {/* Global Background Grid Effect */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000008_1px,transparent_1px),linear-gradient(to_bottom,#00000008_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
-      
-      <div className="text-center max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-500">
-        <div className="w-24 h-24 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-red-100 dark:border-red-900/50 shadow-sm rotate-12">
-          <AlertOctagon size={48} className="-rotate-12" />
+    <div className="min-h-[80vh] w-full flex flex-col items-center justify-center p-6 bg-transparent">
+      <div className="max-w-md w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-8 shadow-2xl text-center space-y-6 animate-in fade-in zoom-in duration-500">
+        
+        <div className="mx-auto w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center relative">
+          <div className="absolute inset-0 border-2 border-red-500/20 rounded-full animate-ping"></div>
+          <AlertTriangle size={40} className="text-red-500 drop-shadow-lg relative z-10" />
         </div>
-        <h1 className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tighter mb-4">System Malfunction</h1>
-        <p className="text-gray-600 dark:text-gray-400 font-medium mb-10 leading-relaxed">
-          A critical runtime error has been detected in the interface. Our nodes have logged the exception.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button 
-            onClick={() => reset()} 
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl text-sm font-black transition-all shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95"
-          >
-            <RefreshCcw size={18} strokeWidth={3} /> Attempt Recovery
-          </button>
-          <Link 
-            href="/" 
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 px-8 py-4 rounded-2xl text-sm font-black transition-all shadow-sm hover:scale-105 active:scale-95"
-          >
-            <Home size={18} strokeWidth={3} /> Return to Base
-          </Link>
+
+        <div className="space-y-3">
+          <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight flex items-center justify-center gap-2">
+            <Terminal className="text-blue-500" size={24} />
+            System Offline
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+            We lost connection to the <span className="font-bold text-blue-500">beoneofus</span> network. We might be deploying an upgrade or undergoing routine maintenance.
+          </p>
         </div>
+
+        <button
+          onClick={() => reset()}
+          className="w-full bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-900 text-white font-bold text-sm py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95"
+        >
+          <RefreshCw size={18} /> Reboot Connection
+        </button>
+
       </div>
     </div>
   );

@@ -43,6 +43,7 @@ export default function MessagesContent() {
   const [imagePreview, setImagePreview] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
   const imageInputRef = useRef(null);
+  const textareaRef = useRef(null);
   const [typingUsers, setTypingUsers] = useState({});
   const typingTimeoutsRef = useRef({});
   const lastTypingSentRef = useRef(0);
@@ -739,6 +740,23 @@ export default function MessagesContent() {
     }
   };
 
+  // Auto-resize textarea when inputValue changes
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  }, [inputValue]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (inputValue.trim() || imageFile) {
+        handleSendMessage(e);
+      }
+    }
+  };
+
   // 7. Send Message
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -844,7 +862,7 @@ export default function MessagesContent() {
   };
 
   return (
-    <div className="w-full flex h-[calc(100dvh-180px)] md:h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
+    <div className="w-full flex h-[calc(100dvh-130px)] md:h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
       
       {/* BLOCK MODAL */}
       {showBlockConfirm && (
@@ -1116,7 +1134,7 @@ export default function MessagesContent() {
               )}
             </div>
 
-            <div className={`p-3 md:p-0 md:pt-3 bg-white dark:bg-gray-900 md:bg-transparent dark:md:bg-transparent border-t border-gray-200 dark:border-gray-800 md:border-transparent dark:md:border-transparent shrink-0 w-full z-20 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
+            <div className={`p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:p-0 md:pt-3 bg-white dark:bg-gray-900 md:bg-transparent dark:md:bg-transparent border-t border-gray-200 dark:border-gray-800 md:border-transparent dark:md:border-transparent shrink-0 w-full z-20 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
               {replyingTo && (
                 <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="min-w-0">
@@ -1137,22 +1155,43 @@ export default function MessagesContent() {
                   </div>
                 </div>
               )}
-              <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full p-1.5 pl-3 sm:pl-4 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-md w-full">
+              <form onSubmit={handleSendMessage} className="flex items-end gap-1.5 sm:gap-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-[1.5rem] p-1.5 pl-2 sm:pl-3 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-md w-full">
                 <input type="file" ref={imageInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                <button 
-                  type="button" 
-                  onClick={handleSuggestReply} 
-                  disabled={isSuggesting} 
-                  className="text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors p-2 disabled:opacity-50 shrink-0"
-                  title="Suggest AI Reply"
-                >
-                  {isSuggesting ? <Loader2 size={18} className="animate-spin text-violet-500" /> : <Sparkles size={18} />}
-                </button>
-                <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-2 shrink-0">
-                  <Paperclip size={18} />
-                </button>
-                <input value={inputValue} onChange={handleInputChange} placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-base md:text-sm text-gray-900 dark:text-gray-100 py-2" />
-                <button type="submit" className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-full transition-all shadow-lg shadow-blue-600/20"><Send size={16} strokeWidth={3} /></button>
+                
+                <div className="flex items-center gap-0.5 pb-0.5 shrink-0">
+                  <button 
+                    type="button" 
+                    onClick={handleSuggestReply} 
+                    disabled={isSuggesting} 
+                    className="text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors p-2 disabled:opacity-50"
+                    title="Suggest AI Reply"
+                  >
+                    {isSuggesting ? <Loader2 size={18} className="animate-spin text-violet-500" /> : <Sparkles size={18} />}
+                  </button>
+                  <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-2 hidden sm:block">
+                    <Paperclip size={18} />
+                  </button>
+                </div>
+
+                <textarea 
+                  ref={textareaRef}
+                  value={inputValue} 
+                  onChange={handleInputChange} 
+                  onKeyDown={handleKeyDown}
+                  placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} 
+                  rows={1}
+                  disabled={connectionStatus !== 'accepted'}
+                  className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-base md:text-sm text-gray-900 dark:text-gray-100 py-2.5 resize-none max-h-[120px] custom-scrollbar" 
+                />
+                
+                <div className="pb-0.5 pr-0.5 shrink-0 flex items-center gap-1">
+                  <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-2 sm:hidden block">
+                    <Paperclip size={18} />
+                  </button>
+                  <button type="submit" disabled={connectionStatus !== 'accepted' || (!inputValue.trim() && !imageFile)} className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-full transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 active:scale-95">
+                    <Send size={16} strokeWidth={3} />
+                  </button>
+                </div>
               </form>
             </div>
           </>

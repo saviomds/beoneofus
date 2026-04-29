@@ -24,6 +24,7 @@ const TabSkeleton = () => (
 );
 
 const FeedContent = dynamic(() => import('./contect/FeedContent'), { loading: () => <TabSkeleton /> });
+const ConnectionsContent = dynamic(() => import('./contect/ConnectionsContent'), { loading: () => <TabSkeleton /> });
 const GroupsContent = dynamic(() => import('./contect/GroupsContent'), { loading: () => <TabSkeleton /> });
 const MessagesContent = dynamic(() => import('./contect/MessagesContent'), { loading: () => <TabSkeleton /> });
 const BookmarksContent = dynamic(() => import('./contect/BookmarksContent'), { loading: () => <TabSkeleton /> });
@@ -71,6 +72,7 @@ export default function Dashboard() {
   useEffect(() => {
     const preloadTabs = () => {
       // Manually calling import() fetches and caches the JS chunks
+      import('./contect/ConnectionsContent');
       import('./contect/GroupsContent');
       import('./contect/MessagesContent');
       import('./contect/MoreContent');
@@ -92,6 +94,8 @@ export default function Dashboard() {
     switch (activeSection) {
       case 'feed':
         return <FeedContent />;
+      case 'connections':
+        return <ConnectionsContent />;
       case 'groups':
         return <GroupsContent />;
       case 'messages':

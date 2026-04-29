@@ -2,7 +2,7 @@
 
 import {
   Home, Users, MessageSquare, Bookmark, FileText,
-  MoreHorizontal, Bell, Settings, LogOut, Terminal, CheckCheck
+  MoreHorizontal, Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -349,6 +349,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
   const sidebarItems = [
     { id: 'feed', icon: Home, label: 'My Feed' },
+    { id: 'connections', icon: UserPlus, label: 'Connections' },
     { id: 'groups', icon: Users, label: 'Groups', badge: unreadGroups },
     { id: 'pages', icon: FileText, label: 'Pages' },
     { id: 'messages', icon: MessageSquare, label: 'Messages', badge: unreadMessages },

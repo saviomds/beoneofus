@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Bot, Send, User, Loader2, X, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -65,10 +65,10 @@ export default function FloatingAiAssistant() {
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll to bottom of chat
-  const scrollToBottom = () => {
+  // Auto-scroll to bottom of chat (Memoized to prevent Typewriter reset)
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   // Fetch chat history only once when the widget is opened
   useEffect(() => {
@@ -120,10 +120,16 @@ export default function FloatingAiAssistant() {
         });
       }
 
+      // Strip out custom properties like 'isNew' before sending to the API
+      const apiMessages = [...messages, userMessage].map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
       const res = await fetch("/api/chats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+        body: JSON.stringify({ messages: apiMessages }),
       });
 
       const text = await res.text();

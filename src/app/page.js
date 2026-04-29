@@ -92,6 +92,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-6 text-sm font-bold text-gray-600 dark:text-gray-300">
                   <Link href="/Explore_Projects" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Explore</Link>
                   <Link href="/how_it_works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">How It Works</Link>
+                  <Link href="/docs" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Docs</Link>
                  
                   <Link href="#community" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Community</Link>
                    <Link href="/dash" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Jump In</Link>
@@ -120,6 +121,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-6 text-sm font-bold text-gray-600 dark:text-gray-300">
                   <Link href="/Explore_Projects" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Explore</Link>
                   <Link href="/how_it_works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">How It Works</Link>
+                  <Link href="/docs" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Docs</Link>
                   <Link href="/community" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Community</Link>
                 </div>
                 <div className="h-6 w-px bg-gray-200 dark:bg-gray-800"></div>
@@ -162,6 +164,7 @@ export default function LandingPage() {
               </div>
               <div className={`flex flex-col space-y-1 transition-all duration-500 transform ${mobileMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '200ms' }}>
                 <Link href="/Explore_Projects" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">Explore</Link>
+                <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">Docs</Link>
                 <Link href="/dash?section=groups" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">Projects</Link>
                 <Link href="/dash?section=messages" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors"><MessageSquare size={18} /> Messages</Link>
               </div>
@@ -176,6 +179,7 @@ export default function LandingPage() {
               <div className={`flex flex-col space-y-1 transition-all duration-500 transform ${mobileMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '100ms' }}>
                 <Link href="/Explore_Projects" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">Explore Projects</Link>
                 <Link href="/how_it_works" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">How It Works</Link>
+                <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">Docs</Link>
                 <Link href="/community" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">Community</Link>
               </div>
               <div className={`h-px w-full bg-gray-100 dark:bg-gray-800 my-2 transition-all duration-500 transform ${mobileMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '150ms' }}></div>
@@ -208,6 +212,9 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href={session ? "/dash" : "/auth"} className="w-full sm:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl text-lg font-black shadow-xl shadow-blue-500/20 hover:scale-105 transition-all">
               {session ? "Return to Dashboard" : "Join for Free"} <ArrowRight className="inline ml-2" />
+            </Link>
+            <Link href="/docs" className="w-full sm:w-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 px-8 py-4 rounded-2xl text-lg font-black hover:scale-105 transition-all shadow-sm">
+              Read Docs
             </Link>
           </div>
         </div>

@@ -522,16 +522,27 @@ export default function ProfileContent({ viewUserId }) {
         });
 
         // Trigger email notification
-        fetch('/api/send-app-email', {
+        const emailRes = await fetch('/api/send-app-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            applicationId: appId,
             applicantId,
             status: newStatus,
             jobTitle: jobTitle || 'a recent role',
             customMessage
           })
-        }).catch(err => console.error('Failed to trigger email API:', err));
+        });
+
+        if (!emailRes.ok) {
+          const contentType = emailRes.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errData = await emailRes.json();
+            throw new Error(errData.error || 'Failed to send email notification.');
+          } else {
+            throw new Error('API Route not found or server crashed. Ensure API keys are set.');
+          }
+        }
       }
 
       setJobApplicants(prev => prev.map(app => 
@@ -540,6 +551,7 @@ export default function ProfileContent({ viewUserId }) {
       if (selectedApplicant && selectedApplicant.id === appId) {
         setSelectedApplicant(prev => ({...prev, status: newStatus}));
       }
+      setToast({ message: `Application ${newStatus} successfully!`, type: "success" });
     } catch (err) {
       setToast({ message: "Error updating application: " + err.message, type: "error" });
     }

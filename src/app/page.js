@@ -7,7 +7,7 @@ import { supabase } from "./supabaseClient";
 import { 
   Terminal, Zap, Shield, Cpu, ChevronRight, ArrowRight, 
   Code2, Users, Globe, Bot, Menu, X, Bell, MessageSquare, 
-  ChevronDown, UserPlus, Handshake, Hash 
+  ChevronDown, UserPlus, Handshake, Hash, AlertTriangle
 } from "lucide-react";
 import FloatingAiAssistant from "./components/FloatingAiAssistant";
 
@@ -16,6 +16,7 @@ export default function LandingPage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authError, setAuthError] = useState(null);
 
   const communities = [
     { name: 'Systems & Rust', members: '12.4k', icon: <Cpu size={24} />, desc: 'Low-level programming, memory safety, and performance optimization discussions.' },
@@ -53,18 +54,33 @@ export default function LandingPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      
-      if (session) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', session.user.id)
-          .single();
-        setProfile(data);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          if (error.message.includes('Refresh Token Not Found') || error.message.includes('Invalid Refresh Token')) {
+            setAuthError('Your session has expired or is invalid. Please log in again.');
+            await supabase.auth.signOut(); // Clear invalid local session
+          } else {
+            setAuthError(error.message);
+          }
+        }
+        
+        setSession(session);
+        
+        if (session) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', session.user.id)
+            .single();
+          setProfile(data);
+        }
+      } catch (err) {
+        setAuthError('Authentication check failed. Please try again.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     
     checkAuth();
@@ -271,6 +287,22 @@ export default function LandingPage() {
       <footer className="border-t border-gray-200 dark:border-gray-800 py-10 text-center text-gray-500 dark:text-gray-400 text-xs font-mono uppercase tracking-widest bg-white dark:bg-gray-900">
         beoneofus platform v1.0 © {new Date().getFullYear()}
       </footer>
+
+      {/* Auth Error Pop Card */}
+      {authError && (
+        <div className="fixed bottom-6 right-6 z-50 bg-white dark:bg-gray-900 border border-red-200 dark:border-red-800/50 shadow-2xl rounded-2xl p-4 max-w-sm flex items-start gap-3 animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-full text-red-600 dark:text-red-400 shrink-0">
+            <AlertTriangle size={20} />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">Session Notice</h4>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{authError}</p>
+          </div>
+          <button onClick={() => setAuthError(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       <FloatingAiAssistant />
     </div>

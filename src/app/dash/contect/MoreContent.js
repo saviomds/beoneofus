@@ -23,6 +23,7 @@ import {
   Key,
   RefreshCw,
   AlertCircle,
+  AlertTriangle,
   ShieldAlert,
   ShieldCheck,
   Loader2,
@@ -336,6 +337,20 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [appsLoading, setAppsLoading] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
 
+  const [founderApps, setFounderApps] = useState([]);
+  const [founderAppsLoading, setFounderAppsLoading] = useState(false);
+  const [selectedFounderApp, setSelectedFounderApp] = useState(null);
+
+  const [actionPrompt, setActionPrompt] = useState(null);
+  const [customMessage, setCustomMessage] = useState("");
+  const [actionProcessing, setActionProcessing] = useState(false);
+  const [toast, setToast] = useState({ message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: "", type: "success" }), 3000);
+  };
+
   useEffect(() => {
     const checkAdminAndFetch = async () => {
       if (!currentUserId) return;
@@ -451,6 +466,28 @@ const AdminPanelTool = ({ currentUserId }) => {
     }
   }, [adminTab, isAdmin, applications.length]);
 
+  // Fetch Founder Apps when the 'Founder Apps' tab is opened
+  useEffect(() => {
+    if (adminTab === 'founder_apps' && isAdmin && founderApps.length === 0) {
+      const fetchFounderApps = async () => {
+        setFounderAppsLoading(true);
+        const { data, error } = await supabase
+          .from('founder_applications')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(200);
+          
+        if (error) {
+          console.error("Error fetching founder applications:", error);
+        } else if (data) {
+          setFounderApps(data);
+        }
+        setFounderAppsLoading(false);
+      };
+      fetchFounderApps();
+    }
+  }, [adminTab, isAdmin, founderApps.length]);
+
   const handleAction = async (userId, action) => {
     try {
       const updates = action === 'approve' 
@@ -474,9 +511,10 @@ const AdminPanelTool = ({ currentUserId }) => {
         type: action === 'approve' ? 'handshake' : 'blocked',
         content: action === 'approve' ? 'approved your verification request!' : 'denied your verification request.'
       });
+      showToast(`User verification ${action === 'approve' ? 'approved' : 'denied'}.`);
 
     } catch (err) {
-      alert("Error: " + err.message);
+      showToast("Error: " + err.message, "error");
     }
   };
 
@@ -486,20 +524,38 @@ const AdminPanelTool = ({ currentUserId }) => {
       const { error } = await supabase.from('profiles').delete().eq('id', userId);
       if (error) throw error;
       setAllUsers(prev => prev.filter(u => u.id !== userId));
-      alert(`User @${username} has been deleted.`);
+      showToast(`User @${username} has been deleted.`);
     } catch (err) {
-      alert("Error deleting user: " + err.message);
+      showToast("Error deleting user: " + err.message, "error");
     }
   };
 
   const handleImpersonateUser = (userId, username) => {
-    alert(`Impersonation for @${username} requires a secure backend Edge Function using your Supabase Service Role key to generate an auth token. (Not implemented in client-side)`);
+    showToast(`Impersonation for @${username} requires a secure backend Edge Function using your Supabase Service Role key to generate an auth token.`, "error");
   };
 
-  const handleAppAction = async (appId, newStatus, applicantId, jobTitle) => {
-    const customMessage = window.prompt(`Optional: Add a personal message to send to the applicant (leave blank for standard message):`);
-    if (customMessage === null) return; // Cancel if the user clicks 'Cancel' on the prompt
+  const promptAppAction = (appId, newStatus, applicantId, jobTitle) => {
+    setActionPrompt({ type: 'job', appId, newStatus, applicantId, title: jobTitle });
+    setCustomMessage("");
+  };
 
+  const promptFounderAppAction = (appId, newStatus, applicantId, role) => {
+    setActionPrompt({ type: 'founder', appId, newStatus, applicantId, title: role });
+    setCustomMessage("");
+  };
+
+  const submitActionPrompt = async () => {
+    setActionProcessing(true);
+    if (actionPrompt.type === 'job') {
+      await handleAppAction(actionPrompt.appId, actionPrompt.newStatus, actionPrompt.applicantId, actionPrompt.title, customMessage);
+    } else {
+      await handleFounderAppAction(actionPrompt.appId, actionPrompt.newStatus, actionPrompt.applicantId, actionPrompt.title, customMessage);
+    }
+    setActionProcessing(false);
+    setActionPrompt(null);
+  };
+
+  const handleAppAction = async (appId, newStatus, applicantId, jobTitle, customMessage) => {
     try {
       const { error } = await supabase
         .from('job_applications')
@@ -510,31 +566,49 @@ const AdminPanelTool = ({ currentUserId }) => {
 
       // Send a notification to the applicant!
       if (applicantId) {
+        let notifContent = `Your job application for ${jobTitle || 'a recent role'} was ${newStatus}.`;
+        if (customMessage) notifContent += ` Note: "${customMessage}"`;
+
         await supabase.from('notifications').insert({
           receiver_id: applicantId,
           actor_id: currentUserId,
           type: 'message',
-          content: `Your job application was ${newStatus}.`
+          content: notifContent
         });
 
         // Trigger email notification
-        fetch('/api/send-app-email', {
+        const emailRes = await fetch('/api/send-app-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            applicationId: appId,
             applicantId,
             status: newStatus,
             jobTitle: jobTitle || 'a recent role',
             customMessage
           })
-        }).catch(err => console.error('Failed to trigger email API:', err));
+        });
+
+        if (!emailRes.ok) {
+          const contentType = emailRes.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errData = await emailRes.json();
+            throw new Error(errData.error || 'Failed to send email notification.');
+          } else {
+            throw new Error('API Route not found or server crashed. Ensure API keys are set.');
+          }
+        }
       }
 
       setApplications(prev => prev.map(app => 
         app.id === appId ? { ...app, status: newStatus } : app
       ));
+      if (selectedApp && selectedApp.id === appId) {
+        setSelectedApp(prev => ({...prev, status: newStatus}));
+      }
+      showToast(`Application ${newStatus} successfully!`);
     } catch (err) {
-      alert("Error updating application: " + err.message);
+      showToast("Error updating application: " + err.message, "error");
     }
   };
 
@@ -545,9 +619,85 @@ const AdminPanelTool = ({ currentUserId }) => {
       if (error) throw error;
       setApplications(prev => prev.filter(app => app.id !== appId));
       setSelectedApp(null);
+      showToast("Application deleted successfully.");
     } catch (err) {
-      alert("Error deleting application: " + err.message);
+      showToast("Error deleting application: " + err.message, "error");
     }
+  };
+
+  const handleDeleteFounderApp = async (appId) => {
+    if(!confirm("Are you sure you want to permanently delete this application?")) return;
+    try {
+      const { error } = await supabase.from('founder_applications').delete().eq('id', appId);
+      if (error) throw error;
+      setFounderApps(prev => prev.filter(app => app.id !== appId));
+      setSelectedFounderApp(null);
+      showToast("Application deleted successfully.");
+    } catch (err) {
+      showToast("Error deleting application: " + err.message, "error");
+    }
+  };
+
+  const handleFounderAppAction = async (appId, newStatus, applicantId, role, customMessage) => {
+    try {
+      const { error } = await supabase
+        .from('founder_applications')
+        .update({ status: newStatus })
+        .eq('id', appId);
+
+      if (error) throw error;
+
+      if (applicantId) {
+        const dashboardLink = newStatus === 'accepted' 
+          ? (role === 'cofounder' ? '/founder-dashboard' : '/member-dashboard') 
+          : null;
+          
+        let notifContent = `Your application to join as a ${role} was ${newStatus}.`;
+        if (newStatus === 'accepted') notifContent += ` Welcome aboard!`;
+        if (customMessage) notifContent += ` Note: "${customMessage}"`;
+        
+        await supabase.from('notifications').insert({
+          receiver_id: applicantId,
+          actor_id: currentUserId,
+          type: 'message',
+          content: notifContent,
+          link: dashboardLink
+        });
+
+        // Fetch to send an email
+        const emailRes = await fetch('/api/notify-applicant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ applicationId: appId, applicantId, status: newStatus, role, customMessage, dashboardLink })
+        });
+
+        if (!emailRes.ok) {
+          const contentType = emailRes.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errData = await emailRes.json();
+            throw new Error(errData.error || 'Failed to send email notification.');
+          } else {
+            throw new Error('API Route not found or server crashed. Ensure API keys are set.');
+          }
+        }
+      }
+
+      setFounderApps(prev => prev.map(app => app.id === appId ? { ...app, status: newStatus } : app));
+      if (selectedFounderApp && selectedFounderApp.id === appId) {
+        setSelectedFounderApp(prev => ({...prev, status: newStatus}));
+      }
+      showToast(`Application ${newStatus} successfully!`);
+    } catch (err) {
+      showToast("Error updating application: " + err.message, "error");
+    }
+  };
+
+  const getReasonObj = (reasonData) => {
+    if (!reasonData) return {};
+    if (typeof reasonData === 'string') {
+      try { return JSON.parse(reasonData); } catch (e) { return { 'Responses': reasonData }; }
+    }
+    return reasonData;
   };
 
   if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>;
@@ -582,6 +732,7 @@ const AdminPanelTool = ({ currentUserId }) => {
           <button onClick={() => setAdminTab('users')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'users' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Users</button>
           <button onClick={() => setAdminTab('ai_logs')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'ai_logs' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>AI Logs</button>
           <button onClick={() => setAdminTab('applications')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'applications' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Applications</button>
+          <button onClick={() => setAdminTab('founder_apps')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'founder_apps' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Founder Apps</button>
         </div>
       </div>
 
@@ -783,13 +934,90 @@ const AdminPanelTool = ({ currentUserId }) => {
                     {app.status !== 'accepted' && app.status !== 'declined' && app.status !== 'external_redirect' && (
                       <div className="flex items-center gap-2 mt-2">
                         <button 
-                          onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'declined', app.user_id, app.jobs?.title); }} 
+                          onClick={(e) => { e.stopPropagation(); promptAppAction(app.id, 'declined', app.user_id, app.jobs?.title); }} 
                           className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg font-bold text-[10px] transition-colors border border-red-200 dark:border-red-800/50 uppercase"
                         >
                           Decline
                         </button>
                         <button 
-                          onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'accepted', app.user_id, app.jobs?.title); }} 
+                          onClick={(e) => { e.stopPropagation(); promptAppAction(app.id, 'accepted', app.user_id, app.jobs?.title); }} 
+                          className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg font-bold text-[10px] transition-colors shadow-sm uppercase"
+                        >
+                          Accept
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Founder Applications Tab */}
+      {adminTab === 'founder_apps' && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
+            <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2">Founder & Member Applications</h4>
+            <button onClick={() => setFounderApps([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all">Refresh</button>
+          </div>
+          
+          {founderAppsLoading ? (
+            <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
+          ) : founderApps.length === 0 ? (
+            <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No founder applications found.</div>
+          ) : (
+            <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
+              {founderApps.map(app => (
+                <div key={app.id} onClick={() => setSelectedFounderApp(app)} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between cursor-pointer group">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 overflow-hidden shrink-0 border border-blue-200 dark:border-blue-800/50 flex items-center justify-center font-black text-blue-600 dark:text-blue-400 uppercase">
+                      {app.name ? app.name.substring(0, 2) : "??"}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate">
+                        {app.name}
+                      </h4>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">
+                        Role: <span className="font-bold text-gray-700 dark:text-gray-300">{app.intended_role}</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:items-end shrink-0 gap-2 mt-2 sm:mt-0">
+                    <div className="flex items-center gap-2">
+                      {app.status && (
+                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${
+                          app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 
+                          app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 
+                          'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
+                        }`}>
+                          {app.status}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold">
+                        {new Date(app.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setSelectedFounderApp(app); }} 
+                      className="mt-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      View Details <ChevronRight size={12} />
+                    </button>
+                    
+                    {app.status !== 'accepted' && app.status !== 'declined' && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); promptFounderAppAction(app.id, 'declined', app.user_id, app.intended_role); }} 
+                          className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg font-bold text-[10px] transition-colors border border-red-200 dark:border-red-800/50 uppercase"
+                        >
+                          Decline
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); promptFounderAppAction(app.id, 'accepted', app.user_id, app.intended_role); }} 
                           className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg font-bold text-[10px] transition-colors shadow-sm uppercase"
                         >
                           Accept
@@ -880,13 +1108,13 @@ const AdminPanelTool = ({ currentUserId }) => {
               {selectedApp.status !== 'accepted' && selectedApp.status !== 'declined' && selectedApp.status !== 'external_redirect' ? (
                 <>
                   <button 
-                    onClick={() => { handleAppAction(selectedApp.id, 'declined', selectedApp.user_id, selectedApp.jobs?.title); setSelectedApp(prev => ({...prev, status: 'declined'})); }} 
+                    onClick={() => promptAppAction(selectedApp.id, 'declined', selectedApp.user_id, selectedApp.jobs?.title)} 
                     className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold transition-colors border border-red-200 dark:border-red-800/50"
                   >
                     Decline
                   </button>
                   <button 
-                    onClick={() => { handleAppAction(selectedApp.id, 'accepted', selectedApp.user_id, selectedApp.jobs?.title); setSelectedApp(prev => ({...prev, status: 'accepted'})); }} 
+                    onClick={() => promptAppAction(selectedApp.id, 'accepted', selectedApp.user_id, selectedApp.jobs?.title)} 
                     className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-colors shadow-sm"
                   >
                     Accept
@@ -906,6 +1134,117 @@ const AdminPanelTool = ({ currentUserId }) => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Founder Application Details Modal */}
+      {selectedFounderApp && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedFounderApp(null)} />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <button onClick={() => setSelectedFounderApp(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
+              <X size={18} />
+            </button>
+            
+            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight pr-8 mb-4">Applicant Review</h2>
+            
+            <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+              <div className="relative w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 overflow-hidden shrink-0 flex items-center justify-center font-black text-blue-600 dark:text-blue-400 uppercase">
+                {selectedFounderApp.name ? selectedFounderApp.name.substring(0, 2) : "??"}
+              </div>
+              <div>
+                <h4 className="text-gray-900 dark:text-gray-100 font-bold text-base flex items-center gap-1">
+                  {selectedFounderApp.name}
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Applied as <span className="font-bold text-gray-700 dark:text-gray-300 uppercase">{selectedFounderApp.intended_role}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              {Object.entries(getReasonObj(selectedFounderApp.reason)).map(([key, value], idx) => {
+                const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+                return (
+                  <div key={idx} className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
+                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">{formattedKey}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{value}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+              {selectedFounderApp.status !== 'accepted' && selectedFounderApp.status !== 'declined' ? (
+                <>
+                  <button 
+                    onClick={() => promptFounderAppAction(selectedFounderApp.id, 'declined', selectedFounderApp.user_id, selectedFounderApp.intended_role)} 
+                    className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold transition-colors border border-red-200 dark:border-red-800/50"
+                  >
+                    Decline
+                  </button>
+                  <button 
+                    onClick={() => promptFounderAppAction(selectedFounderApp.id, 'accepted', selectedFounderApp.user_id, selectedFounderApp.intended_role)} 
+                    className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-colors shadow-sm"
+                  >
+                    Accept
+                  </button>
+                </>
+              ) : (
+                <div className="flex-1 text-center py-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-xs border border-gray-200 dark:border-gray-700">
+                  Status: {selectedFounderApp.status}
+                </div>
+              )}
+              <button 
+                onClick={() => handleDeleteFounderApp(selectedFounderApp.id)} 
+                className="px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-xl font-bold transition-colors border border-gray-200 dark:border-gray-700"
+                title="Delete Application"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ACTION PROMPT MODAL */}
+      {actionPrompt && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => !actionProcessing && setActionPrompt(null)} />
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <button onClick={() => setActionPrompt(null)} disabled={actionProcessing} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm disabled:opacity-50">
+              <X size={18} />
+            </button>
+            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-2">
+              {actionPrompt.newStatus === 'accepted' ? 'Accept' : 'Decline'} Application
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              Optional: Add a personal message to send to the applicant. Leave blank for a standard message.
+            </p>
+            <textarea
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Type your message here..."
+              rows={4}
+              className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none custom-scrollbar mb-6"
+            />
+            <div className="flex items-center gap-3">
+              <button onClick={() => setActionPrompt(null)} disabled={actionProcessing} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={submitActionPrompt} disabled={actionProcessing} className={`flex-1 py-3 text-white font-bold rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 ${actionPrompt.newStatus === 'accepted' ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}>
+                {actionProcessing ? <Loader2 size={16} className="animate-spin" /> : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Toast Popup */}
+      {toast.message && (
+        <div className={`fixed bottom-10 right-10 z-[1000] flex items-center gap-3 bg-white dark:bg-gray-900 border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 ${toast.type === 'error' ? 'border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-500' : 'border-indigo-200 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-500'}`}>
+          {toast.type === 'error' ? <AlertTriangle size={18} className="text-rose-500" /> : <Check size={18} className="text-indigo-500" />}
+          <span className="text-sm font-bold tracking-tight">{toast.message}</span>
         </div>
       )}
     </div>

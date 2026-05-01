@@ -2,58 +2,29 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, Clock, Code2, ArrowRight, LayoutDashboard, MessageSquare, Loader2, Check } from 'lucide-react';
+import { CheckCircle2, Clock, Code2, ArrowRight, LayoutDashboard, MessageSquare, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { supabase } from '../supabaseClient';
+import { supabase } from './src/app/supabaseClient';
 
 export default function MemberDashboard() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [tasks, setTasks] = useState([]);
-  const [updates, setUpdates] = useState([]);
 
   useEffect(() => {
-    const checkAuthAndFetchData = async () => {
+    const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.push('/');
+        router.push('/'); // Redirect unauthenticated users to the home/login page
       } else {
         setIsAuthenticated(true);
-        
-        // Fetch User's Tasks
-        const { data: tasksData } = await supabase.from('tasks').select('*').eq('assignee_id', session.user.id).order('created_at', { ascending: false });
-        if (tasksData) setTasks(tasksData);
-
-        // Fetch System Updates / Notifications
-        const { data: notifData } = await supabase.from('notifications').select('*, actor:actor_id(username)').eq('receiver_id', session.user.id).order('created_at', { ascending: false }).limit(5);
-        if (notifData) setUpdates(notifData);
-
-        // Real-time subscription for incoming tasks
-        const taskSubscription = supabase.channel('member_tasks')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `assignee_id=eq.${session.user.id}` }, async () => {
-             const { data } = await supabase.from('tasks').select('*').eq('assignee_id', session.user.id).order('created_at', { ascending: false });
-             if (data) setTasks(data);
-          }).subscribe();
-          
-        return () => { supabase.removeChannel(taskSubscription); };
       }
     };
-    checkAuthAndFetchData();
+    checkAuth();
   }, [router]);
-
-  const handleCompleteTask = async (taskId) => {
-    const { error } = await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId);
-    if (!error) {
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
-    }
-  };
 
   if (!isAuthenticated) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black"><Loader2 className="animate-spin text-blue-600" size={32} /></div>;
   }
-
-  const pendingTasks = tasks.filter(t => t.status === 'pending');
-  const completedTasks = tasks.filter(t => t.status === 'completed');
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black p-6 sm:p-10 animate-in fade-in duration-500">
@@ -78,7 +49,7 @@ export default function MemberDashboard() {
             </div>
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Pending Tasks</p>
-              <p className="text-2xl font-black text-gray-900 dark:text-white">{pendingTasks.length} Assignments</p>
+              <p className="text-2xl font-black text-gray-900 dark:text-white">4 Assignments</p>
             </div>
           </div>
           
@@ -88,7 +59,7 @@ export default function MemberDashboard() {
             </div>
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Completed</p>
-              <p className="text-2xl font-black text-gray-900 dark:text-white">{completedTasks.length} Total</p>
+              <p className="text-2xl font-black text-gray-900 dark:text-white">12 This Week</p>
             </div>
           </div>
 
@@ -108,44 +79,26 @@ export default function MemberDashboard() {
           <div className="lg:col-span-2 bg-white dark:bg-gray-900 p-8 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-sm min-h-[400px]">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><LayoutDashboard size={20} className="text-blue-500"/> My Tasks</h2>
+              <button className="text-sm font-bold text-blue-600 hover:underline">View Kanban</button>
             </div>
-            
-            {pendingTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl bg-gray-50 dark:bg-gray-800/30">
-                <CheckCircle2 size={32} className="mb-3 text-gray-400 dark:text-gray-500" />
-                <p className="font-bold">You are all caught up!</p>
-                <p className="text-sm mt-1">Enjoy your free time or grab a new issue.</p>
-              </div>
-            ) : (
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {pendingTasks.map(task => (
-                  <div key={task.id} className="p-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 flex justify-between items-center gap-4 group">
-                    <div>
-                      <h3 className="font-bold text-gray-900 dark:text-gray-100">{task.title}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{task.description}</p>
-                    </div>
-                    <button onClick={() => handleCompleteTask(task.id)} className="shrink-0 p-3 bg-white hover:bg-green-500 text-gray-400 hover:text-white border border-gray-200 hover:border-green-500 dark:bg-gray-900 dark:border-gray-700 rounded-xl transition-all shadow-sm" title="Mark as Complete">
-                      <Check size={20} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl bg-gray-50 dark:bg-gray-800/30">
+              <CheckCircle2 size={32} className="mb-3 text-gray-400 dark:text-gray-500" />
+              <p className="font-bold">You are all caught up!</p>
+              <p className="text-sm mt-1">Enjoy your free time or grab a new issue.</p>
+            </div>
           </div>
           
           <div className="bg-white dark:bg-gray-900 p-8 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-sm min-h-[400px]">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><MessageSquare size={20} className="text-gray-500"/> Team Updates</h2>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {updates.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No recent updates.</p>
-              ) : (
-                updates.map(upd => (
-                  <div key={upd.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1">{upd.actor?.username ? `@${upd.actor.username}` : 'SYSTEM'}</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{upd.content}</p>
-                  </div>
-                ))
-              )}
+            <div className="space-y-3">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-1">SYSTEM</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">Welcome to your new dashboard! Start exploring your projects.</p>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                <p className="text-xs font-bold text-purple-600 dark:text-purple-400 mb-1">FOUNDER</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">We just deployed the new API updates.</p>
+              </div>
             </div>
           </div>
         </div>

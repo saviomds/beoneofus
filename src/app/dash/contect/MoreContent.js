@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Image from "next/image";
 import { 
   Zap, 
@@ -31,7 +31,8 @@ import {
   Trash2,
   Bot,
   UserCog,
-  FileText
+  FileText,
+  ClipboardList
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -341,6 +342,11 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [founderAppsLoading, setFounderAppsLoading] = useState(false);
   const [selectedFounderApp, setSelectedFounderApp] = useState(null);
 
+  const [adminTasks, setAdminTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [taskForm, setTaskForm] = useState({ assignee_id: '', title: '', description: '' });
+
   const [actionPrompt, setActionPrompt] = useState(null);
   const [customMessage, setCustomMessage] = useState("");
   const [actionProcessing, setActionProcessing] = useState(false);
@@ -382,9 +388,9 @@ const AdminPanelTool = ({ currentUserId }) => {
     checkAdminAndFetch();
   }, [currentUserId]);
 
-  // Fetch all users when the 'Users' tab is opened
+  // Fetch all users when the 'Users' or 'Tasks' tab is opened
   useEffect(() => {
-    if (adminTab === 'users' && isAdmin && allUsers.length === 0) {
+    if ((adminTab === 'users' || adminTab === 'tasks') && isAdmin && allUsers.length === 0) {
       const fetchAllUsers = async () => {
         setUsersLoading(true);
         const { data, error } = await supabase
@@ -487,6 +493,22 @@ const AdminPanelTool = ({ currentUserId }) => {
       fetchFounderApps();
     }
   }, [adminTab, isAdmin, founderApps.length]);
+
+  // Fetch Tasks when the 'Tasks' tab is opened
+  useEffect(() => {
+    if (adminTab === 'tasks' && isAdmin && adminTasks.length === 0) {
+      const fetchTasks = async () => {
+        setTasksLoading(true);
+        const { data, error } = await supabase
+          .from('tasks')
+          .select('*, profiles:assignee_id(username, avatar_url, status)')
+          .order('created_at', { ascending: false });
+        if (data) setAdminTasks(data);
+        setTasksLoading(false);
+      };
+      fetchTasks();
+    }
+  }, [adminTab, isAdmin, adminTasks.length]);
 
   const handleAction = async (userId, action) => {
     try {
@@ -692,6 +714,39 @@ const AdminPanelTool = ({ currentUserId }) => {
     }
   };
 
+  const handleAssignTask = async (e) => {
+    e.preventDefault();
+    setActionProcessing(true);
+    try {
+      const { data, error } = await supabase.from('tasks').insert({
+        assignee_id: taskForm.assignee_id,
+        assigner_id: currentUserId,
+        title: taskForm.title,
+        description: taskForm.description,
+        status: 'pending'
+      }).select('*, profiles:assignee_id(username, avatar_url, status)').single();
+      
+      if (error) throw error;
+
+      setAdminTasks(prev => [data, ...prev]);
+
+      await supabase.from('notifications').insert({
+        receiver_id: taskForm.assignee_id,
+        actor_id: currentUserId,
+        type: 'message',
+        content: `assigned you a new task: ${taskForm.title}`
+      });
+
+      setShowTaskModal(false);
+      setTaskForm({ assignee_id: '', title: '', description: '' });
+      showToast("Task assigned successfully!");
+    } catch (err) {
+      showToast("Error assigning task: " + err.message, "error");
+    } finally {
+      setActionProcessing(false);
+    }
+  };
+
   const getReasonObj = (reasonData) => {
     if (!reasonData) return {};
     if (typeof reasonData === 'string') {
@@ -733,6 +788,7 @@ const AdminPanelTool = ({ currentUserId }) => {
           <button onClick={() => setAdminTab('ai_logs')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'ai_logs' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>AI Logs</button>
           <button onClick={() => setAdminTab('applications')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'applications' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Applications</button>
           <button onClick={() => setAdminTab('founder_apps')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'founder_apps' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Founder Apps</button>
+          <button onClick={() => setAdminTab('tasks')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'tasks' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Tasks</button>
         </div>
       </div>
 
@@ -1207,6 +1263,76 @@ const AdminPanelTool = ({ currentUserId }) => {
         </div>
       )}
 
+      {/* Tasks Tab */}
+      {adminTab === 'tasks' && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
+            <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2">Task Assignments</h4>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setAdminTasks([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all">Refresh</button>
+              <button onClick={() => setShowTaskModal(true)} className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-sm"><Plus size={14}/> Assign Task</button>
+            </div>
+          </div>
+          
+          {tasksLoading ? (
+            <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
+          ) : adminTasks.length === 0 ? (
+            <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No tasks assigned yet.</div>
+          ) : (
+            <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
+              {adminTasks.map(task => (
+                <div key={task.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group">
+                  <div className="flex justify-between items-start">
+                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm">{task.title}</h4>
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'}`}>
+                      {task.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">{task.description}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative">
+                      {task.profiles?.avatar_url ? <Image src={task.profiles.avatar_url} alt="avatar" fill sizes="20px" className="object-cover" /> : <User size={12} className="m-auto mt-1 text-gray-400" />}
+                    </div>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Assigned to @{task.profiles?.username || 'Unknown'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Assign Task Modal */}
+      {showTaskModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => !actionProcessing && setShowTaskModal(false)} />
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <button onClick={() => setShowTaskModal(false)} disabled={actionProcessing} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm disabled:opacity-50"><X size={18} /></button>
+            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-6 flex items-center gap-2"><ClipboardList size={20} className="text-blue-500"/> Assign New Task</h2>
+            <form onSubmit={handleAssignTask} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Assignee</label>
+                <select required value={taskForm.assignee_id} onChange={e => setTaskForm({...taskForm, assignee_id: e.target.value})} className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all appearance-none">
+                  <option value="" disabled>Select a user...</option>
+                  {allUsers.map(u => <option key={u.id} value={u.id}>@{u.username} ({u.status || 'Member'})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Task Title</label>
+                <input required type="text" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} placeholder="e.g. Implement real-time notifications" className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Description</label>
+                <textarea required rows={3} value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})} placeholder="Task details and requirements..." className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all resize-none custom-scrollbar" />
+              </div>
+              <button type="submit" disabled={actionProcessing || !taskForm.assignee_id || !taskForm.title} className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50">
+                {actionProcessing ? <Loader2 size={16} className="animate-spin" /> : 'Assign Task'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ACTION PROMPT MODAL */}
       {actionPrompt && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
@@ -1440,6 +1566,7 @@ export default function MoreContent() {
   const [copiedProfile, setCopiedProfile] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   // Filter tools so non-admins never even see the Admin Panel option
   const visibleTools = MORE_TOOLS.filter(t => t.id !== 'admin' || isAdmin);
@@ -1463,13 +1590,15 @@ export default function MoreContent() {
   const handleOpenTool = (tool) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set('tool', tool.id);
-    router.push(`?${params.toString()}`, { scroll: false });
+    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.push(newUrl, { scroll: false });
   };
 
   const handleCloseTool = () => {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.delete('tool');
-    router.push(`?${params.toString()}`, { scroll: false });
+    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.push(newUrl, { scroll: false });
   };
 
   const handleShareProfile = () => {

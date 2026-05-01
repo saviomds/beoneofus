@@ -1,7 +1,55 @@
-import { Users, Briefcase, Activity, Settings, ArrowRight, Zap, Target } from 'lucide-react';
+"use client";
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Users, Briefcase, Activity, Settings, ArrowRight, Target, Loader2, CheckCircle2, Check } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '../supabaseClient';
 
 export default function FounderDashboard() {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [tasks, setTasks] = useState([]);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/'); // Redirect unauthenticated users to the home/login page
+      } else {
+        setIsAuthenticated(true);
+        
+        // Fetch User's Tasks
+        const { data: tasksData } = await supabase.from('tasks').select('*').eq('assignee_id', session.user.id).order('created_at', { ascending: false });
+        if (tasksData) setTasks(tasksData);
+
+        // Real-time subscription for incoming tasks
+        const taskSubscription = supabase.channel('founder_tasks')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `assignee_id=eq.${session.user.id}` }, async () => {
+             const { data } = await supabase.from('tasks').select('*').eq('assignee_id', session.user.id).order('created_at', { ascending: false });
+             if (data) setTasks(data);
+          }).subscribe();
+          
+        return () => { supabase.removeChannel(taskSubscription); };
+      }
+    };
+    checkAuth();
+  }, [router]);
+
+  const handleCompleteTask = async (taskId) => {
+    const { error } = await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId);
+    if (!error) {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
+    }
+  };
+
+  if (!isAuthenticated) {
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black"><Loader2 className="animate-spin text-blue-600" size={32} /></div>;
+  }
+
+  const pendingTasks = tasks.filter(t => t.status === 'pending');
+  const completedTasks = tasks.filter(t => t.status === 'completed');
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black p-6 sm:p-10 animate-in fade-in duration-500">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -54,14 +102,30 @@ export default function FounderDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white dark:bg-gray-900 p-8 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-sm min-h-[400px]">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><Target size={20} className="text-blue-500"/> Project Roadmap</h2>
-              <button className="text-sm font-bold text-blue-600 hover:underline">View All</button>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><Target size={20} className="text-blue-500"/> Project Tasks</h2>
             </div>
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl bg-gray-50 dark:bg-gray-800/30">
-              <Zap size={32} className="mb-3 text-gray-400 dark:text-gray-500" />
-              <p className="font-bold">No active milestones yet.</p>
-              <p className="text-sm mt-1">Start planning your next big launch.</p>
-            </div>
+            
+            {pendingTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl bg-gray-50 dark:bg-gray-800/30">
+                <CheckCircle2 size={32} className="mb-3 text-gray-400 dark:text-gray-500" />
+                <p className="font-bold">All objectives cleared.</p>
+                <p className="text-sm mt-1">Await further direction from network admin.</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {pendingTasks.map(task => (
+                  <div key={task.id} className="p-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 flex justify-between items-center gap-4 group">
+                    <div>
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100">{task.title}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{task.description}</p>
+                    </div>
+                    <button onClick={() => handleCompleteTask(task.id)} className="shrink-0 p-3 bg-white hover:bg-green-500 text-gray-400 hover:text-white border border-gray-200 hover:border-green-500 dark:bg-gray-900 dark:border-gray-700 rounded-xl transition-all shadow-sm" title="Mark as Complete">
+                      <Check size={20} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="bg-white dark:bg-gray-900 p-8 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-sm min-h-[400px]">

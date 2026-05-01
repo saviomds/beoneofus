@@ -18,7 +18,8 @@
     "react-easy-crop": "^5.5.7",
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^16.1.1",
-    "resend": "^3.2.0"
+    "resend": "^3.2.0",
+    "@supabase/ssr": "^0.5.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

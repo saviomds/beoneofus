@@ -96,7 +96,7 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
             setShowCodeInput(true);
           }
         } catch (e) {
-          console.error("Could not load draft", e);
+          console.warn("Could not load draft", e);
         }
       }
     }
@@ -246,8 +246,14 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
       }, 2000); // Auto-hide after 2 seconds and close modal if applicable
 
     } catch (error) {
-      console.error(error);
-      setErrorMessage(error.message);
+      console.warn("Post submission failed. Details:");
+      console.warn("- Message:", error?.message);
+      console.warn("- Code:", error?.code);
+      console.warn("- Details:", error?.details);
+      console.warn("- Hint:", error?.hint);
+      console.warn("- Full Stringified:", JSON.stringify(error, Object.getOwnPropertyNames(error || {})));
+      
+      setErrorMessage(error?.message || "An unknown error occurred while posting.");
       setShowError(true);
     } finally {
       setLoading(false);

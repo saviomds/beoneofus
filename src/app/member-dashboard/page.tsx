@@ -35,7 +35,6 @@ export default function MemberDashboard() {
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [updates, setUpdates] = useState<any[]>([]);
-  const [mounted, setMounted] = useState(false);
 
   // New Feature States
   const [filter, setFilter] = useState('all');
@@ -45,7 +44,6 @@ export default function MemberDashboard() {
   const [newTaskForm, setNewTaskForm] = useState({ title: '', description: '', priority: 'medium', due_date: '' });
 
   useEffect(() => {
-    setMounted(true);
     let isComponentMounted = true;
     let taskSubscription: any = null;
 
@@ -427,7 +425,7 @@ export default function MemberDashboard() {
       </button>
 
       {/* New Task Modal Portal */}
-      {mounted && isModalOpen && createPortal(
+      {isModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsModalOpen(false)} />
           <div className="relative w-full max-w-md bg-white dark:bg-[#141416] border border-gray-200 dark:border-[#222224] rounded-[1.5rem] shadow-2xl p-6 sm:p-8 animate-slide-up">

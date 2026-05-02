@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, Clock, Code2, ArrowRight, LayoutDashboard, MessageSquare, Loader2, Check, Plus, X, Calendar, AlertCircle, BellRing, Flag, FileText } from 'lucide-react';
+import { CheckCircle2, Clock, Code2, ArrowRight, LayoutDashboard, MessageSquare, Loader2, Check, Plus, X, Calendar, AlertCircle, BellRing, Flag, FileText, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '../supabaseClient';
 
@@ -31,12 +31,46 @@ const isOverdue = (dateStr: string) => {
 
 export default function MemberDashboard() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [sessionUser, setSessionUser] = useState<any>(null);
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [updates, setUpdates] = useState<any[]>([]);
+  
+  // Using sessionStorage for optimistic UI loads so going "back" is instant
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('member_auth') === 'true';
+    }
+    return false;
+  });
+  const [sessionUser, setSessionUser] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = sessionStorage.getItem('member_session_user');
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return null;
+  });
+  const [tasks, setTasks] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = sessionStorage.getItem('member_dashboard_tasks');
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return [];
+  });
+  const [updates, setUpdates] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = sessionStorage.getItem('member_dashboard_updates');
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return [];
+  });
 
   // New Feature States
+  const [isLoading, setIsLoading] = useState(() => {
+    return typeof window !== 'undefined' ? !sessionStorage.getItem('member_dashboard_tasks') : true;
+  });
   const [filter, setFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,18 +92,30 @@ export default function MemberDashboard() {
       if (!isComponentMounted) return;
       
       if (!session) {
+        sessionStorage.removeItem('member_auth');
+        sessionStorage.removeItem('member_session_user');
         router.push('/');
       } else {
         setIsAuthenticated(true);
+        sessionStorage.setItem('member_auth', 'true');
         setSessionUser(session.user);
+        sessionStorage.setItem('member_session_user', JSON.stringify(session.user));
         
         // Fetch User's Tasks
         const { data: tasksData } = await supabase.from('tasks').select('*, assigner:profiles!tasks_assigner_id_fkey(username, avatar_url)').eq('assignee_id', session.user.id).order('created_at', { ascending: false });
-        if (isComponentMounted && tasksData) setTasks(tasksData);
+        if (isComponentMounted && tasksData) {
+          setTasks(tasksData);
+          sessionStorage.setItem('member_dashboard_tasks', JSON.stringify(tasksData));
+        }
 
         // Fetch System Updates / Notifications
         const { data: notifData } = await supabase.from('notifications').select('*, actor:actor_id(username)').eq('receiver_id', session.user.id).order('created_at', { ascending: false }).limit(5);
-        if (isComponentMounted && notifData) setUpdates(notifData);
+        if (isComponentMounted && notifData) {
+          setUpdates(notifData);
+          sessionStorage.setItem('member_dashboard_updates', JSON.stringify(notifData));
+        }
+        
+        if (isComponentMounted) setIsLoading(false);
 
         // Real-time subscription for incoming tasks
         if (isComponentMounted) {
@@ -198,8 +244,15 @@ export default function MemberDashboard() {
     return () => clearTimeout(timer);
   }, [completionRatio, circumference]);
 
-  if (!isAuthenticated) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa] dark:bg-[#0d0d0f]"><Loader2 className="animate-spin text-indigo-600" size={32} /></div>;
+  if (!isAuthenticated && isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa] dark:bg-[#0d0d0f]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-indigo-600" size={32} />
+          <p className="text-sm text-gray-500 font-medium">Restoring workspace...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -295,7 +348,19 @@ export default function MemberDashboard() {
               ))}
             </div>
             
-            {filteredTasks.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-3 flex-1 overflow-hidden">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="p-4 bg-[#f8f9fa] dark:bg-[#0d0d0f]/80 rounded-[1rem] border border-gray-200 dark:border-[#222224] animate-pulse flex gap-4">
+                     <div className="flex-1 space-y-3 py-1">
+                       <div className="h-4 bg-gray-200 dark:bg-[#222224] rounded w-1/3"></div>
+                       <div className="h-3 bg-gray-200 dark:bg-[#222224] rounded w-full"></div>
+                       <div className="h-3 bg-gray-200 dark:bg-[#222224] rounded w-2/3"></div>
+                     </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredTasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center flex-1 text-gray-500 dark:text-gray-400 border border-dashed border-gray-200 dark:border-[#222224] rounded-2xl bg-[#f8f9fa] dark:bg-[#0d0d0f]/50 p-10">
                 <CheckCircle2 size={32} className="mb-3 text-gray-300 dark:text-gray-600" />
                 <p className="font-bold">You are all caught up!</p>
@@ -332,6 +397,23 @@ export default function MemberDashboard() {
                         </p>
                       )}
                       <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">{task.description}</p>
+                      
+                      {/* Render Task URLs if available */}
+                      {(task.url || task.moreContent || task.moreContentUrl || task.more_content_url) && (
+                        <div className="flex flex-wrap items-center gap-4 mt-3">
+                          {task.url && (
+                            <a href={task.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors">
+                              <LinkIcon size={12} /> View Link
+                            </a>
+                          )}
+                          {(task.moreContent || task.moreContentUrl || task.more_content_url) && (
+                            <a href={task.moreContent || task.moreContentUrl || task.more_content_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-indigo-500 transition-colors">
+                              <ArrowRight size={12} /> More Info
+                            </a>
+                          )}
+                        </div>
+                      )}
+
                       {task.due_date && (
                          <div className={`flex items-center gap-1 mt-3 text-[11px] font-mono font-medium ${overdue ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
                            <Calendar size={12} /> {overdue ? 'Overdue: ' : 'Due: '} {formatDueDate(task.due_date)}
@@ -391,7 +473,16 @@ export default function MemberDashboard() {
               )}
             </div>
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {updates.length === 0 ? (
+              {isLoading ? (
+                 <div className="space-y-3">
+                   {[1, 2, 3].map(i => (
+                     <div key={i} className="p-4 bg-[#f8f9fa] dark:bg-[#0d0d0f]/80 rounded-[1rem] border border-gray-200 dark:border-[#222224] animate-pulse space-y-3">
+                       <div className="h-3 bg-gray-200 dark:bg-[#222224] rounded w-1/4"></div>
+                       <div className="h-3 bg-gray-200 dark:bg-[#222224] rounded w-full"></div>
+                     </div>
+                   ))}
+                 </div>
+              ) : updates.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-4">No recent updates.</p>
               ) : (
                 updates.map((upd, i) => {
@@ -406,6 +497,22 @@ export default function MemberDashboard() {
                         <p className="text-[10px] font-mono text-gray-400 dark:text-gray-500">{getRelativeTime(upd.created_at)}</p>
                       </div>
                       <p className="text-sm text-gray-800 dark:text-gray-300 font-medium leading-relaxed">{upd.content}</p>
+                      
+                      {/* Render Update URLs if available */}
+                      {(upd.url || upd.moreContent || upd.moreContentUrl || upd.more_content_url) && (
+                        <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-gray-200/50 dark:border-[#222224]/50">
+                          {upd.url && (
+                            <a href={upd.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors">
+                              <LinkIcon size={12} /> View Link
+                            </a>
+                          )}
+                          {(upd.moreContent || upd.moreContentUrl || upd.more_content_url) && (
+                            <a href={upd.moreContent || upd.moreContentUrl || upd.more_content_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-indigo-500 transition-colors">
+                              <ArrowRight size={12} /> More Info
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })

@@ -337,6 +337,7 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [applications, setApplications] = useState([]);
   const [appsLoading, setAppsLoading] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   const [founderApps, setFounderApps] = useState([]);
   const [founderAppsLoading, setFounderAppsLoading] = useState(false);
@@ -345,7 +346,9 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [adminTasks, setAdminTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [taskForm, setTaskForm] = useState({ assignee_id: '', title: '', description: '' });
+  const [taskForm, setTaskForm] = useState({ assignee_id: '', title: '', description: '', priority: 'Medium', linked_to: '' });
+  const [taskFilter, setTaskFilter] = useState('All');
+  const [teamMembers, setTeamMembers] = useState([]);
 
   const [actionPrompt, setActionPrompt] = useState(null);
   const [customMessage, setCustomMessage] = useState("");
@@ -395,7 +398,7 @@ const AdminPanelTool = ({ currentUserId }) => {
         setUsersLoading(true);
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, username, avatar_url, status, is_verified')
+          .select('id, username, avatar_url, status, is_verified, is_admin')
           .limit(100);
         if (error) console.error("Error fetching users:", error);
         if (data) setAllUsers(data);
@@ -496,19 +499,50 @@ const AdminPanelTool = ({ currentUserId }) => {
 
   // Fetch Tasks when the 'Tasks' tab is opened
   useEffect(() => {
-    if (adminTab === 'tasks' && isAdmin && adminTasks.length === 0) {
+    let channel;
+    if (adminTab === 'tasks' && isAdmin) {
       const fetchTasks = async () => {
         setTasksLoading(true);
         const { data, error } = await supabase
           .from('tasks')
-          .select('*, profiles:assignee_id(username, avatar_url, status)')
+          .select(`
+            *,
+            assignee:profiles!tasks_assignee_id_fkey(username, avatar_url, status),
+            assigner:profiles!tasks_assigner_id_fkey(username, avatar_url, status)
+          `)
           .order('created_at', { ascending: false });
         if (data) setAdminTasks(data);
         setTasksLoading(false);
       };
+
+      const fetchTeamMembers = async () => {
+        const { data } = await supabase
+          .from('founder_applications')
+          .select('user_id, intended_role, name')
+          .eq('status', 'accepted');
+        if (data) {
+          const uniqueMembers = data.reduce((acc, current) => {
+            if (!acc.find(item => item.user_id === current.user_id)) {
+              return acc.concat([current]);
+            }
+            return acc;
+          }, []);
+          setTeamMembers(uniqueMembers);
+        }
+      };
+
       fetchTasks();
+      fetchTeamMembers();
+
+      // Listen for real-time updates so newly created issues show instantly
+      channel = supabase.channel('admin-tasks-all')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+          fetchTasks();
+        })
+        .subscribe();
     }
-  }, [adminTab, isAdmin, adminTasks.length]);
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, [adminTab, isAdmin]);
 
   const handleAction = async (userId, action) => {
     try {
@@ -552,8 +586,38 @@ const AdminPanelTool = ({ currentUserId }) => {
     }
   };
 
-  const handleImpersonateUser = (userId, username) => {
-    showToast(`Impersonation for @${username} requires a secure backend Edge Function using your Supabase Service Role key to generate an auth token.`, "error");
+  const handleToggleAdmin = async (userId, currentIsAdmin, username) => {
+    if (!confirm(`Are you sure you want to ${currentIsAdmin ? 'revoke' : 'grant'} admin access for @${username}?`)) return;
+    try {
+      const { error } = await supabase.from('profiles').update({ is_admin: !currentIsAdmin }).eq('id', userId);
+      if (error) throw error;
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_admin: !currentIsAdmin } : u));
+      showToast(`Admin access ${currentIsAdmin ? 'revoked' : 'granted'} for @${username}.`);
+    } catch (err) {
+      showToast("Error updating admin status: " + err.message, "error");
+    }
+  };
+
+  const handleImpersonateUser = async (userId, username) => {
+    if (!confirm(`Are you sure you want to impersonate @${username}? You will be logged out of your admin account.`)) return;
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('impersonate', {
+        body: { userId }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.action_link) {
+        showToast(`Success! Logging in as @${username}...`);
+        window.location.href = data.action_link;
+      } else {
+        throw new Error("No action link returned.");
+      }
+    } catch (err) {
+      showToast("Error impersonating: " + err.message, "error");
+    }
   };
 
   const promptAppAction = (appId, newStatus, applicantId, jobTitle) => {
@@ -714,6 +778,33 @@ const AdminPanelTool = ({ currentUserId }) => {
     }
   };
 
+  const handleComplexUpdate = async (taskId, newStatus) => {
+    setActionProcessing(true);
+    try {
+      const { error } = await supabase.rpc('update_task_complex', {
+        p_task_id: taskId,
+        p_new_status: newStatus
+      });
+
+      if (error) {
+        console.error("Failed complex update. Details:");
+        console.error("- Message:", error?.message);
+        console.error("- Code:", error?.code);
+        console.error("- Details:", error?.details);
+        console.error("- Hint:", error?.hint);
+        showToast("Failed to update task: " + (error?.message || "Unknown error"), "error");
+      } else {
+        console.log("Task and notifications updated successfully via RPC!");
+        setAdminTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+        showToast("Task updated successfully!");
+      }
+    } catch (err) {
+      showToast("Error updating task: " + err.message, "error");
+    } finally {
+      setActionProcessing(false);
+    }
+  };
+
   const handleAssignTask = async (e) => {
     e.preventDefault();
     setActionProcessing(true);
@@ -723,8 +814,14 @@ const AdminPanelTool = ({ currentUserId }) => {
         assigner_id: currentUserId,
         title: taskForm.title,
         description: taskForm.description,
+        priority: taskForm.priority,
+        linked_to: taskForm.linked_to,
         status: 'pending'
-      }).select('*, profiles:assignee_id(username, avatar_url, status)').single();
+      }).select(`
+        *,
+        assignee:profiles!tasks_assignee_id_fkey(username, avatar_url, status),
+        assigner:profiles!tasks_assigner_id_fkey(username, avatar_url, status)
+      `).single();
       
       if (error) throw error;
 
@@ -738,7 +835,7 @@ const AdminPanelTool = ({ currentUserId }) => {
       });
 
       setShowTaskModal(false);
-      setTaskForm({ assignee_id: '', title: '', description: '' });
+      setTaskForm({ assignee_id: '', title: '', description: '', priority: 'Medium', linked_to: '' });
       showToast("Task assigned successfully!");
     } catch (err) {
       showToast("Error assigning task: " + err.message, "error");
@@ -802,16 +899,19 @@ const AdminPanelTool = ({ currentUserId }) => {
             {requests.map(req => (
               <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
                 <div className="flex items-center gap-4">
-                    <div className="relative w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+                    <div 
+                      onClick={() => setSelectedUserId(req.id)}
+                      className="relative w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80 transition-opacity"
+                    >
                     {req.avatar_url ? (
                       <Image src={req.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
                     ) : (
                       req.username?.substring(0, 2) || "??"
                     )}
                   </div>
-                  <div>
-                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm">@{req.username}</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{req.status || 'Active Node'}</p>
+                  <div className="cursor-pointer group" onClick={() => setSelectedUserId(req.id)}>
+                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm group-hover:text-blue-600 transition-colors">@{req.username}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 group-hover:text-blue-500/80 transition-colors">{req.status || 'Active Node'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -859,18 +959,25 @@ const AdminPanelTool = ({ currentUserId }) => {
               {allUsers.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase())).map(user => (
                 <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+                    <div 
+                      onClick={() => setSelectedUserId(user.id)}
+                      className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80 transition-opacity"
+                    >
                       {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : user.username?.substring(0, 2) || "??"}
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate">
+                    <div className="min-w-0 cursor-pointer group" onClick={() => setSelectedUserId(user.id)}>
+                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         @{user.username}
                         {user.is_verified && <VerifiedBadge size={14} />}
+                        {user.is_admin && <span className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400 px-1.5 py-0.5 rounded uppercase tracking-widest ml-1">Admin</span>}
                       </h4>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">{user.status || 'Active Node'}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate group-hover:text-blue-500/80 transition-colors">{user.status || 'Active Node'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => handleToggleAdmin(user.id, user.is_admin, user.username)} className={`p-2 rounded-xl transition-colors border ${user.is_admin ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-600 hover:text-white border-amber-200 dark:border-amber-800/50 hover:border-amber-600' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-amber-500 hover:text-white border-gray-200 dark:border-gray-700 hover:border-amber-500'}`} title={user.is_admin ? "Revoke Admin Access" : "Grant Admin Access"}>
+                      <ShieldCheck size={16} />
+                    </button>
                     <button onClick={() => handleImpersonateUser(user.id, user.username)} className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-600 dark:hover:bg-purple-500 hover:text-white rounded-xl transition-colors border border-purple-200 dark:border-purple-800/50 hover:border-purple-600 dark:hover:border-purple-500" title="Impersonate User"><UserCog size={16} /></button>
                     <button onClick={() => handleDeleteUser(user.id, user.username)} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-600 dark:hover:bg-red-500 hover:text-white rounded-xl transition-colors border border-red-200 dark:border-red-800/50 hover:border-red-600 dark:hover:border-red-500" title="Delete User"><Trash2 size={16} /></button>
                   </div>
@@ -945,11 +1052,14 @@ const AdminPanelTool = ({ currentUserId }) => {
               {applications.map(app => (
                 <div key={app.id} onClick={() => setSelectedApp(app)} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between cursor-pointer group">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+                    <div 
+                      onClick={(e) => { e.stopPropagation(); setSelectedUserId(app.user_id); }}
+                      className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase hover:opacity-80 transition-opacity"
+                    >
                       {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : app.profiles?.username?.substring(0, 2) || "??"}
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate">
+                    <div className="min-w-0 hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); setSelectedUserId(app.user_id); }}>
+                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate text-blue-600 dark:text-blue-400">
                         @{app.profiles?.username}
                         {app.profiles?.is_verified && <VerifiedBadge size={14} />}
                       </h4>
@@ -1100,11 +1210,14 @@ const AdminPanelTool = ({ currentUserId }) => {
             <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight pr-8 mb-4">Application Details</h2>
             
             <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
-              <div className="relative w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
+              <div 
+                onClick={() => setSelectedUserId(selectedApp.user_id)}
+                className="relative w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80 transition-opacity"
+              >
                 {selectedApp.profiles?.avatar_url ? <Image src={selectedApp.profiles.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" /> : selectedApp.profiles?.username?.substring(0, 2) || "??"}
               </div>
-              <div>
-                <h4 className="text-gray-900 dark:text-gray-100 font-bold text-base flex items-center gap-1">
+              <div className="cursor-pointer group" onClick={() => setSelectedUserId(selectedApp.user_id)}>
+                <h4 className="text-gray-900 dark:text-gray-100 font-bold text-base flex items-center gap-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   @{selectedApp.profiles?.username}
                   {selectedApp.profiles?.is_verified && <VerifiedBadge size={16} />}
                 </h4>
@@ -1266,34 +1379,75 @@ const AdminPanelTool = ({ currentUserId }) => {
       {/* Tasks Tab */}
       {adminTab === 'tasks' && (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
-            <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2">Task Assignments</h4>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setAdminTasks([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all">Refresh</button>
-              <button onClick={() => setShowTaskModal(true)} className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-sm"><Plus size={14}/> Assign Task</button>
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2">Task Assignments (Backlog)</h4>
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <div className="flex bg-gray-200/50 dark:bg-gray-700/50 p-1 rounded-lg shrink-0">
+                {['All', 'High', 'Medium', 'Low'].map(f => (
+                  <button 
+                    key={f} 
+                    onClick={(e) => { e.preventDefault(); setTaskFilter(f); }} 
+                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${taskFilter === f ? 'bg-white dark:bg-gray-600 text-blue-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setAdminTasks([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all shrink-0">Refresh</button>
+              <button onClick={() => setShowTaskModal(true)} className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-sm shrink-0"><Plus size={14}/> Assign Task</button>
             </div>
           </div>
           
           {tasksLoading ? (
             <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
-          ) : adminTasks.length === 0 ? (
+          ) : adminTasks.filter(t => taskFilter === 'All' || t.priority === taskFilter).length === 0 ? (
             <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No tasks assigned yet.</div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {adminTasks.map(task => (
+              {adminTasks.filter(t => taskFilter === 'All' || t.priority === taskFilter)
+                .sort((a, b) => {
+                  const p = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                  return (p[b.priority || 'Medium'] || 0) - (p[a.priority || 'Medium'] || 0);
+                }).map(task => (
                 <div key={task.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group">
                   <div className="flex justify-between items-start">
-                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm">{task.title}</h4>
-                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'}`}>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm">{task.title}</h4>
+                        {task.priority && (
+                          <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border ${task.priority === 'High' ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800/50' : task.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50' : 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50'}`}>
+                            {task.priority}
+                          </span>
+                        )}
+                      </div>
+                      {task.linked_to && (
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                          <FileText size={10} /> {task.linked_to}
+                        </p>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => handleComplexUpdate(task.id, task.status === 'completed' ? 'pending' : 'completed')} 
+                      disabled={actionProcessing} 
+                      className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-50 ${task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'}`}
+                    >
                       {task.status}
-                    </span>
+                    </button>
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">{task.description}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative">
-                      {task.profiles?.avatar_url ? <Image src={task.profiles.avatar_url} alt="avatar" fill sizes="20px" className="object-cover" /> : <User size={12} className="m-auto mt-1 text-gray-400" />}
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative border border-gray-200 dark:border-gray-700">
+                        {task.assigner?.avatar_url ? <Image src={task.assigner.avatar_url} alt="assigner" fill sizes="20px" className="object-cover" /> : <UserCog size={12} className="m-auto mt-1 text-gray-400" />}
+                      </div>
+                      <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">By @{task.assigner?.username || 'Admin'}</span>
                     </div>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Assigned to @{task.profiles?.username || 'Unknown'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">To @{task.assignee?.username || 'Unknown'}</span>
+                      <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative border border-gray-200 dark:border-gray-700">
+                        {task.assignee?.avatar_url ? <Image src={task.assignee.avatar_url} alt="assignee" fill sizes="20px" className="object-cover" /> : <User size={12} className="m-auto mt-1 text-gray-400" />}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1314,7 +1468,13 @@ const AdminPanelTool = ({ currentUserId }) => {
                 <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Assignee</label>
                 <select required value={taskForm.assignee_id} onChange={e => setTaskForm({...taskForm, assignee_id: e.target.value})} className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all appearance-none">
                   <option value="" disabled>Select a user...</option>
-                  {allUsers.map(u => <option key={u.id} value={u.id}>@{u.username} ({u.status || 'Member'})</option>)}
+                  {teamMembers.map(m => {
+                    const userProfile = allUsers.find(u => u.id === m.user_id);
+                    const displayName = userProfile ? `@${userProfile.username}` : m.name;
+                    return (
+                      <option key={m.user_id} value={m.user_id}>{displayName} ({m.intended_role})</option>
+                    );
+                  })}
                 </select>
               </div>
               <div>
@@ -1324,6 +1484,25 @@ const AdminPanelTool = ({ currentUserId }) => {
               <div>
                 <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Description</label>
                 <textarea required rows={3} value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})} placeholder="Task details and requirements..." className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all resize-none custom-scrollbar" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Priority Level</label>
+                <div className="flex gap-2">
+                  {['Low', 'Medium', 'High'].map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setTaskForm({...taskForm, priority: p})}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${taskForm.priority === p ? (p === 'High' ? 'bg-red-600 text-white border-red-600 shadow-sm' : p === 'Medium' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-blue-500 text-white border-blue-500 shadow-sm') : 'bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Linked Milestone/Project (Optional)</label>
+                <input type="text" value={taskForm.linked_to} onChange={e => setTaskForm({...taskForm, linked_to: e.target.value})} placeholder="e.g. Project Alpha Phase 1" className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all" />
               </div>
               <button type="submit" disabled={actionProcessing || !taskForm.assignee_id || !taskForm.title} className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50">
                 {actionProcessing ? <Loader2 size={16} className="animate-spin" /> : 'Assign Task'}
@@ -1361,6 +1540,24 @@ const AdminPanelTool = ({ currentUserId }) => {
               <button onClick={submitActionPrompt} disabled={actionProcessing} className={`flex-1 py-3 text-white font-bold rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 ${actionPrompt.newStatus === 'accepted' ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}>
                 {actionProcessing ? <Loader2 size={16} className="animate-spin" /> : 'Confirm'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* USER PROFILE MODAL */}
+      {selectedUserId && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
+            <button 
+              onClick={() => setSelectedUserId(null)} 
+              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm"
+            >
+              <X size={20} />
+            </button>
+            <div className="p-2 sm:p-6">
+              <ProfileContent viewUserId={selectedUserId} />
             </div>
           </div>
         </div>
@@ -1522,7 +1719,365 @@ const SupportTool = () => {
   );
 };
 
+const UserDashboardTool = ({ currentUserId }) => {
+  const [activeTab, setActiveTab] = useState('');
+  const [isFounderOrMember, setIsFounderOrMember] = useState(null);
+  const [myTasks, setMyTasks] = useState([]);
+  const [myJobApps, setMyJobApps] = useState([]);
+  const [myFounderApps, setMyFounderApps] = useState([]);
+  const [myNotifications, setMyNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [actionProcessing, setActionProcessing] = useState(false);
+  const [dashboardLink, setDashboardLink] = useState(null);
+  const [taskFilter, setTaskFilter] = useState('All');
+
+  const FEATURES_LIST = [
+    { id: 1, title: 'Real-time Workspace Chat', desc: 'Secure, end-to-end encrypted node communication is now live.', date: 'May 1, 2026' },
+    { id: 2, title: 'AI Support Engineer', desc: 'Get instant technical assistance from our integrated AI.', date: 'April 28, 2026' },
+    { id: 3, title: 'Advanced Code Review Tools', desc: 'Highlight and analyze code directly in your feed.', date: 'April 15, 2026' },
+  ];
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    const checkStatus = async () => {
+      setLoading(true);
+      const { data } = await supabase.from('founder_applications').select('id, status, intended_role').eq('user_id', currentUserId);
+      if (data && data.length > 0) {
+        setIsFounderOrMember(true);
+        setActiveTab(prev => prev || 'tasks');
+        const accepted = data.find(app => app.status === 'accepted');
+        if (accepted) {
+          setDashboardLink(accepted.intended_role === 'cofounder' ? '/founder-dashboard' : '/member-dashboard');
+        }
+      } else {
+        setIsFounderOrMember(false);
+        setActiveTab(prev => prev || 'job_apps');
+      }
+      setLoading(false);
+    };
+    checkStatus();
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId || isFounderOrMember !== true) return;
+    let channel;
+
+    const fetchTasks = async () => {
+      const { data } = await supabase.from('tasks').select(`
+        *,
+        assignee:profiles!tasks_assignee_id_fkey(username, avatar_url),
+        assigner:profiles!tasks_assigner_id_fkey(username, avatar_url)
+      `).or(`assignee_id.eq.${currentUserId},assigner_id.eq.${currentUserId}`).order('created_at', { ascending: false });
+      if (data) setMyTasks(data);
+    };
+
+    if (activeTab === 'tasks') {
+      fetchTasks(); // Fetch initial state
+      channel = supabase.channel(`user-tasks-${currentUserId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+          fetchTasks(); // Refresh tasks live when admin updates them
+        }).subscribe();
+    }
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, [activeTab, currentUserId, isFounderOrMember]);
+
+  useEffect(() => {
+    if (!currentUserId || isFounderOrMember !== false) return;
+    const fetchJobApps = async () => {
+      setLoading(true);
+      const { data } = await supabase.from('job_applications').select('*, jobs(title, company)').eq('user_id', currentUserId).order('created_at', { ascending: false });
+      if (data) setMyJobApps(data);
+      setLoading(false);
+    };
+    if (activeTab === 'job_apps' && myJobApps.length === 0) fetchJobApps();
+  }, [activeTab, currentUserId, isFounderOrMember, myJobApps.length]);
+
+  useEffect(() => {
+    if (!currentUserId || isFounderOrMember !== true) return;
+    const fetchFounderApps = async () => {
+      setLoading(true);
+      const { data } = await supabase.from('founder_applications').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false });
+      if (data) setMyFounderApps(data);
+      setLoading(false);
+    };
+    if (activeTab === 'founder_apps' && myFounderApps.length === 0) fetchFounderApps();
+  }, [activeTab, currentUserId, isFounderOrMember, myFounderApps.length]);
+
+  useEffect(() => {
+    if (!currentUserId || isFounderOrMember !== false) return;
+    const fetchNotifs = async () => {
+      setLoading(true);
+      const { data } = await supabase.from('notifications').select('*').eq('receiver_id', currentUserId).order('created_at', { ascending: false }).limit(20);
+      if (data) setMyNotifications(data);
+      setLoading(false);
+    };
+    if (activeTab === 'notifications' && myNotifications.length === 0) fetchNotifs();
+  }, [activeTab, currentUserId, isFounderOrMember, myNotifications.length]);
+
+  const handleTaskUpdate = async (taskId, newStatus) => {
+    setActionProcessing(true);
+    try {
+      const task = myTasks.find(t => t.id === taskId);
+      const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+      if (error) throw error;
+      setMyTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+
+      // Notify the assigner when marking as completed
+      if (newStatus === 'completed' && task && task.assigner_id && task.assigner_id !== currentUserId) {
+        await supabase.from('notifications').insert({
+          receiver_id: task.assigner_id,
+          actor_id: currentUserId,
+          type: 'message',
+          content: `marked the task "${task.title}" as completed.`
+        });
+      }
+    } catch (err) {
+      alert("Error updating task: " + err.message);
+    } finally {
+      setActionProcessing(false);
+    }
+  };
+
+  const handleDeleteJobApp = async (appId) => {
+    if (!confirm("Are you sure you want to delete this application?")) return;
+    try {
+      const { error } = await supabase.from('job_applications').delete().eq('id', appId);
+      if (error) throw error;
+      setMyJobApps(prev => prev.filter(app => app.id !== appId));
+    } catch (err) {
+      alert("Error deleting application: " + err.message);
+    }
+  };
+
+  const handleDeleteFounderApp = async (appId) => {
+    if (!confirm("Are you sure you want to delete this application?")) return;
+    try {
+      const { error } = await supabase.from('founder_applications').delete().eq('id', appId);
+      if (error) throw error;
+      setMyFounderApps(prev => prev.filter(app => app.id !== appId));
+    } catch (err) {
+      alert("Error deleting application: " + err.message);
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-3xl mx-auto py-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 rounded-[2rem]">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-purple-200 dark:border-purple-800/50">
+            <UserCog size={24} />
+          </div>
+          <div>
+            <h3 className="text-purple-700 dark:text-purple-400 font-bold text-lg mb-1">My Dashboard</h3>
+            <p className="text-sm text-purple-600/80 dark:text-purple-400/80 leading-relaxed">Manage your personal tasks and applications.</p>
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0 w-full sm:w-auto">
+          {dashboardLink && (
+            <a href={dashboardLink} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto">
+              Go to Workspace <ChevronRight size={14} />
+            </a>
+          )}
+          <div className="flex bg-white dark:bg-gray-900 p-1 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm shrink-0 overflow-x-auto w-full sm:w-auto">
+          {isFounderOrMember === true && (
+            <>
+              <button onClick={() => setActiveTab('tasks')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'tasks' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Tasks</button>
+              <button onClick={() => setActiveTab('founder_apps')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'founder_apps' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Founder Apps</button>
+            </>
+          )}
+          {isFounderOrMember === false && (
+            <>
+              <button onClick={() => setActiveTab('job_apps')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'job_apps' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Job Apps</button>
+              <button onClick={() => setActiveTab('notifications')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'notifications' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Notifications</button>
+              <button onClick={() => setActiveTab('features')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'features' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>New Features</button>
+            </>
+          )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
+        {loading ? (
+          <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-purple-500" /></div>
+        ) : (
+          <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
+            {activeTab === 'tasks' && (
+              <>
+                <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                  <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mr-1 shrink-0">Filter Backlog:</span>
+                  {['All', 'High', 'Medium', 'Low'].map(f => (
+                    <button 
+                      key={f} 
+                      onClick={(e) => { e.preventDefault(); setTaskFilter(f); }} 
+                      className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all border shrink-0 ${taskFilter === f ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 border-purple-200 dark:border-purple-800' : 'bg-transparent border-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+                {myTasks.filter(t => taskFilter === 'All' || t.priority === taskFilter).length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No tasks found.</div> :
+                myTasks.filter(t => taskFilter === 'All' || t.priority === taskFilter)
+                  .sort((a, b) => {
+                    const p = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                    return (p[b.priority || 'Medium'] || 0) - (p[a.priority || 'Medium'] || 0);
+                  }).map(task => (
+                <div key={task.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex justify-between items-start">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm">{task.title}</h4>
+                        {task.priority && (
+                          <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border ${task.priority === 'High' ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800/50' : task.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50' : 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50'}`}>
+                            {task.priority}
+                          </span>
+                        )}
+                      </div>
+                      {task.linked_to && (
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                          <FileText size={10} /> {task.linked_to}
+                        </p>
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => handleTaskUpdate(task.id, task.status === 'completed' ? 'pending' : 'completed')} 
+                      disabled={actionProcessing} 
+                      className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-50 ${task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'}`}
+                    >
+                      {task.status}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">{task.description}</p>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative border border-gray-200 dark:border-gray-700">
+                        {task.assigner?.avatar_url ? <Image src={task.assigner.avatar_url} alt="assigner" fill sizes="20px" className="object-cover" /> : <UserCog size={12} className="m-auto mt-1 text-gray-400" />}
+                      </div>
+                      <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">By @{task.assigner?.username || 'Admin'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">To @{task.assignee?.username || 'Unknown'}</span>
+                      <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative border border-gray-200 dark:border-gray-700">
+                        {task.assignee?.avatar_url ? <Image src={task.assignee.avatar_url} alt="assignee" fill sizes="20px" className="object-cover" /> : <User size={12} className="m-auto mt-1 text-gray-400" />}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ))}
+              </>
+            )}
+
+            {activeTab === 'job_apps' && (
+              myJobApps.length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No job applications found.</div> :
+              myJobApps.map(app => (
+                <div key={app.id} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm truncate text-blue-600 dark:text-blue-400">
+                      {app.jobs?.title || 'Unknown Role'}
+                    </h4>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">
+                      at {app.jobs?.company || 'Unknown Company'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${
+                      app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 
+                      app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 
+                      'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
+                    }`}>
+                      {app.status}
+                    </span>
+                    <button onClick={() => handleDeleteJobApp(app.id)} className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+
+            {activeTab === 'founder_apps' && (
+              myFounderApps.length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No founder applications found.</div> :
+              myFounderApps.map(app => (
+                <div key={app.id} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm truncate capitalize text-purple-600 dark:text-purple-400">
+                      {app.intended_role}
+                    </h4>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">
+                      Applied on {new Date(app.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'}`}>
+                      {app.status}
+                    </span>
+                    <button onClick={() => handleDeleteFounderApp(app.id)} className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+
+        {activeTab === 'notifications' && (
+          myNotifications.length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No recent notifications.</div> :
+          myNotifications.map(notif => (
+            <div key={notif.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
+              <p className="text-sm text-gray-800 dark:text-gray-200"><span className="font-bold capitalize text-purple-600 dark:text-purple-400">{(notif.type || 'Alert').replace('_', ' ')}:</span> {notif.content}</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest">{new Date(notif.created_at).toLocaleDateString()}</p>
+            </div>
+          ))
+        )}
+
+        {activeTab === 'features' && (
+          FEATURES_LIST.map(feature => (
+            <div key={feature.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
+              <div className="flex justify-between items-start">
+                <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm text-purple-600 dark:text-purple-400">{feature.title}</h4>
+                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800/50">New</span>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-300">{feature.desc}</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{feature.date}</p>
+            </div>
+          ))
+        )}
+
+            {activeTab === 'notifications' && (
+              myNotifications.length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No recent notifications.</div> :
+              myNotifications.map(notif => (
+                <div key={notif.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
+                  <p className="text-sm text-gray-800 dark:text-gray-200"><span className="font-bold capitalize text-purple-600 dark:text-purple-400">{(notif.type || 'Alert').replace('_', ' ')}:</span> {notif.content}</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">{new Date(notif.created_at).toLocaleDateString()}</p>
+                </div>
+              ))
+            )}
+
+            {activeTab === 'features' && (
+              FEATURES_LIST.map(feature => (
+                <div key={feature.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex justify-between items-start">
+                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm text-purple-600 dark:text-purple-400">{feature.title}</h4>
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800/50">New</span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">{feature.desc}</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{feature.date}</p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const MORE_TOOLS = [
+  { 
+    id: "user_dashboard", 
+    label: "My Dashboard", 
+    icon: <UserCog size={20} />, 
+    desc: "Manage your applications & tasks", 
+    details: "View your job applications, founder applications, and assigned tasks." 
+  },
   { 
     id: "api", 
     label: "API Access", 
@@ -1686,6 +2241,7 @@ export default function MoreContent() {
 
             {/* Content Body */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white dark:bg-gray-900 custom-scrollbar relative">
+               {activeItem.id === 'user_dashboard' && <UserDashboardTool currentUserId={currentUserId} />}
                {activeItem.id === 'status' && <SystemStatusTool />}
                {activeItem.id === 'api' && <ApiAccessTool />}
                {activeItem.id === 'community' && <CommunityHubTool currentUserId={currentUserId} />}

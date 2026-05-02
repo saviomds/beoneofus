@@ -5,16 +5,16 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Resend with your API key
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-// Initialize Supabase with the Service Role Key to securely access auth admin
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 export async function POST(req: Request) {
   try {
+    // Initialize Resend with your API key
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    // Initialize Supabase with the Service Role Key to securely access auth admin
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const body = await req.json();
     const { applicationId, applicantId, status, role, customMessage, dashboardLink } = body;
 

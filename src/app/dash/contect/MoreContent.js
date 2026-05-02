@@ -21,6 +21,7 @@ import {
   Activity,
   Database,
   Key,
+  User,
   RefreshCw,
   AlertCircle,
   AlertTriangle,
@@ -32,7 +33,9 @@ import {
   Bot,
   UserCog,
   FileText,
-  ClipboardList
+  ClipboardList,
+  UserPlus,
+  Briefcase
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -296,7 +299,7 @@ const CommunityHubTool = ({ currentUserId }) => {
       {selectedUserId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
+          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
               className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-full text-gray-500 dark:text-gray-400 transition-colors"
@@ -325,10 +328,12 @@ const CommunityHubTool = ({ currentUserId }) => {
 };
 
 const AdminPanelTool = ({ currentUserId }) => {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams?.get('tab') || 'requests';
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminTab, setAdminTab] = useState('requests'); // 'requests' | 'users' | 'ai_logs'
+  const [adminTab, setAdminTab] = useState(initialTab);
   const [allUsers, setAllUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState("");
@@ -349,6 +354,10 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [taskForm, setTaskForm] = useState({ assignee_id: '', title: '', description: '', priority: 'Medium', linked_to: '' });
   const [taskFilter, setTaskFilter] = useState('All');
   const [teamMembers, setTeamMembers] = useState([]);
+  
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteSearch, setInviteSearch] = useState("");
+  const [inviteRole, setInviteRole] = useState("member");
 
   const [actionPrompt, setActionPrompt] = useState(null);
   const [customMessage, setCustomMessage] = useState("");
@@ -393,7 +402,7 @@ const AdminPanelTool = ({ currentUserId }) => {
 
   // Fetch all users when the 'Users' or 'Tasks' tab is opened
   useEffect(() => {
-    if ((adminTab === 'users' || adminTab === 'tasks') && isAdmin && allUsers.length === 0) {
+    if ((adminTab === 'users' || adminTab === 'tasks' || adminTab === 'founder_apps') && isAdmin && allUsers.length === 0) {
       const fetchAllUsers = async () => {
         setUsersLoading(true);
         const { data, error } = await supabase
@@ -488,8 +497,22 @@ const AdminPanelTool = ({ currentUserId }) => {
           
         if (error) {
           console.error("Error fetching founder applications:", error);
+          showToast("DB Error: " + (error.message || error.details || JSON.stringify(error) || "Unknown error"), "error");
         } else if (data) {
-          setFounderApps(data);
+          // Manually fetch and merge profiles to bypass Supabase schema cache issues
+          const userIds = [...new Set(data.map(app => app.user_id).filter(Boolean))];
+          if (userIds.length > 0) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('id, username, avatar_url, is_verified')
+              .in('id', userIds);
+              
+            const profileMap = (profileData || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+            
+            setFounderApps(data.map(app => ({ ...app, profiles: profileMap[app.user_id] || null })));
+          } else {
+            setFounderApps(data);
+          }
         }
         setFounderAppsLoading(false);
       };
@@ -571,6 +594,32 @@ const AdminPanelTool = ({ currentUserId }) => {
 
     } catch (err) {
       showToast("Error: " + err.message, "error");
+    }
+  };
+
+  const handleSendInvite = async () => {
+    const targetUser = allUsers.find(u => u.username.toLowerCase() === inviteSearch.toLowerCase());
+    if (!targetUser) {
+      showToast("Please select a valid user from the search results.", "error");
+      return;
+    }
+    
+    setActionProcessing(true);
+    try {
+      const { error } = await supabase.from('notifications').insert({
+        receiver_id: targetUser.id,
+        actor_id: currentUserId,
+        type: 'message',
+        content: `invited you to apply for the network as a ${inviteRole === 'cofounder' ? 'Co-founder' : 'Member'}! /member/application`
+      });
+      if (error) throw error;
+      showToast(`Invitation sent to @${targetUser.username}!`);
+      setShowInviteModal(false);
+      setInviteSearch("");
+    } catch(err) {
+      showToast("Error sending invite: " + err.message, "error");
+    } finally {
+      setActionProcessing(false);
     }
   };
 
@@ -663,26 +712,24 @@ const AdminPanelTool = ({ currentUserId }) => {
         });
 
         // Trigger email notification
-        const emailRes = await fetch('/api/send-app-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            applicationId: appId,
-            applicantId,
-            status: newStatus,
-            jobTitle: jobTitle || 'a recent role',
-            customMessage
-          })
-        });
-
-        if (!emailRes.ok) {
-          const contentType = emailRes.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const errData = await emailRes.json();
-            throw new Error(errData.error || 'Failed to send email notification.');
-          } else {
-            throw new Error('API Route not found or server crashed. Ensure API keys are set.');
+        try {
+          const emailRes = await fetch('/api/send-app-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              applicationId: appId,
+              applicantId,
+              status: newStatus,
+              jobTitle: jobTitle || 'a recent role',
+              customMessage
+            })
+          });
+          if (!emailRes.ok) {
+            const errData = await emailRes.json().catch(() => ({}));
+            console.error('Failed to send email notification:', errData.error || emailRes.statusText);
           }
+        } catch (emailErr) {
+          console.error('Email API error:', emailErr);
         }
       }
 
@@ -746,25 +793,22 @@ const AdminPanelTool = ({ currentUserId }) => {
           receiver_id: applicantId,
           actor_id: currentUserId,
           type: 'message',
-          content: notifContent,
-          link: dashboardLink
+          content: dashboardLink ? `${notifContent} ${dashboardLink}` : notifContent
         });
 
         // Fetch to send an email
-        const emailRes = await fetch('/api/notify-applicant', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ applicationId: appId, applicantId, status: newStatus, role, customMessage, dashboardLink })
-        });
-
-        if (!emailRes.ok) {
-          const contentType = emailRes.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const errData = await emailRes.json();
-            throw new Error(errData.error || 'Failed to send email notification.');
-          } else {
-            throw new Error('API Route not found or server crashed. Ensure API keys are set.');
+        try {
+          const emailRes = await fetch('/api/notify-applicant', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ applicationId: appId, applicantId, status: newStatus, role, customMessage, dashboardLink })
+          });
+          if (!emailRes.ok) {
+            const errData = await emailRes.json().catch(() => ({}));
+            console.error('Failed to send email notification:', errData.error || emailRes.statusText);
           }
+        } catch (emailErr) {
+          console.error('Email API error:', emailErr);
         }
       }
 
@@ -1083,7 +1127,7 @@ const AdminPanelTool = ({ currentUserId }) => {
                         app.status === 'external_redirect' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' :
                         'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
                       }`}>
-                        {app.status === 'external_redirect' ? 'External Redirect' : app.status}
+                        {app.status === 'external_redirect' ? 'External Redirect' : (app.status || 'pending')}
                       </span>
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold">
                         {new Date(app.created_at).toLocaleDateString()}
@@ -1126,7 +1170,10 @@ const AdminPanelTool = ({ currentUserId }) => {
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
           <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
             <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2">Founder & Member Applications</h4>
-            <button onClick={() => setFounderApps([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all">Refresh</button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowInviteModal(true)} className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-sm"><UserPlus size={14}/> Invite User</button>
+              <button onClick={() => setFounderApps([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all">Refresh</button>
+            </div>
           </div>
           
           {founderAppsLoading ? (
@@ -1138,30 +1185,35 @@ const AdminPanelTool = ({ currentUserId }) => {
               {founderApps.map(app => (
                 <div key={app.id} onClick={() => setSelectedFounderApp(app)} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between cursor-pointer group">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 overflow-hidden shrink-0 border border-blue-200 dark:border-blue-800/50 flex items-center justify-center font-black text-blue-600 dark:text-blue-400 uppercase">
-                      {app.name ? app.name.substring(0, 2) : "??"}
+                    <div 
+                      onClick={(e) => { e.stopPropagation(); setSelectedUserId(app.user_id); }}
+                      className="relative w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 overflow-hidden shrink-0 border border-blue-200 dark:border-blue-800/50 flex items-center justify-center font-black text-blue-600 dark:text-blue-400 uppercase cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                      {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : (app.name ? app.name.substring(0, 2) : "??")}
                     </div>
                     <div className="min-w-0">
-                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate">
-                        {app.name}
+                      <h4 
+                        onClick={(e) => { e.stopPropagation(); setSelectedUserId(app.user_id); }}
+                        className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      >
+                        {app.profiles?.username ? `@${app.profiles.username}` : app.name}
+                        {app.profiles?.is_verified && <VerifiedBadge size={14} />}
                       </h4>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">
-                        Role: <span className="font-bold text-gray-700 dark:text-gray-300">{app.intended_role}</span>
+                        Role: <span className={`font-bold ${app.intended_role === 'cofounder' ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>{app.intended_role === 'cofounder' ? 'Co-founder' : 'Member'}</span>
                       </p>
                     </div>
                   </div>
                   
                   <div className="flex flex-col sm:items-end shrink-0 gap-2 mt-2 sm:mt-0">
                     <div className="flex items-center gap-2">
-                      {app.status && (
-                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${
-                          app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 
-                          app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 
-                          'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
-                        }`}>
-                          {app.status}
-                        </span>
-                      )}
+                      <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${
+                        app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 
+                        app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 
+                        'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
+                      }`}>
+                        {app.status || 'pending'}
+                      </span>
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold">
                         {new Date(app.created_at).toLocaleDateString()}
                       </span>
@@ -1232,7 +1284,7 @@ const AdminPanelTool = ({ currentUserId }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
                   <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Status</p>
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 capitalize">{selectedApp.status === 'external_redirect' ? 'External Redirect' : selectedApp.status}</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 capitalize">{selectedApp.status === 'external_redirect' ? 'External Redirect' : (selectedApp.status || 'pending')}</p>
                 </div>
                 <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
                   <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Applied On</p>
@@ -1318,15 +1370,22 @@ const AdminPanelTool = ({ currentUserId }) => {
             <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight pr-8 mb-4">Applicant Review</h2>
             
             <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
-              <div className="relative w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 overflow-hidden shrink-0 flex items-center justify-center font-black text-blue-600 dark:text-blue-400 uppercase">
-                {selectedFounderApp.name ? selectedFounderApp.name.substring(0, 2) : "??"}
+              <div 
+                onClick={() => setSelectedUserId(selectedFounderApp.user_id)}
+                className="relative w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 overflow-hidden shrink-0 flex items-center justify-center font-black text-blue-600 dark:text-blue-400 uppercase cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                {selectedFounderApp.profiles?.avatar_url ? <Image src={selectedFounderApp.profiles.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" /> : (selectedFounderApp.name ? selectedFounderApp.name.substring(0, 2) : "??")}
               </div>
               <div>
-                <h4 className="text-gray-900 dark:text-gray-100 font-bold text-base flex items-center gap-1">
-                  {selectedFounderApp.name}
+                <h4 
+                  onClick={() => setSelectedUserId(selectedFounderApp.user_id)}
+                  className="text-gray-900 dark:text-gray-100 font-bold text-base flex items-center gap-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  {selectedFounderApp.profiles?.username ? `@${selectedFounderApp.profiles.username}` : selectedFounderApp.name}
+                  {selectedFounderApp.profiles?.is_verified && <VerifiedBadge size={16} />}
                 </h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Applied as <span className="font-bold text-gray-700 dark:text-gray-300 uppercase">{selectedFounderApp.intended_role}</span>
+                  Applied as <span className={`font-bold uppercase ${selectedFounderApp.intended_role === 'cofounder' ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>{selectedFounderApp.intended_role === 'cofounder' ? 'Co-founder' : 'Member'}</span>
                 </p>
               </div>
             </div>
@@ -1361,7 +1420,7 @@ const AdminPanelTool = ({ currentUserId }) => {
                 </>
               ) : (
                 <div className="flex-1 text-center py-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-xs border border-gray-200 dark:border-gray-700">
-                  Status: {selectedFounderApp.status}
+                  Status: {selectedFounderApp.status || 'pending'}
                 </div>
               )}
               <button 
@@ -1545,11 +1604,69 @@ const AdminPanelTool = ({ currentUserId }) => {
         </div>
       )}
 
+      {/* INVITE USER MODAL */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => !actionProcessing && setShowInviteModal(false)} />
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <button onClick={() => setShowInviteModal(false)} disabled={actionProcessing} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm disabled:opacity-50"><X size={18} /></button>
+            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-6 flex items-center gap-2"><UserPlus size={20} className="text-blue-500"/> Invite to Apply</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Select User</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                  <input 
+                    type="text" 
+                    value={inviteSearch}
+                    onChange={(e) => setInviteSearch(e.target.value)}
+                    placeholder="Search by username..."
+                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-9 pr-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all"
+                  />
+                </div>
+                {inviteSearch && (
+                  <div className="mt-2 max-h-40 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm custom-scrollbar">
+                    {allUsers.filter(u => u.username.toLowerCase().includes(inviteSearch.toLowerCase()) && u.id !== currentUserId).map(u => (
+                      <div key={u.id} onClick={() => setInviteSearch(u.username)} className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0">
+                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative shrink-0">
+                          {u.avatar_url ? <Image src={u.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : <User size={16} className="m-auto mt-2 text-gray-400" />}
+                        </div>
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">@{u.username}</span>
+                      </div>
+                    ))}
+                    {allUsers.filter(u => u.username.toLowerCase().includes(inviteSearch.toLowerCase()) && u.id !== currentUserId).length === 0 && (
+                      <div className="p-4 text-center text-xs text-gray-500 font-bold">No users found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block mt-4">Role to Apply For</label>
+                <div className="flex gap-2">
+                  <button onClick={() => setInviteRole('member')} className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all border ${inviteRole === 'member' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Member</button>
+                  <button onClick={() => setInviteRole('cofounder')} className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all border ${inviteRole === 'cofounder' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Co-founder</button>
+                </div>
+              </div>
+
+              <button 
+                onClick={handleSendInvite} 
+                disabled={actionProcessing || !inviteSearch} 
+                className="w-full mt-6 py-3.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-bold rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {actionProcessing ? <Loader2 size={16} className="animate-spin" /> : 'Send Application Link'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* USER PROFILE MODAL */}
       {selectedUserId && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
+          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
             <button 
               onClick={() => setSelectedUserId(null)} 
               className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm"
@@ -1728,8 +1845,36 @@ const UserDashboardTool = ({ currentUserId }) => {
   const [myNotifications, setMyNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionProcessing, setActionProcessing] = useState(false);
-  const [dashboardLink, setDashboardLink] = useState(null);
+  const [acceptedRoles, setAcceptedRoles] = useState([]);
   const [taskFilter, setTaskFilter] = useState('All');
+
+  const renderWithLinks = (text) => {
+    if (!text) return text;
+    const urlRegex = /(https?:\/\/[a-zA-Z0-9](?:[^\s<]*[^<.,:;"')\]\s])?|\B\/[a-zA-Z0-9](?:[^\s<]*[^<.,:;"')\]\s])?)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) => {
+      if (i % 2 === 1) { // It's a matched URL
+        const isInternal = part.startsWith('/');
+        return (
+          <a 
+            key={i} 
+            href={part} 
+            target={isInternal ? "_self" : "_blank"}
+            rel={isInternal ? "" : "noopener noreferrer"}
+            onClick={(e) => e.stopPropagation()} 
+            className={isInternal ? "inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ml-2 no-underline not-italic align-middle" : "text-blue-600 dark:text-blue-400 hover:underline font-bold"}
+          >
+            {isInternal ? (
+              part === '/member/application' ? <><UserPlus size={14} /> Apply Now</> : 
+              part.includes('dashboard') ? <><Briefcase size={14} /> Open Workspace</> : 
+              'View Link'
+            ) : part}
+          </a>
+        );
+      }
+      return part;
+    });
+  };
 
   const FEATURES_LIST = [
     { id: 1, title: 'Real-time Workspace Chat', desc: 'Secure, end-to-end encrypted node communication is now live.', date: 'May 1, 2026' },
@@ -1745,9 +1890,9 @@ const UserDashboardTool = ({ currentUserId }) => {
       if (data && data.length > 0) {
         setIsFounderOrMember(true);
         setActiveTab(prev => prev || 'tasks');
-        const accepted = data.find(app => app.status === 'accepted');
-        if (accepted) {
-          setDashboardLink(accepted.intended_role === 'cofounder' ? '/founder-dashboard' : '/member-dashboard');
+        const accepted = data.filter(app => app.status === 'accepted').map(app => app.intended_role);
+        if (accepted.length > 0) {
+          setAcceptedRoles([...new Set(accepted)]);
         }
       } else {
         setIsFounderOrMember(false);
@@ -1873,9 +2018,14 @@ const UserDashboardTool = ({ currentUserId }) => {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0 w-full sm:w-auto">
-          {dashboardLink && (
-            <a href={dashboardLink} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto">
-              Go to Workspace <ChevronRight size={14} />
+          {acceptedRoles.includes('cofounder') && (
+            <a href="/founder-dashboard" className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto">
+              Founder Workspace <ChevronRight size={14} />
+            </a>
+          )}
+          {acceptedRoles.includes('member') && (
+            <a href="/member-dashboard" className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto">
+              Member Workspace <ChevronRight size={14} />
             </a>
           )}
           <div className="flex bg-white dark:bg-gray-900 p-1 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm shrink-0 overflow-x-auto w-full sm:w-auto">
@@ -1999,8 +2149,8 @@ const UserDashboardTool = ({ currentUserId }) => {
               myFounderApps.map(app => (
                 <div key={app.id} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-800">
                   <div className="flex flex-col gap-1 min-w-0">
-                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm truncate capitalize text-purple-600 dark:text-purple-400">
-                      {app.intended_role}
+                    <h4 className={`font-bold text-sm truncate capitalize ${app.intended_role === 'cofounder' ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                      {app.intended_role === 'cofounder' ? 'Co-founder Application' : 'Member Application'}
                     </h4>
                     <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">
                       Applied on {new Date(app.created_at).toLocaleDateString()}
@@ -2008,7 +2158,7 @@ const UserDashboardTool = ({ currentUserId }) => {
                   </div>
                   <div className="flex items-center gap-4">
                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'}`}>
-                      {app.status}
+                      {app.status || 'pending'}
                     </span>
                     <button onClick={() => handleDeleteFounderApp(app.id)} className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
                       <Trash2 size={16} />
@@ -2018,34 +2168,11 @@ const UserDashboardTool = ({ currentUserId }) => {
               ))
             )}
 
-        {activeTab === 'notifications' && (
-          myNotifications.length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No recent notifications.</div> :
-          myNotifications.map(notif => (
-            <div key={notif.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
-              <p className="text-sm text-gray-800 dark:text-gray-200"><span className="font-bold capitalize text-purple-600 dark:text-purple-400">{(notif.type || 'Alert').replace('_', ' ')}:</span> {notif.content}</p>
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest">{new Date(notif.created_at).toLocaleDateString()}</p>
-            </div>
-          ))
-        )}
-
-        {activeTab === 'features' && (
-          FEATURES_LIST.map(feature => (
-            <div key={feature.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
-              <div className="flex justify-between items-start">
-                <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm text-purple-600 dark:text-purple-400">{feature.title}</h4>
-                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800/50">New</span>
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-300">{feature.desc}</p>
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{feature.date}</p>
-            </div>
-          ))
-        )}
-
             {activeTab === 'notifications' && (
               myNotifications.length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No recent notifications.</div> :
               myNotifications.map(notif => (
                 <div key={notif.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
-                  <p className="text-sm text-gray-800 dark:text-gray-200"><span className="font-bold capitalize text-purple-600 dark:text-purple-400">{(notif.type || 'Alert').replace('_', ' ')}:</span> {notif.content}</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200"><span className="font-bold capitalize text-purple-600 dark:text-purple-400">{(notif.type || 'Alert').replace('_', ' ')}:</span> {renderWithLinks(notif.content)}</p>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest">{new Date(notif.created_at).toLocaleDateString()}</p>
                 </div>
               ))

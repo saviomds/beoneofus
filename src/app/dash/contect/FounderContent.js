@@ -145,6 +145,7 @@ export default function FounderContent() {
         skills: 'See full responses',
         experience: 'See full responses',
         reason: compiledResponses,
+        status: 'pending',
       }).select();
 
       if (error) {

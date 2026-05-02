@@ -522,26 +522,24 @@ export default function ProfileContent({ viewUserId }) {
         });
 
         // Trigger email notification
-        const emailRes = await fetch('/api/send-app-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            applicationId: appId,
-            applicantId,
-            status: newStatus,
-            jobTitle: jobTitle || 'a recent role',
-            customMessage
-          })
-        });
-
-        if (!emailRes.ok) {
-          const contentType = emailRes.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const errData = await emailRes.json();
-            throw new Error(errData.error || 'Failed to send email notification.');
-          } else {
-            throw new Error('API Route not found or server crashed. Ensure API keys are set.');
+        try {
+          const emailRes = await fetch('/api/send-app-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              applicationId: appId,
+              applicantId,
+              status: newStatus,
+              jobTitle: jobTitle || 'a recent role',
+              customMessage
+            })
+          });
+          if (!emailRes.ok) {
+            const errData = await emailRes.json().catch(() => ({}));
+            console.error('Failed to send email notification:', errData.error || emailRes.statusText);
           }
+        } catch (emailErr) {
+          console.error('Email API error:', emailErr);
         }
       }
 
@@ -571,8 +569,8 @@ export default function ProfileContent({ viewUserId }) {
   const displayBanner = bannerPreview || profile?.banner_url;
 
   return (
-    <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 pt-4 px-2">
-      <div className="mb-8">
+    <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 pt-4 px-2 sm:px-6" style={{ zoom: "0.85" }}>
+      <div className="mb-8 max-w-6xl w-full mx-auto">
         <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Profile</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your professional identity and network status." : "Viewing professional network identity."}</p>
       </div>
@@ -607,9 +605,9 @@ export default function ProfileContent({ viewUserId }) {
         </div>
       )}
 
-      <div className="max-w-4xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] relative overflow-visible shadow-sm mb-10">
+      <div className="max-w-6xl w-full mx-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] relative overflow-visible shadow-xl shadow-gray-200/50 dark:shadow-black/50 mb-10">
         {/* Banner Section */}
-        <div className="h-32 sm:h-48 w-full bg-gradient-to-r from-slate-800 via-blue-900 to-slate-900 rounded-t-[2rem] relative overflow-hidden group">
+        <div className="h-40 sm:h-56 w-full bg-gradient-to-tr from-slate-900 via-indigo-900 to-slate-800 rounded-t-[2.5rem] relative overflow-hidden group">
           {displayBanner ? (
             <Image src={displayBanner} alt="Profile Banner" fill priority quality={75} className="object-cover object-center" />
           ) : (
@@ -628,11 +626,11 @@ export default function ProfileContent({ viewUserId }) {
         </div>
         <input type="file" ref={bannerInputRef} onChange={handleBannerFileChange} accept="image/*" className="hidden" />
         
-        <div className="px-6 sm:px-10 relative pb-10">
+        <div className="px-6 sm:px-12 relative pb-12">
           {/* Header Area with Avatar and Actions */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 -mt-12 sm:-mt-16 mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6 -mt-16 sm:-mt-24 mb-8">
             {/* Avatar */}
-            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white dark:border-gray-900 bg-white dark:bg-gray-900 flex items-center justify-center text-4xl font-black text-gray-700 dark:text-gray-300 shadow-md shrink-0 overflow-hidden group z-10">
+            <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 sm:border-8 border-white dark:border-gray-900 bg-white dark:bg-gray-900 flex items-center justify-center text-5xl font-black text-gray-700 dark:text-gray-300 shadow-xl shrink-0 overflow-hidden group z-10 transition-transform hover:scale-105 duration-300">
               {displayAvatar ? (
                 <Image src={displayAvatar} alt="Profile Avatar" fill sizes="128px" className="object-cover object-center" />
               ) : (
@@ -652,14 +650,14 @@ export default function ProfileContent({ viewUserId }) {
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3 pt-2 sm:pt-0 z-10">
+            <div className="flex items-center gap-3 pt-4 sm:pt-0 z-10 pb-2 sm:pb-4">
               {isOwnProfile ? (
                 !isEditing && (
                   <button 
                     onClick={() => setIsEditing(true)} 
-                    className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 px-6 py-2.5 rounded-full border border-gray-300 dark:border-gray-700 transition-all shadow-sm active:scale-95"
+                    className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-6 py-3 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
                   >
-                    <Edit3 size={16} /> Edit Profile
+                    <Edit3 size={18} /> Edit Profile
                   </button>
                 )
               ) : (
@@ -668,35 +666,35 @@ export default function ProfileContent({ viewUserId }) {
                     <button 
                       onClick={handleFollow}
                       disabled={connectionProcessing}
-                      className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-full transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                      className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-full transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50"
                     >
-                      {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Follow
+                      {connectionProcessing ? <Loader2 size={18} className="animate-spin" /> : <Users size={18} />} Follow
                     </button>
                   )}
                   {connectionStatus === 'pending_sent' && (
                     <button 
                       onClick={handleUnfollow}
                       disabled={connectionProcessing}
-                      className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/50 border border-gray-300 dark:border-gray-700 px-6 py-2.5 rounded-full transition-all active:scale-95 disabled:opacity-50"
+                      className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/50 border border-gray-300 dark:border-gray-700 px-8 py-3 rounded-full transition-all active:scale-95 disabled:opacity-50"
                     >
-                      {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Pending
+                      {connectionProcessing ? <Loader2 size={18} className="animate-spin" /> : <Users size={18} />} Pending
                     </button>
                   )}
                   {connectionStatus === 'pending_received' && (
                      <button 
                       disabled
-                      className="flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-6 py-2.5 rounded-full border border-amber-200 dark:border-amber-800/50 transition-all cursor-default"
+                      className="flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-8 py-3 rounded-full border border-amber-200 dark:border-amber-800/50 transition-all cursor-default shadow-sm"
                     >
-                      <Users size={16} /> Review Request
+                      <Users size={18} /> Review Request
                     </button>
                   )}
                   {connectionStatus === 'accepted' && (
                     <button 
                       onClick={handleUnfollow}
                       disabled={connectionProcessing}
-                      className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/50 px-6 py-2.5 rounded-full border border-gray-300 dark:border-gray-700 transition-all active:scale-95 disabled:opacity-50"
+                      className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/50 px-8 py-3 rounded-full border border-gray-300 dark:border-gray-700 transition-all active:scale-95 disabled:opacity-50"
                     >
-                      {connectionProcessing ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />} Unfollow
+                      {connectionProcessing ? <Loader2 size={18} className="animate-spin" /> : <Users size={18} />} Unfollow
                     </button>
                   )}
                 </>
@@ -803,33 +801,33 @@ export default function ProfileContent({ viewUserId }) {
               </div>
             </div>
           ) : (
-            <div className="animate-in fade-in duration-300 pt-2">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <div className="animate-in fade-in duration-500 pt-4">
+              <h2 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white flex items-center gap-3 tracking-tight">
                 {profile?.username || 'Unknown User'}
-                {profile?.is_verified && <VerifiedBadge size={28} />}
+                {profile?.is_verified && <VerifiedBadge size={32} />}
               </h2>
-              <p className="text-gray-700 dark:text-gray-300 text-base sm:text-lg mt-1.5 font-medium max-w-2xl">
+              <p className="text-gray-600 dark:text-gray-300 text-lg sm:text-xl mt-2 font-medium max-w-2xl leading-relaxed">
                 {profile?.status || 'Software Engineer'}
               </p>
               
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm text-gray-500 dark:text-gray-400 font-medium">
+              <div className="flex flex-wrap items-center gap-3 mt-6 text-sm text-gray-600 dark:text-gray-400 font-medium">
                 {profile?.work_status && profile.work_status !== 'None' && (
-                  <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${profile.work_status === 'Hiring' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'}`}>
-                    <Briefcase size={12} /> {profile.work_status}
+                  <span className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border shadow-sm transition-transform hover:-translate-y-0.5 ${profile.work_status === 'Hiring' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'}`}>
+                    <Briefcase size={14} /> {profile.work_status}
                   </span>
                 )}
                 {profile?.location && (
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-default">
                     <MapPin size={16} className="text-gray-400 dark:text-gray-500" /> {profile.location}
                   </span>
                 )}
                 <div className="relative">
                   <span 
                     onClick={handleViewFollowers}
-                    className={`flex items-center gap-1.5 transition-colors ${followersCount > 0 ? 'cursor-pointer hover:text-blue-600 dark:hover:text-blue-400' : ''}`}
+                    className={`flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-800 transition-colors ${followersCount > 0 ? 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800/50 hover:text-blue-600 dark:hover:text-blue-400' : 'cursor-default'}`}
                   >
-                    <Users size={16} className="text-gray-400 dark:text-gray-500" /> 
-                    <span className={followersCount > 0 ? "font-bold text-blue-600" : ""}>
+                    <Users size={16} className={followersCount > 0 ? "text-blue-500" : "text-gray-400 dark:text-gray-500"} /> 
+                    <span className={followersCount > 0 ? "font-bold text-blue-600 dark:text-blue-400" : "font-bold"}>
                       {Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(followersCount)}
                     </span> connections
                   </span>
@@ -864,9 +862,9 @@ export default function ProfileContent({ viewUserId }) {
               </div>
 
               {/* OPPORTUNITIES (JOBS) SECTION */}
-              <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Opportunities</h3>
+              <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Opportunities</h3>
                   {isOwnProfile && (
                     <button 
                       onClick={() => {
@@ -874,21 +872,23 @@ export default function ProfileContent({ viewUserId }) {
                         setJobForm({ title: "", company: "", location: "", type: "Full-time", salary: "", tags: "", external_url: "", description: "", experience_level: "Mid-level" });
                         setShowJobModal(true);
                       }} 
-                      className="flex items-center gap-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95"
+                      className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-full transition-all shadow-md hover:shadow-lg active:scale-95"
                     >
-                      <Plus size={14} /> Post a Job
+                      <Plus size={16} /> Post a Job
                     </button>
                   )}
                 </div>
                 {userJobs.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-6">
                     {userJobs.map(job => (
-                      <div key={job.id} onClick={() => setViewJob(job)} className="p-5 border border-gray-200 dark:border-gray-800 rounded-2xl bg-white dark:bg-gray-900 shadow-sm hover:border-blue-500/30 transition-all group cursor-pointer">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1 min-w-0 pr-3">
-                            <h4 className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 transition-colors truncate">{job.title}</h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1.5 truncate"><Building size={12} className="shrink-0" /> <span className="truncate">{job.company}</span></p>
-                          </div>
+                      <div key={job.id} onClick={() => setViewJob(job)} className="p-6 border border-gray-100 dark:border-gray-800 rounded-3xl bg-white dark:bg-gray-900 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-blue-500/30 transition-all duration-300 group cursor-pointer relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                        <div className="relative z-10">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex-1 min-w-0 pr-4">
+                              <h4 className="font-black text-lg text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">{job.title}</h4>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1.5 truncate"><Building size={14} className="shrink-0 text-gray-400" /> <span className="truncate font-medium">{job.company}</span></p>
+                            </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {isOwnProfile && (
                           <>
@@ -929,16 +929,17 @@ export default function ProfileContent({ viewUserId }) {
                               </button>
                           </>
                             )}
-                            <span className="text-[9px] px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg font-black uppercase tracking-widest border border-blue-200 dark:border-blue-800/50 shrink-0 whitespace-nowrap">{job.type}</span>
+                            <span className="text-[10px] px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg font-black uppercase tracking-widest border border-blue-200 dark:border-blue-800/50 shrink-0 whitespace-nowrap">{job.type}</span>
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-500 dark:text-gray-400 font-medium mb-4">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-gray-500 dark:text-gray-400 font-medium mb-5">
                           <span className="flex items-center gap-1 min-w-0"><MapPin size={12} className="shrink-0" /> <span className="truncate">{job.location}</span></span>
                           {job.salary && <span className="flex items-center gap-1 shrink-0"><DollarSign size={12} className="shrink-0" /> {job.salary}</span>}
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {(job.tags || []).slice(0,3).map(t => <span key={t} className="text-[10px] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-0.5 rounded text-gray-600 dark:text-gray-300 font-bold">{t}</span>)}
-                          {(job.tags || []).length > 3 && <span className="text-[10px] text-gray-400 font-bold px-1 py-0.5">+{(job.tags.length - 3)}</span>}
+                          {(job.tags || []).slice(0,3).map(t => <span key={t} className="text-xs bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-md text-gray-600 dark:text-gray-300 font-bold">{t}</span>)}
+                          {(job.tags || []).length > 3 && <span className="text-xs text-gray-400 font-bold px-1 py-1">+{(job.tags.length - 3)}</span>}
+                        </div>
                         </div>
                       </div>
                     ))}
@@ -951,58 +952,58 @@ export default function ProfileContent({ viewUserId }) {
                 )}
               </div>
 
-              <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">Contact & Details</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 text-gray-400 dark:text-gray-500"><Mail size={20} /></div>
+              <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">
+                <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-8">Contact & Details</h3>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
+                    <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-blue-500 transition-colors"><Mail size={20} /></div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{isOwnProfile ? "Email" : "Email Visibility"}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{isOwnProfile ? (currentUser?.email || 'N/A') : 'Protected by User'}</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{isOwnProfile ? "Email" : "Email Visibility"}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{isOwnProfile ? (currentUser?.email || 'N/A') : 'Protected by User'}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 text-gray-400 dark:text-gray-500"><Calendar size={20} /></div>
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
+                    <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-emerald-500 transition-colors"><Calendar size={20} /></div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Date Joined</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{isOwnProfile && currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Active Member'}</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Date Joined</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{isOwnProfile && currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Active Member'}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 text-gray-400 dark:text-gray-500"><Shield size={20} /></div>
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
+                    <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-purple-500 transition-colors"><Shield size={20} /></div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Security Clearance</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Security Clearance</p>
                       {profile?.is_verified ? (
-                        <p className="text-sm text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 mt-0.5"><VerifiedBadge size={14} /> Verified Identity</p>
+                        <p className="text-sm text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1.5"><VerifiedBadge size={16} /> Verified Identity</p>
                       ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-0.5">Standard Node</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 font-bold">Standard Node</p>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 text-gray-400 dark:text-gray-500"><User size={20} /></div>
-                    <div className="min-w-0 pr-4">
-                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Account Node ID</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate" title={profile?.id || 'N/A'}>{profile?.id || 'N/A'}</p>
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
+                    <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-amber-500 transition-colors"><User size={20} /></div>
+                    <div className="min-w-0 pr-4 flex flex-col justify-center">
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Account Node ID</p>
+                      <p className="text-xs text-gray-900 dark:text-gray-100 font-mono truncate font-bold" title={profile?.id || 'N/A'}>{profile?.id || 'N/A'}</p>
                     </div>
                   </div>
                   {profile?.github && (
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 text-gray-400 dark:text-gray-500"><GitBranch size={20} /></div>
-                      <div className="min-w-0 pr-4">
-                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">GitHub</p>
-                        <a href={`https://github.com/${profile.github}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate block">
+                    <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
+                      <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white transition-colors"><GitBranch size={20} /></div>
+                      <div className="min-w-0 pr-4 flex flex-col justify-center">
+                        <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">GitHub</p>
+                        <a href={`https://github.com/${profile.github}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline truncate block">
                           github.com/{profile.github}
                         </a>
                       </div>
                     </div>
                   )}
                   {profile?.website && (
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 text-gray-400 dark:text-gray-500"><Link size={20} /></div>
-                      <div className="min-w-0 pr-4">
-                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Website</p>
-                        <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate block">
+                    <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
+                      <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-pink-500 transition-colors"><Link size={20} /></div>
+                      <div className="min-w-0 pr-4 flex flex-col justify-center">
+                        <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Website</p>
+                        <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline truncate block">
                           {profile.website.replace(/^https?:\/\//, '')}
                         </a>
                       </div>
@@ -1144,7 +1145,7 @@ export default function ProfileContent({ viewUserId }) {
                           app.status === 'external_redirect' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' :
                           'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
                         }`}>
-                          {app.status === 'external_redirect' ? 'External Redirect' : app.status}
+                          {app.status === 'external_redirect' ? 'External Redirect' : (app.status || 'pending')}
                         </span>
                         
                         {app.status !== 'accepted' && app.status !== 'declined' && app.status !== 'external_redirect' && (
@@ -1250,7 +1251,7 @@ export default function ProfileContent({ viewUserId }) {
                 </>
               ) : (
                 <div className="flex-1 text-center py-3.5 bg-gray-50 dark:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-xs border border-gray-200 dark:border-gray-700">
-                  Status: {selectedApplicant.status === 'external_redirect' ? 'External Redirect' : selectedApplicant.status}
+                  Status: {selectedApplicant.status === 'external_redirect' ? 'External Redirect' : (selectedApplicant.status || 'pending')}
                 </div>
               )}
             </div>

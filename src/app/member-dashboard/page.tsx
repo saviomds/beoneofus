@@ -31,6 +31,12 @@ const isOverdue = (dateStr: string) => {
 
 export default function MemberDashboard() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
   
   // Using sessionStorage for optimistic UI loads so going "back" is instant
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -244,7 +250,7 @@ export default function MemberDashboard() {
     return () => clearTimeout(timer);
   }, [completionRatio, circumference]);
 
-  if (!isAuthenticated && isLoading) {
+  if (!mounted || (!isAuthenticated && isLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa] dark:bg-[#0d0d0f]">
         <div className="flex flex-col items-center gap-4">

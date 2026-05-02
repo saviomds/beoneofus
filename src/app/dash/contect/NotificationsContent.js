@@ -5,7 +5,8 @@ import Image from "next/image";
 import { 
   Bell, Heart, MessageSquare, Check, Zap, 
   ShieldAlert, ShieldCheck, MoreHorizontal, Users, ChevronRight, Clock, UserPlus,
-  BadgeCheck
+  BadgeCheck,
+  Briefcase
 } from "lucide-react"; 
 import { supabase } from "../../supabaseClient";
 import { useDashboard } from "./DashboardContext";
@@ -122,6 +123,34 @@ export default function NotificationsContent() {
 
     await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
     setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+  };
+
+  const renderWithLinks = (text) => {
+    if (!text) return text;
+    const urlRegex = /(https?:\/\/[a-zA-Z0-9](?:[^\s<]*[^<.,:;"')\]\s])?|\B\/[a-zA-Z0-9](?:[^\s<]*[^<.,:;"')\]\s])?)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) => {
+      if (i % 2 === 1) { // It's a matched URL
+        const isInternal = part.startsWith('/');
+        return (
+          <a 
+            key={i} 
+            href={part} 
+            target={isInternal ? "_self" : "_blank"}
+            rel={isInternal ? "" : "noopener noreferrer"}
+            onClick={(e) => e.stopPropagation()} 
+            className={isInternal ? "inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ml-2 no-underline not-italic align-middle" : "text-blue-600 dark:text-blue-400 hover:underline font-bold"}
+          >
+            {isInternal ? (
+              part === '/member/application' ? <><UserPlus size={14} /> Apply Now</> : 
+              part.includes('dashboard') ? <><Briefcase size={14} /> Open Workspace</> : 
+              'View Link'
+            ) : part}
+          </a>
+        );
+      }
+      return part;
+    });
   };
 
   const handleDeclineConnection = async (e, notif) => {
@@ -276,14 +305,14 @@ export default function NotificationsContent() {
                     {notif.actor?.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
                   </span> 
                   {notif.type === 'like' && 'liked your post.'}
-                  {notif.type === 'message' && <>sent you a message: <span className="text-gray-700 dark:text-gray-300 italic">{displayContent}</span></>}
-                  {notif.type === 'comment' && <>replied: <span className="text-gray-700 dark:text-gray-300 italic">{notif.content}</span></>}
+                {notif.type === 'message' && <>sent you a message: <span className="text-gray-700 dark:text-gray-300 italic">{renderWithLinks(displayContent)}</span></>}
+                {notif.type === 'comment' && <>replied: <span className="text-gray-700 dark:text-gray-300 italic">{renderWithLinks(notif.content)}</span></>}
                   {notif.type === 'handshake' && 'accepted your connection request.'}
                   {notif.type === 'connection_request' && 'sent you a connection request.'}
                   {notif.type === 'blocked' && 'severed the connection.'}
                   {notif.type === 'group_join_request' && <>requested to join <span className="font-bold text-gray-900 dark:text-gray-100">{displayContent}</span>.</>}
                   {notif.type === 'group_invite' && <>granted you access to <span className="font-bold text-gray-900 dark:text-gray-100">{displayContent}</span>.</>}
-                  {!['like', 'comment', 'message', 'handshake', 'connection_request', 'blocked', 'unblocked', 'group_invite', 'group_join_request'].includes(notif.type) && `${displayContent}`}
+                {!['like', 'comment', 'message', 'handshake', 'connection_request', 'blocked', 'unblocked', 'group_invite', 'group_join_request'].includes(notif.type) && renderWithLinks(displayContent)}
                 </div>
                 
                 <div className="flex items-center gap-3 mt-3">

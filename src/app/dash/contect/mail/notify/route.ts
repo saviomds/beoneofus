@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 // @ts-ignore - Ensure 'resend' is installed via npm install resend
 import { Resend } from 'resend';

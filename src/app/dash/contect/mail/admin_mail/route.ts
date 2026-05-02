@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     let emailBody = `Your application to join as a ${role} has been ${status}.\n\n`;
     if (customMessage) emailBody += `Note from admin: ${customMessage}\n\n`;
     if (dashboardLink) emailBody += `Access your new dashboard here: ${process.env.NEXT_PUBLIC_SITE_URL || 'http://beoneofus.vercel.app/'}${dashboardLink}`;
-
+    
     await resend.emails.send({
       from: 'BeOneOfUs <notifications@beoneofus.com>',
       to: [applicantEmail],

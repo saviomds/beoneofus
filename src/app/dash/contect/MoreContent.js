@@ -1,41 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Image from "next/image";
-import { 
-  Zap, 
-  HelpCircle, 
-  Code2, 
-  Share2, 
-  LogOut, 
-  ChevronRight, 
-  X, 
-  Globe, 
-  Cpu,
-  Send,
-  Copy,
-  Check,
-  Plus,
-  Terminal,
-  Activity,
-  Database,
-  Key,
-  User,
-  RefreshCw,
-  AlertCircle,
-  AlertTriangle,
-  ShieldAlert,
-  ShieldCheck,
-  Loader2,
-  Search,
-  Trash2,
-  Bot,
-  UserCog,
-  FileText,
-  ClipboardList,
-  UserPlus,
-  Briefcase
+import {
+  Zap, HelpCircle, Code2, LogOut, ChevronRight, X, Globe, Send,
+  Copy, Check, Plus, Activity, Database, Key, User, AlertCircle,
+  AlertTriangle, ShieldAlert, ShieldCheck, Loader2, Search, Trash2,
+  Bot, UserCog, FileText, ClipboardList, UserPlus, Briefcase,
+  BarChart3, Crown, Users, Award, TrendingUp, RefreshCw, Eye,
+  BadgeCheck, Filter, ArrowUpRight, Terminal, Layers, Bell,
+  CheckCircle2, Clock, XCircle, ChevronDown, MoreHorizontal,
+  Shield
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -44,87 +20,156 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-// --- TOOL COMPONENTS ---
+// ─── Shared UI Primitives ────────────────────────────────────────────────────
+
+function Toast({ message, type }) {
+  if (!message) return null;
+  return (
+    <div className={`fixed bottom-6 right-6 z-[500] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border
+      animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-sm
+      ${type === "error"
+        ? "bg-white dark:bg-[#0f0a0a] border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400"
+        : "bg-white dark:bg-[#0a0f0a] border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400"}`}>
+      {type === "error" ? <AlertTriangle size={15} className="shrink-0" /> : <Check size={15} className="shrink-0" />}
+      <span className="text-xs font-bold tracking-tight">{message}</span>
+    </div>
+  );
+}
+
+function useToast() {
+  const [toast, setToast] = useState({ message: "", type: "success" });
+  const show = useCallback((message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: "", type: "success" }), 3500);
+  }, []);
+  return [toast, show];
+}
+
+function StatCard({ icon: Icon, label, value, sub, color = "blue", loading }) {
+  const palette = {
+    blue:   { border: "border-blue-200 dark:border-blue-500/20",   bg: "bg-blue-50 dark:bg-blue-500/5",   icon: "text-blue-500 dark:text-blue-400",   val: "text-blue-600 dark:text-blue-300" },
+    amber:  { border: "border-amber-200 dark:border-amber-500/20",  bg: "bg-amber-50 dark:bg-amber-500/5",  icon: "text-amber-500 dark:text-amber-400",  val: "text-amber-600 dark:text-amber-300" },
+    violet: { border: "border-violet-200 dark:border-violet-500/20", bg: "bg-violet-50 dark:bg-violet-500/5", icon: "text-violet-500 dark:text-violet-400", val: "text-violet-600 dark:text-violet-300" },
+    emerald:{ border: "border-emerald-200 dark:border-emerald-500/20",bg: "bg-emerald-50 dark:bg-emerald-500/5",icon: "text-emerald-500 dark:text-emerald-400",val: "text-emerald-600 dark:text-emerald-300" },
+    rose:   { border: "border-rose-200 dark:border-rose-500/20",   bg: "bg-rose-50 dark:bg-rose-500/5",   icon: "text-rose-500 dark:text-rose-400",   val: "text-rose-600 dark:text-rose-300" },
+  };
+  const c = palette[color];
+  return (
+    <div className={`relative overflow-hidden rounded-2xl border ${c.border} ${c.bg} p-5`}>
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.15em]">{label}</p>
+        <div className={`${c.icon} opacity-60`}><Icon size={16} /></div>
+      </div>
+      <p className={`text-3xl font-black tabular-nums ${c.val}`}>
+        {loading ? <Loader2 size={20} className="animate-spin" /> : (value ?? "—")}
+      </p>
+      {sub && <p className="text-[10px] text-gray-500 dark:text-gray-600 mt-1.5 font-medium">{sub}</p>}
+      <div className={`absolute -bottom-6 -right-6 w-20 h-20 rounded-full blur-2xl opacity-10 ${c.icon} bg-current`} />
+    </div>
+  );
+}
+
+function Badge({ children, color = "gray" }) {
+  const colors = {
+    gray:    "bg-gray-100 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700/50",
+    blue:    "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20",
+    emerald: "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20",
+    amber:   "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20",
+    red:     "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20",
+    violet:  "bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-500/20",
+  };
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide border ${colors[color]}`}>
+      {children}
+    </span>
+  );
+}
+
+function statusColor(status) {
+  if (!status) return "gray";
+  if (status === "accepted" || status === "verified" || status === "completed") return "emerald";
+  if (status === "declined" || status === "rejected") return "red";
+  if (status === "pending") return "amber";
+  return "blue";
+}
+
+// ─── System Status ───────────────────────────────────────────────────────────
 
 const SystemStatusTool = () => {
   const [ping, setPing] = useState(0);
   const [history, setHistory] = useState(Array(30).fill(0));
-  const [status, setStatus] = useState('Operational');
+  const [status, setStatus] = useState("Operational");
 
   useEffect(() => {
     let isMounted = true;
     const checkPing = async () => {
       const start = Date.now();
       try {
-        await supabase.from('profiles').select('id').limit(1);
+        await supabase.from("profiles").select("id").limit(1);
         const duration = Date.now() - start;
         if (isMounted) {
           setPing(duration);
           setHistory(prev => [...prev.slice(1), duration]);
-          setStatus(duration > 800 ? 'Degraded' : 'Operational');
+          setStatus(duration > 800 ? "Degraded" : "Operational");
         }
-      } catch(e) {
-        if (isMounted) {
-          setStatus('Outage');
-          setPing(0);
-          setHistory(prev => [...prev.slice(1), 0]);
-        }
+      } catch {
+        if (isMounted) { setStatus("Outage"); setPing(0); setHistory(prev => [...prev.slice(1), 0]); }
       }
     };
     checkPing();
-    const interval = setInterval(checkPing, 2000);
-    return () => { isMounted = false; clearInterval(interval); };
+    const iv = setInterval(checkPing, 2000);
+    return () => { isMounted = false; clearInterval(iv); };
   }, []);
 
-  return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-         <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col justify-between shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Activity size={18} className="text-gray-500 dark:text-gray-400" />
-              <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest">Network Latency</p>
-            </div>
-            <div className="flex items-end gap-2">
-               <span className="text-5xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">{ping}</span>
-               <span className="text-gray-500 dark:text-gray-400 mb-1 font-bold">ms</span>
-            </div>
-         </div>
-         <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col justify-between shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Database size={18} className="text-gray-500 dark:text-gray-400" />
-              <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest">Platform Health</p>
-            </div>
-            <div className="flex items-center gap-3 mt-2">
-               <div className={`w-4 h-4 rounded-full shadow-lg ${status === 'Operational' ? 'bg-green-500 shadow-green-500/50 animate-pulse' : 'bg-red-500 shadow-red-500/50'}`} />
-               <span className={`text-2xl font-black tracking-tight ${status === 'Operational' ? 'text-green-400' : 'text-red-400'}`}>{status}</span>
-            </div>
-         </div>
-      </div>
+  const maxPing = Math.max(...history, 1);
 
-      <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
-        <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest mb-6">Real-Time Packet Monitor</p>
-        <div className="h-40 flex items-end gap-1.5 w-full">
+  return (
+    <div className="space-y-6 max-w-3xl mx-auto py-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity size={14} className="text-gray-500" />
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Latency</p>
+          </div>
+          <div className="flex items-end gap-1.5">
+            <span className="text-5xl font-black text-gray-900 dark:text-white tabular-nums">{ping}</span>
+            <span className="text-gray-500 mb-1 font-bold text-sm">ms</span>
+          </div>
+        </div>
+        <div className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl">
+          <div className="flex items-center gap-2 mb-4">
+            <Database size={14} className="text-gray-500" />
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Health</p>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <div className={`w-3 h-3 rounded-full ${status === "Operational" ? "bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50" : "bg-red-500 shadow-lg shadow-red-500/50"}`} />
+            <span className={`text-xl font-black ${status === "Operational" ? "text-emerald-500 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>{status}</span>
+          </div>
+        </div>
+      </div>
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
+        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Real-Time Packet Monitor</p>
+        <div className="h-32 flex items-end gap-1 w-full">
           {history.map((val, i) => {
-            const height = Math.min(100, Math.max(2, (val / 500) * 100));
+            const h = Math.max(2, Math.min(100, (val / maxPing) * 100));
+            const opacity = 0.3 + (i / history.length) * 0.7;
             return (
-              <div 
-                key={i} 
-                className="flex-1 bg-blue-500 hover:bg-blue-400 transition-all rounded-t-sm opacity-80 hover:opacity-100" 
-                style={{ height: `${height}%` }} 
-                title={`${val}ms`}
-              />
+              <div key={i} className="flex-1 bg-blue-500 rounded-t-sm transition-all duration-300"
+                style={{ height: `${h}%`, opacity }} title={`${val}ms`} />
             );
           })}
         </div>
       </div>
     </div>
   );
-}
+};
+
+// ─── API Access ───────────────────────────────────────────────────────────────
 
 const ApiAccessTool = () => {
   const [keys, setKeys] = useState([
-    { id: 1, name: 'Production Key', key: 'sk_live_9a8b7c6d5e4f3a2b1c0d', created: '2023-11-20' },
-    { id: 2, name: 'Development Key', key: 'sk_test_1b2c3d4e5f6a7b8c9d0e', created: '2024-01-15' }
+    { id: 1, name: "Production Key", key: "key_live_9a8b7c6d5e4f3a2b1c0d9e8f", created: "2023-11-20" },
+    { id: 2, name: "Development Key", key: "key_test_1b2c3d4e5f6a7b8c9d0e1f2a", created: "2024-01-15" },
   ]);
   const [copied, setCopied] = useState(null);
 
@@ -135,93 +180,83 @@ const ApiAccessTool = () => {
   };
 
   const generateKey = () => {
-    const isLive = Math.random() > 0.5;
-    const prefix = isLive ? 'sk_live_' : 'sk_test_';
-    const newKey = prefix + Array.from({length: 24}, () => Math.random().toString(36).charAt(2)).join('');
-    setKeys([{ id: Date.now(), name: 'New API Key', key: newKey, created: new Date().toISOString().split('T')[0] }, ...keys]);
+    const live = Math.random() > 0.5;
+    const newKey = (live ? "key_live_" : "key_test_") + Array.from({ length: 24 }, () => Math.random().toString(36).charAt(2)).join("");
+    setKeys(prev => [{ id: Date.now(), name: "New API Key", key: newKey, created: new Date().toISOString().split("T")[0] }, ...prev]);
   };
 
-  const deleteKey = (id) => setKeys(keys.filter(k => k.id !== id));
-
   return (
-    <div className="space-y-8 max-w-3xl mx-auto py-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-3xl mx-auto py-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-gray-900 dark:text-gray-100 font-bold text-lg">Active Secret Keys</h3>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Do not share your API keys in publicly accessible areas.</p>
+          <h3 className="text-gray-900 dark:text-white font-black text-lg">Active Secret Keys</h3>
+          <p className="text-gray-500 text-xs mt-0.5">Never share keys in public repositories.</p>
         </div>
-        <button onClick={generateKey} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/20 shrink-0">
-          <Plus size={16} /> Create New Key
+        <button onClick={generateKey}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20">
+          <Plus size={14} /> Generate Key
         </button>
       </div>
-
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-sm">
-        {keys.length === 0 ? (
-           <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm">No API keys found. Generate one to get started.</div>
-        ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {keys.map(k => (
-              <div key={k.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
-                <div>
-                  <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-2 mb-1">
-                    <Key size={14} className={k.key.startsWith('sk_live') ? 'text-green-500' : 'text-amber-500'} /> 
-                    {k.name}
-                  </h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 font-mono tracking-wider bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded inline-block border border-gray-200 dark:border-gray-700">{k.key.substring(0, 12)}••••••••••••••••</p>
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+        {keys.length === 0
+          ? <div className="p-10 text-center text-gray-500 dark:text-gray-600 text-sm">No keys. Generate one to start.</div>
+          : keys.map(k => (
+            <div key={k.id} className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Key size={12} className={k.key.startsWith("key_live") ? "text-emerald-500 dark:text-emerald-400" : "text-amber-500 dark:text-amber-400"} />
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{k.name}</p>
+                  <Badge color={k.key.startsWith("key_live") ? "emerald" : "amber"}>{k.key.startsWith("key_live") ? "live" : "test"}</Badge>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-widest hidden sm:block mr-2">{k.created}</span>
-                  <button onClick={() => handleCopy(k.key)} className="p-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-all border border-gray-200 dark:border-gray-700" title="Copy Key">
-                    {copied === k.key ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
-                  </button>
-                  <button onClick={() => deleteKey(k.id)} className="p-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all border border-gray-200 dark:border-gray-700" title="Revoke Key">
-                    <X size={16} />
-                  </button>
-                </div>
+                <p className="text-[11px] text-gray-600 dark:text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded inline-block">
+                  {k.key.substring(0, 14)}••••••••••••
+                </p>
               </div>
-            ))}
-          </div>
-        )}
+              <div className="flex items-center gap-2 shrink-0 ml-4">
+                <span className="text-[10px] text-gray-500 dark:text-gray-600 font-bold hidden sm:block">{k.created}</span>
+                <button onClick={() => handleCopy(k.key)}
+                  className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all border border-gray-200 dark:border-gray-700">
+                  {copied === k.key ? <Check size={14} className="text-emerald-500 dark:text-emerald-400" /> : <Copy size={14} />}
+                </button>
+                <button onClick={() => setKeys(prev => prev.filter(x => x.id !== k.id))}
+                  className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-xl text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-all border border-gray-200 dark:border-gray-700">
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          ))
+        }
       </div>
     </div>
   );
 };
 
+// ─── Community Hub ───────────────────────────────────────────────────────────
+
 const CommunityHubTool = ({ currentUserId }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const scrollRef = useRef(null);
   const [error, setError] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
-    const fetchMessages = async () => {
+    const fetch = async () => {
       const { data, error } = await supabase
-        .from('community_messages')
-        .select('*, profiles:user_id(username, avatar_url, is_verified)')
-        .order('created_at', { ascending: true })
-        .limit(50);
-      if (error) {
-        setError(true);
-      } else if (data) {
-        setMessages(data);
-      }
+        .from("community_messages")
+        .select("*, profiles:user_id(username, avatar_url, is_verified)")
+        .order("created_at", { ascending: true }).limit(50);
+      if (error) setError(true);
+      else setMessages(data || []);
     };
-    fetchMessages();
-
-    const channel = supabase.channel('public:community_messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'community_messages' }, (payload) => {
-         const fetchNew = async () => {
-            const { data } = await supabase.from('community_messages').select('*, profiles:user_id(username, avatar_url, is_verified)').eq('id', payload.new.id).single();
-            if (data) setMessages(prev => {
-              if (prev.find(m => m.id === data.id)) return prev;
-              return [...prev, data];
-            });
-         };
-         fetchNew();
+    fetch();
+    const ch = supabase.channel("public:community_messages")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "community_messages" }, async (payload) => {
+        const { data } = await supabase.from("community_messages")
+          .select("*, profiles:user_id(username, avatar_url, is_verified)").eq("id", payload.new.id).single();
+        if (data) setMessages(prev => prev.find(m => m.id === data.id) ? prev : [...prev, data]);
       }).subscribe();
-
-    return () => supabase.removeChannel(channel);
+    return () => supabase.removeChannel(ch);
   }, []);
 
   useEffect(() => {
@@ -233,1611 +268,1184 @@ const CommunityHubTool = ({ currentUserId }) => {
     if (!input.trim() || !currentUserId) return;
     const text = input;
     setInput("");
-    
-    // Optimistic update for fast UI
-    const tempId = Date.now();
-    setMessages(prev => [...prev, { id: tempId, user_id: currentUserId, text, profiles: { username: 'Sending...' } }]);
-    
-    await supabase.from('community_messages').insert({ user_id: currentUserId, text });
+    setMessages(prev => [...prev, { id: Date.now(), user_id: currentUserId, text, profiles: { username: "You" } }]);
+    await supabase.from("community_messages").insert({ user_id: currentUserId, text });
   };
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full space-y-4 text-center p-10">
-        <AlertCircle size={48} className="text-red-500/50 mb-2" />
-        <div>
-          <p className="text-red-400 font-bold mb-2 text-lg">Community Hub Not Initialized</p>
-          <p className="text-gray-500 text-sm max-w-md mx-auto leading-relaxed">
-            The <code className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded mx-1">community_messages</code> table does not exist in your database. 
-            Please run the setup SQL provided by your assistant to enable real-time global chat.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  if (error) return (
+    <div className="flex flex-col items-center justify-center h-full p-10 text-center">
+      <AlertCircle size={40} className="text-red-500/40 mb-4" />
+      <p className="text-red-500 dark:text-red-400 font-bold mb-2">Community Hub Not Initialized</p>
+      <p className="text-gray-500 text-xs max-w-sm leading-relaxed">
+        The <code className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded">community_messages</code> table does not exist. Run the setup SQL to enable global chat.
+      </p>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] overflow-hidden max-w-4xl mx-auto shadow-lg">
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar" ref={scrollRef}>
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-             <Globe size={48} className="mb-4 opacity-30 text-blue-500" />
-             <p className="font-bold text-sm uppercase tracking-widest mb-1">Global Chat Initialized</p>
-             <p className="text-xs font-mono">Say hello to the network.</p>
-          </div>
-        ) : (
-          messages.map(msg => (
-         <div key={msg.id} className={`flex gap-2 ${msg.user_id === currentUserId ? 'justify-end' : 'justify-start'}`}>
-           {msg.user_id !== currentUserId && (
-             <div 
-               onClick={() => setSelectedUserId(msg.user_id)}
-               className="relative w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors overflow-hidden"
-               title={`View @${msg.profiles?.username}'s Profile`}
-             >
-               {msg.profiles?.avatar_url ? (
-                 <Image src={msg.profiles.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" />
-               ) : (
-                 msg.profiles?.username?.substring(0, 2) || "??"
-               )}
-             </div>
-           )}
-           <div className={`flex flex-col ${msg.user_id === currentUserId ? 'items-end' : 'items-start'} max-w-[85%]`}>
-             {msg.user_id !== currentUserId && <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 pl-1 flex items-center gap-1">
-               @{msg.profiles?.username}
-               {msg.profiles?.is_verified && <VerifiedBadge size={10} />}
-             </span>}
-               <div className={`w-full px-4 py-2.5 rounded-2xl text-[13px] leading-relaxed shadow-sm ${msg.user_id === currentUserId ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-none'}`}>
-               {msg.text}
-             </div>
-           </div>
-         </div>
-          ))
-        )}
+    <div className="flex flex-col h-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden max-w-4xl mx-auto">
+      <div className="flex-1 overflow-y-auto p-5 space-y-3" ref={scrollRef}>
+        {messages.length === 0
+          ? <div className="flex flex-col items-center justify-center h-full text-gray-600">
+              <Globe size={36} className="mb-3 text-blue-500/20" />
+              <p className="font-bold text-xs uppercase tracking-widest">Global Chat Initialized</p>
+            </div>
+          : messages.map(msg => (
+            <div key={msg.id} className={`flex gap-2 ${msg.user_id === currentUserId ? "justify-end" : "justify-start"}`}>
+              {msg.user_id !== currentUserId && (
+                <div onClick={() => setSelectedUserId(msg.user_id)}
+                  className="relative w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase shrink-0 mt-auto cursor-pointer hover:opacity-80 transition-opacity overflow-hidden">
+                  {msg.profiles?.avatar_url
+                    ? <Image src={msg.profiles.avatar_url} alt="avatar" fill sizes="28px" className="object-cover" />
+                    : msg.profiles?.username?.substring(0, 2)}
+                </div>
+              )}
+              <div className={`flex flex-col max-w-[80%] ${msg.user_id === currentUserId ? "items-end" : "items-start"}`}>
+                {msg.user_id !== currentUserId && (
+                  <span className="text-[10px] text-gray-500 font-bold mb-1 pl-1 flex items-center gap-1">
+                    @{msg.profiles?.username}
+                    {msg.profiles?.is_verified && <VerifiedBadge size={9} />}
+                  </span>
+                )}
+                <div className={`px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${
+                  msg.user_id === currentUserId
+                    ? "bg-blue-600 text-white rounded-tr-none"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-none"}`}>
+                  {msg.text}
+                </div>
+              </div>
+            </div>
+          ))}
       </div>
 
-      {/* USER PROFILE MODAL */}
       {selectedUserId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
-            <button 
-              onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-full text-gray-500 dark:text-gray-400 transition-colors"
-            >
-              <X size={20} />
+          <div className="absolute inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto z-10 bg-white dark:bg-gray-950 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-2xl">
+            <button onClick={() => setSelectedUserId(null)}
+              className="absolute top-5 right-5 z-50 p-2 bg-gray-100 dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 dark:hover:text-red-400 rounded-full text-gray-500 transition-colors border border-gray-200 dark:border-gray-800">
+              <X size={18} />
             </button>
-            <div className="p-2 sm:p-6">
-              <ProfileContent viewUserId={selectedUserId} />
-            </div>
+            <div className="p-4 sm:p-6"><ProfileContent viewUserId={selectedUserId} /></div>
           </div>
         </div>
       )}
-      <form onSubmit={handleSend} className="p-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-800 flex gap-2 shrink-0">
-        <input 
-          value={input} 
-          onChange={e => setInput(e.target.value)} 
-          placeholder="Broadcast to community..." 
-          className="flex-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
-        />
-        <button type="submit" disabled={!input.trim()} className="px-5 bg-blue-600 text-white hover:bg-blue-700 rounded-2xl font-black disabled:opacity-50 transition-all">
-          <Send size={18} />
+
+      <form onSubmit={handleSend}
+        className="p-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex gap-2 shrink-0">
+        <input value={input} onChange={e => setInput(e.target.value)} placeholder="Broadcast to the network…"
+          className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all placeholder-gray-400 dark:placeholder-gray-600" />
+        <button type="submit" disabled={!input.trim()}
+          className="px-4 bg-blue-600 text-white hover:bg-blue-500 rounded-xl disabled:opacity-40 transition-all">
+          <Send size={15} />
         </button>
       </form>
     </div>
   );
 };
 
+// ─── Admin Panel ─────────────────────────────────────────────────────────────
+
 const AdminPanelTool = ({ currentUserId }) => {
   const searchParams = useSearchParams();
-  const initialTab = searchParams?.get('tab') || 'requests';
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [adminTab, setAdminTab] = useState(searchParams?.get("tab") || "overview");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminTab, setAdminTab] = useState(initialTab);
+  const [loading, setLoading] = useState(true);
+  const [toast, showToast] = useToast();
+  const [actionProcessing, setActionProcessing] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+
+  // Stats
+  const [stats, setStats] = useState({ total: null, founders: null, members: null, verified: null, pending: null, admins: null });
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  // Requests
+  const [requests, setRequests] = useState([]);
+
+  // Users
   const [allUsers, setAllUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState("");
+  const [usersFetched, setUsersFetched] = useState(false);
+  const [usersPage, setUsersPage] = useState(0);
+  const [hasMoreUsers, setHasMoreUsers] = useState(true);
+  const USERS_PER_PAGE = 50;
+
+  // AI Logs
   const [aiLogs, setAiLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
+
+  // Applications
   const [applications, setApplications] = useState([]);
   const [appsLoading, setAppsLoading] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
-  const [selectedUserId, setSelectedUserId] = useState(null);
 
+  // Founder Apps
   const [founderApps, setFounderApps] = useState([]);
   const [founderAppsLoading, setFounderAppsLoading] = useState(false);
   const [selectedFounderApp, setSelectedFounderApp] = useState(null);
 
+  // Tasks
   const [adminTasks, setAdminTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [taskForm, setTaskForm] = useState({ assignee_id: '', title: '', description: '', priority: 'Medium', linked_to: '' });
-  const [taskFilter, setTaskFilter] = useState('All');
+  const [taskForm, setTaskForm] = useState({ assignee_id: "", title: "", description: "", priority: "Medium", linked_to: "" });
+  const [taskFilter, setTaskFilter] = useState("All");
   const [teamMembers, setTeamMembers] = useState([]);
-  
+
+  // Invite
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteSearch, setInviteSearch] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
 
+  // Action prompt
   const [actionPrompt, setActionPrompt] = useState(null);
   const [customMessage, setCustomMessage] = useState("");
-  const [actionProcessing, setActionProcessing] = useState(false);
-  const [toast, setToast] = useState({ message: "", type: "success" });
 
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast({ message: "", type: "success" }), 3000);
-  };
-
+  // ── Auth check ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    const checkAdminAndFetch = async () => {
-      if (!currentUserId) return;
-      
-      // Check admin status
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', currentUserId)
-        .single();
-
-      if (!profile?.is_admin) {
-        setLoading(false);
-        return;
+    if (!currentUserId) return;
+    const init = async () => {
+      const { data } = await supabase.from("profiles").select("is_admin").eq("id", currentUserId).single();
+      if (data?.is_admin) {
+        setIsAdmin(true);
+        // Also fetch pending requests immediately
+        const { data: reqs } = await supabase.from("profiles")
+          .select("id, username, avatar_url, status").eq("verification_status", "pending");
+        setRequests(reqs || []);
       }
-      setIsAdmin(true);
-
-      // Fetch pending requests
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_url, status')
-        .eq('verification_status', 'pending');
-        
-      if (error) console.error("Error fetching requests:", error);
-      if (data) setRequests(data);
       setLoading(false);
     };
-
-    checkAdminAndFetch();
+    init();
   }, [currentUserId]);
 
-  // Fetch all users when the 'Users' or 'Tasks' tab is opened
-  useEffect(() => {
-    if ((adminTab === 'users' || adminTab === 'tasks' || adminTab === 'founder_apps') && isAdmin && allUsers.length === 0) {
-      const fetchAllUsers = async () => {
-        setUsersLoading(true);
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, username, avatar_url, status, is_verified, is_admin')
-          .limit(100);
-        if (error) console.error("Error fetching users:", error);
-        if (data) setAllUsers(data);
-        setUsersLoading(false);
-      };
-      fetchAllUsers();
+  // ── Stats ───────────────────────────────────────────────────────────────────
+  const fetchStats = useCallback(async () => {
+    if (!isAdmin) return;
+    setStatsLoading(true);
+    try {
+      const [total, founders, members, verified, pending, admins] = await Promise.all([
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "founder"),
+        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "member"),
+        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_verified", true),
+        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("verification_status", "pending"),
+        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_admin", true),
+      ]);
+      setStats({
+        total: total.count ?? 0,
+        founders: founders.count ?? 0,
+        members: members.count ?? 0,
+        verified: verified.count ?? 0,
+        pending: pending.count ?? 0,
+        admins: admins.count ?? 0,
+      });
+    } finally {
+      setStatsLoading(false);
     }
-  }, [adminTab, isAdmin, allUsers.length]);
+  }, [isAdmin]);
 
-  // Fetch AI Logs when the 'AI Logs' tab is opened
   useEffect(() => {
-    if (adminTab === 'ai_logs' && isAdmin && aiLogs.length === 0) {
-      const fetchLogs = async () => {
-        setLogsLoading(true);
-        const { data, error } = await supabase
-          .from('ai_chat_messages')
-          .select('role, content, created_at, user_id')
-          .order('created_at', { ascending: false })
-          .limit(100);
-          
-        if (error) {
-          console.error("Error fetching AI logs:", error.message || error);
-        } else if (data) {
-          const userIds = [...new Set(data.map(log => log.user_id).filter(Boolean))];
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_url, is_verified')
-            .in('id', userIds);
-            
-          const profileMap = (profileData || []).reduce((acc, p) => {
-            acc[p.id] = p;
-            return acc;
-          }, {});
-          
-          const logsWithProfiles = data.map(log => ({
-            ...log,
-            profiles: profileMap[log.user_id] || null
-          }));
-          
-          setAiLogs(logsWithProfiles);
-        }
-        setLogsLoading(false);
-      };
-      fetchLogs();
+    if (isAdmin && adminTab === "overview") fetchStats();
+  }, [isAdmin, adminTab, fetchStats]);
+
+  // ── Users ───────────────────────────────────────────────────────────────────
+  const fetchUsers = useCallback(async (page = 0, append = false) => {
+    setUsersLoading(true);
+    const from = page * USERS_PER_PAGE;
+    const to = from + USERS_PER_PAGE - 1;
+
+    const { data, error } = await supabase.from("profiles")
+      .select("id, username, avatar_url, status, is_verified, is_admin, role")
+      .range(from, to);
+    if (!error) {
+      if (append) {
+        setAllUsers(prev => {
+          // Filter to ensure no duplicates if real-time subscriptions also fired
+          const newUsers = (data || []).filter(d => !prev.some(p => p.id === d.id));
+          return [...prev, ...newUsers];
+        });
+      }
+      else setAllUsers(data || []);
+      setHasMoreUsers((data || []).length === USERS_PER_PAGE);
+      setUsersPage(page);
+    } else {
+      console.error("Error fetching users:", error.message);
     }
+    setUsersFetched(true);
+    setUsersLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (isAdmin && !usersFetched && !usersLoading) fetchUsers(0, false);
+  }, [isAdmin, usersFetched, usersLoading, fetchUsers]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const channel = supabase.channel("admin-profiles-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (payload) => {
+        if (payload.eventType === "INSERT") {
+          setAllUsers(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === "UPDATE") {
+          setAllUsers(prev => prev.map(u => u.id === payload.new.id ? { ...u, ...payload.new } : u));
+        } else if (payload.eventType === "DELETE") {
+          setAllUsers(prev => prev.filter(u => u.id !== payload.old.id));
+        }
+      }).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isAdmin]);
+
+  // ── AI Logs ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (adminTab !== "ai_logs" || !isAdmin || aiLogs.length > 0) return;
+    const fetch = async () => {
+      setLogsLoading(true);
+      const { data } = await supabase.from("ai_chat_messages")
+        .select("role, content, created_at, user_id").order("created_at", { ascending: false }).limit(100);
+      if (data) {
+        const ids = [...new Set(data.map(l => l.user_id).filter(Boolean))];
+        const { data: profiles } = await supabase.from("profiles").select("id, username, avatar_url, is_verified").in("id", ids);
+        const map = (profiles || []).reduce((a, p) => ({ ...a, [p.id]: p }), {});
+        setAiLogs(data.map(l => ({ ...l, profiles: map[l.user_id] || null })));
+      }
+      setLogsLoading(false);
+    };
+    fetch();
   }, [adminTab, isAdmin, aiLogs.length]);
 
-  // Fetch Applications when the 'Applications' tab is opened
+  // ── Applications ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (adminTab === 'applications' && isAdmin && applications.length === 0) {
-      const fetchApps = async () => {
-        setAppsLoading(true);
-        const { data, error } = await supabase
-          .from('job_applications')
-          .select('*, jobs(id, title, company), profiles(username, avatar_url, is_verified, github, website, location, status, work_status)')
-          .order('created_at', { ascending: false })
-          .limit(200);
-          
-        if (error) {
-          console.error("Error fetching applications:", error);
-        } else if (data) {
-          const uniqueApps = data.reduce((acc, current) => {
-            const isDuplicate = acc.find(item => item.user_id === current.user_id && item.job_id === current.job_id);
-            if (!isDuplicate) {
-              return acc.concat([current]);
-            }
-            return acc;
-          }, []);
-          setApplications(uniqueApps);
-        }
-        setAppsLoading(false);
-      };
-      fetchApps();
-    }
+    if (adminTab !== "applications" || !isAdmin || applications.length > 0) return;
+    const fetch = async () => {
+      setAppsLoading(true);
+      const { data } = await supabase.from("job_applications")
+        .select("*, jobs(id, title, company), profiles(username, avatar_url, is_verified, github, website, location, status, work_status)")
+        .order("created_at", { ascending: false }).limit(200);
+      if (data) {
+        const unique = data.reduce((acc, cur) => {
+          const dup = acc.find(i => i.user_id === cur.user_id && i.job_id === cur.job_id);
+          return dup ? acc : [...acc, cur];
+        }, []);
+        setApplications(unique);
+      }
+      setAppsLoading(false);
+    };
+    fetch();
   }, [adminTab, isAdmin, applications.length]);
 
-  // Fetch Founder Apps when the 'Founder Apps' tab is opened
+  // ── Founder Apps ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (adminTab === 'founder_apps' && isAdmin && founderApps.length === 0) {
-      const fetchFounderApps = async () => {
-        setFounderAppsLoading(true);
-        const { data, error } = await supabase
-          .from('founder_applications')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(200);
-          
-        if (error) {
-          console.error("Error fetching founder applications:", error);
-          showToast("DB Error: " + (error.message || error.details || JSON.stringify(error) || "Unknown error"), "error");
-        } else if (data) {
-          // Manually fetch and merge profiles to bypass Supabase schema cache issues
-          const userIds = [...new Set(data.map(app => app.user_id).filter(Boolean))];
-          if (userIds.length > 0) {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('id, username, avatar_url, is_verified')
-              .in('id', userIds);
-              
-            const profileMap = (profileData || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
-            
-            setFounderApps(data.map(app => ({ ...app, profiles: profileMap[app.user_id] || null })));
-          } else {
-            setFounderApps(data);
-          }
+    if (adminTab !== "founder_apps" || !isAdmin || founderApps.length > 0) return;
+    const fetch = async () => {
+      setFounderAppsLoading(true);
+      const { data, error } = await supabase.from("founder_applications")
+        .select("*").order("created_at", { ascending: false }).limit(200);
+      if (error) { showToast("DB Error: " + error.message, "error"); setFounderAppsLoading(false); return; }
+      if (data) {
+        const ids = [...new Set(data.map(a => a.user_id).filter(Boolean))];
+        if (ids.length > 0) {
+          const { data: profiles } = await supabase.from("profiles").select("id, username, avatar_url, is_verified").in("id", ids);
+          const map = (profiles || []).reduce((a, p) => ({ ...a, [p.id]: p }), {});
+          setFounderApps(data.map(a => ({ ...a, profiles: map[a.user_id] || null })));
+        } else {
+          setFounderApps(data);
         }
-        setFounderAppsLoading(false);
-      };
-      fetchFounderApps();
-    }
-  }, [adminTab, isAdmin, founderApps.length]);
+      }
+      setFounderAppsLoading(false);
+    };
+    fetch();
+  }, [adminTab, isAdmin, founderApps.length, showToast]);
 
-  // Fetch Tasks when the 'Tasks' tab is opened
+  // ── Tasks ────────────────────────────────────────────────────────────────────
   useEffect(() => {
+    if (adminTab !== "tasks" || !isAdmin) return;
     let channel;
-    if (adminTab === 'tasks' && isAdmin) {
-      const fetchTasks = async () => {
-        setTasksLoading(true);
-        const { data, error } = await supabase
-          .from('tasks')
-          .select(`
-            *,
-            assignee:profiles!tasks_assignee_id_fkey(username, avatar_url, status),
-            assigner:profiles!tasks_assigner_id_fkey(username, avatar_url, status)
-          `)
-          .order('created_at', { ascending: false });
-        if (data) setAdminTasks(data);
-        setTasksLoading(false);
-      };
-
-      const fetchTeamMembers = async () => {
-        const { data } = await supabase
-          .from('founder_applications')
-          .select('user_id, intended_role, name')
-          .eq('status', 'accepted');
-        if (data) {
-          const uniqueMembers = data.reduce((acc, current) => {
-            if (!acc.find(item => item.user_id === current.user_id)) {
-              return acc.concat([current]);
-            }
-            return acc;
-          }, []);
-          setTeamMembers(uniqueMembers);
-        }
-      };
-
-      fetchTasks();
-      fetchTeamMembers();
-
-      // Listen for real-time updates so newly created issues show instantly
-      channel = supabase.channel('admin-tasks-all')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-          fetchTasks();
-        })
-        .subscribe();
-    }
+    const fetchTasks = async () => {
+      setTasksLoading(true);
+      const { data } = await supabase.from("tasks").select(`
+        *, assignee:profiles!tasks_assignee_id_fkey(username, avatar_url, status),
+        assigner:profiles!tasks_assigner_id_fkey(username, avatar_url, status)
+      `).order("created_at", { ascending: false });
+      if (data) setAdminTasks(data);
+      setTasksLoading(false);
+    };
+    const fetchTeam = async () => {
+      const { data } = await supabase.from("founder_applications").select("user_id, intended_role, name").eq("status", "accepted");
+      if (data) setTeamMembers(data.reduce((acc, m) => acc.find(x => x.user_id === m.user_id) ? acc : [...acc, m], []));
+    };
+    fetchTasks();
+    fetchTeam();
+    channel = supabase.channel("admin-tasks").on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, fetchTasks).subscribe();
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [adminTab, isAdmin]);
 
-  const handleAction = async (userId, action) => {
+  // ── Handlers ─────────────────────────────────────────────────────────────────
+
+  const handleVerification = async (userId, action) => {
     try {
-      const updates = action === 'approve' 
-        ? { is_verified: true, verification_status: 'verified' }
-        : { is_verified: false, verification_status: 'unverified' };
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', userId);
-
+      const updates = action === "approve"
+        ? { is_verified: true, verification_status: "verified" }
+        : { is_verified: false, verification_status: "unverified" };
+      const { error } = await supabase.from("profiles").update(updates).eq("id", userId);
       if (error) throw error;
-
-      // Remove from list
-      setRequests(prev => prev.filter(req => req.id !== userId));
-      
-      // Send a notification to the user
-      await supabase.from('notifications').insert({
-        receiver_id: userId,
-        actor_id: currentUserId,
-        type: action === 'approve' ? 'handshake' : 'blocked',
-        content: action === 'approve' ? 'approved your verification request!' : 'denied your verification request.'
+      setRequests(prev => prev.filter(r => r.id !== userId));
+      await supabase.from("notifications").insert({
+        receiver_id: userId, actor_id: currentUserId,
+        type: action === "approve" ? "handshake" : "blocked",
+        content: action === "approve" ? "approved your verification request!" : "denied your verification request."
       });
-      showToast(`User verification ${action === 'approve' ? 'approved' : 'denied'}.`);
-
-    } catch (err) {
-      showToast("Error: " + err.message, "error");
-    }
+      showToast(`Verification ${action === "approve" ? "approved" : "denied"}.`);
+      fetchStats();
+    } catch (err) { showToast(err.message, "error"); }
   };
 
-  const handleSendInvite = async () => {
-    const targetUser = allUsers.find(u => u.username.toLowerCase() === inviteSearch.toLowerCase());
-    if (!targetUser) {
-      showToast("Please select a valid user from the search results.", "error");
-      return;
-    }
-    
-    setActionProcessing(true);
+  const handleToggleAdmin = async (userId, isAdm, username) => {
+    if (!confirm(`${isAdm ? "Revoke" : "Grant"} admin for @${username}?`)) return;
     try {
-      const { error } = await supabase.from('notifications').insert({
-        receiver_id: targetUser.id,
-        actor_id: currentUserId,
-        type: 'message',
-        content: `invited you to apply for the network as a ${inviteRole === 'cofounder' ? 'Co-founder' : 'Member'}! /member/application`
-      });
+      const { error } = await supabase.from("profiles").update({ is_admin: !isAdm }).eq("id", userId);
       if (error) throw error;
-      showToast(`Invitation sent to @${targetUser.username}!`);
-      setShowInviteModal(false);
-      setInviteSearch("");
-    } catch(err) {
-      showToast("Error sending invite: " + err.message, "error");
-    } finally {
-      setActionProcessing(false);
-    }
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_admin: !isAdm } : u));
+      showToast(`Admin ${isAdm ? "revoked" : "granted"} for @${username}.`);
+    } catch (err) { showToast(err.message, "error"); }
   };
 
   const handleDeleteUser = async (userId, username) => {
-    if (!confirm(`Are you sure you want to permanently delete @${username}?`)) return;
+    if (!confirm(`Permanently delete @${username}?`)) return;
     try {
-      const { error } = await supabase.from('profiles').delete().eq('id', userId);
+      const { error } = await supabase.from("profiles").delete().eq("id", userId);
       if (error) throw error;
       setAllUsers(prev => prev.filter(u => u.id !== userId));
-      showToast(`User @${username} has been deleted.`);
-    } catch (err) {
-      showToast("Error deleting user: " + err.message, "error");
-    }
-  };
-
-  const handleToggleAdmin = async (userId, currentIsAdmin, username) => {
-    if (!confirm(`Are you sure you want to ${currentIsAdmin ? 'revoke' : 'grant'} admin access for @${username}?`)) return;
-    try {
-      const { error } = await supabase.from('profiles').update({ is_admin: !currentIsAdmin }).eq('id', userId);
-      if (error) throw error;
-      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_admin: !currentIsAdmin } : u));
-      showToast(`Admin access ${currentIsAdmin ? 'revoked' : 'granted'} for @${username}.`);
-    } catch (err) {
-      showToast("Error updating admin status: " + err.message, "error");
-    }
+      showToast(`@${username} deleted.`);
+      fetchStats();
+    } catch (err) { showToast(err.message, "error"); }
   };
 
   const handleImpersonateUser = async (userId, username) => {
-    if (!confirm(`Are you sure you want to impersonate @${username}? You will be logged out of your admin account.`)) return;
-    
+    if (!confirm(`Impersonate @${username}? You will be logged out.`)) return;
     try {
-      const { data, error } = await supabase.functions.invoke('impersonate', {
-        body: { userId }
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      if (data?.action_link) {
-        showToast(`Success! Logging in as @${username}...`);
-        window.location.href = data.action_link;
-      } else {
-        throw new Error("No action link returned.");
-      }
-    } catch (err) {
-      showToast("Error impersonating: " + err.message, "error");
-    }
-  };
-
-  const promptAppAction = (appId, newStatus, applicantId, jobTitle) => {
-    setActionPrompt({ type: 'job', appId, newStatus, applicantId, title: jobTitle });
-    setCustomMessage("");
-  };
-
-  const promptFounderAppAction = (appId, newStatus, applicantId, role) => {
-    setActionPrompt({ type: 'founder', appId, newStatus, applicantId, title: role });
-    setCustomMessage("");
+      const { data, error } = await supabase.functions.invoke("impersonate", { body: { userId } });
+      if (error || data?.error) throw new Error(error?.message || data?.error || "Unknown error");
+      if (data?.action_link) { showToast(`Logging in as @${username}…`); window.location.href = data.action_link; }
+      else throw new Error("No action link returned.");
+    } catch (err) { showToast(err.message, "error"); }
   };
 
   const submitActionPrompt = async () => {
     setActionProcessing(true);
-    if (actionPrompt.type === 'job') {
-      await handleAppAction(actionPrompt.appId, actionPrompt.newStatus, actionPrompt.applicantId, actionPrompt.title, customMessage);
-    } else {
-      await handleFounderAppAction(actionPrompt.appId, actionPrompt.newStatus, actionPrompt.applicantId, actionPrompt.title, customMessage);
-    }
-    setActionProcessing(false);
-    setActionPrompt(null);
-  };
-
-  const handleAppAction = async (appId, newStatus, applicantId, jobTitle, customMessage) => {
+    const { type, appId, newStatus, applicantId, title } = actionPrompt;
+    const table = type === "job" ? "job_applications" : "founder_applications";
     try {
-      const { error } = await supabase
-        .from('job_applications')
-        .update({ status: newStatus })
-        .eq('id', appId);
-
+      const { error } = await supabase.from(table).update({ status: newStatus }).eq("id", appId);
       if (error) throw error;
+      let content = `Your ${type === "job" ? "job" : ""} application for ${title || "a role"} was ${newStatus}.`;
+      if (customMessage) content += ` Note: "${customMessage}"`;
+      await supabase.from("notifications").insert({ receiver_id: applicantId, actor_id: currentUserId, type: "message", content });
 
-      // Send a notification to the applicant!
-      if (applicantId) {
-        let notifContent = `Your job application for ${jobTitle || 'a recent role'} was ${newStatus}.`;
-        if (customMessage) notifContent += ` Note: "${customMessage}"`;
+      // Email hooks
+      const endpoint = type === "job" ? "/api/send-app-email" : "/api/notify-applicant";
+      try {
+        await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ applicationId: appId, applicantId, status: newStatus, jobTitle: title, role: title, customMessage }) });
+      } catch { /* non-blocking */ }
 
-        await supabase.from('notifications').insert({
-          receiver_id: applicantId,
-          actor_id: currentUserId,
-          type: 'message',
-          content: notifContent
-        });
-
-        // Trigger email notification
-        try {
-          const emailRes = await fetch('/api/send-app-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              applicationId: appId,
-              applicantId,
-              status: newStatus,
-              jobTitle: jobTitle || 'a recent role',
-              customMessage
-            })
-          });
-          if (!emailRes.ok) {
-            const errData = await emailRes.json().catch(() => ({}));
-            console.error('Failed to send email notification:', errData.error || emailRes.statusText);
-          }
-        } catch (emailErr) {
-          console.error('Email API error:', emailErr);
-        }
-      }
-
-      setApplications(prev => prev.map(app => 
-        app.id === appId ? { ...app, status: newStatus } : app
-      ));
-      if (selectedApp && selectedApp.id === appId) {
-        setSelectedApp(prev => ({...prev, status: newStatus}));
-      }
-      showToast(`Application ${newStatus} successfully!`);
-    } catch (err) {
-      showToast("Error updating application: " + err.message, "error");
-    }
-  };
-
-  const handleDeleteApp = async (appId) => {
-    if(!confirm("Are you sure you want to permanently delete this application?")) return;
-    try {
-      const { error } = await supabase.from('job_applications').delete().eq('id', appId);
-      if (error) throw error;
-      setApplications(prev => prev.filter(app => app.id !== appId));
-      setSelectedApp(null);
-      showToast("Application deleted successfully.");
-    } catch (err) {
-      showToast("Error deleting application: " + err.message, "error");
-    }
-  };
-
-  const handleDeleteFounderApp = async (appId) => {
-    if(!confirm("Are you sure you want to permanently delete this application?")) return;
-    try {
-      const { error } = await supabase.from('founder_applications').delete().eq('id', appId);
-      if (error) throw error;
-      setFounderApps(prev => prev.filter(app => app.id !== appId));
-      setSelectedFounderApp(null);
-      showToast("Application deleted successfully.");
-    } catch (err) {
-      showToast("Error deleting application: " + err.message, "error");
-    }
-  };
-
-  const handleFounderAppAction = async (appId, newStatus, applicantId, role, customMessage) => {
-    try {
-      const { error } = await supabase
-        .from('founder_applications')
-        .update({ status: newStatus })
-        .eq('id', appId);
-
-      if (error) throw error;
-
-      if (applicantId) {
-        const dashboardLink = newStatus === 'accepted' 
-          ? (role === 'cofounder' ? '/founder-dashboard' : '/member-dashboard') 
-          : null;
-          
-        let notifContent = `Your application to join as a ${role} was ${newStatus}.`;
-        if (newStatus === 'accepted') notifContent += ` Welcome aboard!`;
-        if (customMessage) notifContent += ` Note: "${customMessage}"`;
-        
-        await supabase.from('notifications').insert({
-          receiver_id: applicantId,
-          actor_id: currentUserId,
-          type: 'message',
-          content: dashboardLink ? `${notifContent} ${dashboardLink}` : notifContent
-        });
-
-        // Fetch to send an email
-        try {
-          const emailRes = await fetch('/api/notify-applicant', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ applicationId: appId, applicantId, status: newStatus, role, customMessage, dashboardLink })
-          });
-          if (!emailRes.ok) {
-            const errData = await emailRes.json().catch(() => ({}));
-            console.error('Failed to send email notification:', errData.error || emailRes.statusText);
-          }
-        } catch (emailErr) {
-          console.error('Email API error:', emailErr);
-        }
-      }
-
-      setFounderApps(prev => prev.map(app => app.id === appId ? { ...app, status: newStatus } : app));
-      if (selectedFounderApp && selectedFounderApp.id === appId) {
-        setSelectedFounderApp(prev => ({...prev, status: newStatus}));
-      }
-      showToast(`Application ${newStatus} successfully!`);
-    } catch (err) {
-      showToast("Error updating application: " + err.message, "error");
-    }
-  };
-
-  const handleComplexUpdate = async (taskId, newStatus) => {
-    setActionProcessing(true);
-    try {
-      const { error } = await supabase.rpc('update_task_complex', {
-        p_task_id: taskId,
-        p_new_status: newStatus
-      });
-
-      if (error) {
-        console.error("Failed complex update. Details:");
-        console.error("- Message:", error?.message);
-        console.error("- Code:", error?.code);
-        console.error("- Details:", error?.details);
-        console.error("- Hint:", error?.hint);
-        showToast("Failed to update task: " + (error?.message || "Unknown error"), "error");
+      if (type === "job") {
+        setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus } : a));
+        if (selectedApp?.id === appId) setSelectedApp(prev => ({ ...prev, status: newStatus }));
       } else {
-        console.log("Task and notifications updated successfully via RPC!");
-        setAdminTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-        showToast("Task updated successfully!");
+        setFounderApps(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus } : a));
+        if (selectedFounderApp?.id === appId) setSelectedFounderApp(prev => ({ ...prev, status: newStatus }));
       }
-    } catch (err) {
-      showToast("Error updating task: " + err.message, "error");
-    } finally {
-      setActionProcessing(false);
-    }
+      showToast(`Application ${newStatus}.`);
+    } catch (err) { showToast(err.message, "error"); }
+    finally { setActionProcessing(false); setActionPrompt(null); }
   };
 
   const handleAssignTask = async (e) => {
     e.preventDefault();
     setActionProcessing(true);
     try {
-      const { data, error } = await supabase.from('tasks').insert({
-        assignee_id: taskForm.assignee_id,
-        assigner_id: currentUserId,
-        title: taskForm.title,
-        description: taskForm.description,
-        priority: taskForm.priority,
-        linked_to: taskForm.linked_to,
-        status: 'pending'
-      }).select(`
-        *,
-        assignee:profiles!tasks_assignee_id_fkey(username, avatar_url, status),
-        assigner:profiles!tasks_assigner_id_fkey(username, avatar_url, status)
-      `).single();
-      
+      const { data, error } = await supabase.from("tasks").insert({
+        assignee_id: taskForm.assignee_id, assigner_id: currentUserId,
+        title: taskForm.title, description: taskForm.description,
+        priority: taskForm.priority, linked_to: taskForm.linked_to, status: "pending"
+      }).select(`*, assignee:profiles!tasks_assignee_id_fkey(username, avatar_url, status),
+        assigner:profiles!tasks_assigner_id_fkey(username, avatar_url, status)`).single();
       if (error) throw error;
-
       setAdminTasks(prev => [data, ...prev]);
-
-      await supabase.from('notifications').insert({
-        receiver_id: taskForm.assignee_id,
-        actor_id: currentUserId,
-        type: 'message',
-        content: `assigned you a new task: ${taskForm.title}`
+      await supabase.from("notifications").insert({
+        receiver_id: taskForm.assignee_id, actor_id: currentUserId,
+        type: "message", content: `assigned you a task: ${taskForm.title}`
       });
-
       setShowTaskModal(false);
-      setTaskForm({ assignee_id: '', title: '', description: '', priority: 'Medium', linked_to: '' });
-      showToast("Task assigned successfully!");
-    } catch (err) {
-      showToast("Error assigning task: " + err.message, "error");
-    } finally {
-      setActionProcessing(false);
-    }
+      setTaskForm({ assignee_id: "", title: "", description: "", priority: "Medium", linked_to: "" });
+      showToast("Task assigned!");
+    } catch (err) { showToast(err.message, "error"); }
+    finally { setActionProcessing(false); }
   };
 
-  const getReasonObj = (reasonData) => {
-    if (!reasonData) return {};
-    if (typeof reasonData === 'string') {
-      try { return JSON.parse(reasonData); } catch (e) { return { 'Responses': reasonData }; }
-    }
-    return reasonData;
+  const handleComplexUpdate = async (taskId, newStatus) => {
+    setActionProcessing(true);
+    try {
+      const { error } = await supabase.rpc("update_task_complex", { p_task_id: taskId, p_new_status: newStatus });
+      if (error) throw error;
+      setAdminTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+      showToast("Task updated!");
+    } catch (err) { showToast(err.message, "error"); }
+    finally { setActionProcessing(false); }
   };
 
-  if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>;
+  const handleSendInvite = async () => {
+    const target = allUsers.find(u => u.username?.toLowerCase() === inviteSearch.toLowerCase());
+    if (!target) { showToast("Select a valid user.", "error"); return; }
+    setActionProcessing(true);
+    try {
+      const { error } = await supabase.from("notifications").insert({
+        receiver_id: target.id, actor_id: currentUserId, type: "message",
+        content: `invited you to apply as a ${inviteRole === "cofounder" ? "Co-founder" : "Member"}! /member/application`
+      });
+      if (error) throw error;
+      showToast(`Invite sent to @${target.username}!`);
+      setShowInviteModal(false);
+      setInviteSearch("");
+    } catch (err) { showToast(err.message, "error"); }
+    finally { setActionProcessing(false); }
+  };
+
+  const getReasonObj = (r) => {
+    if (!r) return {};
+    if (typeof r === "string") { try { return JSON.parse(r); } catch { return { Responses: r }; } }
+    return r;
+  };
+
+  const TABS = [
+    { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "requests", label: "Requests", icon: Bell },
+    { id: "users", label: "Users", icon: Users },
+    { id: "ai_logs", label: "AI Logs", icon: Bot },
+    { id: "applications", label: "Applications", icon: Briefcase },
+    { id: "founder_apps", label: "Founder Apps", icon: Crown },
+    { id: "tasks", label: "Tasks", icon: ClipboardList },
+  ];
+
+  if (loading) return <div className="p-16 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={24} /></div>;
 
   if (!isAdmin) return (
-    <div className="flex flex-col items-center justify-center h-full space-y-4 text-center p-10">
-      <ShieldAlert size={48} className="text-red-500/50 mb-2" />
-      <div>
-        <p className="text-red-400 font-bold mb-2 text-lg">Unauthorized Access</p>
-        <p className="text-gray-500 text-sm max-w-md mx-auto leading-relaxed">
-          Your node does not have the required security clearance (Admin) to view this terminal.
-        </p>
-      </div>
+    <div className="flex flex-col items-center justify-center h-full p-16 text-center">
+      <ShieldAlert size={48} className="text-red-500/30 mb-4" />
+      <p className="text-red-500 dark:text-red-400 font-black text-lg mb-2">Unauthorized</p>
+      <p className="text-gray-500 dark:text-gray-600 text-sm max-w-xs leading-relaxed">Your node lacks admin clearance to access this terminal.</p>
     </div>
   );
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto py-4">
-      {/* Header + Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-[2rem]">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-blue-200 dark:border-blue-800/50">
-            <ShieldCheck size={24} />
-          </div>
-          <div>
-            <h3 className="text-blue-700 dark:text-blue-400 font-bold text-lg mb-1">Admin Dashboard</h3>
-            <p className="text-sm text-blue-600/80 dark:text-blue-400/80 leading-relaxed">Manage the platform and verify nodes.</p>
-          </div>
-        </div>
-        <div className="flex bg-white dark:bg-gray-900 p-1 rounded-xl border border-blue-200 dark:border-blue-800/50 shadow-sm shrink-0 overflow-x-auto">
-          <button onClick={() => setAdminTab('requests')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'requests' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Requests</button>
-          <button onClick={() => setAdminTab('users')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'users' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Users</button>
-          <button onClick={() => setAdminTab('ai_logs')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'ai_logs' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>AI Logs</button>
-          <button onClick={() => setAdminTab('applications')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'applications' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Applications</button>
-          <button onClick={() => setAdminTab('founder_apps')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'founder_apps' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Founder Apps</button>
-          <button onClick={() => setAdminTab('tasks')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${adminTab === 'tasks' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Tasks</button>
-        </div>
+    <div className="flex flex-col h-full">
+      {/* Tab Bar */}
+      <div className="flex gap-1 px-1 py-1 bg-gray-100/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800 overflow-x-auto shrink-0">
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setAdminTab(tab.id)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all
+              ${adminTab === tab.id ? "bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/5"}`}>
+            <tab.icon size={12} /> {tab.label}
+            {tab.id === "requests" && requests.length > 0 && (
+              <span className="w-4 h-4 rounded-full bg-amber-500 text-[9px] font-black text-white flex items-center justify-center ml-0.5">
+                {requests.length}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Requests Tab */}
-      {adminTab === 'requests' && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm">
-        {requests.length === 0 ? (
-          <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No pending verification requests.</div>
-        ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {requests.map(req => (
-              <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
-                <div className="flex items-center gap-4">
-                    <div 
-                      onClick={() => setSelectedUserId(req.id)}
-                      className="relative w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80 transition-opacity"
-                    >
-                    {req.avatar_url ? (
-                      <Image src={req.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
-                    ) : (
-                      req.username?.substring(0, 2) || "??"
-                    )}
-                  </div>
-                  <div className="cursor-pointer group" onClick={() => setSelectedUserId(req.id)}>
-                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm group-hover:text-blue-600 transition-colors">@{req.username}</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 group-hover:text-blue-500/80 transition-colors">{req.status || 'Active Node'}</p>
-                  </div>
+      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+
+        {/* ── OVERVIEW ── */}
+        {adminTab === "overview" && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-white font-black text-lg">Platform Overview</h3>
+              <button onClick={fetchStats} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all border border-gray-200 dark:border-gray-700">
+                <RefreshCw size={12} /> Refresh
+              </button>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              <StatCard icon={Users}      label="Total Users"   value={stats.total}    color="blue"   loading={statsLoading} sub="All registered nodes" />
+              <StatCard icon={Crown}      label="Founders"      value={stats.founders} color="amber"  loading={statsLoading} sub="Founder-role accounts" />
+              <StatCard icon={Users}      label="Members"       value={stats.members}  color="violet" loading={statsLoading} sub="Standard members" />
+              <StatCard icon={BadgeCheck} label="Verified"      value={stats.verified} color="emerald" loading={statsLoading} sub="Badge-verified" />
+              <StatCard icon={Clock}      label="Pending"       value={stats.pending}  color="amber"  loading={statsLoading} sub="Awaiting review" />
+              <StatCard icon={Shield}     label="Admins"        value={stats.admins}   color="rose"   loading={statsLoading} sub="Admin accounts" />
+            </div>
+
+            {/* Verification rate */}
+            {stats.total > 0 && (
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Verification Coverage</p>
+                  <span className="text-emerald-400 font-black text-sm">
+                    {Math.round((stats.verified / stats.total) * 100)}%
+                  </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => handleAction(req.id, 'reject')} className="px-5 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold text-xs transition-colors border border-red-200 dark:border-red-800/50">
-                    Deny
-                  </button>
-                  <button onClick={() => handleAction(req.id, 'approve')} className="px-5 py-2.5 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-bold text-xs transition-colors shadow-sm">
-                    Approve
-                  </button>
+                <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-700"
+                    style={{ width: `${Math.round((stats.verified / stats.total) * 100)}%` }} />
+                </div>
+                <div className="flex justify-between mt-2">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-600">{stats.verified} verified</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-600">{stats.total} total</span>
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Quick actions */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Review Requests", icon: Bell, color: "text-amber-400 bg-amber-500/10 border-amber-500/20", action: () => setAdminTab("requests") },
+                { label: "Manage Users", icon: Users, color: "text-blue-400 bg-blue-500/10 border-blue-500/20", action: () => setAdminTab("users") },
+                { label: "View Tasks", icon: ClipboardList, color: "text-violet-400 bg-violet-500/10 border-violet-500/20", action: () => setAdminTab("tasks") },
+                { label: "Founder Apps", icon: Crown, color: "text-amber-400 bg-amber-500/10 border-amber-500/20", action: () => setAdminTab("founder_apps") },
+              ].map(({ label, icon: Icon, color, action }) => (
+                <button key={label} onClick={action}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border text-xs font-bold transition-all hover:scale-[1.02] ${color}`}>
+                  <Icon size={18} /> {label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-        </div>
-      )}
 
-      {/* Manage Users Tab */}
-      {adminTab === 'users' && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+        {/* ── REQUESTS ── */}
+        {adminTab === "requests" && (
+          <div className="space-y-3">
+            <h3 className="text-gray-900 dark:text-white font-black">Verification Requests <span className="text-gray-500 dark:text-gray-600 font-normal text-sm">({requests.length})</span></h3>
+            {requests.length === 0
+              ? <div className="py-16 text-center text-gray-500 dark:text-gray-600 text-sm">No pending verification requests.</div>
+              : requests.map(req => (
+                <div key={req.id} className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-gray-300 dark:hover:border-gray-700 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div onClick={() => setSelectedUserId(req.id)}
+                      className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80">
+                      {req.avatar_url ? <Image src={req.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : req.username?.substring(0, 2)}
+                    </div>
+                    <div onClick={() => setSelectedUserId(req.id)} className="cursor-pointer">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white hover:text-blue-500 dark:hover:text-blue-400 transition-colors">@{req.username}</p>
+                      <p className="text-[10px] text-gray-500">{req.status || "Active Node"}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleVerification(req.id, "reject")}
+                      className="px-4 py-2 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl text-xs font-bold border border-red-200 dark:border-red-500/20 transition-all">Deny</button>
+                    <button onClick={() => handleVerification(req.id, "approve")}
+                      className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-500 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20">Approve</button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+
+        {/* ── USERS ── */}
+        {adminTab === "users" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-white font-black">Manage Users <span className="text-gray-500 dark:text-gray-600 font-normal text-sm">({allUsers.length}{hasMoreUsers ? "+" : ""})</span></h3>
+              <button onClick={() => fetchUsers(0, false)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all border border-gray-200 dark:border-gray-700">
+                <RefreshCw size={11} /> Refresh
+              </button>
+            </div>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
-              <input 
-                type="text" 
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Search users by username..." 
-                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 pr-10 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-              />
-              {userSearch && (
-                <button onClick={() => setUserSearch('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-                  <X size={14} />
-                </button>
-              )}
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-600" size={14} />
+              <input value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Search users…"
+                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 pl-9 pr-4 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all" />
             </div>
-          </div>
-          
-          {usersLoading ? (
-            <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
-          ) : allUsers.length === 0 ? (
-            <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No users found.</div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {allUsers.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase())).map(user => (
-                <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div 
-                      onClick={() => setSelectedUserId(user.id)}
-                      className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80 transition-opacity"
-                    >
-                      {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : user.username?.substring(0, 2) || "??"}
-                    </div>
-                    <div className="min-w-0 cursor-pointer group" onClick={() => setSelectedUserId(user.id)}>
-                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        @{user.username}
-                        {user.is_verified && <VerifiedBadge size={14} />}
-                        {user.is_admin && <span className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400 px-1.5 py-0.5 rounded uppercase tracking-widest ml-1">Admin</span>}
-                      </h4>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate group-hover:text-blue-500/80 transition-colors">{user.status || 'Active Node'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={() => handleToggleAdmin(user.id, user.is_admin, user.username)} className={`p-2 rounded-xl transition-colors border ${user.is_admin ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-600 hover:text-white border-amber-200 dark:border-amber-800/50 hover:border-amber-600' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-amber-500 hover:text-white border-gray-200 dark:border-gray-700 hover:border-amber-500'}`} title={user.is_admin ? "Revoke Admin Access" : "Grant Admin Access"}>
-                      <ShieldCheck size={16} />
-                    </button>
-                    <button onClick={() => handleImpersonateUser(user.id, user.username)} className="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-600 dark:hover:bg-purple-500 hover:text-white rounded-xl transition-colors border border-purple-200 dark:border-purple-800/50 hover:border-purple-600 dark:hover:border-purple-500" title="Impersonate User"><UserCog size={16} /></button>
-                    <button onClick={() => handleDeleteUser(user.id, user.username)} className="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-600 dark:hover:bg-red-500 hover:text-white rounded-xl transition-colors border border-red-200 dark:border-red-800/50 hover:border-red-600 dark:hover:border-red-500" title="Delete User"><Trash2 size={16} /></button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* AI Logs Tab */}
-      {adminTab === 'ai_logs' && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
-            <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2">Recent AI Interactions</h4>
-            <button onClick={() => setAiLogs([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all">Refresh</button>
-          </div>
-          
-          {logsLoading ? (
-            <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
-          ) : aiLogs.length === 0 ? (
-            <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No AI logs found.</div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {aiLogs.map((log, index) => (
-                <div key={log.id || index} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4">
-                  {/* Avatar & User Info */}
-                  <div className="flex items-center sm:items-start sm:w-48 shrink-0 gap-3">
-                    {log.role === 'assistant' ? (
-                      <div className="w-10 h-10 rounded-xl bg-gray-900 border border-gray-800 text-white flex items-center justify-center shrink-0">
-                        <Bot size={20} />
+            {usersLoading && allUsers.length === 0
+              ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={22} /></div>
+              : (
+                <div className="space-y-2">
+                  {allUsers.filter(u => u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(user => (
+                    <div key={user.id}
+                      className="flex items-center justify-between p-3.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:border-gray-300 dark:hover:border-gray-700 transition-all shadow-sm">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div onClick={() => setSelectedUserId(user.id)}
+                          className="relative w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80 shrink-0">
+                          {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="36px" className="object-cover" /> : user.username?.substring(0, 2)}
+                        </div>
+                        <div className="min-w-0 cursor-pointer" onClick={() => setSelectedUserId(user.id)}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-xs font-bold text-gray-900 dark:text-white hover:text-blue-500 dark:hover:text-blue-400 transition-colors">@{user.username}</p>
+                            {user.is_verified && <BadgeCheck size={12} className="text-blue-500 dark:text-blue-400" />}
+                            {user.is_admin && <Badge color="amber">Admin</Badge>}
+                            {user.role && <Badge color="gray">{user.role}</Badge>}
+                          </div>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-600 mt-0.5 truncate">{user.status || "Active"}</p>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
-                        {log.profiles?.avatar_url ? <Image src={log.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : log.profiles?.username?.substring(0, 2) || "??"}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate">
-                        {log.role === 'assistant' ? 'beoneofus AI' : `@${log.profiles?.username || 'Unknown'}`}
-                        {log.profiles?.is_verified && log.role !== 'assistant' && <VerifiedBadge size={14} />}
-                      </h4>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">{new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', month:'short', day:'numeric'})}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Message Content */}
-                  <div className={`flex-1 text-sm p-4 rounded-2xl whitespace-pre-wrap ${log.role === 'assistant' ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100' : 'bg-blue-600 text-white shadow-md shadow-blue-500/20'}`}>
-                    {log.content}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Applications Tab */}
-      {adminTab === 'applications' && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
-            <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2">Job Applications Tracker</h4>
-            <button onClick={() => setApplications([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all">Refresh</button>
-          </div>
-          
-          {appsLoading ? (
-            <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
-          ) : applications.length === 0 ? (
-            <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No applications found.</div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {applications.map(app => (
-                <div key={app.id} onClick={() => setSelectedApp(app)} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between cursor-pointer group">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div 
-                      onClick={(e) => { e.stopPropagation(); setSelectedUserId(app.user_id); }}
-                      className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase hover:opacity-80 transition-opacity"
-                    >
-                      {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : app.profiles?.username?.substring(0, 2) || "??"}
-                    </div>
-                    <div className="min-w-0 hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); setSelectedUserId(app.user_id); }}>
-                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate text-blue-600 dark:text-blue-400">
-                        @{app.profiles?.username}
-                        {app.profiles?.is_verified && <VerifiedBadge size={14} />}
-                      </h4>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">
-                      {app.profiles?.status && <span className="text-gray-700 dark:text-gray-300 mr-1">{app.profiles.status} •</span>}
-                        Applied for: <span className="font-bold text-gray-700 dark:text-gray-300">{app.jobs?.title || 'Unknown Role'}</span> at {app.jobs?.company || 'Unknown'}
-                      </p>
-                    {app.resume_url && (
-                      <a href={app.resume_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                        <FileText size={10} /> View Resume
-                      </a>
-                    )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col sm:items-end shrink-0 gap-2 mt-2 sm:mt-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${
-                        app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 
-                        app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 
-                        app.status === 'external_redirect' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' :
-                        'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
-                      }`}>
-                        {app.status === 'external_redirect' ? 'External Redirect' : (app.status || 'pending')}
-                      </span>
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold">
-                        {new Date(app.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setSelectedApp(app); }} 
-                      className="mt-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-                    >
-                      View Full Application <ChevronRight size={12} />
-                    </button>
-                    
-                    {app.status !== 'accepted' && app.status !== 'declined' && app.status !== 'external_redirect' && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); promptAppAction(app.id, 'declined', app.user_id, app.jobs?.title); }} 
-                          className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg font-bold text-[10px] transition-colors border border-red-200 dark:border-red-800/50 uppercase"
-                        >
-                          Decline
+                      <div className="flex gap-1.5 shrink-0 ml-3">
+                        <button onClick={() => handleToggleAdmin(user.id, user.is_admin, user.username)} title="Toggle Admin"
+                          className={`p-2 rounded-xl transition-all border text-xs ${user.is_admin ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:text-amber-500 dark:hover:text-amber-400"}`}>
+                          <ShieldCheck size={14} />
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); promptAppAction(app.id, 'accepted', app.user_id, app.jobs?.title); }} 
-                          className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg font-bold text-[10px] transition-colors shadow-sm uppercase"
-                        >
-                          Accept
+                        <button onClick={() => handleImpersonateUser(user.id, user.username)} title="Impersonate"
+                          className="p-2 bg-gray-50 dark:bg-gray-800 text-gray-500 hover:text-violet-500 dark:hover:text-violet-400 rounded-xl transition-all border border-gray-200 dark:border-gray-700">
+                          <UserCog size={14} />
+                        </button>
+                        <button onClick={() => handleDeleteUser(user.id, user.username)} title="Delete"
+                          className="p-2 bg-gray-50 dark:bg-gray-800 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-xl transition-all border border-gray-200 dark:border-gray-700">
+                          <Trash2 size={14} />
                         </button>
                       </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Founder Applications Tab */}
-      {adminTab === 'founder_apps' && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
-            <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2">Founder & Member Applications</h4>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowInviteModal(true)} className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-sm"><UserPlus size={14}/> Invite User</button>
-              <button onClick={() => setFounderApps([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all">Refresh</button>
-            </div>
-          </div>
-          
-          {founderAppsLoading ? (
-            <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
-          ) : founderApps.length === 0 ? (
-            <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No founder applications found.</div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {founderApps.map(app => (
-                <div key={app.id} onClick={() => setSelectedFounderApp(app)} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between cursor-pointer group">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div 
-                      onClick={(e) => { e.stopPropagation(); setSelectedUserId(app.user_id); }}
-                      className="relative w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 overflow-hidden shrink-0 border border-blue-200 dark:border-blue-800/50 flex items-center justify-center font-black text-blue-600 dark:text-blue-400 uppercase cursor-pointer hover:opacity-80 transition-opacity"
-                    >
-                      {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" /> : (app.name ? app.name.substring(0, 2) : "??")}
                     </div>
-                    <div className="min-w-0">
-                      <h4 
-                        onClick={(e) => { e.stopPropagation(); setSelectedUserId(app.user_id); }}
-                        className="text-gray-900 dark:text-gray-100 font-bold text-sm flex items-center gap-1 truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                      >
-                        {app.profiles?.username ? `@${app.profiles.username}` : app.name}
-                        {app.profiles?.is_verified && <VerifiedBadge size={14} />}
-                      </h4>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">
-                        Role: <span className={`font-bold ${app.intended_role === 'cofounder' ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>{app.intended_role === 'cofounder' ? 'Co-founder' : 'Member'}</span>
-                      </p>
+                  ))}
+              {hasMoreUsers && !userSearch && (
+                <div className="pt-2 flex justify-center">
+                  <button onClick={() => fetchUsers(usersPage + 1, true)} className="px-5 py-2.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold transition-all border border-gray-200 dark:border-gray-700 shadow-sm">
+                    Load More Users
+                  </button>
+                </div>
+              )}
+                </div>
+              )}
+          </div>
+        )}
+
+        {/* ── AI LOGS ── */}
+        {adminTab === "ai_logs" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-white font-black">AI Interaction Logs</h3>
+              <button onClick={() => setAiLogs([])} className="text-xs text-blue-500 dark:text-blue-400 font-bold hover:text-blue-600 dark:hover:text-blue-300">Refresh</button>
+            </div>
+            {logsLoading
+              ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={22} /></div>
+              : aiLogs.length === 0
+                ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-sm">No AI logs found.</div>
+                : aiLogs.map((log, i) => (
+                  <div key={i} className="flex gap-3 p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
+                    <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 overflow-hidden
+                      ${log.role === "assistant" ? "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400" : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700"}`}>
+                      {log.role === "assistant"
+                        ? <Bot size={16} />
+                        : log.profiles?.avatar_url
+                          ? <div className="relative w-full h-full"><Image src={log.profiles.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /></div>
+                          : <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">{log.profiles?.username?.substring(0, 2) || "?"}</span>}
                     </div>
-                  </div>
-                  
-                  <div className="flex flex-col sm:items-end shrink-0 gap-2 mt-2 sm:mt-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${
-                        app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 
-                        app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 
-                        'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
-                      }`}>
-                        {app.status || 'pending'}
-                      </span>
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold">
-                        {new Date(app.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setSelectedFounderApp(app); }} 
-                      className="mt-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-                    >
-                      View Details <ChevronRight size={12} />
-                    </button>
-                    
-                    {app.status !== 'accepted' && app.status !== 'declined' && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); promptFounderAppAction(app.id, 'declined', app.user_id, app.intended_role); }} 
-                          className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg font-bold text-[10px] transition-colors border border-red-200 dark:border-red-800/50 uppercase"
-                        >
-                          Decline
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); promptFounderAppAction(app.id, 'accepted', app.user_id, app.intended_role); }} 
-                          className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg font-bold text-[10px] transition-colors shadow-sm uppercase"
-                        >
-                          Accept
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Application Details Modal */}
-      {selectedApp && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedApp(null)} />
-          <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <button onClick={() => setSelectedApp(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
-              <X size={18} />
-            </button>
-            
-            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight pr-8 mb-4">Application Details</h2>
-            
-            <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
-              <div 
-                onClick={() => setSelectedUserId(selectedApp.user_id)}
-                className="relative w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80 transition-opacity"
-              >
-                {selectedApp.profiles?.avatar_url ? <Image src={selectedApp.profiles.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" /> : selectedApp.profiles?.username?.substring(0, 2) || "??"}
-              </div>
-              <div className="cursor-pointer group" onClick={() => setSelectedUserId(selectedApp.user_id)}>
-                <h4 className="text-gray-900 dark:text-gray-100 font-bold text-base flex items-center gap-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  @{selectedApp.profiles?.username}
-                  {selectedApp.profiles?.is_verified && <VerifiedBadge size={16} />}
-                </h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {selectedApp.profiles?.status && <span className="block text-gray-700 dark:text-gray-300 mb-0.5 font-medium">{selectedApp.profiles.status}</span>}
-                  Applied for <span className="font-bold text-gray-700 dark:text-gray-300">{selectedApp.jobs?.title || 'Unknown Role'}</span> at {selectedApp.jobs?.company || 'Unknown'}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4 mb-8">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
-                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Status</p>
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 capitalize">{selectedApp.status === 'external_redirect' ? 'External Redirect' : (selectedApp.status || 'pending')}</p>
-                </div>
-                <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
-                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Applied On</p>
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{new Date(selectedApp.created_at).toLocaleDateString()}</p>
-                </div>
-              </div>
-              
-              {(selectedApp.cover_letter || selectedApp.message || selectedApp.notes) && (
-                <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
-                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Cover Letter / Message</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selectedApp.cover_letter || selectedApp.message || selectedApp.notes}</p>
-                </div>
-              )}
-
-              {selectedApp.resume_url && (
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">Attached Document</p>
-                    <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Candidate{`'`}s CV / Resume File</p>
-                  </div>
-                  <a href={selectedApp.resume_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs transition-colors shadow-sm">
-                    <FileText size={16} /> Open File
-                  </a>
-                </div>
-              )}
-
-              {(selectedApp.resume_url || selectedApp.portfolio_url || selectedApp.email || selectedApp.phone || selectedApp.profiles?.github || selectedApp.profiles?.website || selectedApp.profiles?.location) && (
-                <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl space-y-3">
-                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Contact & Links</p>
-                  {selectedApp.email && <p className="text-sm"><strong className="text-gray-900 dark:text-gray-100">Email:</strong> <a href={`mailto:${selectedApp.email}`} className="text-blue-600 hover:underline">{selectedApp.email}</a></p>}
-                  {selectedApp.phone && <p className="text-sm"><strong className="text-gray-900 dark:text-gray-100">Phone:</strong> {selectedApp.phone}</p>}
-                  {selectedApp.profiles?.location && <p className="text-sm"><strong className="text-gray-900 dark:text-gray-100">Location:</strong> {selectedApp.profiles.location}</p>}
-                  {selectedApp.resume_url && <p className="text-sm"><strong className="text-gray-900 dark:text-gray-100">Resume:</strong> <a href={selectedApp.resume_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View Document</a></p>}
-                  {selectedApp.portfolio_url && <p className="text-sm"><strong className="text-gray-900 dark:text-gray-100">Portfolio:</strong> <a href={selectedApp.portfolio_url.startsWith('http') ? selectedApp.portfolio_url : `https://${selectedApp.portfolio_url}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{selectedApp.portfolio_url}</a></p>}
-                  {selectedApp.profiles?.github && <p className="text-sm"><strong className="text-gray-900 dark:text-gray-100">GitHub:</strong> <a href={`https://github.com/${selectedApp.profiles.github}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">github.com/{selectedApp.profiles.github}</a></p>}
-                  {selectedApp.profiles?.website && <p className="text-sm"><strong className="text-gray-900 dark:text-gray-100">Website:</strong> <a href={selectedApp.profiles.website.startsWith('http') ? selectedApp.profiles.website : `https://${selectedApp.profiles.website}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{selectedApp.profiles.website.replace(/^https?:\/\//, '')}</a></p>}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-              {selectedApp.status !== 'accepted' && selectedApp.status !== 'declined' && selectedApp.status !== 'external_redirect' ? (
-                <>
-                  <button 
-                    onClick={() => promptAppAction(selectedApp.id, 'declined', selectedApp.user_id, selectedApp.jobs?.title)} 
-                    className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold transition-colors border border-red-200 dark:border-red-800/50"
-                  >
-                    Decline
-                  </button>
-                  <button 
-                    onClick={() => promptAppAction(selectedApp.id, 'accepted', selectedApp.user_id, selectedApp.jobs?.title)} 
-                    className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-colors shadow-sm"
-                  >
-                    Accept
-                  </button>
-                </>
-              ) : (
-                <div className="flex-1 text-center py-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-xs border border-gray-200 dark:border-gray-700">
-                  Application is {selectedApp.status === 'external_redirect' ? 'External Redirect' : selectedApp.status}
-                </div>
-              )}
-              <button 
-                onClick={() => handleDeleteApp(selectedApp.id)} 
-                className="px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-xl font-bold transition-colors border border-gray-200 dark:border-gray-700"
-                title="Delete Application Record"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Founder Application Details Modal */}
-      {selectedFounderApp && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedFounderApp(null)} />
-          <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <button onClick={() => setSelectedFounderApp(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
-              <X size={18} />
-            </button>
-            
-            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight pr-8 mb-4">Applicant Review</h2>
-            
-            <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
-              <div 
-                onClick={() => setSelectedUserId(selectedFounderApp.user_id)}
-                className="relative w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 overflow-hidden shrink-0 flex items-center justify-center font-black text-blue-600 dark:text-blue-400 uppercase cursor-pointer hover:opacity-80 transition-opacity"
-              >
-                {selectedFounderApp.profiles?.avatar_url ? <Image src={selectedFounderApp.profiles.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" /> : (selectedFounderApp.name ? selectedFounderApp.name.substring(0, 2) : "??")}
-              </div>
-              <div>
-                <h4 
-                  onClick={() => setSelectedUserId(selectedFounderApp.user_id)}
-                  className="text-gray-900 dark:text-gray-100 font-bold text-base flex items-center gap-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                >
-                  {selectedFounderApp.profiles?.username ? `@${selectedFounderApp.profiles.username}` : selectedFounderApp.name}
-                  {selectedFounderApp.profiles?.is_verified && <VerifiedBadge size={16} />}
-                </h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Applied as <span className={`font-bold uppercase ${selectedFounderApp.intended_role === 'cofounder' ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>{selectedFounderApp.intended_role === 'cofounder' ? 'Co-founder' : 'Member'}</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4 mb-8">
-              {Object.entries(getReasonObj(selectedFounderApp.reason)).map(([key, value], idx) => {
-                const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
-                return (
-                  <div key={idx} className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
-                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">{formattedKey}</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{value}</p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-              {selectedFounderApp.status !== 'accepted' && selectedFounderApp.status !== 'declined' ? (
-                <>
-                  <button 
-                    onClick={() => promptFounderAppAction(selectedFounderApp.id, 'declined', selectedFounderApp.user_id, selectedFounderApp.intended_role)} 
-                    className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold transition-colors border border-red-200 dark:border-red-800/50"
-                  >
-                    Decline
-                  </button>
-                  <button 
-                    onClick={() => promptFounderAppAction(selectedFounderApp.id, 'accepted', selectedFounderApp.user_id, selectedFounderApp.intended_role)} 
-                    className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-colors shadow-sm"
-                  >
-                    Accept
-                  </button>
-                </>
-              ) : (
-                <div className="flex-1 text-center py-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-xs border border-gray-200 dark:border-gray-700">
-                  Status: {selectedFounderApp.status || 'pending'}
-                </div>
-              )}
-              <button 
-                onClick={() => handleDeleteFounderApp(selectedFounderApp.id)} 
-                className="px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-xl font-bold transition-colors border border-gray-200 dark:border-gray-700"
-                title="Delete Application"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tasks Tab */}
-      {adminTab === 'tasks' && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
-          <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-            <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2">Task Assignments (Backlog)</h4>
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <div className="flex bg-gray-200/50 dark:bg-gray-700/50 p-1 rounded-lg shrink-0">
-                {['All', 'High', 'Medium', 'Low'].map(f => (
-                  <button 
-                    key={f} 
-                    onClick={(e) => { e.preventDefault(); setTaskFilter(f); }} 
-                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${taskFilter === f ? 'bg-white dark:bg-gray-600 text-blue-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => setAdminTasks([])} className="text-xs text-blue-600 font-bold hover:underline px-2 transition-all shrink-0">Refresh</button>
-              <button onClick={() => setShowTaskModal(true)} className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-sm shrink-0"><Plus size={14}/> Assign Task</button>
-            </div>
-          </div>
-          
-          {tasksLoading ? (
-            <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-blue-500" /></div>
-          ) : adminTasks.filter(t => taskFilter === 'All' || t.priority === taskFilter).length === 0 ? (
-            <div className="p-10 text-center text-gray-500 dark:text-gray-400 text-sm font-medium">No tasks assigned yet.</div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {adminTasks.filter(t => taskFilter === 'All' || t.priority === taskFilter)
-                .sort((a, b) => {
-                  const p = { 'High': 3, 'Medium': 2, 'Low': 1 };
-                  return (p[b.priority || 'Medium'] || 0) - (p[a.priority || 'Medium'] || 0);
-                }).map(task => (
-                <div key={task.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group">
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm">{task.title}</h4>
-                        {task.priority && (
-                          <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border ${task.priority === 'High' ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800/50' : task.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50' : 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50'}`}>
-                            {task.priority}
-                          </span>
-                        )}
-                      </div>
-                      {task.linked_to && (
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                          <FileText size={10} /> {task.linked_to}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs font-bold text-gray-900 dark:text-gray-300">
+                          {log.role === "assistant" ? "beoneofus AI" : `@${log.profiles?.username || "Unknown"}`}
                         </p>
-                      )}
+                        <p className="text-[10px] text-gray-500 dark:text-gray-600">{new Date(log.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                      </div>
+                      <p className={`text-xs leading-relaxed line-clamp-3 ${log.role === "assistant" ? "text-gray-600 dark:text-gray-400" : "text-gray-800 dark:text-gray-300"}`}>{log.content}</p>
                     </div>
-                    <button 
-                      onClick={() => handleComplexUpdate(task.id, task.status === 'completed' ? 'pending' : 'completed')} 
-                      disabled={actionProcessing} 
-                      className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-50 ${task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'}`}
-                    >
-                      {task.status}
+                  </div>
+                ))}
+          </div>
+        )}
+
+        {/* ── APPLICATIONS ── */}
+        {adminTab === "applications" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-white font-black">Job Applications <span className="text-gray-500 dark:text-gray-600 font-normal text-sm">({applications.length})</span></h3>
+              <button onClick={() => setApplications([])} className="text-xs text-blue-500 dark:text-blue-400 font-bold hover:text-blue-600 dark:hover:text-blue-300">Refresh</button>
+            </div>
+            {appsLoading
+              ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={22} /></div>
+              : applications.length === 0
+                ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-sm">No applications found.</div>
+                : applications.map(app => (
+                  <div key={app.id} onClick={() => setSelectedApp(app)}
+                    className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:border-gray-300 dark:hover:border-gray-700 transition-all cursor-pointer shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div onClick={e => { e.stopPropagation(); setSelectedUserId(app.user_id); }}
+                          className="relative w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80">
+                          {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt="avatar" fill sizes="36px" className="object-cover" /> : app.profiles?.username?.substring(0, 2)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1">@{app.profiles?.username} {app.profiles?.is_verified && <BadgeCheck size={11} className="text-blue-500 dark:text-blue-400" />}</p>
+                          <p className="text-[10px] text-gray-500 truncate">{app.jobs?.title || "Unknown"} · {app.jobs?.company || "—"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                        <Badge color={statusColor(app.status)}>{app.status || "pending"}</Badge>
+                        <ChevronRight size={14} className="text-gray-400 dark:text-gray-600" />
+                      </div>
+                    </div>
+                    {app.status !== "accepted" && app.status !== "declined" && (
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setActionPrompt({ type: "job", appId: app.id, newStatus: "declined", applicantId: app.user_id, title: app.jobs?.title })}
+                          className="flex-1 py-1.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-lg text-[10px] font-bold hover:bg-red-100 dark:hover:bg-red-500/20 transition-all">Decline</button>
+                        <button onClick={() => setActionPrompt({ type: "job", appId: app.id, newStatus: "accepted", applicantId: app.user_id, title: app.jobs?.title })}
+                          className="flex-1 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-bold hover:bg-emerald-500 transition-all">Accept</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+          </div>
+        )}
+
+        {/* ── FOUNDER APPS ── */}
+        {adminTab === "founder_apps" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-white font-black">Founder Applications <span className="text-gray-500 dark:text-gray-600 font-normal text-sm">({founderApps.length})</span></h3>
+              <div className="flex gap-2">
+                <button onClick={() => setShowInviteModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all">
+                  <UserPlus size={12} /> Invite
+                </button>
+                <button onClick={() => setFounderApps([])} className="text-xs text-blue-500 dark:text-blue-400 font-bold hover:text-blue-600 dark:hover:text-blue-300">Refresh</button>
+              </div>
+            </div>
+            {founderAppsLoading
+              ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={22} /></div>
+              : founderApps.length === 0
+                ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-sm">No founder applications.</div>
+                : founderApps.map(app => (
+                  <div key={app.id} onClick={() => setSelectedFounderApp(app)}
+                    className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:border-gray-300 dark:hover:border-gray-700 transition-all cursor-pointer shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div onClick={e => { e.stopPropagation(); setSelectedUserId(app.user_id); }}
+                          className="relative w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center font-black text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80 shrink-0">
+                          {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt="avatar" fill sizes="36px" className="object-cover" /> : (app.name?.substring(0, 2) || "??")}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-900 dark:text-white">{app.profiles?.username ? `@${app.profiles.username}` : app.name}</p>
+                          <p className={`text-[10px] font-bold ${app.intended_role === "cofounder" ? "text-violet-600 dark:text-violet-400" : "text-blue-600 dark:text-blue-400"}`}>
+                            {app.intended_role === "cofounder" ? "Co-founder" : "Member"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge color={statusColor(app.status)}>{app.status || "pending"}</Badge>
+                        <ChevronRight size={14} className="text-gray-400 dark:text-gray-600" />
+                      </div>
+                    </div>
+                    {app.status !== "accepted" && app.status !== "declined" && (
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setActionPrompt({ type: "founder", appId: app.id, newStatus: "declined", applicantId: app.user_id, title: app.intended_role })}
+                          className="flex-1 py-1.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-lg text-[10px] font-bold hover:bg-red-100 dark:hover:bg-red-500/20 transition-all">Decline</button>
+                        <button onClick={() => setActionPrompt({ type: "founder", appId: app.id, newStatus: "accepted", applicantId: app.user_id, title: app.intended_role })}
+                          className="flex-1 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-bold hover:bg-emerald-500 transition-all">Accept</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+          </div>
+        )}
+
+        {/* ── TASKS ── */}
+        {adminTab === "tasks" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h3 className="text-gray-900 dark:text-white font-black">Task Assignments</h3>
+              <div className="flex items-center gap-2">
+                <div className="flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-0.5 rounded-xl shadow-sm">
+                  {["All", "High", "Medium", "Low"].map(f => (
+                    <button key={f} onClick={() => setTaskFilter(f)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${taskFilter === f ? "bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400"}`}>
+                      {f}
                     </button>
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">{task.description}</p>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative border border-gray-200 dark:border-gray-700">
-                        {task.assigner?.avatar_url ? <Image src={task.assigner.avatar_url} alt="assigner" fill sizes="20px" className="object-cover" /> : <UserCog size={12} className="m-auto mt-1 text-gray-400" />}
+                  ))}
+                </div>
+                <button onClick={() => setShowTaskModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all">
+                  <Plus size={12} /> Assign
+                </button>
+              </div>
+            </div>
+            {tasksLoading
+              ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={22} /></div>
+              : adminTasks.filter(t => taskFilter === "All" || t.priority === taskFilter).length === 0
+                ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-sm">No tasks.</div>
+                : adminTasks.filter(t => taskFilter === "All" || t.priority === taskFilter)
+                  .sort((a, b) => ({ High: 3, Medium: 2, Low: 1 }[b.priority || "Medium"] - ({ High: 3, Medium: 2, Low: 1 }[a.priority || "Medium"]))
+                  ).map(task => (
+                    <div key={task.id} className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:border-gray-300 dark:hover:border-gray-700 transition-all shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{task.title}</p>
+                            <Badge color={task.priority === "High" ? "rose" : task.priority === "Medium" ? "amber" : "blue"}>{task.priority}</Badge>
+                          </div>
+                          {task.linked_to && <p className="text-[10px] text-gray-500 flex items-center gap-1 mb-1"><FileText size={9} />{task.linked_to}</p>}
+                          <p className="text-xs text-gray-600 dark:text-gray-500 line-clamp-2">{task.description}</p>
+                        </div>
+                        <button onClick={() => handleComplexUpdate(task.id, task.status === "completed" ? "pending" : "completed")}
+                          disabled={actionProcessing}
+                          className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all disabled:opacity-50 ${
+                            task.status === "completed" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20" : "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20"}`}>
+                          {task.status}
+                        </button>
                       </div>
-                      <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">By @{task.assigner?.username || 'Admin'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">To @{task.assignee?.username || 'Unknown'}</span>
-                      <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative border border-gray-200 dark:border-gray-700">
-                        {task.assignee?.avatar_url ? <Image src={task.assignee.avatar_url} alt="assignee" fill sizes="20px" className="object-cover" /> : <User size={12} className="m-auto mt-1 text-gray-400" />}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800/60">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden relative">
+                            {task.assigner?.avatar_url ? <Image src={task.assigner.avatar_url} alt="assigner" fill sizes="20px" className="object-cover" /> : <UserCog size={10} className="absolute inset-0 m-auto text-gray-400 dark:text-gray-600" />}
+                          </div>
+                          <span className="text-[9px] text-gray-500 dark:text-gray-600 uppercase tracking-widest">@{task.assigner?.username || "Admin"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-gray-500 dark:text-gray-600 uppercase tracking-widest">→ @{task.assignee?.username || "?"}</span>
+                          <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden relative">
+                            {task.assignee?.avatar_url ? <Image src={task.assignee.avatar_url} alt="assignee" fill sizes="20px" className="object-cover" /> : <User size={10} className="absolute inset-0 m-auto text-gray-400 dark:text-gray-600" />}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── MODALS ─────────────────────────────────────────────────────────────── */}
+
+      {/* App Detail */}
+      {selectedApp && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm" onClick={() => setSelectedApp(null)} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+            <button onClick={() => setSelectedApp(null)} className="absolute top-5 right-5 p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl text-gray-500 border border-gray-200 dark:border-gray-800"><X size={16} /></button>
+            <h2 className="text-lg font-black text-gray-900 dark:text-white mb-4">Application Details</h2>
+            <div className="space-y-3 mb-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
+                  <p className="text-[10px] text-gray-500 dark:text-gray-600 uppercase tracking-widest mb-1">Status</p>
+                  <Badge color={statusColor(selectedApp.status)}>{selectedApp.status || "pending"}</Badge>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
+                  <p className="text-[10px] text-gray-500 dark:text-gray-600 uppercase tracking-widest mb-1">Applied</p>
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">{new Date(selectedApp.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+              {(selectedApp.cover_letter || selectedApp.message || selectedApp.notes) && (
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
+                  <p className="text-[10px] text-gray-500 dark:text-gray-600 uppercase tracking-widest mb-2">Cover Letter</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{selectedApp.cover_letter || selectedApp.message || selectedApp.notes}</p>
+                </div>
+              )}
+              {selectedApp.resume_url && (
+                <a href={selectedApp.resume_url} target="_blank" rel="noreferrer"
+                  className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all">
+                  <span>View Resume / CV</span><FileText size={14} />
+                </a>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {selectedApp.status !== "accepted" && selectedApp.status !== "declined" ? (
+                <>
+                  <button onClick={() => setActionPrompt({ type: "job", appId: selectedApp.id, newStatus: "declined", applicantId: selectedApp.user_id, title: selectedApp.jobs?.title })}
+                    className="flex-1 py-2.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-lg text-[10px] font-bold hover:bg-red-100 dark:hover:bg-red-500/20 transition-all">Decline</button>
+                  <button onClick={() => setActionPrompt({ type: "job", appId: selectedApp.id, newStatus: "accepted", applicantId: selectedApp.user_id, title: selectedApp.jobs?.title })}
+                    className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 transition-all">Accept</button>
+                </>
+              ) : (
+                <div className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-center text-gray-500 text-xs font-bold uppercase">
+                  {selectedApp.status}
+                </div>
+              )}
+              <button onClick={async () => {
+                if (!confirm("Delete this application?")) return;
+                const { error } = await supabase.from("job_applications").delete().eq("id", selectedApp.id);
+                if (!error) { setApplications(prev => prev.filter(a => a.id !== selectedApp.id)); setSelectedApp(null); showToast("Deleted."); }
+                else showToast(error.message, "error");
+              }} className="px-4 py-2.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-xl text-xs font-bold transition-all">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Founder App Detail */}
+      {selectedFounderApp && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm" onClick={() => setSelectedFounderApp(null)} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+            <button onClick={() => setSelectedFounderApp(null)} className="absolute top-5 right-5 p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl text-gray-500 border border-gray-200 dark:border-gray-800"><X size={16} /></button>
+            <h2 className="text-lg font-black text-gray-900 dark:text-white mb-4">Applicant Review</h2>
+            <div className="space-y-3 mb-5">
+              {Object.entries(getReasonObj(selectedFounderApp.reason)).map(([key, val], i) => (
+                <div key={i} className="p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
+                  <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">{key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{val}</p>
                 </div>
               ))}
             </div>
-          )}
+            <div className="flex gap-2">
+              {selectedFounderApp.status !== "accepted" && selectedFounderApp.status !== "declined" ? (
+                <>
+                  <button onClick={() => setActionPrompt({ type: "founder", appId: selectedFounderApp.id, newStatus: "declined", applicantId: selectedFounderApp.user_id, title: selectedFounderApp.intended_role })}
+                    className="flex-1 py-2.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-lg text-[10px] font-bold hover:bg-red-100 dark:hover:bg-red-500/20 transition-all">Decline</button>
+                  <button onClick={() => setActionPrompt({ type: "founder", appId: selectedFounderApp.id, newStatus: "accepted", applicantId: selectedFounderApp.user_id, title: selectedFounderApp.intended_role })}
+                    className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 transition-all">Accept</button>
+                </>
+              ) : (
+                <div className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-center text-gray-500 text-xs font-bold uppercase">{selectedFounderApp.status}</div>
+              )}
+              <button onClick={async () => {
+                if (!confirm("Delete?")) return;
+                const { error } = await supabase.from("founder_applications").delete().eq("id", selectedFounderApp.id);
+                if (!error) { setFounderApps(prev => prev.filter(a => a.id !== selectedFounderApp.id)); setSelectedFounderApp(null); showToast("Deleted."); }
+                else showToast(error.message, "error");
+              }} className="px-4 py-2.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-xl text-xs font-bold transition-all">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action Prompt */}
+      {actionPrompt && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm" onClick={() => !actionProcessing && setActionPrompt(null)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <h2 className="text-base font-black text-gray-900 dark:text-white mb-1">{actionPrompt.newStatus === "accepted" ? "Accept" : "Decline"} Application</h2>
+            <p className="text-xs text-gray-500 mb-4">Add an optional personal note for the applicant.</p>
+            <textarea value={customMessage} onChange={e => setCustomMessage(e.target.value)} placeholder="Optional message…" rows={3}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all resize-none mb-4 placeholder-gray-400 dark:placeholder-gray-500" />
+            <div className="flex gap-2">
+              <button onClick={() => setActionPrompt(null)} disabled={actionProcessing}
+                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-colors">Cancel</button>
+              <button onClick={submitActionPrompt} disabled={actionProcessing}
+                className={`flex-1 py-2.5 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-all
+                  ${actionPrompt.newStatus === "accepted" ? "bg-emerald-600 hover:bg-emerald-500" : "bg-red-600 hover:bg-red-500"}`}>
+                {actionProcessing ? <Loader2 size={14} className="animate-spin" /> : "Confirm"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Assign Task Modal */}
       {showTaskModal && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => !actionProcessing && setShowTaskModal(false)} />
-          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <button onClick={() => setShowTaskModal(false)} disabled={actionProcessing} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm disabled:opacity-50"><X size={18} /></button>
-            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-6 flex items-center gap-2"><ClipboardList size={20} className="text-blue-500"/> Assign New Task</h2>
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm" onClick={() => !actionProcessing && setShowTaskModal(false)} />
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <button onClick={() => setShowTaskModal(false)} disabled={actionProcessing} className="absolute top-5 right-5 p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl text-gray-500 border border-gray-200 dark:border-gray-800 transition-colors"><X size={16} /></button>
+            <h2 className="text-base font-black text-gray-900 dark:text-white mb-5 flex items-center gap-2"><ClipboardList size={16} className="text-blue-500 dark:text-blue-400" /> Assign Task</h2>
             <form onSubmit={handleAssignTask} className="space-y-4">
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Assignee</label>
-                <select required value={taskForm.assignee_id} onChange={e => setTaskForm({...taskForm, assignee_id: e.target.value})} className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all appearance-none">
-                  <option value="" disabled>Select a user...</option>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">Assignee</label>
+                <select required value={taskForm.assignee_id} onChange={e => setTaskForm({ ...taskForm, assignee_id: e.target.value })}
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 px-3 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all">
+                  <option value="" disabled>Select a user…</option>
                   {teamMembers.map(m => {
-                    const userProfile = allUsers.find(u => u.id === m.user_id);
-                    const displayName = userProfile ? `@${userProfile.username}` : m.name;
-                    return (
-                      <option key={m.user_id} value={m.user_id}>{displayName} ({m.intended_role})</option>
-                    );
+                    const u = allUsers.find(x => x.id === m.user_id);
+                    return <option key={m.user_id} value={m.user_id}>{u ? `@${u.username}` : m.name} ({m.intended_role})</option>;
                   })}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Task Title</label>
-                <input required type="text" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} placeholder="e.g. Implement real-time notifications" className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all" />
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">Title</label>
+                <input required type="text" value={taskForm.title} onChange={e => setTaskForm({ ...taskForm, title: e.target.value })} placeholder="Task title…"
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 px-3 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all placeholder-gray-400 dark:placeholder-gray-500" />
               </div>
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Description</label>
-                <textarea required rows={3} value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})} placeholder="Task details and requirements..." className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all resize-none custom-scrollbar" />
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">Description</label>
+                <textarea required rows={3} value={taskForm.description} onChange={e => setTaskForm({ ...taskForm, description: e.target.value })} placeholder="Details…"
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 px-3 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all resize-none placeholder-gray-400 dark:placeholder-gray-500" />
               </div>
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Priority Level</label>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">Priority</label>
                 <div className="flex gap-2">
-                  {['Low', 'Medium', 'High'].map(p => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setTaskForm({...taskForm, priority: p})}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${taskForm.priority === p ? (p === 'High' ? 'bg-red-600 text-white border-red-600 shadow-sm' : p === 'Medium' ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-blue-500 text-white border-blue-500 shadow-sm') : 'bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                    >
+                  {["Low", "Medium", "High"].map(p => (
+                    <button key={p} type="button" onClick={() => setTaskForm({ ...taskForm, priority: p })}
+                      className={`flex-1 py-2 rounded-xl text-[10px] font-bold uppercase border transition-all
+                        ${taskForm.priority === p
+                          ? p === "High" ? "bg-red-600 text-white border-red-600" : p === "Medium" ? "bg-amber-500 text-white border-amber-500" : "bg-blue-600 text-white border-blue-600"
+                          : "bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-500 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"}`}>
                       {p}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Linked Milestone/Project (Optional)</label>
-                <input type="text" value={taskForm.linked_to} onChange={e => setTaskForm({...taskForm, linked_to: e.target.value})} placeholder="e.g. Project Alpha Phase 1" className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all" />
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">Linked Milestone (optional)</label>
+                <input type="text" value={taskForm.linked_to} onChange={e => setTaskForm({ ...taskForm, linked_to: e.target.value })} placeholder="e.g. Project Alpha"
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 px-3 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all placeholder-gray-400 dark:placeholder-gray-500" />
               </div>
-              <button type="submit" disabled={actionProcessing || !taskForm.assignee_id || !taskForm.title} className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50">
-                {actionProcessing ? <Loader2 size={16} className="animate-spin" /> : 'Assign Task'}
+              <button type="submit" disabled={actionProcessing || !taskForm.assignee_id || !taskForm.title}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-40">
+                {actionProcessing ? <Loader2 size={14} className="animate-spin" /> : "Assign Task"}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* ACTION PROMPT MODAL */}
-      {actionPrompt && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => !actionProcessing && setActionPrompt(null)} />
-          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <button onClick={() => setActionPrompt(null)} disabled={actionProcessing} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm disabled:opacity-50">
-              <X size={18} />
-            </button>
-            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-2">
-              {actionPrompt.newStatus === 'accepted' ? 'Accept' : 'Decline'} Application
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              Optional: Add a personal message to send to the applicant. Leave blank for a standard message.
-            </p>
-            <textarea
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-              placeholder="Type your message here..."
-              rows={4}
-              className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none custom-scrollbar mb-6"
-            />
-            <div className="flex items-center gap-3">
-              <button onClick={() => setActionPrompt(null)} disabled={actionProcessing} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50">
-                Cancel
-              </button>
-              <button onClick={submitActionPrompt} disabled={actionProcessing} className={`flex-1 py-3 text-white font-bold rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 ${actionPrompt.newStatus === 'accepted' ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}`}>
-                {actionProcessing ? <Loader2 size={16} className="animate-spin" /> : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* INVITE USER MODAL */}
+      {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => !actionProcessing && setShowInviteModal(false)} />
-          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <button onClick={() => setShowInviteModal(false)} disabled={actionProcessing} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm disabled:opacity-50"><X size={18} /></button>
-            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-6 flex items-center gap-2"><UserPlus size={20} className="text-blue-500"/> Invite to Apply</h2>
-            
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm" onClick={() => !actionProcessing && setShowInviteModal(false)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <button onClick={() => setShowInviteModal(false)} disabled={actionProcessing} className="absolute top-5 right-5 p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl text-gray-500 border border-gray-200 dark:border-gray-800 transition-colors"><X size={16} /></button>
+            <h2 className="text-base font-black text-gray-900 dark:text-white mb-5 flex items-center gap-2"><UserPlus size={16} className="text-blue-500 dark:text-blue-400" /> Invite to Apply</h2>
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Select User</label>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">Search User</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                  <input 
-                    type="text" 
-                    value={inviteSearch}
-                    onChange={(e) => setInviteSearch(e.target.value)}
-                    placeholder="Search by username..."
-                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-9 pr-4 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 transition-all"
-                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-600" size={13} />
+                  <input value={inviteSearch} onChange={e => setInviteSearch(e.target.value)} placeholder="Username…"
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 pl-9 pr-3 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all placeholder-gray-400 dark:placeholder-gray-500" />
                 </div>
                 {inviteSearch && (
-                  <div className="mt-2 max-h-40 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm custom-scrollbar">
-                    {allUsers.filter(u => u.username.toLowerCase().includes(inviteSearch.toLowerCase()) && u.id !== currentUserId).map(u => (
-                      <div key={u.id} onClick={() => setInviteSearch(u.username)} className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0">
-                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative shrink-0">
-                          {u.avatar_url ? <Image src={u.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : <User size={16} className="m-auto mt-2 text-gray-400" />}
+                  <div className="mt-1.5 max-h-36 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
+                    {allUsers.filter(u => u.username?.toLowerCase().includes(inviteSearch.toLowerCase()) && u.id !== currentUserId).map(u => (
+                      <div key={u.id} onClick={() => setInviteSearch(u.username)}
+                        className="flex items-center gap-2.5 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer border-b border-gray-100 dark:border-gray-800/60 last:border-0 transition-colors">
+                        <div className="w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700 overflow-hidden relative shrink-0">
+                          {u.avatar_url ? <Image src={u.avatar_url} alt="avatar" fill sizes="28px" className="object-cover" /> : null}
                         </div>
-                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">@{u.username}</span>
+                        <span className="text-xs font-bold text-gray-900 dark:text-white">@{u.username}</span>
                       </div>
                     ))}
-                    {allUsers.filter(u => u.username.toLowerCase().includes(inviteSearch.toLowerCase()) && u.id !== currentUserId).length === 0 && (
-                      <div className="p-4 text-center text-xs text-gray-500 font-bold">No users found</div>
-                    )}
                   </div>
                 )}
               </div>
-              
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block mt-4">Role to Apply For</label>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1.5">Role</label>
                 <div className="flex gap-2">
-                  <button onClick={() => setInviteRole('member')} className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all border ${inviteRole === 'member' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Member</button>
-                  <button onClick={() => setInviteRole('cofounder')} className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all border ${inviteRole === 'cofounder' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Co-founder</button>
+                  <button onClick={() => setInviteRole("member")}
+                    className={`flex-1 py-2 rounded-xl text-[10px] font-bold border transition-all ${inviteRole === "member" ? "bg-blue-600 text-white border-blue-600" : "bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-500 border-gray-200 dark:border-gray-800"}`}>Member</button>
+                  <button onClick={() => setInviteRole("cofounder")}
+                    className={`flex-1 py-2 rounded-xl text-[10px] font-bold border transition-all ${inviteRole === "cofounder" ? "bg-violet-600 text-white border-violet-600" : "bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-500 border-gray-200 dark:border-gray-800"}`}>Co-founder</button>
                 </div>
               </div>
-
-              <button 
-                onClick={handleSendInvite} 
-                disabled={actionProcessing || !inviteSearch} 
-                className="w-full mt-6 py-3.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-bold rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {actionProcessing ? <Loader2 size={16} className="animate-spin" /> : 'Send Application Link'}
+              <button onClick={handleSendInvite} disabled={actionProcessing || !inviteSearch}
+                className="w-full py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black rounded-xl text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-gray-800 dark:hover:bg-gray-100 shadow-sm">
+                {actionProcessing ? <Loader2 size={14} className="animate-spin" /> : "Send Invite"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* USER PROFILE MODAL */}
+      {/* Profile Modal */}
       {selectedUserId && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
-            <button 
-              onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm"
-            >
-              <X size={20} />
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto z-10 bg-gray-950 rounded-2xl border border-gray-800 shadow-2xl">
+            <button onClick={() => setSelectedUserId(null)}
+              className="absolute top-5 right-5 z-50 p-2 bg-gray-900 hover:bg-gray-800 rounded-full text-gray-500 border border-gray-800 transition-colors">
+              <X size={18} />
             </button>
-            <div className="p-2 sm:p-6">
-              <ProfileContent viewUserId={selectedUserId} />
-            </div>
+            <div className="p-4 sm:p-6"><ProfileContent viewUserId={selectedUserId} /></div>
           </div>
         </div>
       )}
 
-      {/* Custom Toast Popup */}
-      {toast.message && (
-        <div className={`fixed bottom-10 right-10 z-[1000] flex items-center gap-3 bg-white dark:bg-gray-900 border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 ${toast.type === 'error' ? 'border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-500' : 'border-indigo-200 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-500'}`}>
-          {toast.type === 'error' ? <AlertTriangle size={18} className="text-rose-500" /> : <Check size={18} className="text-indigo-500" />}
-          <span className="text-sm font-bold tracking-tight">{toast.message}</span>
-        </div>
-      )}
+      <Toast message={toast.message} type={toast.type} />
     </div>
   );
 };
 
-const supportMarkdownComponents = {
+// ─── Support Tool ─────────────────────────────────────────────────────────────
+
+const mdComponents = {
   p: ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
   ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
   ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
-  li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-  h1: ({ node, ...props }) => <h1 className="text-sm font-black mb-2 mt-3" {...props} />,
-  h2: ({ node, ...props }) => <h2 className="text-sm font-bold mb-2 mt-3" {...props} />,
-  h3: ({ node, ...props }) => <h3 className="text-xs font-bold mb-1 mt-2" {...props} />,
-  strong: ({ node, ...props }) => <strong className="font-bold text-blue-950 dark:text-blue-50" {...props} />,
+  strong: ({ node, ...props }) => <strong className="font-bold text-blue-800 dark:text-blue-200" {...props} />,
   code({ node, inline, className, children, ...props }) {
     const match = /language-(\w+)/.exec(className || "");
     return !inline && match ? (
-      <div className="rounded-lg overflow-hidden my-3 border border-blue-200 dark:border-blue-800/50 shadow-sm bg-[#1E1E1E]">
-        <div className="bg-gray-800/80 px-3 py-1.5 text-[9px] font-mono text-gray-400 uppercase tracking-widest flex justify-between items-center border-b border-white/5">
-          <span>{match[1]}</span>
-        </div>
-        <SyntaxHighlighter
-          {...props}
-          style={vscDarkPlus}
-          language={match[1]}
-          PreTag="div"
-          customStyle={{ margin: 0, padding: '0.75rem', background: 'transparent', fontSize: '0.75rem' }}
-        >
+      <div className="rounded-lg overflow-hidden my-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1E1E1E]">
+        <div className="px-3 py-1.5 text-[9px] font-mono text-gray-500 uppercase tracking-widest bg-gray-100 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">{match[1]}</div>
+        <SyntaxHighlighter {...props} style={vscDarkPlus} language={match[1]} PreTag="div"
+          customStyle={{ margin: 0, padding: "0.75rem", background: "transparent", fontSize: "0.7rem" }}>
           {String(children).replace(/\n$/, "")}
         </SyntaxHighlighter>
       </div>
     ) : (
-      <code {...props} className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-1 py-0.5 rounded font-mono text-[10px] border border-blue-200 dark:border-blue-800/50">
-        {children}
-      </code>
+      <code {...props} className="bg-gray-100 dark:bg-gray-700/60 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded font-mono text-[10px]">{children}</code>
     );
   }
 };
 
-function SupportTypewriterMessage({ content }) {
-  const [displayedContent, setDisplayedContent] = useState("");
+function TypewriterMessage({ content }) {
+  const [displayed, setDisplayed] = useState("");
   useEffect(() => {
     let i = 0;
-    const timer = setInterval(() => {
-      setDisplayedContent(content.slice(0, i + 1));
-      i++;
-      if (i >= content.length) clearInterval(timer);
-    }, 15);
-    return () => clearInterval(timer);
+    const t = setInterval(() => { setDisplayed(content.slice(0, i + 1)); i++; if (i >= content.length) clearInterval(t); }, 12);
+    return () => clearInterval(t);
   }, [content]);
-  return <ReactMarkdown components={supportMarkdownComponents}>{displayedContent}</ReactMarkdown>;
+  return <ReactMarkdown components={mdComponents}>{displayed}</ReactMarkdown>;
 }
 
 const SupportTool = () => {
-  const [issue, setIssue] = useState('');
+  const [issue, setIssue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [tickets, setTickets] = useState([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!issue.trim() || isProcessing) return;
-    
-    const currentIssue = issue;
-    setIssue('');
+    const cur = issue;
+    setIssue("");
     setIsProcessing(true);
-    
     try {
-      const prompt = `You are the official technical support engineering AI for the beoneofus platform. A user has submitted the following support ticket: "${currentIssue}". Please provide a helpful, concise, and highly technical resolution to their issue.`;
-      
       const res = await fetch("/api/chats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: `You are the technical support AI for the beoneofus platform. User issue: "${cur}". Provide a concise, helpful, technical resolution.` }] }),
       });
-
       const text = await res.text();
       let data;
-      try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
-      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
-
-      setTickets(prev => [{ id: Date.now(), issue: currentIssue, reply: data.message.content.replace(/^["']|["']$/g, '').trim(), isNew: true }, ...prev]);
-    } catch (error) {
-      setTickets(prev => [{ id: Date.now(), issue: currentIssue, reply: "Error contacting support AI: " + error.message, isNew: true }, ...prev]);
-    } finally {
-      setIsProcessing(false);
-    }
+      try { data = JSON.parse(text); } catch { throw new Error("AI API not active. Restart your dev server."); }
+      if (!res.ok) throw new Error(data.error || "Failed to get response");
+      setTickets(prev => [{ id: Date.now(), issue: cur, reply: data.message.content.replace(/^["']|["']$/g, "").trim(), isNew: true }, ...prev]);
+    } catch (err) {
+      setTickets(prev => [{ id: Date.now(), issue: cur, reply: "Error: " + err.message, isNew: false }, ...prev]);
+    } finally { setIsProcessing(false); }
   };
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto py-4">
-      <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-[2rem] flex items-start gap-5">
-        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-blue-200 dark:border-blue-800/50">
-          <HelpCircle size={24} />
-        </div>
+    <div className="space-y-5 max-w-2xl mx-auto py-4">
+      <div className="p-5 bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20 rounded-2xl flex items-start gap-4">
+        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0"><HelpCircle size={20} /></div>
         <div>
-          <h3 className="text-blue-700 dark:text-blue-400 font-bold text-lg mb-2">Need Technical Assistance?</h3>
-          <p className="text-sm text-blue-600/80 dark:text-blue-400/80 leading-relaxed">
-            Our AI support engineering team is ready to help you instantly with architecture reviews, debugging, and platform guidance.
-          </p>
+          <h3 className="text-gray-900 dark:text-white font-black mb-1">AI Technical Support</h3>
+          <p className="text-xs text-blue-700/80 dark:text-blue-300/60 leading-relaxed">Instant engineering assistance — debugging, architecture, platform guidance.</p>
         </div>
       </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-[2.5rem] border border-gray-200 dark:border-gray-800 shadow-xl">
-        <div>
-          <label className="block text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3 pl-2">Describe your issue</label>
-          <textarea 
-            rows={4}
-            required
-            value={issue}
-            onChange={e => setIssue(e.target.value)}
-            placeholder="E.g., I am getting a 500 error when trying to invoke a serverless function..."
-            className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-700 rounded-2xl p-5 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 custom-scrollbar"
-            disabled={isProcessing}
-          />
-        </div>
-        <button disabled={isProcessing || !issue.trim()} type="submit" className="w-full flex items-center justify-center gap-2 py-4 bg-blue-600 text-white font-black uppercase tracking-widest text-xs rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
-          {isProcessing ? <><Loader2 size={16} className="animate-spin" /> Analyzing Issue...</> : 'Submit Support Ticket'}
+      <form onSubmit={handleSubmit} className="space-y-3 bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Describe Your Issue</label>
+        <textarea rows={4} required value={issue} onChange={e => setIssue(e.target.value)} disabled={isProcessing}
+          placeholder="e.g. Getting a 500 error when invoking a serverless function…"
+          className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 resize-none transition-all placeholder-gray-400 dark:placeholder-gray-600" />
+        <button disabled={isProcessing || !issue.trim()} type="submit"
+          className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white font-black text-xs rounded-xl hover:bg-blue-500 transition-all disabled:opacity-40 shadow-sm">
+          {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Analyzing…</> : "Submit Ticket"}
         </button>
       </form>
-
-      {tickets.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm pl-2 mt-8">Recent Tickets</h4>
-          {tickets.map(ticket => (
-            <div key={ticket.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-4">
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
-                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Your Issue</p>
-                <p className="text-sm text-gray-800 dark:text-gray-200">{ticket.issue}</p>
-              </div>
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Bot size={14} className="text-blue-600 dark:text-blue-400" />
-                  <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Support AI Reply</p>
-                </div>
-                <div className="text-sm text-blue-900 dark:text-blue-100 leading-relaxed">
-                  {ticket.isNew ? (
-                    <SupportTypewriterMessage content={ticket.reply} />
-                  ) : (
-                    <ReactMarkdown components={supportMarkdownComponents}>{ticket.reply}</ReactMarkdown>
-                  )}
-                </div>
-              </div>
+      {tickets.map(ticket => (
+        <div key={ticket.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-3 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm">
+          <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-xl">
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Your Issue</p>
+            <p className="text-xs text-gray-800 dark:text-gray-300">{ticket.issue}</p>
+          </div>
+          <div className="p-3 bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <Bot size={12} className="text-blue-600 dark:text-blue-400" />
+              <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-widest font-black">Support AI</p>
             </div>
-          ))}
+            <div className="text-xs text-gray-800 dark:text-gray-300 leading-relaxed">
+              {ticket.isNew ? <TypewriterMessage content={ticket.reply} /> : <ReactMarkdown components={mdComponents}>{ticket.reply}</ReactMarkdown>}
+            </div>
+          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 };
 
+// ─── User Dashboard ───────────────────────────────────────────────────────────
+
 const UserDashboardTool = ({ currentUserId }) => {
-  const [activeTab, setActiveTab] = useState('');
+  const [activeTab, setActiveTab] = useState("");
   const [isFounderOrMember, setIsFounderOrMember] = useState(null);
   const [myTasks, setMyTasks] = useState([]);
   const [myJobApps, setMyJobApps] = useState([]);
@@ -1846,29 +1454,24 @@ const UserDashboardTool = ({ currentUserId }) => {
   const [loading, setLoading] = useState(false);
   const [actionProcessing, setActionProcessing] = useState(false);
   const [acceptedRoles, setAcceptedRoles] = useState([]);
-  const [taskFilter, setTaskFilter] = useState('All');
+  const [taskFilter, setTaskFilter] = useState("All");
+
+  const FEATURES = [
+    { id: 1, title: "Real-time Workspace Chat", desc: "Secure, encrypted node communication.", date: "May 1, 2026" },
+    { id: 2, title: "AI Support Engineer", desc: "Instant technical assistance from AI.", date: "Apr 28, 2026" },
+    { id: 3, title: "Advanced Code Review", desc: "Highlight and analyze code in your feed.", date: "Apr 15, 2026" },
+  ];
 
   const renderWithLinks = (text) => {
     if (!text) return text;
-    const urlRegex = /(https?:\/\/[a-zA-Z0-9](?:[^\s<]*[^<.,:;"')\]\s])?|\B\/[a-zA-Z0-9](?:[^\s<]*[^<.,:;"')\]\s])?)/g;
-    const parts = text.split(urlRegex);
-    return parts.map((part, i) => {
-      if (i % 2 === 1) { // It's a matched URL
-        const isInternal = part.startsWith('/');
+    return text.split(/(https?:\/\/[^\s]+|\B\/[^\s]+)/g).map((part, i) => {
+      if (i % 2 === 1) {
+        const internal = part.startsWith("/");
         return (
-          <a 
-            key={i} 
-            href={part} 
-            target={isInternal ? "_self" : "_blank"}
-            rel={isInternal ? "" : "noopener noreferrer"}
-            onClick={(e) => e.stopPropagation()} 
-            className={isInternal ? "inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ml-2 no-underline not-italic align-middle" : "text-blue-600 dark:text-blue-400 hover:underline font-bold"}
-          >
-            {isInternal ? (
-              part === '/member/application' ? <><UserPlus size={14} /> Apply Now</> : 
-              part.includes('dashboard') ? <><Briefcase size={14} /> Open Workspace</> : 
-              'View Link'
-            ) : part}
+          <a key={i} href={part} target={internal ? "_self" : "_blank"} rel={internal ? "" : "noopener noreferrer"}
+            onClick={e => e.stopPropagation()}
+            className={internal ? "inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-bold ml-1" : "text-blue-400 hover:underline font-bold"}>
+            {internal ? <><UserPlus size={11} /> Apply Now</> : part}
           </a>
         );
       }
@@ -1876,504 +1479,374 @@ const UserDashboardTool = ({ currentUserId }) => {
     });
   };
 
-  const FEATURES_LIST = [
-    { id: 1, title: 'Real-time Workspace Chat', desc: 'Secure, end-to-end encrypted node communication is now live.', date: 'May 1, 2026' },
-    { id: 2, title: 'AI Support Engineer', desc: 'Get instant technical assistance from our integrated AI.', date: 'April 28, 2026' },
-    { id: 3, title: 'Advanced Code Review Tools', desc: 'Highlight and analyze code directly in your feed.', date: 'April 15, 2026' },
-  ];
-
   useEffect(() => {
     if (!currentUserId) return;
-    const checkStatus = async () => {
+    const check = async () => {
       setLoading(true);
-      const { data } = await supabase.from('founder_applications').select('id, status, intended_role').eq('user_id', currentUserId);
-      if (data && data.length > 0) {
+      const { data } = await supabase.from("founder_applications").select("id, status, intended_role").eq("user_id", currentUserId);
+      if (data?.length) {
         setIsFounderOrMember(true);
-        setActiveTab(prev => prev || 'tasks');
-        const accepted = data.filter(app => app.status === 'accepted').map(app => app.intended_role);
-        if (accepted.length > 0) {
-          setAcceptedRoles([...new Set(accepted)]);
-        }
+        setActiveTab(prev => prev || "tasks");
+        const accepted = data.filter(a => a.status === "accepted").map(a => a.intended_role);
+        setAcceptedRoles([...new Set(accepted)]);
       } else {
         setIsFounderOrMember(false);
-        setActiveTab(prev => prev || 'job_apps');
+        setActiveTab(prev => prev || "job_apps");
       }
       setLoading(false);
     };
-    checkStatus();
+    check();
   }, [currentUserId]);
 
   useEffect(() => {
-    if (!currentUserId || isFounderOrMember !== true) return;
-    let channel;
-
+    if (!currentUserId || isFounderOrMember !== true || activeTab !== "tasks") return;
+    let ch;
     const fetchTasks = async () => {
-      const { data } = await supabase.from('tasks').select(`
-        *,
-        assignee:profiles!tasks_assignee_id_fkey(username, avatar_url),
+      const { data } = await supabase.from("tasks").select(`
+        *, assignee:profiles!tasks_assignee_id_fkey(username, avatar_url),
         assigner:profiles!tasks_assigner_id_fkey(username, avatar_url)
-      `).or(`assignee_id.eq.${currentUserId},assigner_id.eq.${currentUserId}`).order('created_at', { ascending: false });
+      `).or(`assignee_id.eq.${currentUserId},assigner_id.eq.${currentUserId}`).order("created_at", { ascending: false });
       if (data) setMyTasks(data);
     };
-
-    if (activeTab === 'tasks') {
-      fetchTasks(); // Fetch initial state
-      channel = supabase.channel(`user-tasks-${currentUserId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-          fetchTasks(); // Refresh tasks live when admin updates them
-        }).subscribe();
-    }
-    return () => { if (channel) supabase.removeChannel(channel); };
+    fetchTasks();
+    ch = supabase.channel(`user-tasks-${currentUserId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, fetchTasks).subscribe();
+    return () => { if (ch) supabase.removeChannel(ch); };
   }, [activeTab, currentUserId, isFounderOrMember]);
 
   useEffect(() => {
-    if (!currentUserId || isFounderOrMember !== false) return;
-    const fetchJobApps = async () => {
+    if (activeTab !== "job_apps" || isFounderOrMember !== false || myJobApps.length > 0) return;
+    const fetch = async () => {
       setLoading(true);
-      const { data } = await supabase.from('job_applications').select('*, jobs(title, company)').eq('user_id', currentUserId).order('created_at', { ascending: false });
+      const { data } = await supabase.from("job_applications").select("*, jobs(title, company)").eq("user_id", currentUserId).order("created_at", { ascending: false });
       if (data) setMyJobApps(data);
       setLoading(false);
     };
-    if (activeTab === 'job_apps' && myJobApps.length === 0) fetchJobApps();
+    fetch();
   }, [activeTab, currentUserId, isFounderOrMember, myJobApps.length]);
 
   useEffect(() => {
-    if (!currentUserId || isFounderOrMember !== true) return;
-    const fetchFounderApps = async () => {
+    if (activeTab !== "founder_apps" || isFounderOrMember !== true || myFounderApps.length > 0) return;
+    const fetch = async () => {
       setLoading(true);
-      const { data } = await supabase.from('founder_applications').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false });
+      const { data } = await supabase.from("founder_applications").select("*").eq("user_id", currentUserId).order("created_at", { ascending: false });
       if (data) setMyFounderApps(data);
       setLoading(false);
     };
-    if (activeTab === 'founder_apps' && myFounderApps.length === 0) fetchFounderApps();
+    fetch();
   }, [activeTab, currentUserId, isFounderOrMember, myFounderApps.length]);
 
   useEffect(() => {
-    if (!currentUserId || isFounderOrMember !== false) return;
-    const fetchNotifs = async () => {
+    if (activeTab !== "notifications" || isFounderOrMember !== false || myNotifications.length > 0) return;
+    const fetch = async () => {
       setLoading(true);
-      const { data } = await supabase.from('notifications').select('*').eq('receiver_id', currentUserId).order('created_at', { ascending: false }).limit(20);
+      const { data } = await supabase.from("notifications").select("*").eq("receiver_id", currentUserId).order("created_at", { ascending: false }).limit(20);
       if (data) setMyNotifications(data);
       setLoading(false);
     };
-    if (activeTab === 'notifications' && myNotifications.length === 0) fetchNotifs();
+    fetch();
   }, [activeTab, currentUserId, isFounderOrMember, myNotifications.length]);
 
   const handleTaskUpdate = async (taskId, newStatus) => {
     setActionProcessing(true);
     try {
       const task = myTasks.find(t => t.id === taskId);
-      const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+      const { error } = await supabase.from("tasks").update({ status: newStatus }).eq("id", taskId);
       if (error) throw error;
       setMyTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-
-      // Notify the assigner when marking as completed
-      if (newStatus === 'completed' && task && task.assigner_id && task.assigner_id !== currentUserId) {
-        await supabase.from('notifications').insert({
-          receiver_id: task.assigner_id,
-          actor_id: currentUserId,
-          type: 'message',
-          content: `marked the task "${task.title}" as completed.`
+      if (newStatus === "completed" && task?.assigner_id && task.assigner_id !== currentUserId) {
+        await supabase.from("notifications").insert({
+          receiver_id: task.assigner_id, actor_id: currentUserId,
+          type: "message", content: `marked task "${task.title}" as completed.`
         });
       }
-    } catch (err) {
-      alert("Error updating task: " + err.message);
-    } finally {
-      setActionProcessing(false);
-    }
+    } catch (err) { alert(err.message); }
+    finally { setActionProcessing(false); }
   };
 
-  const handleDeleteJobApp = async (appId) => {
-    if (!confirm("Are you sure you want to delete this application?")) return;
-    try {
-      const { error } = await supabase.from('job_applications').delete().eq('id', appId);
-      if (error) throw error;
-      setMyJobApps(prev => prev.filter(app => app.id !== appId));
-    } catch (err) {
-      alert("Error deleting application: " + err.message);
-    }
-  };
-
-  const handleDeleteFounderApp = async (appId) => {
-    if (!confirm("Are you sure you want to delete this application?")) return;
-    try {
-      const { error } = await supabase.from('founder_applications').delete().eq('id', appId);
-      if (error) throw error;
-      setMyFounderApps(prev => prev.filter(app => app.id !== appId));
-    } catch (err) {
-      alert("Error deleting application: " + err.message);
-    }
-  };
+  const memberTabs = [
+    { id: "tasks", label: "Tasks" },
+    { id: "founder_apps", label: "My Applications" },
+  ];
+  const guestTabs = [
+    { id: "job_apps", label: "Job Apps" },
+    { id: "notifications", label: "Notifications" },
+    { id: "features", label: "What's New" },
+  ];
+  const tabs = isFounderOrMember ? memberTabs : guestTabs;
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto py-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 rounded-[2rem]">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-purple-200 dark:border-purple-800/50">
-            <UserCog size={24} />
-          </div>
+    <div className="space-y-4 max-w-3xl mx-auto py-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-violet-50 dark:bg-violet-500/5 border border-violet-200 dark:border-violet-500/20 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-violet-100 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-xl flex items-center justify-center shrink-0"><UserCog size={18} /></div>
           <div>
-            <h3 className="text-purple-700 dark:text-purple-400 font-bold text-lg mb-1">My Dashboard</h3>
-            <p className="text-sm text-purple-600/80 dark:text-purple-400/80 leading-relaxed">Manage your personal tasks and applications.</p>
+            <h3 className="text-gray-900 dark:text-white font-black text-sm">My Dashboard</h3>
+            <p className="text-[10px] text-violet-600/70 dark:text-violet-300/50 font-medium">Personal tasks & applications</p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0 w-full sm:w-auto">
-          {acceptedRoles.includes('cofounder') && (
-            <a href="/founder-dashboard" className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto">
-              Founder Workspace <ChevronRight size={14} />
+        <div className="flex items-center gap-2 flex-wrap">
+          {acceptedRoles.includes("cofounder") && (
+            <a href="/founder-dashboard" className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
+              Founder Workspace <ArrowUpRight size={11} />
             </a>
           )}
-          {acceptedRoles.includes('member') && (
-            <a href="/member-dashboard" className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto">
-              Member Workspace <ChevronRight size={14} />
+          {acceptedRoles.includes("member") && (
+            <a href="/member-dashboard" className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
+              Member Workspace <ArrowUpRight size={11} />
             </a>
           )}
-          <div className="flex bg-white dark:bg-gray-900 p-1 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm shrink-0 overflow-x-auto w-full sm:w-auto">
-          {isFounderOrMember === true && (
-            <>
-              <button onClick={() => setActiveTab('tasks')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'tasks' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Tasks</button>
-              <button onClick={() => setActiveTab('founder_apps')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'founder_apps' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Founder Apps</button>
-            </>
-          )}
-          {isFounderOrMember === false && (
-            <>
-              <button onClick={() => setActiveTab('job_apps')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'job_apps' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Job Apps</button>
-              <button onClick={() => setActiveTab('notifications')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'notifications' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>Notifications</button>
-              <button onClick={() => setActiveTab('features')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'features' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>New Features</button>
-            </>
-          )}
+          <div className="flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-0.5 rounded-xl shadow-sm">
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => setActiveTab(t.id)}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${activeTab === t.id ? "bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                {t.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col">
-        {loading ? (
-          <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-purple-500" /></div>
-        ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[500px] overflow-y-auto custom-scrollbar">
-            {activeTab === 'tasks' && (
-              <>
-                <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 flex items-center gap-2 overflow-x-auto no-scrollbar">
-                  <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mr-1 shrink-0">Filter Backlog:</span>
-                  {['All', 'High', 'Medium', 'Low'].map(f => (
-                    <button 
-                      key={f} 
-                      onClick={(e) => { e.preventDefault(); setTaskFilter(f); }} 
-                      className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all border shrink-0 ${taskFilter === f ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 border-purple-200 dark:border-purple-800' : 'bg-transparent border-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
-                {myTasks.filter(t => taskFilter === 'All' || t.priority === taskFilter).length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No tasks found.</div> :
-                myTasks.filter(t => taskFilter === 'All' || t.priority === taskFilter)
-                  .sort((a, b) => {
-                    const p = { 'High': 3, 'Medium': 2, 'Low': 1 };
-                    return (p[b.priority || 'Medium'] || 0) - (p[a.priority || 'Medium'] || 0);
-                  }).map(task => (
-                <div key={task.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col gap-1">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+        {loading
+          ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-violet-500" size={22} /></div>
+          : (
+            <div>
+              {activeTab === "tasks" && (
+                <>
+                  <div className="flex gap-1 p-3 border-b border-gray-100 dark:border-gray-800 overflow-x-auto">
+                    {["All", "High", "Medium", "Low"].map(f => (
+                      <button key={f} onClick={() => setTaskFilter(f)}
+                        className={`px-3 py-1 text-[10px] font-bold uppercase rounded-lg transition-all whitespace-nowrap ${taskFilter === f ? "bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-400"}`}>
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                  {myTasks.filter(t => taskFilter === "All" || t.priority === taskFilter).length === 0
+                    ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-xs">No tasks assigned.</div>
+                    : myTasks.filter(t => taskFilter === "All" || t.priority === taskFilter)
+                      .sort((a, b) => ({ High: 3, Medium: 2, Low: 1 }[b.priority || "Medium"] - ({ High: 3, Medium: 2, Low: 1 }[a.priority || "Medium"]))
+                      ).map(task => (
+                        <div key={task.id} className="p-4 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-xs font-bold text-gray-900 dark:text-white">{task.title}</p>
+                                <Badge color={task.priority === "High" ? "rose" : task.priority === "Medium" ? "amber" : "blue"}>{task.priority}</Badge>
+                              </div>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-500 line-clamp-2">{task.description}</p>
+                            </div>
+                            <button onClick={() => handleTaskUpdate(task.id, task.status === "completed" ? "pending" : "completed")}
+                              disabled={actionProcessing}
+                              className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all disabled:opacity-50 ${task.status === "completed" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20" : "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20"}`}>
+                              {task.status}
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/60">
+                            <span className="text-[9px] text-gray-600">from @{task.assigner?.username || "Admin"}</span>
+                            <span className="text-[9px] text-gray-600">→ @{task.assignee?.username || "?"}</span>
+                          </div>
+                        </div>
+                      ))
+                  }
+                </>
+              )}
+
+              {activeTab === "job_apps" && (
+                myJobApps.length === 0
+                  ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-xs">No job applications.</div>
+                  : myJobApps.map(app => (
+                    <div key={app.id} className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
+                      <div>
+                        <p className="text-xs font-bold text-gray-900 dark:text-white">{app.jobs?.title || "Unknown"}</p>
+                        <p className="text-[10px] text-gray-500">at {app.jobs?.company}</p>
+                      </div>
                       <div className="flex items-center gap-2">
-                        <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm">{task.title}</h4>
-                        {task.priority && (
-                          <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border ${task.priority === 'High' ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800/50' : task.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50' : 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50'}`}>
-                            {task.priority}
-                          </span>
-                        )}
+                        <Badge color={statusColor(app.status)}>{app.status}</Badge>
+                        <button onClick={async () => {
+                          if (!confirm("Delete?")) return;
+                          const { error } = await supabase.from("job_applications").delete().eq("id", app.id);
+                          if (!error) setMyJobApps(prev => prev.filter(a => a.id !== app.id));
+                        }} className="p-1.5 text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
                       </div>
-                      {task.linked_to && (
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                          <FileText size={10} /> {task.linked_to}
+                    </div>
+                  ))
+              )}
+
+              {activeTab === "founder_apps" && (
+                myFounderApps.length === 0
+                  ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-xs">No applications found.</div>
+                  : myFounderApps.map(app => (
+                    <div key={app.id} className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
+                      <div>
+                        <p className={`text-xs font-bold ${app.intended_role === "cofounder" ? "text-violet-600 dark:text-violet-400" : "text-blue-600 dark:text-blue-400"}`}>
+                          {app.intended_role === "cofounder" ? "Co-founder Application" : "Member Application"}
                         </p>
-                      )}
-                    </div>
-                    <button 
-                      onClick={() => handleTaskUpdate(task.id, task.status === 'completed' ? 'pending' : 'completed')} 
-                      disabled={actionProcessing} 
-                      className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-50 ${task.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'}`}
-                    >
-                      {task.status}
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">{task.description}</p>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative border border-gray-200 dark:border-gray-700">
-                        {task.assigner?.avatar_url ? <Image src={task.assigner.avatar_url} alt="assigner" fill sizes="20px" className="object-cover" /> : <UserCog size={12} className="m-auto mt-1 text-gray-400" />}
+                        <p className="text-[10px] text-gray-500">{new Date(app.created_at).toLocaleDateString()}</p>
                       </div>
-                      <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">By @{task.assigner?.username || 'Admin'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">To @{task.assignee?.username || 'Unknown'}</span>
-                      <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden relative border border-gray-200 dark:border-gray-700">
-                        {task.assignee?.avatar_url ? <Image src={task.assignee.avatar_url} alt="assignee" fill sizes="20px" className="object-cover" /> : <User size={12} className="m-auto mt-1 text-gray-400" />}
+                      <div className="flex items-center gap-2">
+                        <Badge color={statusColor(app.status)}>{app.status || "pending"}</Badge>
+                        <button onClick={async () => {
+                          if (!confirm("Delete?")) return;
+                          const { error } = await supabase.from("founder_applications").delete().eq("id", app.id);
+                          if (!error) setMyFounderApps(prev => prev.filter(a => a.id !== app.id));
+                        }} className="p-1.5 text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
                       </div>
                     </div>
-                  </div>
-                </div>
-                ))}
-              </>
-            )}
+                  ))
+              )}
 
-            {activeTab === 'job_apps' && (
-              myJobApps.length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No job applications found.</div> :
-              myJobApps.map(app => (
-                <div key={app.id} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm truncate text-blue-600 dark:text-blue-400">
-                      {app.jobs?.title || 'Unknown Role'}
-                    </h4>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">
-                      at {app.jobs?.company || 'Unknown Company'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${
-                      app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 
-                      app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 
-                      'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
-                    }`}>
-                      {app.status}
-                    </span>
-                    <button onClick={() => handleDeleteJobApp(app.id)} className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
+              {activeTab === "notifications" && (
+                myNotifications.length === 0
+                  ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-xs">No notifications.</div>
+                  : myNotifications.map(n => (
+                    <div key={n.id} className="p-4 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <span className="font-bold text-violet-600 dark:text-violet-400 capitalize">{(n.type || "alert").replace("_", " ")}: </span>
+                        {renderWithLinks(n.content)}
+                      </p>
+                      <p className="text-[9px] text-gray-500 dark:text-gray-600 mt-1">{new Date(n.created_at).toLocaleDateString()}</p>
+                    </div>
+                  ))
+              )}
 
-            {activeTab === 'founder_apps' && (
-              myFounderApps.length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No founder applications found.</div> :
-              myFounderApps.map(app => (
-                <div key={app.id} className="flex flex-col sm:flex-row p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-4 items-start sm:items-center justify-between border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <h4 className={`font-bold text-sm truncate capitalize ${app.intended_role === 'cofounder' ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                      {app.intended_role === 'cofounder' ? 'Co-founder Application' : 'Member Application'}
-                    </h4>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5 truncate">
-                      Applied on {new Date(app.created_at).toLocaleDateString()}
-                    </p>
+              {activeTab === "features" && FEATURES.map(f => (
+                <div key={f.id} className="p-4 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-bold text-gray-900 dark:text-white">{f.title}</p>
+                    <Badge color="violet">New</Badge>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${app.status === 'accepted' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : app.status === 'declined' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'}`}>
-                      {app.status || 'pending'}
-                    </span>
-                    <button onClick={() => handleDeleteFounderApp(app.id)} className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  <p className="text-[10px] text-gray-500">{f.desc}</p>
+                  <p className="text-[9px] text-gray-400 dark:text-gray-600 mt-1">{f.date}</p>
                 </div>
-              ))
-            )}
-
-            {activeTab === 'notifications' && (
-              myNotifications.length === 0 ? <div className="p-10 text-center text-gray-500 text-sm">No recent notifications.</div> :
-              myNotifications.map(notif => (
-                <div key={notif.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
-                  <p className="text-sm text-gray-800 dark:text-gray-200"><span className="font-bold capitalize text-purple-600 dark:text-purple-400">{(notif.type || 'Alert').replace('_', ' ')}:</span> {renderWithLinks(notif.content)}</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">{new Date(notif.created_at).toLocaleDateString()}</p>
-                </div>
-              ))
-            )}
-
-            {activeTab === 'features' && (
-              FEATURES_LIST.map(feature => (
-                <div key={feature.id} className="flex flex-col p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all gap-2 group border-b border-gray-100 dark:border-gray-800">
-                  <div className="flex justify-between items-start">
-                    <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm text-purple-600 dark:text-purple-400">{feature.title}</h4>
-                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800/50">New</span>
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-300">{feature.desc}</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{feature.date}</p>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
       </div>
     </div>
   );
 };
 
-const MORE_TOOLS = [
-  { 
-    id: "user_dashboard", 
-    label: "My Dashboard", 
-    icon: <UserCog size={20} />, 
-    desc: "Manage your applications & tasks", 
-    details: "View your job applications, founder applications, and assigned tasks." 
-  },
-  { 
-    id: "api", 
-    label: "API Access", 
-    icon: <Code2 size={20} />, 
-    desc: "Developer tools & keys", 
-    details: "Integrate SAVIOMDS into your own workflows using our REST API and Webhooks." 
-  },
-  { 
-    id: "status", 
-    label: "System Status", 
-    icon: <Zap size={20} />, 
-    desc: "Check platform health", 
-    details: "Current status: All systems operational. Check latency for Mauritius region nodes." 
-  },
-  { 
-    id: "community", 
-    label: "Community Hub", 
-    icon: <Globe size={20} />, 
-    desc: "Join the conversation", 
-    details: "Connect with other TechNinja developers and share your latest Next.js projects." 
-  },
-  { 
-    id: "support", 
-    label: "Help & Support", 
-    icon: <HelpCircle size={20} />, 
-    desc: "Get technical help", 
-    details: "Access our documentation or open a ticket with our support engineering team." 
-  },
-  { 
-    id: "admin", 
-    label: "Admin Dashboard", 
-    icon: <ShieldAlert size={20} />, 
-    desc: "Platform management", 
-    details: "Review verification requests and manage the network." 
-  },
+// ─── Tool Registry ────────────────────────────────────────────────────────────
+
+const TOOLS = [
+  { id: "user_dashboard", label: "My Dashboard",    icon: UserCog,    desc: "Applications & task management" },
+  { id: "api",            label: "API Access",       icon: Code2,      desc: "Developer keys & integration" },
+  { id: "status",         label: "System Status",    icon: Zap,        desc: "Platform health & latency" },
+  { id: "community",      label: "Community Hub",    icon: Globe,      desc: "Global network chat" },
+  { id: "support",        label: "Help & Support",   icon: HelpCircle, desc: "AI technical assistance" },
+  { id: "admin",          label: "Admin Dashboard",  icon: ShieldAlert, desc: "Platform management", adminOnly: true },
 ];
+
+// ─── Main Export ──────────────────────────────────────────────────────────────
 
 export default function MoreContent() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [copiedProfile, setCopiedProfile] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  // Filter tools so non-admins never even see the Admin Panel option
-  const visibleTools = MORE_TOOLS.filter(t => t.id !== 'admin' || isAdmin);
-
-  // Derive active tool directly from search parameters without needing useEffect or state
-  const toolParam = searchParams?.get('tool');
+  const visibleTools = TOOLS.filter(t => !t.adminOnly || isAdmin);
+  const toolParam = searchParams?.get("tool");
   const activeItem = toolParam ? visibleTools.find(t => t.id === toolParam) || null : null;
 
   useEffect(() => {
-    const getSession = async () => {
+    const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
         setCurrentUserId(session.user.id);
-        const { data } = await supabase.from('profiles').select('is_admin').eq('id', session.user.id).single();
+        const { data } = await supabase.from("profiles").select("is_admin").eq("id", session.user.id).single();
         if (data?.is_admin) setIsAdmin(true);
       }
     };
-    getSession();
+    init();
   }, []);
 
-  const handleOpenTool = (tool) => {
+  const openTool = (tool) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
-    params.set('tool', tool.id);
-    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.push(newUrl, { scroll: false });
+    params.set("tool", tool.id);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  const handleCloseTool = () => {
+  const closeTool = () => {
     const params = new URLSearchParams(searchParams?.toString() || "");
-    params.delete('tool');
-    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.push(newUrl, { scroll: false });
-  };
-
-  const handleShareProfile = () => {
-    if (currentUserId) {
-      navigator.clipboard.writeText(`${window.location.origin}/u/${currentUserId}`);
-      setCopiedProfile(true);
-      setTimeout(() => setCopiedProfile(false), 2000);
-    }
+    params.delete("tool");
+    const url = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.push(url, { scroll: false });
   };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/auth';
+    window.location.href = "/auth";
   };
 
   return (
-    <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 no-scrollbar relative">
-      
+    <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Resources</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">Extra tools for your development workflow.</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">Tools and utilities for your workflow.</p>
       </div>
 
-      {/* Grid Layout - 2 Columns on desktop to use the mid-section width better */}
+      {/* Tool Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {visibleTools.map((tool) => (
-          <div 
-            key={tool.id}
-        onClick={() => handleOpenTool(tool)}
-            className="group flex items-center justify-between p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[1.5rem] hover:border-blue-500/30 dark:hover:border-blue-500/30 hover:shadow-md transition-all cursor-pointer"
-          >
+        {visibleTools.map(tool => (
+          <button key={tool.id} onClick={() => openTool(tool)}
+            className="group flex items-center justify-between p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-blue-500/40 dark:hover:border-blue-500/30 hover:shadow-lg transition-all text-left">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                {tool.icon}
+              <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0">
+                <tool.icon size={20} />
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 tracking-tight">{tool.label}</span>
-                <span className="text-[11px] text-gray-600 dark:text-gray-400 font-bold uppercase tracking-wider">{tool.desc}</span>
+              <div>
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{tool.label}</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-500 font-medium mt-0.5">{tool.desc}</p>
               </div>
             </div>
-            <ChevronRight size={16} className="text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all" />
-          </div>
+            <ChevronRight size={15} className="text-gray-400 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5 shrink-0" />
+          </button>
         ))}
       </div>
 
-      {/* Secondary Actions */}
-      <div className="mt-8 space-y-2">
-         
-         
-         <button 
-           onClick={handleSignOut}
-           className="w-full flex items-center gap-3 p-4 text-red-500/60 hover:text-red-500 transition-all"
-         >
-            <LogOut size={18} />
-            <span className="text-sm font-bold">Sign Out</span>
-         </button>
+      {/* Sign out */}
+      <div className="mt-8">
+        <button onClick={handleSignOut} className="flex items-center gap-2.5 p-3 text-red-400/50 hover:text-red-400 transition-colors text-sm font-bold">
+          <LogOut size={16} /> Sign Out
+        </button>
       </div>
 
-      {/* --- FULL PAGE TOOL MODAL --- */}
+      {/* Full-screen Tool Modal */}
       {activeItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-          <div 
-            className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-md"
-            onClick={handleCloseTool}
-          />
-          
-          <div className="relative w-full max-w-4xl h-[85vh] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            
-            {/* Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between shrink-0">
-               <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
-                   {activeItem.icon}
-                 </div>
-                 <div>
-                   <h2 className="text-xl font-black text-gray-900 dark:text-gray-100">{activeItem.label}</h2>
-                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{activeItem.desc}</p>
-                 </div>
-               </div>
-               <button onClick={handleCloseTool} className="p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-all rounded-xl">
-                 <X size={20} />
-               </button>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={closeTool} />
+          <div className="relative w-full max-w-4xl h-[88vh] bg-gray-50 dark:bg-[#0c0c10] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                  <activeItem.icon size={16} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-gray-900 dark:text-white">{activeItem.label}</h2>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-600 font-medium">{activeItem.desc}</p>
+                </div>
+              </div>
+              <button onClick={closeTool}
+                className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all rounded-xl">
+                <X size={16} />
+              </button>
             </div>
 
-            {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white dark:bg-gray-900 custom-scrollbar relative">
-               {activeItem.id === 'user_dashboard' && <UserDashboardTool currentUserId={currentUserId} />}
-               {activeItem.id === 'status' && <SystemStatusTool />}
-               {activeItem.id === 'api' && <ApiAccessTool />}
-               {activeItem.id === 'community' && <CommunityHubTool currentUserId={currentUserId} />}
-               {activeItem.id === 'support' && <SupportTool />}
-               {activeItem.id === 'admin' && <AdminPanelTool currentUserId={currentUserId} />}
+            {/* Modal body */}
+            <div className={`flex-1 overflow-hidden ${activeItem.id === "admin" ? "flex flex-col" : "overflow-y-auto"}`}>
+              <div className={activeItem.id === "admin" ? "flex flex-col h-full" : "p-5"}>
+                {activeItem.id === "user_dashboard" && <UserDashboardTool currentUserId={currentUserId} />}
+                {activeItem.id === "status" && <SystemStatusTool />}
+                {activeItem.id === "api" && <ApiAccessTool />}
+                {activeItem.id === "community" && <div className="h-full"><CommunityHubTool currentUserId={currentUserId} /></div>}
+                {activeItem.id === "support" && <SupportTool />}
+                {activeItem.id === "admin" && <AdminPanelTool currentUserId={currentUserId} />}
+              </div>
             </div>
           </div>
         </div>

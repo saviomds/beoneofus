@@ -1,4 +1,4 @@
-import ProjectIDE from "../ProjectIDE";
+import ProjectIDE from "../projects/ProjectIDE";
 
 export const metadata = {
   title: "Project IDE - beoneofus",

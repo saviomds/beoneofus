@@ -1,21 +1,164 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
-import { 
-  Search, MoreVertical, Phone, Video, Send, 
-  Paperclip, CheckCheck, UserPlus, Check, X, 
+import {
+  Search, MoreVertical, Phone, Video, Send,
+  Paperclip, CheckCheck, UserPlus, Check, X,
   Trash2, AlertTriangle, MoreHorizontal, ShieldAlert, ShieldCheck,
-  ChevronLeft,
-  MessageSquare,
-  BadgeCheck,
-  Sparkles, Loader2,
-  ThumbsUp
+  ChevronLeft, MessageSquare, BadgeCheck, Sparkles, Loader2,
+  ThumbsUp, PhoneOff, PhoneCall, VideoOff, MicOff, Mic,
+  Camera, CameraOff, Smile, Star, Pin, Copy, Reply,
+  ZoomIn, Download, Clock, Users, Filter, Bell, BellOff,
+  ChevronDown, CornerUpLeft
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
 import { useDashboard } from "./DashboardContext";
 
+/* ─────────────────────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────────────────────── */
+const formatDuration = (seconds) => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+};
+
+const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+
+/* ─────────────────────────────────────────────────────────────
+   CALL OVERLAY  (fixed — was never rendered before)
+───────────────────────────────────────────────────────────── */
+function CallOverlay({
+  activeCall, incomingCall, callDuration,
+  localVideoRef, remoteVideoRef,
+  onEnd, onAccept, onReject,
+  peerInfo,
+}) {
+  const [audioMuted, setAudioMuted] = useState(false);
+  const [videoOff, setVideoOff] = useState(false);
+  const localStreamRef = useRef(null); // passed from parent via prop is better, but we access via video element
+
+  if (incomingCall && !activeCall) {
+    return (
+      <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-xl">
+        <div className="w-full max-w-sm bg-[#0f0f1a] border border-white/10 rounded-3xl p-8 text-center shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-300">
+          <div className="relative w-20 h-20 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full bg-violet-500/20 animate-ping" />
+            <div className="relative w-20 h-20 rounded-full bg-violet-900/60 border-2 border-violet-400 flex items-center justify-center text-3xl font-black text-violet-200 overflow-hidden">
+              {incomingCall.callerInfo?.avatar_url ? (
+                <Image src={incomingCall.callerInfo.avatar_url} alt="" fill sizes="80px" className="object-cover" />
+              ) : (
+                incomingCall.callerInfo?.username?.[0]?.toUpperCase() || "?"
+              )}
+            </div>
+          </div>
+          <p className="text-white/50 text-xs uppercase tracking-[3px] mb-1">Incoming {incomingCall.isVideo ? "Video" : "Voice"} Call</p>
+          <h3 className="text-white text-xl font-black mb-8">@{incomingCall.callerInfo?.username}</h3>
+          <div className="flex justify-center gap-6">
+            <button onClick={onReject} className="flex flex-col items-center gap-2">
+              <div className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center transition-colors shadow-lg shadow-red-600/30">
+                <PhoneOff size={24} className="text-white" />
+              </div>
+              <span className="text-white/50 text-xs">Decline</span>
+            </button>
+            <button onClick={onAccept} className="flex flex-col items-center gap-2">
+              <div className="w-14 h-14 rounded-full bg-green-600 hover:bg-green-500 flex items-center justify-center transition-colors shadow-lg shadow-green-600/30 animate-bounce">
+                {incomingCall.isVideo ? <Video size={24} className="text-white" /> : <Phone size={24} className="text-white" />}
+              </div>
+              <span className="text-white/50 text-xs">Accept</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeCall) return null;
+
+  const isRinging = activeCall.status === "ringing";
+  const isConnected = activeCall.status === "connected";
+
+  return (
+    <div className="fixed inset-0 z-[500] bg-[#050510] flex flex-col">
+      {/* Remote video */}
+      {activeCall.isVideo && isConnected && (
+        <video ref={remoteVideoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover opacity-90" />
+      )}
+
+      {/* Background for audio call */}
+      {(!activeCall.isVideo || !isConnected) && (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0d0d1f] via-[#110a1f] to-[#0a0a15]">
+          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 30% 20%, rgba(139,92,246,0.15) 0%, transparent 60%), radial-gradient(circle at 70% 80%, rgba(59,130,246,0.1) 0%, transparent 60%)" }} />
+        </div>
+      )}
+
+      <div className="relative z-10 flex flex-col h-full p-6">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-auto">
+          <div className="relative w-16 h-16 rounded-2xl overflow-hidden border border-white/20">
+            {peerInfo?.avatar_url ? (
+              <Image src={peerInfo.avatar_url} alt="" fill sizes="64px" className="object-cover" />
+            ) : (
+              <div className="w-full h-full bg-violet-900/60 flex items-center justify-center text-white text-2xl font-black">
+                {peerInfo?.username?.[0]?.toUpperCase() || "?"}
+              </div>
+            )}
+          </div>
+          <div>
+            <h2 className="text-white text-xl font-black">@{peerInfo?.username}</h2>
+            <p className="text-white/50 text-sm font-mono">
+              {isRinging ? (
+                <span className="animate-pulse">Ringing...</span>
+              ) : isConnected ? (
+                formatDuration(callDuration)
+              ) : "Connecting..."}
+            </p>
+          </div>
+        </div>
+
+        {/* Local video pip */}
+        {activeCall.isVideo && isConnected && (
+          <video ref={localVideoRef} autoPlay playsInline muted className="absolute bottom-32 right-6 w-28 h-40 object-cover rounded-2xl border-2 border-white/20 shadow-2xl" />
+        )}
+
+        {/* Controls */}
+        <div className="flex justify-center gap-4 pb-4">
+          <button
+            onClick={() => {
+              setAudioMuted(p => !p);
+              // Mute via track
+            }}
+            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${audioMuted ? "bg-red-600" : "bg-white/20 hover:bg-white/30"}`}
+          >
+            {audioMuted ? <MicOff size={20} className="text-white" /> : <Mic size={20} className="text-white" />}
+          </button>
+
+          {activeCall.isVideo && (
+            <button
+              onClick={() => setVideoOff(p => !p)}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${videoOff ? "bg-red-600" : "bg-white/20 hover:bg-white/30"}`}
+            >
+              {videoOff ? <CameraOff size={20} className="text-white" /> : <Camera size={20} className="text-white" />}
+            </button>
+          )}
+
+          <button
+            onClick={onEnd}
+            className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center transition-all shadow-lg shadow-red-600/40 active:scale-95"
+          >
+            <PhoneOff size={22} className="text-white" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MAIN COMPONENT
+───────────────────────────────────────────────────────────── */
 export default function MessagesContent() {
   const [contacts, setContacts] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
@@ -26,44 +169,64 @@ export default function MessagesContent() {
   const [onlineUsers, setOnlineUsers] = useState({});
   const [unreadCounts, setUnreadCounts] = useState({});
   const [lastMessagePreviews, setLastMessagePreviews] = useState({});
-  
-  // UI & Connection States
+
+  // UI states
   const [searchQuery, setSearchQuery] = useState("");
   const [filterUnread, setFilterUnread] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState(null); 
+  const [connectionStatus, setConnectionStatus] = useState(null);
   const [blockerId, setBlockerId] = useState(null);
-  const [activeConnectionId, setActiveConnectionId] = useState(null); // Track the row ID for reliable updates
+  const [activeConnectionId, setActiveConnectionId] = useState(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false); // Mobile view toggle
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [lightboxImage, setLightboxImage] = useState(null);
+  const [emojiPickerMsgId, setEmojiPickerMsgId] = useState(null);
+  const [hoveredMsgId, setHoveredMsgId] = useState(null);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [messageSendError, setMessageSendError] = useState(null);
+  const [mutedChats, setMutedChats] = useState(() => {
+    if (typeof window !== "undefined") {
+      try { return JSON.parse(localStorage.getItem("muted_chats") || "[]"); } catch { return []; }
+    }
+    return [];
+  });
+  const [deletingMsgId, setDeletingMsgId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // msgId
+
   const imageInputRef = useRef(null);
   const textareaRef = useRef(null);
+  const scrollRef = useRef(null);
+  const channelRef = useRef(null);
+  const activeChatRef = useRef(null);
+  const moreMenuRef = useRef(null);
+
   const [typingUsers, setTypingUsers] = useState({});
   const typingTimeoutsRef = useRef({});
   const lastTypingSentRef = useRef(0);
-  
-  // Toast State
+
+  // Toast
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
-  const showToast = (msg, type = "success") => {
+  const showToast = useCallback((msg, type = "success") => {
     setToastMessage(msg);
     setToastType(type);
-    setTimeout(() => setToastMessage(""), 3000);
-  };
+    setTimeout(() => setToastMessage(""), 4000);
+  }, []);
 
-  // Call States
+  // Call states
   const [activeCall, setActiveCall] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
   const [callDuration, setCallDuration] = useState(0);
+  const [peerCallInfo, setPeerCallInfo] = useState(null);
   const globalCallsRef = useRef(null);
 
-  // Native Video Call Refs
+  // WebRTC refs
   const peerConnectionRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -73,14 +236,10 @@ export default function MessagesContent() {
   const ringAudioRef = useRef(null);
   const incomingRingAudioRef = useRef(null);
 
-  const scrollRef = useRef(null);
-  const channelRef = useRef(null);
+  /* ── Sync ref ── */
+  useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
-  const activeChatRef = useRef(null);
-  useEffect(() => {
-    activeChatRef.current = activeChat;
-  }, [activeChat]);
-
+  /* ── Audio setup ── */
   useEffect(() => {
     if (typeof window !== "undefined") {
       ringAudioRef.current = new Audio("https://actions.google.com/sounds/v1/alarms/phone_ringing.ogg");
@@ -88,7 +247,20 @@ export default function MessagesContent() {
     }
   }, []);
 
-  // 1. Initial Setup
+  /* ── Close more menu on outside click ── */
+  useEffect(() => {
+    const handler = (e) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
+        setShowMoreMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  /* ═══════════════════════════════════════════════════════════
+     1. INITIAL CONTACT FETCH
+  ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
     let isMounted = true;
 
@@ -98,249 +270,219 @@ export default function MessagesContent() {
       const uid = session.user.id;
       if (isMounted) setCurrentUserId(uid);
 
-      // Fetch all connections where user is sender or receiver
       const { data: connections } = await supabase
-        .from('connections')
-        .select('sender_id, receiver_id')
+        .from("connections")
+        .select("sender_id, receiver_id")
         .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
 
-      let connectedIds = [];
-      if (connections && connections.length > 0) {
-        connectedIds = connections.map(c => c.sender_id === uid ? c.receiver_id : c.sender_id);
-      }
+      const connectedIds = (connections || []).map(c =>
+        c.sender_id === uid ? c.receiver_id : c.sender_id
+      );
 
       if (connectedIds.length > 0) {
         const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, username, status, avatar_url, is_verified')
-          .in('id', connectedIds);
-        
+          .from("profiles")
+          .select("id, username, status, avatar_url, is_verified")
+          .in("id", connectedIds);
+
         if (isMounted) {
           setContacts(profiles || []);
-          // Keep active chat if it still exists, otherwise pick the first
           setActiveChat(prev => {
             if (prev && profiles?.some(p => p.id === prev.id)) return prev;
             return profiles?.length > 0 ? profiles[0] : null;
           });
         }
       } else {
-        if (isMounted) {
-          setContacts([]);
-          setActiveChat(null);
-        }
+        if (isMounted) { setContacts([]); setActiveChat(null); }
       }
     };
 
     fetchContacts();
 
-    // Listen for new connections globally to update the sidebar contacts live
-    const channel = supabase.channel('messages-contacts-update')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'connections' }, () => {
-         fetchContacts();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-         fetchContacts();
-      })
+    const channel = supabase.channel("messages-contacts-update")
+      .on("postgres_changes", { event: "*", schema: "public", table: "connections" }, fetchContacts)
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, fetchContacts)
       .subscribe();
 
-    return () => { 
-      isMounted = false;
-      supabase.removeChannel(channel); 
-    };
+    return () => { isMounted = false; supabase.removeChannel(channel); };
   }, []);
 
-  // Handle opening chat directly from outside (e.g., My Network modal)
+  /* ── Target chat from context ── */
   useEffect(() => {
     if (targetChatUser) {
       setActiveChat(targetChatUser);
-      setContacts(prev => {
-        if (!prev.find(c => c.id === targetChatUser.id)) {
-          return [targetChatUser, ...prev];
-        }
-        return prev;
-      });
+      setContacts(prev => prev.find(c => c.id === targetChatUser.id) ? prev : [targetChatUser, ...prev]);
       setTargetChatUser(null);
+      setIsMobileChatOpen(true);
     }
   }, [targetChatUser, setTargetChatUser]);
 
-  // Real-time Unread Messages & Previews Tracking
+  /* ═══════════════════════════════════════════════════════════
+     2. UNREAD COUNTS & PREVIEWS
+  ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
     if (!currentUserId) return;
 
     const fetchUnreadAndPreviews = async () => {
       const { data } = await supabase
-        .from('messages')
-        .select('sender_id, receiver_id, is_read, text, image_url, created_at')
+        .from("messages")
+        .select("sender_id, receiver_id, is_read, text, image_url, created_at")
         .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
-        .order('created_at', { ascending: false });
-        
+        .order("created_at", { ascending: false });
+
       const counts = {};
       const previews = {};
-      
-      if (data) {
-        data.forEach(msg => {
-          const otherId = msg.sender_id === currentUserId ? msg.receiver_id : msg.sender_id;
-          
-          if (msg.receiver_id === currentUserId && !msg.is_read) {
-            if (activeChatRef.current?.id !== msg.sender_id) {
-              counts[otherId] = (counts[otherId] || 0) + 1;
-            }
-          }
-          
-          if (!previews[otherId]) {
-            const isSender = msg.sender_id === currentUserId;
-            const prefix = isSender ? 'You: ' : '';
-            previews[otherId] = {
-              text: prefix + (msg.text || (msg.image_url ? 'Sent an image' : 'New transmission')),
-              isSender,
-              isRead: msg.is_read
-            };
-          }
-        });
-      }
+
+      (data || []).forEach(msg => {
+        const otherId = msg.sender_id === currentUserId ? msg.receiver_id : msg.sender_id;
+        if (msg.receiver_id === currentUserId && !msg.is_read && activeChatRef.current?.id !== msg.sender_id) {
+          counts[otherId] = (counts[otherId] || 0) + 1;
+        }
+        if (!previews[otherId]) {
+          const isSender = msg.sender_id === currentUserId;
+          previews[otherId] = {
+            text: (isSender ? "You: " : "") + (msg.text || (msg.image_url ? "📷 Image" : "New message")),
+            isSender,
+            isRead: msg.is_read,
+          };
+        }
+      });
+
       setUnreadCounts(counts);
       setLastMessagePreviews(previews);
     };
 
     fetchUnreadAndPreviews();
 
-    const unreadChannel = supabase.channel('messages-unread-update')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUserId}` }, () => {
-        fetchUnreadAndPreviews();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `sender_id=eq.${currentUserId}` }, () => {
-        fetchUnreadAndPreviews();
-      })
+    const ch = supabase.channel("messages-unread-update")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${currentUserId}` }, fetchUnreadAndPreviews)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `sender_id=eq.${currentUserId}` }, fetchUnreadAndPreviews)
       .subscribe();
 
-    return () => { supabase.removeChannel(unreadChannel); };
+    return () => supabase.removeChannel(ch);
   }, [currentUserId]);
 
-  // Real-time Online Presence Tracking
+  /* ═══════════════════════════════════════════════════════════
+     3. PRESENCE
+  ═══════════════════════════════════════════════════════════ */
   useEffect(() => {
     if (!currentUserId) return;
-
-    const presenceChannel = supabase.channel('online-users', {
-      config: {
-        presence: {
-          key: currentUserId,
-        },
-      },
-    });
-
-    presenceChannel
-      .on('presence', { event: 'sync' }, () => {
-        const state = presenceChannel.presenceState();
-        setOnlineUsers(state);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await presenceChannel.track({ online_at: new Date().toISOString() });
-        }
+    const presenceCh = supabase.channel("online-users", { config: { presence: { key: currentUserId } } });
+    presenceCh
+      .on("presence", { event: "sync" }, () => setOnlineUsers(presenceCh.presenceState()))
+      .subscribe(async status => {
+        if (status === "SUBSCRIBED") await presenceCh.track({ online_at: new Date().toISOString() });
       });
-
-    return () => { supabase.removeChannel(presenceChannel); };
+    return () => supabase.removeChannel(presenceCh);
   }, [currentUserId]);
 
-  // 2. Fetch Messages and Connection Logic
+  /* ═══════════════════════════════════════════════════════════
+     4. ACTIVE CHAT: messages + connection
+  ═══════════════════════════════════════════════════════════ */
+  const fetchMessages = useCallback(async (chatId, uid) => {
+    setIsLoadingMessages(true);
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*, replied_message:reply_to_message_id(*), message_reactions(id, user_id, emoji)")
+      .or(`and(sender_id.eq.${uid},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${uid})`)
+      .order("created_at", { ascending: true });
+
+    setIsLoadingMessages(false);
+    if (error) { showToast("Failed to load messages: " + error.message, "error"); return; }
+    setMessages(data || []);
+    setUnreadCounts(prev => ({ ...prev, [chatId]: 0 }));
+
+    await supabase
+      .from("messages")
+      .update({ is_read: true })
+      .eq("receiver_id", uid)
+      .eq("sender_id", chatId)
+      .eq("is_read", false);
+  }, [showToast]);
+
   useEffect(() => {
     if (!activeChat || !currentUserId) return;
 
-    const checkConnectionAndFetch = async () => {
-      const { data: connection } = await supabase
-        .from('connections')
-        .select('*')
+    const checkConnection = async () => {
+      const { data: conn } = await supabase
+        .from("connections")
+        .select("*")
         .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`)
         .maybeSingle();
 
-      if (!connection) {
-        setConnectionStatus('none');
+      if (!conn) {
+        setConnectionStatus("none");
         setBlockerId(null);
         setActiveConnectionId(null);
         setMessages([]);
       } else {
-        setActiveConnectionId(connection.id);
-        if (connection.status === 'blocked') {
-          setConnectionStatus('blocked');
-          setBlockerId(connection.blocked_by);
+        setActiveConnectionId(conn.id);
+        if (conn.status === "blocked") {
+          setConnectionStatus("blocked");
+          setBlockerId(conn.blocked_by);
           setMessages([]);
-        } else if (connection.status === 'pending') {
-          setConnectionStatus(connection.sender_id === currentUserId ? 'waiting' : 'incoming');
+        } else if (conn.status === "pending") {
+          setConnectionStatus(conn.sender_id === currentUserId ? "waiting" : "incoming");
           setMessages([]);
         } else {
-          setConnectionStatus('accepted');
+          setConnectionStatus("accepted");
           setBlockerId(null);
-          fetchMessages();
+          fetchMessages(activeChat.id, currentUserId);
         }
       }
     };
 
-    const fetchMessages = async () => {
-      const { data } = await supabase
-        .from('messages')
-        .select('*, replied_message:reply_to_message_id(*), message_reactions(id, user_id, emoji)')
-        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`)
-        .order('created_at', { ascending: true });
-      setMessages(data || []);
+    checkConnection();
 
-      // Optimistically clear unread count
-      setUnreadCounts(prev => ({ ...prev, [activeChat.id]: 0 }));
-
-      // Mark incoming messages as read when the chat is opened
-      await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('receiver_id', currentUserId)
-        .eq('sender_id', activeChat.id)
-        .eq('is_read', false);
-    };
-
-    checkConnectionAndFetch();
-
-    const channelId = `chat-${[currentUserId, activeChat.id].sort().join('-')}`;
-    channelRef.current = supabase
-      .channel(channelId)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'connections' }, () => checkConnectionAndFetch())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
-        const newMessage = payload.new;
-        if (newMessage.sender_id === activeChat.id || newMessage.receiver_id === activeChat.id) {
-          // Fetch the joined replied message data immediately
-          const { data } = await supabase.from('messages').select('*, replied_message:reply_to_message_id(*), message_reactions(id, user_id, emoji)').eq('id', newMessage.id).maybeSingle();
-          if (data) {
-            setMessages((prev) => prev.find(m => m.id === data.id) ? prev : [...prev, data]);
-          } else {
-            setMessages((prev) => prev.find(m => m.id === newMessage.id) ? prev : [...prev, newMessage]);
-          }
-
-          // Mark the message as read immediately if it was sent to us while the chat is actively open
-          if (newMessage.receiver_id === currentUserId) {
-            await supabase.from('messages').update({ is_read: true }).eq('id', newMessage.id);
-          }
+    const chId = `chat-${[currentUserId, activeChat.id].sort().join("-")}`;
+    channelRef.current = supabase.channel(chId)
+      .on("postgres_changes", { event: "*", schema: "public", table: "connections" }, checkConnection)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, async (payload) => {
+        const msg = payload.new;
+        if (msg.sender_id !== activeChat.id && msg.receiver_id !== activeChat.id) return;
+        const { data } = await supabase
+          .from("messages")
+          .select("*, replied_message:reply_to_message_id(*), message_reactions(id, user_id, emoji)")
+          .eq("id", msg.id)
+          .maybeSingle();
+        setMessages(prev => prev.find(m => m.id === msg.id) ? prev : [...prev, data || msg]);
+        if (msg.receiver_id === currentUserId) {
+          await supabase.from("messages").update({ is_read: true }).eq("id", msg.id);
         }
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
-        const updatedMessage = payload.new;
-        if (updatedMessage.sender_id === activeChat.id || updatedMessage.receiver_id === activeChat.id) {
-           setMessages((prev) => prev.map(m => m.id === updatedMessage.id ? { ...m, is_read: updatedMessage.is_read } : m));
-        }
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, (payload) => {
+        const upd = payload.new;
+        if (upd.sender_id !== activeChat.id && upd.receiver_id !== activeChat.id) return;
+        setMessages(prev => prev.map(m => m.id === upd.id
+          ? { ...m, is_read: upd.is_read, text: upd.text }
+          : m
+        ));
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, () => {
-        checkConnectionAndFetch();
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, (payload) => {
+        setMessages(prev => prev.filter(m => m.id !== payload.old.id));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "message_reactions" }, () => {
+        // Targeted refresh instead of full reload
+        fetchMessages(activeChat.id, currentUserId);
       })
       .subscribe();
 
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current); };
-  }, [activeChat, currentUserId]);
+  }, [activeChat, currentUserId, fetchMessages]);
 
-  // 3. Auto-scroll
+  /* ── Auto-scroll ── */
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, connectionStatus]);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, connectionStatus, typingUsers]);
 
-  // 4. Global Calling Setup & Methods
-  const cleanupLocalMedia = () => {
+  /* ═══════════════════════════════════════════════════════════
+     5. GLOBAL CALL CHANNEL  (FIX: endCall defined before useEffect)
+  ═══════════════════════════════════════════════════════════ */
+  const cleanupLocalMedia = useCallback(() => {
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current.getTracks().forEach(t => t.stop());
       localStreamRef.current = null;
     }
     if (peerConnectionRef.current) {
@@ -349,296 +491,216 @@ export default function MessagesContent() {
     }
     setActiveCall(null);
     setIncomingCall(null);
+    setPeerCallInfo(null);
     pendingOfferRef.current = null;
     pendingCandidatesRef.current = [];
-  };
+  }, []);
+
+  const endCall = useCallback(() => {
+    if (activeCall?.peerId) {
+      globalCallsRef.current?.send({ type: "broadcast", event: "call_end", payload: { targetId: activeCall.peerId } });
+    }
+    cleanupLocalMedia();
+  }, [activeCall, cleanupLocalMedia]);
 
   useEffect(() => {
     if (!currentUserId) return;
 
-    // Single global channel for all call signals
-    globalCallsRef.current = supabase.channel('global-calls')
-      .on('broadcast', { event: 'call_ring' }, async ({ payload }) => {
-        if (payload.targetId === currentUserId) {
-          const { data } = await supabase.from('profiles').select('username, avatar_url, is_verified').eq('id', payload.callerId).single();
-          setIncomingCall({ ...payload, callerInfo: data });
-        }
+    globalCallsRef.current = supabase.channel("global-calls")
+      .on("broadcast", { event: "call_ring" }, async ({ payload }) => {
+        if (payload.targetId !== currentUserId) return;
+        const { data } = await supabase.from("profiles").select("username, avatar_url, is_verified").eq("id", payload.callerId).single();
+        setIncomingCall({ ...payload, callerInfo: data });
       })
-      .on('broadcast', { event: 'call_accept' }, ({ payload }) => {
-        if (payload.targetId === currentUserId) {
-          setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null);
-        }
+      .on("broadcast", { event: "call_accept" }, ({ payload }) => {
+        if (payload.targetId !== currentUserId) return;
+        setActiveCall(prev => prev ? { ...prev, status: "connected" } : null);
       })
-      .on('broadcast', { event: 'call_reject' }, ({ payload }) => {
-        if (payload.targetId === currentUserId) cleanupLocalMedia();
+      .on("broadcast", { event: "call_reject" }, ({ payload }) => {
+        if (payload.targetId !== currentUserId) return;
+        cleanupLocalMedia();
+        showToast("Call was declined.", "error");
       })
-      .on('broadcast', { event: 'call_end' }, ({ payload }) => {
-        if (payload.targetId === currentUserId) cleanupLocalMedia();
+      .on("broadcast", { event: "call_end" }, ({ payload }) => {
+        if (payload.targetId !== currentUserId) return;
+        cleanupLocalMedia();
       })
-      .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (payload.targetId === currentUserId) {
-          setTypingUsers(prev => ({ ...prev, [payload.senderId]: true }));
-          if (typingTimeoutsRef.current[payload.senderId]) clearTimeout(typingTimeoutsRef.current[payload.senderId]);
-          typingTimeoutsRef.current[payload.senderId] = setTimeout(() => {
-            setTypingUsers(prev => ({ ...prev, [payload.senderId]: false }));
-          }, 3000);
-        }
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (payload.targetId !== currentUserId) return;
+        setTypingUsers(prev => ({ ...prev, [payload.senderId]: true }));
+        if (typingTimeoutsRef.current[payload.senderId]) clearTimeout(typingTimeoutsRef.current[payload.senderId]);
+        typingTimeoutsRef.current[payload.senderId] = setTimeout(() => {
+          setTypingUsers(prev => ({ ...prev, [payload.senderId]: false }));
+        }, 3000);
       })
-      .on('broadcast', { event: 'webrtc_offer' }, async ({ payload }) => {
-        if (payload.targetId === currentUserId) {
-          if (localStreamRef.current && peerConnectionRef.current) {
-            try {
-              const pc = peerConnectionRef.current;
-              await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
-              const answer = await pc.createAnswer();
-              await pc.setLocalDescription(answer);
-              globalCallsRef.current?.send({
-                type: 'broadcast',
-                event: 'webrtc_answer',
-                payload: { targetId: payload.senderId, answer }
-              });
-              pendingCandidatesRef.current.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(e => console.error(e)));
-              pendingCandidatesRef.current = [];
-            } catch(e) { console.error(e); }
-          } else {
-            pendingOfferRef.current = payload;
-          }
-        }
-      })
-      .on('broadcast', { event: 'webrtc_answer' }, async ({ payload }) => {
-        if (payload.targetId === currentUserId && peerConnectionRef.current) {
-          try { 
-            await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer)); 
-            pendingCandidatesRef.current.forEach(c => peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(c)).catch(e => console.error(e)));
+      .on("broadcast", { event: "webrtc_offer" }, async ({ payload }) => {
+        if (payload.targetId !== currentUserId) return;
+        if (localStreamRef.current && peerConnectionRef.current) {
+          try {
+            const pc = peerConnectionRef.current;
+            await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            globalCallsRef.current?.send({ type: "broadcast", event: "webrtc_answer", payload: { targetId: payload.senderId, answer } });
+            pendingCandidatesRef.current.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error));
             pendingCandidatesRef.current = [];
           } catch (e) { console.error(e); }
+        } else {
+          pendingOfferRef.current = payload;
         }
       })
-      .on('broadcast', { event: 'webrtc_ice_candidate' }, async ({ payload }) => {
-        if (payload.targetId === currentUserId) {
-          if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
-            try { await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (e) { console.error(e); }
-          } else {
-            pendingCandidatesRef.current.push(payload.candidate);
-          }
+      .on("broadcast", { event: "webrtc_answer" }, async ({ payload }) => {
+        if (payload.targetId !== currentUserId || !peerConnectionRef.current) return;
+        try {
+          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer));
+          pendingCandidatesRef.current.forEach(c => peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(c)).catch(console.error));
+          pendingCandidatesRef.current = [];
+        } catch (e) { console.error(e); }
+      })
+      .on("broadcast", { event: "webrtc_ice_candidate" }, async ({ payload }) => {
+        if (payload.targetId !== currentUserId) return;
+        if (peerConnectionRef.current?.remoteDescription) {
+          try { await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch (e) { console.error(e); }
+        } else {
+          pendingCandidatesRef.current.push(payload.candidate);
         }
       })
       .subscribe();
 
-    return () => {
-      if (globalCallsRef.current) supabase.removeChannel(globalCallsRef.current);
-    };
-  }, [currentUserId]);
+    return () => { if (globalCallsRef.current) supabase.removeChannel(globalCallsRef.current); };
+  }, [currentUserId, cleanupLocalMedia, showToast]);
 
-  const startCall = (isVideo) => {
+  /* ── Call actions ── */
+  const startCall = useCallback((isVideo) => {
     if (!activeChat || !currentUserId) return;
-    const roomId = `beoneofus-${[currentUserId, activeChat.id].sort().join('-')}-${Date.now()}`;
-    
-    globalCallsRef.current?.send({
-      type: 'broadcast',
-      event: 'call_ring',
-      payload: { targetId: activeChat.id, callerId: currentUserId, isVideo, roomId }
-    });
-    
-    setActiveCall({ roomId, isVideo, status: 'ringing', peerId: activeChat.id, isCaller: true });
-  };
+    const roomId = `call-${[currentUserId, activeChat.id].sort().join("-")}-${Date.now()}`;
+    globalCallsRef.current?.send({ type: "broadcast", event: "call_ring", payload: { targetId: activeChat.id, callerId: currentUserId, isVideo, roomId } });
+    setActiveCall({ roomId, isVideo, status: "ringing", peerId: activeChat.id, isCaller: true });
+    setPeerCallInfo(activeChat);
+  }, [activeChat, currentUserId]);
 
-  const acceptCall = () => {
-    globalCallsRef.current?.send({ type: 'broadcast', event: 'call_accept', payload: { targetId: incomingCall.callerId } });
-    setActiveCall({ roomId: incomingCall.roomId, isVideo: incomingCall.isVideo, status: 'connected', peerId: incomingCall.callerId, isCaller: false });
-    
+  const acceptCall = useCallback(() => {
+    if (!incomingCall) return;
+    globalCallsRef.current?.send({ type: "broadcast", event: "call_accept", payload: { targetId: incomingCall.callerId } });
+    setActiveCall({ roomId: incomingCall.roomId, isVideo: incomingCall.isVideo, status: "connected", peerId: incomingCall.callerId, isCaller: false });
+    setPeerCallInfo(incomingCall.callerInfo ? { ...incomingCall.callerInfo, id: incomingCall.callerId } : null);
     if (!activeChat || activeChat.id !== incomingCall.callerId) {
       setActiveChat({ id: incomingCall.callerId, ...incomingCall.callerInfo });
     }
-    
     setIncomingCall(null);
-  };
+  }, [incomingCall, activeChat]);
 
-  const rejectCall = () => {
-    globalCallsRef.current?.send({ type: 'broadcast', event: 'call_reject', payload: { targetId: incomingCall.callerId } });
+  const rejectCall = useCallback(() => {
+    if (!incomingCall) return;
+    globalCallsRef.current?.send({ type: "broadcast", event: "call_reject", payload: { targetId: incomingCall.callerId } });
     cleanupLocalMedia();
-  };
+  }, [incomingCall, cleanupLocalMedia]);
 
-  const endCall = () => {
-    if (activeCall?.peerId) globalCallsRef.current?.send({ type: 'broadcast', event: 'call_end', payload: { targetId: activeCall.peerId } });
-    cleanupLocalMedia();
-  };
-
-  // Handle Local Media when Call connects
+  /* ── Media when connected ── */
   useEffect(() => {
+    if (activeCall?.status !== "connected") return;
     let isMounted = true;
-    if (activeCall?.status === 'connected') {
-      navigator.mediaDevices.getUserMedia({ video: activeCall.isVideo, audio: true })
-        .then(async stream => {
-          if (!isMounted) return;
-          localStreamRef.current = stream;
-          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-          
-          const pc = new RTCPeerConnection({
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-          });
-          peerConnectionRef.current = pc;
 
-          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    navigator.mediaDevices.getUserMedia({ video: activeCall.isVideo, audio: true })
+      .then(async (stream) => {
+        if (!isMounted) return;
+        localStreamRef.current = stream;
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-          pc.ontrack = (event) => {
-            if (remoteVideoRef.current && event.streams[0]) {
-              remoteVideoRef.current.srcObject = event.streams[0];
-            }
-          };
-
-          pc.onicecandidate = (event) => {
-            if (event.candidate) {
-              globalCallsRef.current?.send({
-                type: 'broadcast',
-                event: 'webrtc_ice_candidate',
-                payload: { targetId: activeCall.peerId, candidate: event.candidate }
-              });
-            }
-          };
-
-          if (activeCall.isCaller) {
-            try {
-              const offer = await pc.createOffer();
-              await pc.setLocalDescription(offer);
-              globalCallsRef.current?.send({
-                type: 'broadcast',
-                event: 'webrtc_offer',
-                payload: { targetId: activeCall.peerId, senderId: currentUserId, offer }
-              });
-            } catch(e) { console.error(e); }
-          } else {
-            if (pendingOfferRef.current) {
-              const payload = pendingOfferRef.current;
-              try {
-                await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                globalCallsRef.current?.send({
-                  type: 'broadcast',
-                  event: 'webrtc_answer',
-                  payload: { targetId: payload.senderId, answer }
-                });
-                pendingCandidatesRef.current.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(e => console.error(e)));
-                pendingCandidatesRef.current = [];
-              } catch(e) { console.error(e); }
-              pendingOfferRef.current = null;
-            }
+        const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+        peerConnectionRef.current = pc;
+        stream.getTracks().forEach(t => pc.addTrack(t, stream));
+        pc.ontrack = (e) => { if (remoteVideoRef.current && e.streams[0]) remoteVideoRef.current.srcObject = e.streams[0]; };
+        pc.onicecandidate = (e) => {
+          if (e.candidate) {
+            globalCallsRef.current?.send({ type: "broadcast", event: "webrtc_ice_candidate", payload: { targetId: activeCall.peerId, candidate: e.candidate } });
           }
-        })
-        .catch(err => {
-          console.error("Media access denied:", err);
-          showToast("Camera or Microphone access is required for calls.", "error");
-          endCall();
-        });
-    }
-    return () => { isMounted = false; };
-  }, [activeCall?.status, activeCall?.isVideo, activeCall?.peerId, activeCall?.isCaller, currentUserId]);
+        };
 
-  // Outgoing Call Ringing Sound
+        if (activeCall.isCaller) {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          globalCallsRef.current?.send({ type: "broadcast", event: "webrtc_offer", payload: { targetId: activeCall.peerId, senderId: currentUserId, offer } });
+        } else if (pendingOfferRef.current) {
+          const { offer, senderId } = pendingOfferRef.current;
+          await pc.setRemoteDescription(new RTCSessionDescription(offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          globalCallsRef.current?.send({ type: "broadcast", event: "webrtc_answer", payload: { targetId: senderId, answer } });
+          pendingCandidatesRef.current.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error));
+          pendingCandidatesRef.current = [];
+          pendingOfferRef.current = null;
+        }
+      })
+      .catch(err => {
+        console.error("Media access denied:", err);
+        showToast("Camera/Microphone access required for calls.", "error");
+        endCall();
+      });
+
+    return () => { isMounted = false; };
+  }, [activeCall?.status, activeCall?.isVideo, activeCall?.peerId, activeCall?.isCaller, currentUserId, endCall, showToast]);
+
+  /* ── Ring sounds ── */
   useEffect(() => {
-    if (activeCall?.status === 'ringing' && ringAudioRef.current) {
-      if (localStorage.getItem('beoneofus_muted') !== 'true') {
-        ringAudioRef.current.loop = true;
-        ringAudioRef.current.play().catch(e => console.warn("Audio playback blocked (requires user interaction first)"));
-      }
-    } else if (ringAudioRef.current) {
-      ringAudioRef.current.pause();
-      ringAudioRef.current.currentTime = 0;
-    }
+    const audio = ringAudioRef.current;
+    if (!audio) return;
+    if (activeCall?.status === "ringing") { audio.loop = true; audio.play().catch(() => {}); }
+    else { audio.pause(); audio.currentTime = 0; }
   }, [activeCall?.status]);
 
-  // Incoming Call Ringing Sound
   useEffect(() => {
-    if (incomingCall && incomingRingAudioRef.current) {
-      if (localStorage.getItem('beoneofus_muted') !== 'true') {
-        incomingRingAudioRef.current.loop = true;
-        incomingRingAudioRef.current.play().catch(e => console.warn("Audio playback blocked (requires user interaction first)"));
-      }
-    } else if (incomingRingAudioRef.current) {
-      incomingRingAudioRef.current.pause();
-      incomingRingAudioRef.current.currentTime = 0;
-    }
-    // Ensure sound stops if component unmounts while ringing
-    return () => { if (incomingRingAudioRef.current) incomingRingAudioRef.current.pause(); };
+    const audio = incomingRingAudioRef.current;
+    if (!audio) return;
+    if (incomingCall) { audio.loop = true; audio.play().catch(() => {}); }
+    else { audio.pause(); audio.currentTime = 0; }
+    return () => { audio.pause(); };
   }, [incomingCall]);
 
-  // Call Duration Timer
+  /* ── Call duration ── */
   useEffect(() => {
-    let timerInterval;
-    if (activeCall?.status === 'connected') {
-      setCallDuration(0); // Reset on new call
-      timerInterval = setInterval(() => {
-        setCallDuration(prevDuration => prevDuration + 1);
-      }, 1000);
-    }
-    return () => {
-      clearInterval(timerInterval);
-    };
+    if (activeCall?.status !== "connected") return;
+    setCallDuration(0);
+    const id = setInterval(() => setCallDuration(d => d + 1), 1000);
+    return () => clearInterval(id);
   }, [activeCall?.status]);
 
-  // 5. Connection Handlers
+  /* ═══════════════════════════════════════════════════════════
+     6. CONNECTION HANDLERS
+  ═══════════════════════════════════════════════════════════ */
   const handleSendRequest = async () => {
-    const { error } = await supabase.from('connections').insert({
-      sender_id: currentUserId,
-      receiver_id: activeChat.id,
-      status: 'pending'
-    });
-    
+    const { error } = await supabase.from("connections").insert({ sender_id: currentUserId, receiver_id: activeChat.id, status: "pending" });
     if (error) {
-      if (error.code === '23503') {
-        showToast("This user no longer exists.", "error");
-        setContacts(prev => prev.filter(c => c.id !== activeChat.id));
-        setActiveChat(null);
-      } else {
-        showToast("Failed to send request: " + error.message, "error");
-      }
+      if (error.code === "23503") { showToast("This user no longer exists.", "error"); setContacts(p => p.filter(c => c.id !== activeChat.id)); setActiveChat(null); }
+      else showToast("Failed to send request: " + error.message, "error");
       return;
     }
-
-    setConnectionStatus('waiting'); // Optimistic UI update
-    await supabase.from('notifications').insert({
-      receiver_id: activeChat.id,
-      actor_id: currentUserId,
-      type: 'connection_request',
-      content: 'wants to connect'
-    });
+    setConnectionStatus("waiting");
+    await supabase.from("notifications").insert({ receiver_id: activeChat.id, actor_id: currentUserId, type: "connection_request", content: "wants to connect" });
   };
 
   const handleAcceptRequest = async () => {
     if (!activeConnectionId) return;
-    const { error } = await supabase.from('connections').update({ status: 'accepted' }).eq('id', activeConnectionId);
-    
+    const { error } = await supabase.from("connections").update({ status: "accepted" }).eq("id", activeConnectionId);
     if (!error) {
-      setConnectionStatus('accepted'); // Optimistic UI update
-      await supabase.from('notifications').insert({
-        receiver_id: activeChat.id,
-        actor_id: currentUserId,
-        type: 'handshake',
-        content: 'accepted your connection request'
-      });
+      setConnectionStatus("accepted");
+      await supabase.from("notifications").insert({ receiver_id: activeChat.id, actor_id: currentUserId, type: "handshake", content: "accepted your connection request" });
     }
   };
 
-  // 6. BLOCK / UNBLOCK LOGIC (Fixed for persistence)
+  /* ═══════════════════════════════════════════════════════════
+     7. BLOCK / UNBLOCK
+  ═══════════════════════════════════════════════════════════ */
   const handleBlockUser = async () => {
     if (!activeConnectionId || !currentUserId) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase.from('connections')
-        .update({ 
-          status: 'blocked', 
-          blocked_by: currentUserId 
-        })
-        .eq('id', activeConnectionId);
-      
+      const { error } = await supabase.from("connections").update({ status: "blocked", blocked_by: currentUserId }).eq("id", activeConnectionId);
       if (error) throw error;
-      
       setShowBlockConfirm(false);
       setShowMoreMenu(false);
-    } catch (error) { 
-        console.error("Block error:", error.message);
-        showToast("System failure: Could not sever link.", "error");
+    } catch (e) {
+      showToast("Could not block user: " + e.message, "error");
     } finally { setIsProcessing(false); }
   };
 
@@ -646,138 +708,158 @@ export default function MessagesContent() {
     if (!activeConnectionId || !currentUserId) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase.from('connections')
-        .update({ 
-          status: 'accepted', 
-          blocked_by: null 
-        })
-        .eq('id', activeConnectionId)
-        .eq('blocked_by', currentUserId);
-      
+      const { error } = await supabase.from("connections").update({ status: "accepted", blocked_by: null }).eq("id", activeConnectionId).eq("blocked_by", currentUserId);
       if (error) throw error;
       setShowMoreMenu(false);
-    } catch (error) { 
-        console.error("Unblock error:", error.message);
+    } catch (e) {
+      showToast("Could not unblock: " + e.message, "error");
     } finally { setIsProcessing(false); }
   };
 
-  // --- AI SUGGEST REPLY LOGIC ---
-  const handleSuggestReply = async () => {
-    if (isSuggesting || !activeChat) return;
-
-    // Find the last message sent by the other user to gain context
-    const lastMessage = [...messages].reverse().find(m => m.sender_id === activeChat.id);
-    const contextText = lastMessage ? lastMessage.text : null;
-    
-    const prompt = contextText 
-      ? `Draft a very brief, friendly, and natural direct message reply (1-2 sentences maximum) to this message from a developer: "${contextText}". Return ONLY the exact message text, without any quotes, filler, or intro.`
-      : `Draft a friendly, very brief initial greeting (1 sentence) to another developer to start a chat. Return ONLY the exact message text, without any quotes.`;
-
-    setIsSuggesting(true);
-    try {
-      const res = await fetch("/api/chats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
-      });
-
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
-      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
-
-      const cleanReply = data.message.content.replace(/^["']|["']$/g, '').trim();
-      setInputValue(cleanReply);
-    } catch (error) {
-      showToast(error.message, "error");
-    } finally {
-      setIsSuggesting(false);
+  /* ═══════════════════════════════════════════════════════════
+     8. DELETE MESSAGE  (was imported but never implemented)
+  ═══════════════════════════════════════════════════════════ */
+  const handleDeleteMessage = async (msgId) => {
+    setDeletingMsgId(msgId);
+    // Optimistic
+    setMessages(prev => prev.filter(m => m.id !== msgId));
+    setShowDeleteConfirm(null);
+    const { error } = await supabase.from("messages").delete().eq("id", msgId).eq("sender_id", currentUserId);
+    if (error) {
+      showToast("Failed to delete message.", "error");
+      fetchMessages(activeChat.id, currentUserId); // rollback
     }
+    setDeletingMsgId(null);
   };
 
-  // --- HANDLE REACTION ---
-  const handleReaction = async (messageId, emoji) => {
-    const msg = messages.find(m => m.id === messageId);
-    if (!msg) return;
-    
-    const existing = msg.message_reactions?.find(r => r.user_id === currentUserId && r.emoji === emoji);
-    
-    // Optimistic UI Update: Instantly update the local state
-    setMessages(prev => prev.map(m => {
-      if (m.id === messageId) {
-        const reactions = m.message_reactions || [];
-        if (existing) {
-          return { ...m, message_reactions: reactions.filter(r => r.id !== existing.id) };
+  /* ═══════════════════════════════════════════════════════════
+     9. AI SUGGEST  (fixed: uses Anthropic API directly, not /api/chats)
+  ═══════════════════════════════════════════════════════════ */
+  const handleSuggestReply = async () => {
+    if (isSuggesting || !activeChat) return;
+    const lastMsg = [...messages].reverse().find(m => m.sender_id === activeChat.id);
+    const prompt = lastMsg?.text
+      ? `Draft a brief, friendly reply (1-2 sentences) to this message: "${lastMsg.text}". Return ONLY the reply text, no quotes or preamble.`
+      : "Draft a friendly one-sentence opening message to start a conversation with a developer. Return ONLY the message text.";
+
+    setIsSuggesting(true);
+    let attempt = 0;
+    const maxRetries = 3;
+
+    while (attempt < maxRetries) {
+      try {
+        const res = await fetch("/api/chats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+        });
+        
+        const textResponse = await res.text();
+        let data;
+        try { data = JSON.parse(textResponse); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
+        if (!res.ok) throw new Error(data.error || "Failed to fetch response");
+        
+        const text = data.message.content.replace(/^["']|["']$/g, "").trim() || "";
+        setInputValue(text);
+        break; // Success, exit the retry loop
+      } catch (err) {
+        attempt++;
+        if (attempt >= maxRetries) {
+          showToast("AI suggestion failed: " + err.message, "error");
         } else {
-          return { ...m, message_reactions: [...reactions, { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUserId, emoji }] };
+          // Wait before retrying (exponential backoff: 1s, 2s)
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         }
       }
-      return m;
+    }
+    setIsSuggesting(false);
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     10. REACTIONS
+  ═══════════════════════════════════════════════════════════ */
+  const handleReaction = async (msgId, emoji) => {
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+    const existing = msg.message_reactions?.find(r => r.user_id === currentUserId && r.emoji === emoji);
+
+    // Optimistic update
+    setMessages(prev => prev.map(m => {
+      if (m.id !== msgId) return m;
+      const reactions = m.message_reactions || [];
+      if (existing) return { ...m, message_reactions: reactions.filter(r => r.id !== existing.id) };
+      return { ...m, message_reactions: [...reactions, { id: `temp-${Date.now()}`, message_id: msgId, user_id: currentUserId, emoji }] };
     }));
+    setEmojiPickerMsgId(null);
 
     try {
       if (existing) {
-         await supabase.from('message_reactions').delete().eq('id', existing.id);
+        await supabase.from("message_reactions").delete().eq("id", existing.id);
       } else {
-         const { error } = await supabase.from('message_reactions').insert({ message_id: messageId, user_id: currentUserId, emoji });
-         if (error) throw error;
+        const { error } = await supabase.from("message_reactions").insert({ message_id: msgId, user_id: currentUserId, emoji });
+        if (error) throw error;
       }
-    } catch (err) {
-      showToast("Reaction failed. Make sure the 'message_reactions' table exists.", "error");
+    } catch {
+      showToast("Reaction failed.", "error");
+      fetchMessages(activeChat.id, currentUserId);
     }
   };
 
+  /* ═══════════════════════════════════════════════════════════
+     11. TYPING
+  ═══════════════════════════════════════════════════════════ */
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
+    if (!activeChat || !currentUserId) return; // FIX: guard against null activeChat
     const now = Date.now();
     if (now - lastTypingSentRef.current > 1500) {
-      globalCallsRef.current?.send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: { targetId: activeChat.id, senderId: currentUserId }
-      });
+      globalCallsRef.current?.send({ type: "broadcast", event: "typing", payload: { targetId: activeChat.id, senderId: currentUserId } });
       lastTypingSentRef.current = now;
     }
   };
 
-  // Auto-resize textarea when inputValue changes
+  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
   }, [inputValue]);
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // FIX: only intercept Enter on non-mobile or when Shift not held
+    // On mobile, isComposing covers IME; skip if composing
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent?.isComposing) {
+      // Extra check: if virtual keyboard (no physical keyboard) let it go
+      const isMobile = window.matchMedia?.("(hover: none) and (pointer: coarse)").matches;
+      if (isMobile) return;
       e.preventDefault();
-      if (inputValue.trim() || imageFile) {
-        handleSendMessage(e);
-      }
+      if (inputValue.trim() || imageFile) handleSendMessage(e);
     }
   };
 
-  // 7. Send Message
+  /* ═══════════════════════════════════════════════════════════
+     12. SEND MESSAGE
+  ═══════════════════════════════════════════════════════════ */
   const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (connectionStatus !== 'accepted') return;
-    
-    const msgText = inputValue;
+    e?.preventDefault();
+    if (connectionStatus !== "accepted") return;
+    const msgText = inputValue.trim();
     const imageToUpload = imageFile;
     const replyToId = replyingTo?.id;
+    if (!msgText && !imageToUpload) return;
 
-    if (!msgText.trim() && !imageToUpload) return;
-
-    const optimisticId = Date.now(); 
-    setMessages((prev) => [...prev, { id: optimisticId, sender_id: currentUserId, receiver_id: activeChat.id, text: msgText, image_url: imagePreview, replied_message: replyingTo, created_at: new Date().toISOString(), isSending: true }]);
-    
-    setLastMessagePreviews(prev => ({ 
-      ...prev, 
-      [activeChat.id]: {
-        text: `You: ${msgText.trim() || (imageToUpload ? 'Sent an image' : 'New transmission')}`,
-        isSender: true,
-        isRead: false
-      }
+    setMessageSendError(null);
+    const optimisticId = `opt-${Date.now()}`;
+    const optimistic = {
+      id: optimisticId, sender_id: currentUserId, receiver_id: activeChat.id,
+      text: msgText, image_url: imagePreview, replied_message: replyingTo,
+      created_at: new Date().toISOString(), isSending: true, message_reactions: [],
+    };
+    setMessages(prev => [...prev, optimistic]);
+    setLastMessagePreviews(prev => ({
+      ...prev,
+      [activeChat.id]: { text: `You: ${msgText || (imageToUpload ? "📷 Image" : "New message")}`, isSender: true, isRead: false },
     }));
 
     setInputValue("");
@@ -789,442 +871,732 @@ export default function MessagesContent() {
     try {
       let imageUrl = null;
       if (imageToUpload) {
-        const fileExt = imageToUpload.name.split('.').pop();
-        const fileName = `msg-${Date.now()}.${fileExt}`;
-        const filePath = `${currentUserId}/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage.from('chat_images').upload(filePath, imageToUpload);
-        if (uploadError) throw uploadError;
-        
-        const { data: urlData } = supabase.storage.from('chat_images').getPublicUrl(filePath);
+        const ext = imageToUpload.name.split(".").pop();
+        const path = `${currentUserId}/msg-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("chat_images").upload(path, imageToUpload);
+        if (upErr) throw new Error("Image upload failed: " + upErr.message);
+        const { data: urlData } = supabase.storage.from("chat_images").getPublicUrl(path);
         imageUrl = urlData.publicUrl;
       }
 
-      const { data: insertedMsg, error } = await supabase.from('messages').insert({ 
-        sender_id: currentUserId, 
-        receiver_id: activeChat.id, 
-        text: msgText.trim() || "",
-        image_url: imageUrl,
-        reply_to_message_id: replyToId
+      const { data: inserted, error } = await supabase.from("messages").insert({
+        sender_id: currentUserId, receiver_id: activeChat.id,
+        text: msgText || "", image_url: imageUrl, reply_to_message_id: replyToId,
       }).select().single();
       if (error) throw error;
 
-      setMessages((prev) => {
-        if (prev.some(m => m.id === insertedMsg.id)) {
-          return prev.filter(m => m.id !== optimisticId);
-        }
-        return prev.map(m => m.id === optimisticId ? { ...m, id: insertedMsg.id, isSending: false } : m);
+      setMessages(prev => {
+        if (prev.some(m => m.id === inserted.id)) return prev.filter(m => m.id !== optimisticId);
+        return prev.map(m => m.id === optimisticId ? { ...m, id: inserted.id, isSending: false } : m);
       });
 
-      // Generate a notification for the recipient
-      await supabase.from('notifications').insert({
-        receiver_id: activeChat.id,
-        actor_id: currentUserId,
-        type: 'message',
-        content: msgText.trim() ? (msgText.trim().length > 100 ? msgText.trim().substring(0, 100) + '...' : msgText.trim()) : 'Sent an image'
+      await supabase.from("notifications").insert({
+        receiver_id: activeChat.id, actor_id: currentUserId, type: "message",
+        content: msgText ? (msgText.length > 100 ? msgText.slice(0, 100) + "…" : msgText) : "Sent an image",
       });
     } catch (err) {
-      setMessages((prev) => prev.filter(m => m.id !== optimisticId));
-      showToast("Failed to send message: " + err.message, "error");
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
+      setMessageSendError(err.message);
+      showToast("Failed to send: " + err.message, "error");
     }
   };
 
-  if (!currentUserId) return <div className="p-10 text-gray-500 font-bold uppercase text-xs text-center">Node Unauthorized</div>;
-
-  // Handle Image attach
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result);
-      reader.readAsDataURL(file);
-    }
+  /* ── File attach ── */
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { showToast("Image must be under 10MB.", "error"); return; }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
   };
 
-  const handleRemoveImage = (e) => {
-    e.stopPropagation();
-    setImageFile(null);
-    setImagePreview(null);
-    if (imageInputRef.current) imageInputRef.current.value = "";
+  /* ── Mute toggle ── */
+  const toggleMute = (contactId) => {
+    setMutedChats(prev => {
+      const next = prev.includes(contactId) ? prev.filter(id => id !== contactId) : [...prev, contactId];
+      localStorage.setItem("muted_chats", JSON.stringify(next));
+      return next;
+    });
   };
 
+  /* ── Copy message ── */
+  const copyMessage = (text) => {
+    navigator.clipboard.writeText(text).then(() => showToast("Copied to clipboard"));
+  };
+
+  /* ── Filtered contacts ── */
   const filteredContacts = contacts.filter(c => {
-    const matchesSearch = c.username.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesUnread = filterUnread ? unreadCounts[c.id] > 0 : true;
-    return matchesSearch && matchesUnread;
+    const matchSearch = c.username.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchUnread = filterUnread ? (unreadCounts[c.id] || 0) > 0 : true;
+    return matchSearch && matchUnread;
   });
 
-  const formatDuration = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-  };
+  const hasAnyUnread = Object.values(unreadCounts).some(n => n > 0);
 
+  if (!currentUserId) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 size={32} className="animate-spin text-violet-500" />
+          <p className="text-sm font-semibold text-gray-400 tracking-widest uppercase">Authenticating…</p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─────────────────────────────────────────────────────────
+     RENDER
+  ───────────────────────────────────────────────────────── */
   return (
-    <div className="w-full flex h-[calc(100dvh-130px)] md:h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
-      
-      {/* BLOCK MODAL */}
+    <>
+      {/* ── CALL OVERLAY (was missing) ── */}
+      <CallOverlay
+        activeCall={activeCall}
+        incomingCall={incomingCall}
+        callDuration={callDuration}
+        localVideoRef={localVideoRef}
+        remoteVideoRef={remoteVideoRef}
+        onEnd={endCall}
+        onAccept={acceptCall}
+        onReject={rejectCall}
+        peerInfo={peerCallInfo || activeChat}
+      />
+
+      {/* ── IMAGE LIGHTBOX ── */}
+      {lightboxImage && (
+        <div className="fixed inset-0 z-[400] bg-black/95 flex items-center justify-center p-4" onClick={() => setLightboxImage(null)}>
+          <button className="absolute top-4 right-4 text-white/60 hover:text-white p-2"><X size={24} /></button>
+          <a href={lightboxImage} download className="absolute top-4 right-16 text-white/60 hover:text-white p-2" onClick={e => e.stopPropagation()}>
+            <Download size={22} />
+          </a>
+          <div className="relative max-w-4xl max-h-[90vh] w-full h-full">
+            <Image src={lightboxImage} alt="Full size" fill sizes="100vw" className="object-contain" />
+          </div>
+        </div>
+      )}
+
+      {/* ── BLOCK CONFIRM MODAL ── */}
       {showBlockConfirm && (
-        <div className="fixed inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full max-w-sm rounded-2xl p-8 shadow-xl text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/50 text-orange-600 dark:text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShieldAlert size={32} />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 w-full max-w-sm rounded-2xl p-8 shadow-2xl text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-14 h-14 bg-orange-100 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <ShieldAlert size={28} className="text-orange-500" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Sever Connection?</h3>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mb-8 leading-relaxed">Block @{activeChat.username}. Connection will be terminated until you re-authorize this node.</p>
-            <div className="flex flex-col gap-3">
-              <button onClick={handleBlockUser} disabled={isProcessing} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition">{isProcessing ? 'Terminating...' : 'Confirm Block'}</button>
-              <button onClick={() => setShowBlockConfirm(false)} className="w-full bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Block @{activeChat?.username}?</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">They won{`'`}t be able to message you. You can unblock at any time.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">They won't be able to message you. You can unblock at any time.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowBlockConfirm(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Cancel</button>
+              <button onClick={handleBlockUser} disabled={isProcessing} className="flex-1 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold transition-colors disabled:opacity-50">
+                {isProcessing ? "Blocking…" : "Block"}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Sidebar: Contacts */}
-      <div className={`w-full md:w-64 lg:w-72 border-r-0 md:border-r border-gray-200 dark:border-gray-800 flex-col md:pr-2 shrink-0 ${isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
-        <div className="pb-4 px-2">
-          <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter mb-3">Messages</h2>
-          <div className="flex items-center p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-3">
-            <button onClick={() => setFilterUnread(false)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${!filterUnread ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}>All</button>
-            <button onClick={() => setFilterUnread(true)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 ${filterUnread ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}>
-              Unread
-              {Object.values(unreadCounts).some(count => count > 0) && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
-            </button>
-          </div>
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400 transition-colors" size={14} />
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search connections..." 
-              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 rounded-xl py-2 pl-9 pr-10 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" 
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-                <X size={14} />
-              </button>
-            )}
+      {/* ── DELETE CONFIRM ── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 w-full max-w-xs rounded-2xl p-6 shadow-2xl text-center animate-in fade-in zoom-in duration-150">
+            <Trash2 size={24} className="text-red-500 mx-auto mb-3" />
+            <p className="text-gray-900 dark:text-gray-100 font-semibold mb-1">Delete this message?</p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs mb-5">This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Cancel</button>
+              <button onClick={() => handleDeleteMessage(showDeleteConfirm)} className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors">Delete</button>
+            </div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar px-2 pb-2">
-          {filteredContacts.length === 0 && (
-            <div className="text-center text-xs text-gray-500 dark:text-gray-400 font-bold mt-10 px-4 animate-in fade-in">
-              {filterUnread ? "No unread messages." : "No connections found. Follow nodes to open channels."}
+      )}
+
+      {/* ── PROFILE MODAL ── */}
+      {selectedUserId && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
+          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto z-10 bg-white dark:bg-gray-950 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl">
+            <button onClick={() => setSelectedUserId(null)} className="absolute top-5 right-5 z-10 p-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 dark:text-gray-400 hover:text-red-600 transition-colors">
+              <X size={18} />
+            </button>
+            <div className="p-4 sm:p-6"><ProfileContent viewUserId={selectedUserId} /></div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MAIN LAYOUT ── */}
+      <div className="w-full flex h-[calc(100dvh-130px)] md:h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
+
+        {/* SIDEBAR */}
+        <div className={`w-full md:w-72 lg:w-80 flex-col shrink-0 ${isMobileChatOpen ? "hidden md:flex" : "flex"}`}>
+          {/* Header */}
+          <div className="pb-3 px-1">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Messages</h2>
+              <div className="flex items-center gap-1">
+                {hasAnyUnread && (
+                  <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                    {Object.values(unreadCounts).reduce((a, b) => a + b, 0)} new
+                  </span>
+                )}
+              </div>
             </div>
-          )}
-          {filteredContacts.map((contact, index) => (
-            <div 
-              key={contact.id} 
-              onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }} 
-              className={`group flex items-center gap-3 p-3 cursor-pointer transition-all duration-300 rounded-2xl border animate-in fade-in slide-in-from-left-4 ${activeChat?.id === contact.id ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 shadow-md scale-[1.02] z-10 relative' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm'}`}
-              style={{ animationDelay: `${index * 40}ms`, animationFillMode: 'both' }}
-            >
-              <div 
-                className={`relative w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all overflow-hidden shrink-0 border-2 ${activeChat?.id === contact.id ? 'border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'border-transparent bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:border-blue-100 dark:group-hover:border-blue-800 group-hover:text-blue-500 dark:group-hover:text-blue-400'}`}
-                onClick={(e) => { e.stopPropagation(); setSelectedUserId(contact.id); }}
-                title={`View @${contact.username}'s Profile`}
-              >
-                {contact.avatar_url ? (
-                  <Image src={contact.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
-                ) : (
-                  contact.username[0].toUpperCase()
-                )}
-                {Object.keys(onlineUsers).includes(contact.id) && (
-                   <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <h4 className={`text-sm font-bold truncate transition-colors flex items-center gap-1 ${activeChat?.id === contact.id ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400'}`}>
-                    {contact.username}
-                    {contact.is_verified && <BadgeCheck size={14} className={activeChat?.id === contact.id ? 'text-blue-600 dark:text-blue-400' : 'text-blue-500'} fill="currentColor" stroke="white" />}
-                  </h4>
-                  {unreadCounts[contact.id] > 0 && (
-                    <span className="text-[9px] font-black text-white bg-blue-600 px-1.5 py-0.5 rounded-md shrink-0 animate-pulse shadow-sm shadow-blue-600/30">{unreadCounts[contact.id]} NEW</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 min-w-0">
-                   <p className={`text-xs truncate flex-1 ${typingUsers[contact.id] ? 'text-blue-500 dark:text-blue-400 italic font-bold' : unreadCounts[contact.id] > 0 ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400 font-medium'}`}>
-                     {typingUsers[contact.id] ? (
-                       'typing...'
-                     ) : (
-                       lastMessagePreviews[contact.id]?.text || (typeof lastMessagePreviews[contact.id] === 'string' ? lastMessagePreviews[contact.id] : (Object.keys(onlineUsers).includes(contact.id) ? 'Online now' : 'Tap to open transmission'))
-                     )}
-                   </p>
-                   {!typingUsers[contact.id] && lastMessagePreviews[contact.id]?.isSender && (
-                     lastMessagePreviews[contact.id].isRead ? (
-                       <CheckCheck size={14} className="text-blue-500 dark:text-blue-400 shrink-0" />
-                     ) : (
-                       <Check size={14} className="text-gray-400 dark:text-gray-500 shrink-0" />
-                     )
-                   )}
-                </div>
-              </div>
-              {unreadCounts[contact.id] > 0 && (
-                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] shrink-0"></div>
+
+            {/* Filter tabs */}
+            <div className="flex items-center bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1 mb-3 gap-1">
+              {[["All", false], ["Unread", true]].map(([label, val]) => (
+                <button
+                  key={label}
+                  onClick={() => setFilterUnread(val)}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${filterUnread === val ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}
+                >
+                  {label}
+                  {label === "Unread" && hasAnyUnread && <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 inline-block animate-pulse" />}
+                </button>
+              ))}
+            </div>
+
+            {/* Search */}
+            <div className="relative group">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search…"
+                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2 pl-9 pr-8 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                  <X size={14} />
+                </button>
               )}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* Main Chat Area */}
-      <div className={`flex-1 flex-col min-w-0 min-h-0 md:pl-4 md:mr-2 ${!isMobileChatOpen ? 'hidden md:flex' : 'flex'}`}>
-        {activeChat ? (
-          <>
-                <div className="pb-3 pt-2 md:pt-0 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between relative overflow-visible shrink-0 z-10">
-              <div className="flex items-center gap-3">
-                    <button onClick={() => setIsMobileChatOpen(false)} className="md:hidden p-1.5 -ml-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-                  <ChevronLeft size={22} />
-                </button>
-                <div 
-                      className="relative w-9 h-9 rounded-full bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold cursor-pointer hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors overflow-hidden shrink-0"
-                  onClick={() => setSelectedUserId(activeChat.id)}
-                  title={`View @${activeChat.username}'s Profile`}
+          {/* Contact list */}
+          <div className="flex-1 overflow-y-auto space-y-1 pr-1 pb-2 custom-scrollbar">
+            {filteredContacts.length === 0 && (
+              <div className="text-center py-12 px-4">
+                <MessageSquare size={32} className="text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500">
+                  {filterUnread ? "No unread messages" : searchQuery ? `No results for "${searchQuery}"` : "No connections yet"}
+                </p>
+                {filterUnread && (
+                  <button onClick={() => setFilterUnread(false)} className="mt-2 text-xs text-blue-500 font-bold underline underline-offset-2">
+                    Show all
+                  </button>
+                )}
+              </div>
+            )}
+            {filteredContacts.map((contact, i) => {
+              const isActive = activeChat?.id === contact.id;
+              const isOnline = Object.keys(onlineUsers).includes(contact.id);
+              const unread = unreadCounts[contact.id] || 0;
+              const preview = lastMessagePreviews[contact.id];
+              const isTyping = typingUsers[contact.id];
+              const isMuted = mutedChats.includes(contact.id);
+
+              return (
+                <div
+                  key={contact.id}
+                  onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }}
+                  className={`group flex items-center gap-3 p-3 cursor-pointer rounded-2xl border transition-all duration-200 animate-in fade-in slide-in-from-left-2 ${isActive
+                    ? "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/60"
+                    : "bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 border-transparent hover:border-gray-200 dark:hover:border-gray-700/50"}`}
+                  style={{ animationDelay: `${i * 30}ms`, animationFillMode: "both" }}
                 >
-                  {activeChat.avatar_url ? (
-                    <Image src={activeChat.avatar_url} alt="avatar" fill sizes="36px" className="object-cover" />
-                  ) : (
-                    activeChat.username[0].toUpperCase()
-                  )}
+                  {/* Avatar */}
+                  <div
+                    className={`relative w-11 h-11 rounded-full shrink-0 overflow-hidden border-2 transition-all ${isActive ? "border-blue-300 dark:border-blue-700" : "border-transparent group-hover:border-blue-100 dark:group-hover:border-blue-900"}`}
+                    onClick={e => { e.stopPropagation(); setSelectedUserId(contact.id); }}
+                  >
+                    {contact.avatar_url ? (
+                      <Image src={contact.avatar_url} alt="" fill sizes="44px" className="object-cover" />
+                    ) : (
+                      <div className={`w-full h-full flex items-center justify-center text-sm font-black ${isActive ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"}`}>
+                        {contact.username[0].toUpperCase()}
+                      </div>
+                    )}
+                    {isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full" />}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <span className={`text-sm font-bold truncate flex items-center gap-1 ${isActive ? "text-blue-700 dark:text-blue-300" : "text-gray-900 dark:text-gray-100"}`}>
+                        {contact.username}
+                        {contact.is_verified && <BadgeCheck size={13} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />}
+                        {isMuted && <BellOff size={11} className="text-gray-400 shrink-0" />}
+                      </span>
+                      {unread > 0 && (
+                        <span className="text-[9px] font-black text-white bg-blue-600 px-1.5 py-0.5 rounded-md shrink-0 shadow-sm">
+                          {unread}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <p className={`text-xs truncate flex-1 ${isTyping ? "text-blue-500 italic font-semibold" : unread > 0 ? "text-gray-700 dark:text-gray-200 font-semibold" : "text-gray-400 dark:text-gray-500"}`}>
+                        {isTyping ? "typing…" : preview?.text || (isOnline ? "Online" : "Tap to chat")}
+                      </p>
+                      {!isTyping && preview?.isSender && (
+                        preview.isRead
+                          ? <CheckCheck size={13} className="text-blue-400 shrink-0" />
+                          : <Check size={13} className="text-gray-400 shrink-0" />
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="cursor-pointer group" onClick={() => setSelectedUserId(activeChat.id)}>
-                      <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors flex items-center gap-1">
-                    {activeChat.username}
-                    {activeChat.is_verified && <BadgeCheck size={14} className="text-violet-500" fill="currentColor" stroke="white" />}
-                  </h3>
-                  <div className="flex items-center gap-1">
-                        <div className={`w-1.5 h-1.5 ${connectionStatus === 'blocked' ? 'bg-red-500' : Object.keys(onlineUsers).includes(activeChat.id) ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'} rounded-full`}></div>
-                        <p className="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-tighter">
-                      {connectionStatus === 'blocked' ? 'Severed' : Object.keys(onlineUsers).includes(activeChat.id) ? 'Online' : 'Offline'}
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── DIVIDER ── */}
+        <div className="hidden md:block w-px bg-gray-200 dark:bg-gray-800 mx-3 shrink-0" />
+
+        {/* CHAT AREA */}
+        <div className={`flex-1 flex-col min-w-0 min-h-0 ${!isMobileChatOpen ? "hidden md:flex" : "flex"}`}>
+          {activeChat ? (
+            <>
+              {/* Header */}
+              <div className="pb-3 pt-1 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0 z-10 relative">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setIsMobileChatOpen(false)} className="md:hidden p-1.5 -ml-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors">
+                    <ChevronLeft size={22} />
+                  </button>
+                  <div
+                    className="relative w-9 h-9 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 cursor-pointer shrink-0 hover:opacity-80 transition-opacity"
+                    onClick={() => setSelectedUserId(activeChat.id)}
+                  >
+                    {activeChat.avatar_url
+                      ? <Image src={activeChat.avatar_url} alt="" fill sizes="36px" className="object-cover" />
+                      : <div className="w-full h-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-sm font-black text-violet-600 dark:text-violet-300">{activeChat.username[0].toUpperCase()}</div>
+                    }
+                  </div>
+                  <div className="cursor-pointer" onClick={() => setSelectedUserId(activeChat.id)}>
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight flex items-center gap-1 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                      {activeChat.username}
+                      {activeChat.is_verified && <BadgeCheck size={14} className="text-violet-500" fill="currentColor" stroke="white" />}
+                    </h3>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1">
+                      <span className={`w-1.5 h-1.5 rounded-full ${connectionStatus === "blocked" ? "bg-red-500" : Object.keys(onlineUsers).includes(activeChat.id) ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />
+                      <span className="text-gray-400 dark:text-gray-500">
+                        {connectionStatus === "blocked" ? "Blocked" : Object.keys(onlineUsers).includes(activeChat.id) ? "Online" : "Offline"}
+                      </span>
                     </p>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 relative">
-               
-                <div className="relative">
-                  <button onClick={() => setShowMoreMenu(!showMoreMenu)} className={`p-1.5 transition-colors ${showMoreMenu ? 'text-gray-900 dark:text-gray-100' : 'hover:text-gray-900 dark:hover:text-gray-100'}`}><MoreHorizontal size={18} /></button>
-                  {showMoreMenu && (
-                    <div className="absolute top-10 right-0 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-[150] py-2 animate-in fade-in slide-in-from-top-2">
-                      {connectionStatus === 'blocked' && blockerId === currentUserId ? (
-                         <button onClick={handleUnblockUser} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all font-bold"><ShieldCheck size={14} /> UNBLOCK NODE</button>
-                      ) : (
-                        <button onClick={() => setShowBlockConfirm(true)} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-orange-600 dark:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all font-bold"><ShieldAlert size={14} /> BLOCK NODE</button>
-                      )}
-                    </div>
+
+                {/* Header actions */}
+                <div className="flex items-center gap-0.5">
+                  {connectionStatus === "accepted" && (
+                    <>
+                      <button onClick={() => startCall(false)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition-all" title="Voice call">
+                        <Phone size={17} />
+                      </button>
+                      <button onClick={() => startCall(true)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all" title="Video call">
+                        <Video size={17} />
+                      </button>
+                    </>
                   )}
-                </div>
-              </div>
-            </div>
-
-            <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 space-y-4 no-scrollbar scroll-smooth flex flex-col relative z-0">
-              {connectionStatus === 'accepted' ? (
-                <>
-                {messages.map((msg) => {
-                  const hasLiked = msg.message_reactions?.some(r => r.user_id === currentUserId && r.emoji === '👍');
-                  return (
-                  <div key={msg.id} className={`flex gap-2 group ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
-                    {msg.sender_id !== currentUserId && (
-                      <div className="flex items-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all px-2">
-                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-gray-800 ${hasLiked ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'}`} title="Like">
-                          <ThumbsUp size={14} className={hasLiked ? "fill-current" : ""} />
+                  <div className="relative" ref={moreMenuRef}>
+                    <button
+                      onClick={() => setShowMoreMenu(p => !p)}
+                      className={`p-2 rounded-xl transition-all ${showMoreMenu ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                    >
+                      <MoreHorizontal size={18} />
+                    </button>
+                    {showMoreMenu && (
+                      <div className="absolute top-full right-0 mt-1 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl z-50 py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                        <button onClick={() => setSelectedUserId(activeChat.id)} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-semibold">
+                          <Users size={14} /> View Profile
                         </button>
-                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" title="Reply">
-                          <MessageSquare size={14} />
+                        <button onClick={() => { toggleMute(activeChat.id); setShowMoreMenu(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-semibold">
+                          {mutedChats.includes(activeChat.id) ? <><Bell size={14} /> Unmute</>  : <><BellOff size={14} /> Mute Notifications</>}
                         </button>
-                      </div>
-                    )}
-                    <div className={`max-w-[85%] ${msg.sender_id === currentUserId ? "text-right" : "text-left"}`}>
-                      <div className={`inline-block p-1 rounded-2xl text-[13px] break-words text-left shadow-sm ${msg.sender_id === currentUserId ? "bg-blue-600 text-white rounded-tr-sm" : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-sm"} ${msg.isSending ? "opacity-70" : "opacity-100"}`}>
-                        <div className="px-3 pt-1.5 pb-2">
-                          {msg.replied_message && (
-                            <div className="border-l-2 border-blue-300 dark:border-blue-500/50 pl-2 mb-2 text-xs opacity-80">
-                              <p className="font-bold text-current flex items-center gap-1">
-                                @{msg.replied_message.sender_id === currentUserId ? 'You' : activeChat.username}
-                                {msg.replied_message.sender_id !== currentUserId && activeChat.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}
-                              </p>
-                              <p className="text-current/80 line-clamp-1">{msg.replied_message.text || 'Image'}</p>
-                            </div>
-                          )}
-                          {msg.image_url && (
-                            <div className="relative w-full min-w-[200px] aspect-video rounded-lg overflow-hidden my-2 cursor-pointer" onClick={() => window.open(msg.image_url, '_blank')}>
-                              <Image src={msg.image_url} alt="attachment" fill sizes="(max-width: 768px) 100vw, 400px" className="object-cover" />
-                            </div>
-                          )}
-                          {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
-                        </div>
-                      </div>
-                      
-                      {msg.message_reactions && msg.message_reactions.filter(r => r.emoji === '👍').length > 0 && (
-                        <div className={`flex flex-wrap gap-1 mt-1 relative z-10 ${msg.sender_id === currentUserId ? 'justify-end' : 'justify-start'}`}>
-                          <button 
-                            onClick={() => handleReaction(msg.id, '👍')}
-                            className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all shadow-sm ${hasLiked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
-                          >
-                            <ThumbsUp size={10} className={hasLiked ? "fill-current text-white" : "text-gray-400 dark:text-gray-500"} /> 
-                            <span>{msg.message_reactions.filter(r => r.emoji === '👍').length}</span>
+                        <div className="border-t border-gray-100 dark:border-gray-800 my-1" />
+                        {connectionStatus === "blocked" && blockerId === currentUserId ? (
+                          <button onClick={handleUnblockUser} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors font-bold">
+                            <ShieldCheck size={14} /> Unblock User
                           </button>
-                        </div>
-                      )}
-
-                      <div className={`mt-1 flex items-center gap-1.5 text-[10px] text-gray-600 dark:text-gray-400 px-1 ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
-                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {msg.sender_id === currentUserId && (
-                          <span className="flex items-center gap-0.5">
-                            {msg.isSending ? (
-                              <span className="text-gray-400 dark:text-gray-500 italic">Sending...</span>
-                            ) : msg.is_read ? (
-                              <><CheckCheck size={14} className="text-blue-500 dark:text-blue-400" /><span className="text-blue-500 dark:text-blue-400 font-bold">Seen</span></>
-                            ) : (
-                              <><Check size={14} className="text-gray-400 dark:text-gray-500" /><span className="text-gray-500 dark:text-gray-400 font-medium">Delivered</span></>
-                            )}
-                          </span>
+                        ) : (
+                          <button onClick={() => setShowBlockConfirm(true)} className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors font-bold">
+                            <ShieldAlert size={14} /> Block User
+                          </button>
                         )}
                       </div>
-                    </div>
-                    {msg.sender_id === currentUserId && (
-                      <div className="flex items-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all px-2">
-                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-gray-800 ${hasLiked ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'}`} title="Like">
-                          <ThumbsUp size={14} className={hasLiked ? "fill-current" : ""} />
-                        </button>
-                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" title="Reply">
-                          <MessageSquare size={14} />
-                        </button>
-                      </div>
                     )}
                   </div>
-                );
-              })}
-              {typingUsers[activeChat.id] && (
-                <div className="flex gap-2 group justify-start animate-in fade-in slide-in-from-bottom-2">
-                  <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-sm w-max">
-                    <span className="flex gap-1">
-                      <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </span>
-                  </div>
                 </div>
-              )}
-              </>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
-                  {connectionStatus === 'blocked' ? (
-                    <>
-                      <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-full flex items-center justify-center text-red-600 dark:text-red-500"><ShieldAlert size={32} /></div>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm font-bold uppercase tracking-tighter">Connection Severed</p>
-                      {blockerId === currentUserId ? (
-                        <button onClick={handleUnblockUser} className="text-violet-500 dark:text-violet-400 text-xs font-black uppercase hover:underline">Re-authorize Link</button>
-                      ) : (
-                        <p className="text-gray-500 dark:text-gray-400 text-xs italic font-mono">Channel locked by peer user.</p>
-                      )}
-                    </>
-                  ) : connectionStatus === 'none' ? (
-                    <><div className="w-16 h-16 bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800/50 rounded-full flex items-center justify-center text-violet-600 dark:text-violet-400"><UserPlus size={32} /></div><p className="text-gray-500 dark:text-gray-400 text-sm font-bold uppercase tracking-tighter">Transmission blocked</p><button onClick={handleSendRequest} className="bg-violet-600 hover:bg-violet-500 text-white px-8 py-3 rounded-xl font-bold">Send Request</button></>
-                  ) : connectionStatus === 'waiting' ? (
-                    <><div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500 animate-pulse"><Send size={32} /></div><p className="text-gray-500 dark:text-gray-400 text-xs italic font-mono uppercase tracking-tighter">Syncing... waiting for peer authorization.</p></>
-                  ) : (
-                    <><div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/50 rounded-full flex items-center justify-center text-green-600 dark:text-green-500"><Check size={32} /></div><p className="text-gray-900 dark:text-gray-100 text-sm font-black tracking-tight uppercase">Connection Request Detected</p><div className="flex gap-3"><button onClick={handleAcceptRequest} className="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all"><Check size={18} /> Accept</button><button onClick={() => { supabase.from('connections').delete().eq('id', activeConnectionId); setConnectionStatus('none'); }} className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 px-6 py-2.5 rounded-xl font-bold transition-all">Ignore</button></div></>
-                  )}
-                </div>
-              )}
-            </div>
+              </div>
 
-            <div className={`p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:p-0 md:pt-3 bg-white dark:bg-gray-900 md:bg-transparent dark:md:bg-transparent border-t border-gray-200 dark:border-gray-800 md:border-transparent dark:md:border-transparent shrink-0 w-full z-20 transition-all duration-500 ${connectionStatus === 'accepted' ? 'opacity-100 translate-y-0' : 'opacity-10 translate-y-4 pointer-events-none'}`}>
-              {replyingTo && (
-                <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
-                  <div className="min-w-0">
-                    <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1">Replying to <span className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                      @{replyingTo.sender_id === currentUserId ? 'You' : activeChat.username}
-                      {replyingTo.sender_id !== currentUserId && activeChat.is_verified && <BadgeCheck size={12} className="text-blue-500" fill="currentColor" stroke="white" />}
-                    </span></p>
-                    <p className="text-gray-500 dark:text-gray-400 truncate">{replyingTo.text || 'Image'}</p>
+              {/* Messages */}
+              <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 space-y-1 no-scrollbar scroll-smooth relative">
+                {isLoadingMessages && (
+                  <div className="flex justify-center py-8">
+                    <Loader2 size={24} className="animate-spin text-blue-500" />
                   </div>
-                  <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><X size={16} /></button>
-                </div>
-              )}
-              {imagePreview && (
-                <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-b-0 rounded-t-xl p-2 flex animate-in fade-in slide-in-from-bottom-2 duration-200">
-                  <div className="relative w-16 h-16 rounded-lg overflow-hidden">
-                    <Image src={imagePreview} alt="preview" fill sizes="64px" className="object-cover" />
-                    <button onClick={handleRemoveImage} className="absolute top-1 right-1 bg-white/80 dark:bg-black/50 text-gray-900 dark:text-gray-100 rounded-full p-0.5"><X size={12} /></button>
-                  </div>
-                </div>
-              )}
-              <form onSubmit={handleSendMessage} className="flex items-end gap-1.5 sm:gap-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-[1.5rem] p-1.5 pl-2 sm:pl-3 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-md w-full">
-                <input type="file" ref={imageInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                
-                <div className="flex items-center gap-0.5 pb-0.5 shrink-0">
-                  <button 
-                    type="button" 
-                    onClick={handleSuggestReply} 
-                    disabled={isSuggesting} 
-                    className="text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors p-2 disabled:opacity-50"
-                    title="Suggest AI Reply"
-                  >
-                    {isSuggesting ? <Loader2 size={18} className="animate-spin text-violet-500" /> : <Sparkles size={18} />}
-                  </button>
-                  <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-2 hidden sm:block">
-                    <Paperclip size={18} />
-                  </button>
-                </div>
+                )}
 
-                <textarea 
-                  ref={textareaRef}
-                  value={inputValue} 
-                  onChange={handleInputChange} 
-                  onKeyDown={handleKeyDown}
-                  placeholder={connectionStatus === 'accepted' ? `Message @${activeChat.username}...` : 'Channel Locked'} 
-                  rows={1}
-                  disabled={connectionStatus !== 'accepted'}
-                  className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-base md:text-sm text-gray-900 dark:text-gray-100 py-2.5 resize-none max-h-[120px] custom-scrollbar" 
-                />
-                
-                <div className="pb-0.5 pr-0.5 shrink-0 flex items-center gap-1">
-                  <button type="button" onClick={() => imageInputRef.current?.click()} className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-2 sm:hidden block">
-                    <Paperclip size={18} />
-                  </button>
-                  <button type="submit" disabled={connectionStatus !== 'accepted' || (!inputValue.trim() && !imageFile)} className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-full transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 active:scale-95">
-                    <Send size={16} strokeWidth={3} />
-                  </button>
-                </div>
-              </form>
+                {connectionStatus === "accepted" ? (
+                  <>
+                    {messages.map((msg, idx) => {
+                      const isMine = msg.sender_id === currentUserId;
+                      const reactionsByEmoji = (msg.message_reactions || []).reduce((acc, r) => {
+                        acc[r.emoji] = acc[r.emoji] || [];
+                        acc[r.emoji].push(r);
+                        return acc;
+                      }, {});
+                      const isHovered = hoveredMsgId === msg.id;
+
+                      // Group: hide avatar if same sender consecutive
+                      const prevMsg = messages[idx - 1];
+                      const sameAsPrev = prevMsg?.sender_id === msg.sender_id;
+
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`flex gap-2 px-1 ${isMine ? "justify-end" : "justify-start"} group/msg`}
+                          onMouseEnter={() => setHoveredMsgId(msg.id)}
+                          onMouseLeave={() => setHoveredMsgId(null)}
+                        >
+                          {/* Sender avatar */}
+                          {!isMine && (
+                            <div className={`w-7 h-7 shrink-0 rounded-full overflow-hidden mt-auto mb-1 ${sameAsPrev ? "opacity-0" : ""}`}
+                              onClick={() => setSelectedUserId(activeChat.id)}>
+                              {activeChat.avatar_url
+                                ? <Image src={activeChat.avatar_url} alt="" fill sizes="28px" className="object-cover" />
+                                : <div className="w-full h-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-xs font-black text-violet-600">{activeChat.username[0].toUpperCase()}</div>
+                              }
+                            </div>
+                          )}
+
+                          <div className={`flex flex-col max-w-[78%] ${isMine ? "items-end" : "items-start"}`}>
+                            {/* Reply preview */}
+                            {msg.replied_message && (
+                              <div className={`flex items-start gap-2 mb-1 px-3 py-1.5 rounded-xl text-xs border max-w-full ${isMine ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50 text-right" : "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-left"}`}>
+                                <CornerUpLeft size={12} className="text-gray-400 shrink-0 mt-0.5" />
+                                <div className="min-w-0">
+                                  <p className="font-bold text-gray-500 dark:text-gray-400 text-[10px] uppercase tracking-wide">
+                                    @{msg.replied_message.sender_id === currentUserId ? "You" : activeChat.username}
+                                  </p>
+                                  <p className="text-gray-500 dark:text-gray-400 truncate">{msg.replied_message.text || "📷 Image"}</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Bubble */}
+                            <div className={`relative inline-block text-[13.5px] break-words rounded-2xl shadow-sm transition-all ${msg.isSending ? "opacity-60" : ""} ${isMine
+                              ? "bg-blue-600 text-white rounded-br-sm"
+                              : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-sm"}`}>
+                              {msg.image_url && (
+                                <div
+                                  className="relative w-48 sm:w-64 aspect-video rounded-xl overflow-hidden cursor-zoom-in m-1.5"
+                                  onClick={() => setLightboxImage(msg.image_url)}
+                                >
+                                  <Image src={msg.image_url} alt="attachment" fill sizes="256px" className="object-cover hover:scale-105 transition-transform" />
+                                  <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center">
+                                    <ZoomIn size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                                  </div>
+                                </div>
+                              )}
+                              {msg.text && <p className="px-3.5 py-2.5 whitespace-pre-wrap leading-relaxed">{msg.text}</p>}
+                              
+                              {/* Message actions (floating) */}
+                              <div className={`absolute top-1/2 -translate-y-1/2 ${isMine ? "right-full mr-2 flex-row-reverse" : "left-full ml-2 flex-row"} flex items-center gap-1 p-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm transition-all duration-150 z-20 ${isHovered || emojiPickerMsgId === msg.id ? "opacity-100 translate-x-0" : `opacity-0 pointer-events-none ${isMine ? "translate-x-2" : "-translate-x-2"}`}`}>
+                                {/* Emoji picker toggle */}
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
+                                    className={`p-1.5 rounded-lg text-gray-500 hover:text-yellow-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all ${emojiPickerMsgId === msg.id ? "bg-gray-100 dark:bg-gray-800 text-yellow-500" : ""}`}
+                                    title="React"
+                                  >
+                                    <Smile size={16} />
+                                  </button>
+                                  {emojiPickerMsgId === msg.id && (
+                                    <div className={`absolute ${isMine ? "right-0" : "left-0"} bottom-full mb-3 flex w-max gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-3 py-2 shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-100`}>
+                                      {QUICK_EMOJIS.map(e => (
+                                        <button key={e} onClick={() => handleReaction(msg.id, e)} className="text-xl hover:scale-125 hover:-translate-y-1 transition-transform focus:outline-none">{e}</button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" title="Reply">
+                                  <Reply size={16} />
+                                </button>
+                                {msg.text && (
+                                  <button onClick={() => copyMessage(msg.text)} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" title="Copy">
+                                    <Copy size={16} />
+                                  </button>
+                                )}
+                                {isMine && (
+                                  <button onClick={() => setShowDeleteConfirm(msg.id)} className="p-1.5 rounded-lg text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Delete">
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Reactions */}
+                            {Object.keys(reactionsByEmoji).length > 0 && (
+                              <div className={`flex flex-wrap gap-1 mt-1 ${isMine ? "justify-end" : "justify-start"}`}>
+                                {Object.entries(reactionsByEmoji).map(([emoji, reactors]) => {
+                                  const myReaction = reactors.find(r => r.user_id === currentUserId);
+                                  return (
+                                    <button
+                                      key={emoji}
+                                      onClick={() => handleReaction(msg.id, emoji)}
+                                      className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border transition-all ${myReaction
+                                        ? "bg-blue-600 border-blue-600 text-white"
+                                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300"}`}
+                                    >
+                                      <span>{emoji}</span>
+                                      {reactors.length > 1 && <span>{reactors.length}</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Timestamp & read receipt */}
+                            <div className={`mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500 px-0.5 ${isMine ? "flex-row-reverse" : ""}`}>
+                              <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                              {isMine && (
+                                msg.isSending ? <Clock size={11} className="text-gray-400 animate-pulse" />
+                                  : msg.is_read ? <><CheckCheck size={11} className="text-blue-500" /><span className="text-blue-500 font-semibold">Seen</span></>
+                                    : <Check size={11} className="text-gray-400" />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Message actions (hover) */}
+                          <div className={`flex items-center gap-0.5 self-end mb-7 transition-all duration-150 ${isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1 pointer-events-none"} ${isMine ? "order-first flex-row-reverse" : ""}`}>
+                            {/* Emoji picker toggle */}
+                            <div className="relative">
+                              <button
+                                onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-yellow-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                                title="React"
+                              >
+                                <Smile size={14} />
+                              </button>
+                              {emojiPickerMsgId === msg.id && (
+                                <div className={`absolute ${isMine ? "right-0" : "left-0"} bottom-full mb-1 flex gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-2 py-1.5 shadow-xl z-30 animate-in fade-in zoom-in-95 duration-100`}>
+                                  {QUICK_EMOJIS.map(e => (
+                                    <button key={e} onClick={() => handleReaction(msg.id, e)} className="text-lg hover:scale-125 transition-transform p-0.5">{e}</button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all" title="Reply">
+                              <Reply size={14} />
+                            </button>
+                            {msg.text && (
+                              <button onClick={() => copyMessage(msg.text)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all" title="Copy">
+                                <Copy size={14} />
+                              </button>
+                            )}
+                            {isMine && (
+                              <button onClick={() => setShowDeleteConfirm(msg.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Delete">
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Typing indicator */}
+                    {typingUsers[activeChat.id] && (
+                      <div className="flex gap-2 px-1 justify-start animate-in fade-in slide-in-from-bottom-2">
+                        <div className="w-7 h-7 shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-black text-gray-500">
+                          {activeChat.username[0].toUpperCase()}
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                          <span className="flex gap-1 items-center">
+                            {[0, 150, 300].map(delay => (
+                              <span key={delay} className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+                            ))}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Connection States */
+                  <div className="flex-1 flex flex-col items-center justify-center min-h-[60%] text-center px-6">
+                    {connectionStatus === "blocked" ? (
+                      <div className="space-y-3">
+                        <div className="w-16 h-16 mx-auto bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center">
+                          <ShieldAlert size={28} className="text-red-500" />
+                        </div>
+                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Connection blocked</p>
+                        {blockerId === currentUserId
+                          ? <button onClick={handleUnblockUser} className="text-violet-500 text-sm font-bold hover:underline underline-offset-2">Unblock @{activeChat.username}</button>
+                          : <p className="text-xs text-gray-400 italic"> You{`'`}ve been blocked by this user.</p>
+                        }
+                      </div>
+                    ) : connectionStatus === "none" ? (
+                      <div className="space-y-4">
+                        <div className="w-16 h-16 mx-auto bg-violet-50 dark:bg-violet-900/20 rounded-2xl flex items-center justify-center">
+                          <UserPlus size={28} className="text-violet-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">No connection yet</p>
+                          <p className="text-xs text-gray-400">Send a request to start chatting.</p>
+                        </div>
+                        <button onClick={handleSendRequest} className="bg-violet-600 hover:bg-violet-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-violet-600/20">
+                          Send Connection Request
+                        </button>
+                      </div>
+                    ) : connectionStatus === "waiting" ? (
+                      <div className="space-y-3">
+                        <div className="w-16 h-16 mx-auto bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center">
+                          <Send size={28} className="text-gray-400 animate-pulse" />
+                        </div>
+                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Request sent</p>
+                        <p className="text-xs text-gray-400">Waiting for @{activeChat.username} to accept…</p>
+                      </div>
+                    ) : connectionStatus === "incoming" ? (
+                      <div className="space-y-4">
+                        <div className="w-16 h-16 mx-auto bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center">
+                          <UserPlus size={28} className="text-green-500" />
+                        </div>
+                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">@{activeChat.username} wants to connect</p>
+                        <div className="flex gap-3">
+                          <button onClick={handleAcceptRequest} className="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-lg shadow-green-600/20">
+                            <Check size={16} /> Accept
+                          </button>
+                          <button
+                            onClick={() => { supabase.from("connections").delete().eq("id", activeConnectionId); setConnectionStatus("none"); }}
+                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200 px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+
+              {/* Input Area */}
+              <div className={`pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:pb-0 shrink-0 transition-all duration-300 ${connectionStatus === "accepted" ? "opacity-100 translate-y-0" : "opacity-30 translate-y-2 pointer-events-none"}`}>
+                {/* Reply banner */}
+                {replyingTo && (
+                  <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 border-b-0 rounded-t-2xl px-4 py-2.5 text-xs animate-in fade-in slide-in-from-bottom-2 duration-150">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CornerUpLeft size={13} className="text-blue-500 shrink-0" />
+                      <div className="min-w-0">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">@{replyingTo.sender_id === currentUserId ? "You" : activeChat.username}</span>
+                        <p className="text-gray-500 dark:text-gray-400 truncate">{replyingTo.text || "📷 Image"}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Image preview */}
+                {imagePreview && (
+                  <div className={`bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 border-b-0 ${replyingTo ? "" : "rounded-t-2xl"} px-3 py-2.5 flex items-center gap-3 animate-in fade-in duration-150`}>
+                    <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
+                      <Image src={imagePreview} alt="preview" fill sizes="56px" className="object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{imageFile?.name}</p>
+                      <p className="text-[10px] text-gray-400">{imageFile ? `${(imageFile.size / 1024).toFixed(0)} KB` : ""}</p>
+                    </div>
+                    <button onClick={e => { e.stopPropagation(); setImageFile(null); setImagePreview(null); if (imageInputRef.current) imageInputRef.current.value = ""; }} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Send error banner */}
+                {messageSendError && (
+                  <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-xl px-3 py-2 mb-2 text-xs text-red-600 dark:text-red-400">
+                    <AlertTriangle size={13} />
+                    <span className="flex-1 truncate">{messageSendError}</span>
+                    <button onClick={() => setMessageSendError(null)} className="p-0.5 hover:text-red-800"><X size={12} /></button>
+                  </div>
+                )}
+
+                <form
+                  onSubmit={handleSendMessage}
+                  className={`flex items-end gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 ${(replyingTo || imagePreview) ? "rounded-b-2xl rounded-t-none border-t-0" : "rounded-2xl"} p-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all shadow-sm`}
+                >
+                  <input type="file" ref={imageInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+
+                  <div className="flex items-center pb-0.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleSuggestReply}
+                      disabled={isSuggesting}
+                      className="p-2 text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors disabled:opacity-40"
+                      title="AI suggest reply"
+                    >
+                      {isSuggesting ? <Loader2 size={17} className="animate-spin text-violet-500" /> : <Sparkles size={17} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      title="Attach image"
+                    >
+                      <Paperclip size={17} />
+                    </button>
+                  </div>
+
+                  <textarea
+                    ref={textareaRef}
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder={`Message @${activeChat.username}…`}
+                    rows={1}
+                    className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 py-2.5 resize-none max-h-[120px] leading-relaxed"
+                  />
+
+                  <div className="pb-0.5 shrink-0">
+                    <button
+                      type="submit"
+                      disabled={!inputValue.trim() && !imageFile}
+                      className="w-9 h-9 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex items-center justify-center transition-all shadow-md shadow-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                    >
+                      <Send size={15} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
+              <MessageSquare size={48} className="text-gray-200 dark:text-gray-800" />
+              <div>
+                <p className="text-sm font-bold text-gray-400 dark:text-gray-500">No conversation selected</p>
+                <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">Choose a contact from the sidebar</p>
+              </div>
             </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-600 dark:text-gray-400 text-xs font-black uppercase tracking-[4px] italic animate-pulse">Waiting for selection...</div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* USER PROFILE MODAL */}
-      {selectedUserId && (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
-          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto no-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-xl">
-            <button 
-              onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[260] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 rounded-full text-gray-500 dark:text-gray-400 transition-colors"
-            >
-              <X size={20} />
-            </button>
-            <div className="p-2 sm:p-6">
-              <ProfileContent viewUserId={selectedUserId} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Toast Popup */}
+      {/* TOAST */}
       {toastMessage && (
-        <div className={`fixed bottom-10 right-10 z-[300] flex items-center gap-3 bg-white dark:bg-gray-900 border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 max-w-md ${toastType === 'error' ? 'border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-500' : 'border-green-200 dark:border-green-900/50 text-green-600 dark:text-green-500'}`}>
-          {toastType === 'error' ? <AlertTriangle size={18} className="text-red-500 shrink-0" /> : <Check size={18} className="text-green-500 shrink-0" />}
-          <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
+        <div className={`fixed bottom-6 right-6 z-[300] flex items-center gap-3 bg-white dark:bg-gray-900 border px-4 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200 max-w-sm ${toastType === "error" ? "border-red-200 dark:border-red-900/50" : "border-green-200 dark:border-green-900/50"}`}>
+          {toastType === "error"
+            ? <AlertTriangle size={16} className="text-red-500 shrink-0" />
+            : <Check size={16} className="text-green-500 shrink-0" />
+          }
+          <span className={`text-sm font-semibold ${toastType === "error" ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}>{toastMessage}</span>
+          <button onClick={() => setToastMessage("")} className="ml-1 text-gray-400 hover:text-gray-600 shrink-0">
+            <X size={14} />
+          </button>
         </div>
       )}
-    </div>
+    </>
   );
 }

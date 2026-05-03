@@ -104,13 +104,20 @@ export default function PagesContent() {
     if (!postInput.trim() || !activePage || !currentUserId) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase.from('page_posts').insert({
+      const { data: newPost, error } = await supabase.from('page_posts').insert({
         page_id: activePage.id,
         user_id: currentUserId,
         content: postInput
-      });
+      }).select('*, profiles(username, avatar_url, is_verified)').single();
       if (error) throw error;
       setPostInput("");
+
+      if (newPost) {
+        setPagePosts(prev => {
+          if (prev.some(p => p.id === newPost.id)) return prev;
+          return [newPost, ...prev];
+        });
+      }
     } catch (err) {
       alert(err.message);
     } finally {

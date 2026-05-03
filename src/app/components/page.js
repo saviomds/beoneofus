@@ -1,12 +1,16 @@
-import React from 'react';
+import ProjectIDE from "../ProjectIDE";
 
-export default function HelpCenter() {
+export const metadata = {
+  title: "Project IDE - beoneofus",
+  description: "Write and manage your b1overs project code",
+};
+
+export default async function IDEPage({ params }) {
+  const resolvedParams = await params;
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <div className="pt-32 px-6 max-w-7xl mx-auto text-center">
-        <h1 className="text-4xl font-black text-gray-900 dark:text-gray-100 mb-4">Help Center</h1>
-        <p className="text-gray-600 dark:text-gray-400">Our support documentation is currently under construction.</p>
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-20 flex flex-col">
+      <ProjectIDE projectId={resolvedParams.id} />
     </div>
   );
 }

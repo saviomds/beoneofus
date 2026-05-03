@@ -433,16 +433,23 @@ export default function GroupsContent() {
         imageUrl = urlData.publicUrl;
       }
 
-      // Insert message. The real-time subscription will update the UI.
-      const { error } = await supabase.from('group_messages').insert({
+      // Insert message.
+      const { data: newMsg, error } = await supabase.from('group_messages').insert({
         group_id: activeWorkspace.id,
         user_id: currentUserId,
         text: text.trim() || "",
         image_url: imageUrl,
         reply_to_message_id: replyToId,
-      });
+      }).select('*, profiles(username, avatar_url, is_verified), replied_message:reply_to_message_id(*, text, image_url, profiles(username, is_verified)), group_message_reactions(id, user_id, emoji)').single();
 
       if (error) throw error;
+
+      if (newMsg) {
+        setWorkspaceMessages(prev => {
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+      }
     } catch (err) {
       showToast('Failed to send message: ' + err.message, 'error');
     } finally {
@@ -478,7 +485,7 @@ export default function GroupsContent() {
          if (error) throw error;
       }
     } catch (err) {
-      showToast("Reaction failed. Make sure the  i wan'group_message_reactions' table exists.", "error");
+      showToast("Reaction failed. Make sure the 'group_message_reactions' table exists.", "error");
     }
   };
 

@@ -190,6 +190,7 @@ export default function MessagesContent() {
   const [hoveredMsgId, setHoveredMsgId] = useState(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [messageSendError, setMessageSendError] = useState(null);
+  const forceScrollRef = useRef(false);
   const [mutedChats, setMutedChats] = useState(() => {
     if (typeof window !== "undefined") {
       try { return JSON.parse(localStorage.getItem("muted_chats") || "[]"); } catch { return []; }
@@ -473,7 +474,13 @@ export default function MessagesContent() {
   /* ── Auto-scroll ── */
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+      
+      if (isNearBottom || forceScrollRef.current) {
+        scrollRef.current.scrollTop = scrollHeight;
+        forceScrollRef.current = false;
+      }
     }
   }, [messages, connectionStatus, typingUsers]);
 
@@ -856,6 +863,7 @@ export default function MessagesContent() {
       text: msgText, image_url: imagePreview, replied_message: replyingTo,
       created_at: new Date().toISOString(), isSending: true, message_reactions: [],
     };
+    forceScrollRef.current = true;
     setMessages(prev => [...prev, optimistic]);
     setLastMessagePreviews(prev => ({
       ...prev,
@@ -886,8 +894,12 @@ export default function MessagesContent() {
       if (error) throw error;
 
       setMessages(prev => {
-        if (prev.some(m => m.id === inserted.id)) return prev.filter(m => m.id !== optimisticId);
-        return prev.map(m => m.id === optimisticId ? { ...m, id: inserted.id, isSending: false } : m);
+        // If real-time event already added it, filter out optimistic
+        if (prev.some(m => m.id === inserted.id && !m.isSending)) {
+          return prev.filter(m => m.id !== optimisticId);
+        }
+        // Otherwise properly update optimistic with real data and URL
+        return prev.map(m => m.id === optimisticId ? { ...m, ...inserted, image_url: imageUrl || m.image_url, isSending: false } : m);
       });
 
       await supabase.from("notifications").insert({
@@ -1263,7 +1275,7 @@ export default function MessagesContent() {
                         >
                           {/* Sender avatar */}
                           {!isMine && (
-                            <div className={`w-7 h-7 shrink-0 rounded-full overflow-hidden mt-auto mb-1 ${sameAsPrev ? "opacity-0" : ""}`}
+                            <div className={`w-7 h-7 shrink-0 rounded-full overflow-hidden mt-auto mb-1 ${sameAsPrev ? "opacity-0 pointer-events-none" : ""}`}
                               onClick={() => setSelectedUserId(activeChat.id)}>
                               {activeChat.avatar_url
                                 ? <Image src={activeChat.avatar_url} alt="" fill sizes="28px" className="object-cover" />
@@ -1287,12 +1299,16 @@ export default function MessagesContent() {
                             )}
 
                             {/* Bubble */}
-                            <div className={`relative inline-block text-[13.5px] break-words rounded-2xl shadow-sm transition-all ${msg.isSending ? "opacity-60" : ""} ${isMine
-                              ? "bg-blue-600 text-white rounded-br-sm"
-                              : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-sm"}`}>
+                            <div className={`relative inline-block text-[13.5px] break-words rounded-2xl shadow-sm transition-all ${msg.isSending ? "opacity-60" : ""} ${
+                              !msg.text && msg.image_url 
+                                ? "bg-transparent shadow-none" 
+                                : isMine
+                                  ? "bg-blue-600 text-white rounded-br-sm"
+                                  : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-sm"
+                            }`}>
                               {msg.image_url && (
                                 <div
-                                  className="relative w-48 sm:w-64 aspect-video rounded-xl overflow-hidden cursor-zoom-in m-1.5"
+                                  className={`relative w-48 sm:w-64 aspect-video rounded-xl overflow-hidden cursor-zoom-in ${msg.text ? "m-1.5" : ""} bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800`}
                                   onClick={() => setLightboxImage(msg.image_url)}
                                 >
                                   <Image src={msg.image_url} alt="attachment" fill sizes="256px" className="object-cover hover:scale-105 transition-transform" />

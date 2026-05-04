@@ -1,0 +1,34 @@
+export default function manifest() {
+  return {
+    name: 'beoneofus - The network for developers',
+    short_name: 'beoneofus',
+    description: 'Connect with developers worldwide. Broadcast your code. Join secure workspaces.',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#111827',
+    theme_color: '#111827',
+    icons: [
+      {
+        src: '/android-chrome-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        src: '/android-chrome-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+      {
+        src: '/logo.png',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+      {
+        src: '/cropped_circle_image.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+    ],
+  };
+}

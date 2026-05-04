@@ -290,18 +290,21 @@ const CommunityHubTool = ({ currentUserId }) => {
               <Globe size={36} className="mb-3 text-blue-500/20" />
               <p className="font-bold text-xs uppercase tracking-widest">Global Chat Initialized</p>
             </div>
-          : messages.map(msg => (
+          : messages.map((msg, idx) => {
+            const prevMsg = messages[idx - 1];
+            const sameAsPrev = prevMsg?.user_id === msg.user_id;
+            return (
             <div key={msg.id} className={`flex gap-2 ${msg.user_id === currentUserId ? "justify-end" : "justify-start"}`}>
               {msg.user_id !== currentUserId && (
                 <div onClick={() => setSelectedUserId(msg.user_id)}
-                  className="relative w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase shrink-0 mt-auto cursor-pointer hover:opacity-80 transition-opacity overflow-hidden">
+                  className={`relative w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase shrink-0 mt-auto cursor-pointer hover:opacity-80 transition-opacity overflow-hidden ${sameAsPrev ? "opacity-0 pointer-events-none" : ""}`}>
                   {msg.profiles?.avatar_url
                     ? <Image src={msg.profiles.avatar_url} alt="avatar" fill sizes="28px" className="object-cover" />
-                    : msg.profiles?.username?.substring(0, 2)}
+                    : msg.profiles?.username?.substring(0, 2)} 
                 </div>
               )}
               <div className={`flex flex-col max-w-[80%] ${msg.user_id === currentUserId ? "items-end" : "items-start"}`}>
-                {msg.user_id !== currentUserId && (
+                {msg.user_id !== currentUserId && !sameAsPrev && (
                   <span className="text-[10px] text-gray-500 font-bold mb-1 pl-1 flex items-center gap-1">
                     @{msg.profiles?.username}
                     {msg.profiles?.is_verified && <VerifiedBadge size={9} />}
@@ -310,12 +313,12 @@ const CommunityHubTool = ({ currentUserId }) => {
                 <div className={`px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${
                   msg.user_id === currentUserId
                     ? "bg-blue-600 text-white rounded-tr-none"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-none"}`}>
+                    : `bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 ${sameAsPrev ? "rounded-tl-2xl" : "rounded-tl-none"}`}`}>
                   {msg.text}
                 </div>
               </div>
             </div>
-          ))}
+          )})}
       </div>
 
       {selectedUserId && (

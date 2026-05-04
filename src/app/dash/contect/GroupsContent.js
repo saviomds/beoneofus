@@ -532,15 +532,18 @@ export default function GroupsContent() {
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">This is the start of an end-to-end encrypted node. Say hello to the channel.</p>
               </div>
             ) : (
-              workspaceMessages.map(msg => {
+              workspaceMessages.map((msg, idx) => {
                 const isMe = msg.user_id === currentUserId;
                 const hasLiked = msg.group_message_reactions?.some(r => r.user_id === currentUserId && r.emoji === '👍');
+                const prevMsg = workspaceMessages[idx - 1];
+                const sameAsPrev = prevMsg?.user_id === msg.user_id;
+                
                 return (
                   <div key={msg.id} className={`flex gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
                     {!isMe ? (
                       <div 
                         onClick={() => setSelectedUserId(msg.user_id)}
-                        className="relative w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors overflow-hidden"
+                        className={`relative w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors overflow-hidden ${sameAsPrev ? "opacity-0 pointer-events-none" : ""}`}
                         title={`View @${msg.profiles?.username}'s Profile`}
                       >
                         {msg.profiles?.avatar_url ? (
@@ -560,11 +563,11 @@ export default function GroupsContent() {
                       </div>
                     )}
                     <div className={`flex flex-col group ${isMe ? "items-end" : "items-start"} max-w-[80%]`}>
-                      {!isMe && <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 ml-1 flex items-center gap-1">
+                      {!isMe && !sameAsPrev && <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 ml-1 flex items-center gap-1">
                         @{msg.profiles?.username}
                         {msg.profiles?.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}
                       </span>}
-                      <div className={`w-full p-1 rounded-2xl ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-md shadow-blue-500/20" : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-none"}`}>
+                      <div className={`w-full p-1 rounded-2xl ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-md shadow-blue-500/20" : `bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 ${sameAsPrev ? "rounded-tl-2xl" : "rounded-tl-none"}`}`}>
                         <div className="px-3 pt-1.5 pb-2">
                           {msg.replied_message && (
                             <div className="border-l-2 border-blue-500/50 dark:border-blue-400/50 pl-2 mb-2 text-xs opacity-80">

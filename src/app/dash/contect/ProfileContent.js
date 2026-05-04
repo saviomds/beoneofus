@@ -611,7 +611,7 @@ export default function ProfileContent({ viewUserId }) {
           {displayBanner ? (
             <Image src={displayBanner} alt="Profile Banner" fill priority quality={75} className="object-cover object-center" />
           ) : (
-            <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
+            <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 mix-blend-overlay"></div>
           )}
           
           {isEditing && (

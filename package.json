@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@serwist/next": "^9.5.11",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.103.0",
     "@webcontainer/api": "^1.6.4",
@@ -24,7 +25,8 @@
     "react-easy-crop": "^5.5.7",
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^16.1.1",
-    "resend": "^3.2.0"
+    "resend": "^3.2.0",
+    "serwist": "^9.5.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

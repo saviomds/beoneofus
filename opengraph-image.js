@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { supabase } from '../../../supabaseClient';
+import { supabase } from '../../supabaseClient';
 
 // Route segment config
 export const runtime = 'edge';

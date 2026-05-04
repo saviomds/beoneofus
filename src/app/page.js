@@ -53,20 +53,21 @@ export default function LandingPage() {
   ];
 
   useEffect(() => {
+    let isMounted = true;
     const checkAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           if (error.message.includes('Refresh Token Not Found') || error.message.includes('Invalid Refresh Token')) {
-            setAuthError('Your session has expired or is invalid. Please log in again.');
+            if (isMounted) setAuthError('Your session has expired or is invalid. Please log in again.');
             await supabase.auth.signOut(); // Clear invalid local session
           } else {
-            setAuthError(error.message);
+            if (isMounted) setAuthError(error.message);
           }
         }
         
-        setSession(session);
+        if (isMounted) setSession(session);
         
         if (session) {
           const { data } = await supabase
@@ -74,16 +75,17 @@ export default function LandingPage() {
             .select('username, avatar_url')
             .eq('id', session.user.id)
             .single();
-          setProfile(data);
+          if (isMounted) setProfile(data);
         }
       } catch (err) {
-        setAuthError('Authentication check failed. Please try again.');
+        if (isMounted) setAuthError('Authentication check failed. Please try again.');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
     
     checkAuth();
+    return () => { isMounted = false; };
   }, []);
 
   return (

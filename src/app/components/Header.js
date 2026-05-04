@@ -150,9 +150,13 @@ export default function Header({ setActiveTab }) {
   // Get current user ID
   useEffect(() => {
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setCurrentUserId(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setCurrentUserId(session.user.id);
+        }
+      } catch (error) {
+        console.error("Header getSession error:", error);
       }
     };
     getSession();

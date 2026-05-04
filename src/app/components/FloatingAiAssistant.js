@@ -74,24 +74,30 @@ export default function FloatingAiAssistant() {
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const fetchHistory = async () => {
-        setIsFetchingHistory(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const { data, error } = await supabase
-            .from('ai_chat_messages')
-            .select('role, content')
-            .eq('user_id', session.user.id)
-            .order('created_at', { ascending: true });
-            
-          if (!error && data && data.length > 0) {
-            setMessages(data);
+        try {
+          setIsFetchingHistory(true);
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const { data, error } = await supabase
+              .from('ai_chat_messages')
+              .select('role, content')
+              .eq('user_id', session.user.id)
+              .order('created_at', { ascending: true });
+              
+            if (!error && data && data.length > 0) {
+              setMessages(data);
+            } else {
+              setMessages([{ role: "assistant", content: "Hello! I am beoneofus AI. How can I help you today?" }]);
+            }
           } else {
             setMessages([{ role: "assistant", content: "Hello! I am beoneofus AI. How can I help you today?" }]);
           }
-        } else {
+        } catch (error) {
+          console.error("AI Assistant history fetch error:", error);
           setMessages([{ role: "assistant", content: "Hello! I am beoneofus AI. How can I help you today?" }]);
+        } finally {
+          setIsFetchingHistory(false);
         }
-        setIsFetchingHistory(false);
       };
       fetchHistory();
     }

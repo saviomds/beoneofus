@@ -16,6 +16,7 @@ export const metadata = {
       { url: '/appIcon.png' },
     ],
   },
+  manifest: '/manifest.json',
   openGraph: {
     title: 'beoneofus',
     description: 'The network for developers. Connect, broadcast code, and join secure workspaces.',

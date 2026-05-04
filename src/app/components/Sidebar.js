@@ -160,71 +160,76 @@ export default function Sidebar({ activeSection, onSectionChange }) {
     };
 
     const initData = async () => {
-      setIsProfileLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        const uid = session.user.id;
-
-        // Fetch Profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', uid)
-          .single();
+      try {
+        setIsProfileLoading(true);
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (profileData) setProfile(profileData);
-
-        await fetchCounts(uid);
-
-        // Remove existing subscription if any
-        if (channelRef.current) supabase.removeChannel(channelRef.current);
-
-        // Set up targeted real-time listeners using the user's ID
-        channelRef.current = supabase
-          .channel(`sidebar-updates-${uid}-${Date.now()}`)
-          .on('postgres_changes', { 
-            event: '*', 
-            schema: 'public', 
-            table: 'messages',
-            filter: `receiver_id=eq.${uid}`
-          }, () => fetchCounts(uid))
-          .on('postgres_changes', { 
-            event: '*', 
-            schema: 'public', 
-            table: 'notifications',
-            filter: `receiver_id=eq.${uid}`
-          }, () => fetchCounts(uid))
-          .on('postgres_changes', { 
-            event: '*', 
-            schema: 'public', 
-            table: 'connections',
-            filter: `receiver_id=eq.${uid}`
-          }, () => fetchCounts(uid))
-          .on('postgres_changes', { 
-            event: '*', 
-            schema: 'public', 
-            table: 'connections',
-            filter: `sender_id=eq.${uid}`
-          }, () => fetchCounts(uid))
-          .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${uid}`
-          }, async () => {
-            const { data: updatedProfile } = await supabase.from('profiles').select('*').eq('id', uid).single();
-            if (updatedProfile) setProfile(updatedProfile);
-          })
-          .subscribe();
-
-      } else {
-        setProfile(null);
-        setUnreadMessages(0);
-        setUnreadNotifs(0);
-        setUnreadGroups(0);
+        if (session) {
+          const uid = session.user.id;
+  
+          // Fetch Profile
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', uid)
+            .single();
+          
+          if (profileData) setProfile(profileData);
+  
+          await fetchCounts(uid);
+  
+          // Remove existing subscription if any
+          if (channelRef.current) supabase.removeChannel(channelRef.current);
+  
+          // Set up targeted real-time listeners using the user's ID
+          channelRef.current = supabase
+            .channel(`sidebar-updates-${uid}-${Date.now()}`)
+            .on('postgres_changes', { 
+              event: '*', 
+              schema: 'public', 
+              table: 'messages',
+              filter: `receiver_id=eq.${uid}`
+            }, () => fetchCounts(uid))
+            .on('postgres_changes', { 
+              event: '*', 
+              schema: 'public', 
+              table: 'notifications',
+              filter: `receiver_id=eq.${uid}`
+            }, () => fetchCounts(uid))
+            .on('postgres_changes', { 
+              event: '*', 
+              schema: 'public', 
+              table: 'connections',
+              filter: `receiver_id=eq.${uid}`
+            }, () => fetchCounts(uid))
+            .on('postgres_changes', { 
+              event: '*', 
+              schema: 'public', 
+              table: 'connections',
+              filter: `sender_id=eq.${uid}`
+            }, () => fetchCounts(uid))
+            .on('postgres_changes', {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'profiles',
+              filter: `id=eq.${uid}`
+            }, async () => {
+              const { data: updatedProfile } = await supabase.from('profiles').select('*').eq('id', uid).single();
+              if (updatedProfile) setProfile(updatedProfile);
+            })
+            .subscribe();
+  
+        } else {
+          setProfile(null);
+          setUnreadMessages(0);
+          setUnreadNotifs(0);
+          setUnreadGroups(0);
+        }
+      } catch (error) {
+        console.error("Sidebar init error:", error);
+      } finally {
+        setIsProfileLoading(false);
       }
-      setIsProfileLoading(false);
     };
 
     initData();
@@ -275,11 +280,11 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   };
 
   const handleMarkAllMessagesRead = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    const uid = session.user.id;
-
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const uid = session.user.id;
+
       const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
@@ -294,11 +299,11 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   };
 
   const handleMarkAllNotifsRead = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    const uid = session.user.id;
-
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const uid = session.user.id;
+
       const { data: notifs } = await supabase
         .from('notifications')
         .select('id, type')
@@ -321,11 +326,11 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   };
 
   const handleMarkAllGroupsRead = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    const uid = session.user.id;
-
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const uid = session.user.id;
+
       const { data: notifs } = await supabase
         .from('notifications')
         .select('id, type')

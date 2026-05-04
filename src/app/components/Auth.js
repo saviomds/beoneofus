@@ -18,31 +18,46 @@ export default function AuthForm() {
 
   // Redirect if user is already logged in
   useEffect(() => {
+    let isMounted = true;
     const checkUser = async () => {
-      // Check if URL has recovery tokens
-      if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
-        setView('update-password');
-        setIsCheckingAuth(false);
-        return;
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        router.push('/dash');
-      } else {
-        setIsCheckingAuth(false);
+      try {
+        // Check if URL has recovery tokens
+        if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+          setView('update-password');
+          setIsCheckingAuth(false);
+          return;
+        }
+  
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+  
+        if (session) {
+          // Use window.location.href instead of router.push to prevent
+          // "Router action dispatched before initialization" errors on mount
+          window.location.href = '/dash';
+        } else {
+          setIsCheckingAuth(false);
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        if (isMounted) setIsCheckingAuth(false);
       }
     };
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
       if (event === 'PASSWORD_RECOVERY') {
         setView('update-password');
         setIsCheckingAuth(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      // The subscription object may be null if the listener failed to attach.
+      subscription?.unsubscribe();
+    };
   }, [router]);
 
   const handleAuth = async (e) => {
@@ -106,8 +121,7 @@ export default function AuthForm() {
           }
           throw signInError;
         }
-        router.push('/dash');
-        router.refresh();
+        window.location.href = '/dash';
       }
     } catch (err) {
       setError(err.message);

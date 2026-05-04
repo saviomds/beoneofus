@@ -109,62 +109,65 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
     let isMounted = true;
 
     const fetchSidebarData = async (showLoader = true) => {
-      if (showLoader) setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session || !isMounted) {
-        if (showLoader && isMounted) setLoading(false);
-        return;
-      }
-      const uid = session.user.id;
-
-      // Fetch existing connections to know who we already follow
-      const { data: connections } = await supabase
-        .from('connections')
-        .select('sender_id, receiver_id')
-        .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
-
-      let connectedIds = [];
-      if (connections) {
-        connectedIds = connections.map(c => c.sender_id === uid ? c.receiver_id : c.sender_id);
-        if (isMounted) setFollowedIds(connectedIds);
-      }
-
-      // Fetch suggested users
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, username, status, avatar_url, is_verified')
-        .neq('id', uid);
-
-      if (profiles && isMounted) {
-        // Filter out people we are already connected to
-        const unassociated = profiles.filter(p => !connectedIds.includes(p.id));
-        
-        setSuggestions(prev => {
-          if (!showLoader && prev.length > 0) {
-            const remaining = prev.filter(p => !connectedIds.includes(p.id));
-            if (remaining.length < 15) {
-              // Add unfollowed users back into the active suggestions list
-              const newToAdd = unassociated.filter(u => !remaining.some(r => r.id === u.id));
-              return [...remaining, ...newToAdd].slice(0, 15);
+      try {
+        if (showLoader) setLoading(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || !isMounted) {
+          return;
+        }
+        const uid = session.user.id;
+  
+        // Fetch existing connections to know who we already follow
+        const { data: connections } = await supabase
+          .from('connections')
+          .select('sender_id, receiver_id')
+          .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
+  
+        let connectedIds = [];
+        if (connections) {
+          connectedIds = connections.map(c => c.sender_id === uid ? c.receiver_id : c.sender_id);
+          if (isMounted) setFollowedIds(connectedIds);
+        }
+  
+        // Fetch suggested users
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, username, status, avatar_url, is_verified')
+          .neq('id', uid);
+  
+        if (profiles && isMounted) {
+          // Filter out people we are already connected to
+          const unassociated = profiles.filter(p => !connectedIds.includes(p.id));
+          
+          setSuggestions(prev => {
+            if (!showLoader && prev.length > 0) {
+              const remaining = prev.filter(p => !connectedIds.includes(p.id));
+              if (remaining.length < 15) {
+                // Add unfollowed users back into the active suggestions list
+                const newToAdd = unassociated.filter(u => !remaining.some(r => r.id === u.id));
+                return [...remaining, ...newToAdd].slice(0, 15);
+              }
+              return remaining;
             }
-            return remaining;
-          }
-          return unassociated.sort(() => 0.5 - Math.random()).slice(0, 15);
-        });
+            return unassociated.sort(() => 0.5 - Math.random()).slice(0, 15);
+          });
+        }
+  
+        // Fetch active groups
+        const { data: activeGroups } = await supabase
+          .from('groups')
+          .select('id, name, description, is_private')
+          .order('created_at', { ascending: false })
+          .limit(3);
+  
+        if (activeGroups && isMounted) {
+          setGroups(activeGroups);
+        }
+      } catch (error) {
+        console.error("RightSidebar fetch error:", error);
+      } finally {
+        if (showLoader && isMounted) setLoading(false);
       }
-
-      // Fetch active groups
-      const { data: activeGroups } = await supabase
-        .from('groups')
-        .select('id, name, description, is_private')
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      if (activeGroups && isMounted) {
-        setGroups(activeGroups);
-      }
-
-      if (showLoader && isMounted) setLoading(false);
     };
 
     fetchSidebarData();
@@ -183,49 +186,53 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
 
   const handleFollowToggle = async (e, receiverId, isFollowed) => {
     e.stopPropagation();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    
-    if (isFollowed) {
-      // Optimistically unfollow
-      setFollowedIds(prev => prev.filter(id => id !== receiverId));
-      const { data, error } = await supabase.from('connections')
-        .delete()
-        .or(`and(sender_id.eq.${session.user.id},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${session.user.id})`)
-        .select();
-
-      if (error || !data || data.length === 0) {
-        console.error("Unfollow error:", error?.message || "Missing DELETE policy");
-        setFollowedIds(prev => [...prev, receiverId]); // Revert UI
-        alert("Error unfollowing: Database blocked the action. Ensure you added the SQL DELETE policy.");
-      }
-    } else {
-      // Optimistically follow
-      setFollowedIds(prev => [...prev, receiverId]);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
       
-      const { error } = await supabase.from('connections').insert({
-        sender_id: session.user.id,
-        receiver_id: receiverId,
-        status: 'pending'
-      });
-
-      if (error) {
-        console.error("Connection error:", error.message);
-        setFollowedIds(prev => prev.filter(id => id !== receiverId)); // Revert UI
-        alert("Error sending request: " + error.message);
-        return;
+      if (isFollowed) {
+        // Optimistically unfollow
+        setFollowedIds(prev => prev.filter(id => id !== receiverId));
+        const { data, error } = await supabase.from('connections')
+          .delete()
+          .or(`and(sender_id.eq.${session.user.id},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${session.user.id})`)
+          .select();
+  
+        if (error || !data || data.length === 0) {
+          console.error("Unfollow error:", error?.message || "Missing DELETE policy");
+          setFollowedIds(prev => [...prev, receiverId]); // Revert UI
+          alert("Error unfollowing: Database blocked the action. Ensure you added the SQL DELETE policy.");
+        }
+      } else {
+        // Optimistically follow
+        setFollowedIds(prev => [...prev, receiverId]);
+        
+        const { error } = await supabase.from('connections').insert({
+          sender_id: session.user.id,
+          receiver_id: receiverId,
+          status: 'pending'
+        });
+  
+        if (error) {
+          console.error("Connection error:", error.message);
+          setFollowedIds(prev => prev.filter(id => id !== receiverId)); // Revert UI
+          alert("Error sending request: " + error.message);
+          return;
+        }
+  
+        const { error: notifError } = await supabase.from('notifications').insert({
+          receiver_id: receiverId,
+          actor_id: session.user.id,
+          type: 'connection_request',
+          content: 'wants to connect'
+        });
+  
+        if (notifError) {
+          console.error("Notification error:", notifError.message);
+        }
       }
-
-      const { error: notifError } = await supabase.from('notifications').insert({
-        receiver_id: receiverId,
-        actor_id: session.user.id,
-        type: 'connection_request',
-        content: 'wants to connect'
-      });
-
-      if (notifError) {
-        console.error("Notification error:", notifError.message);
-      }
+    } catch (error) {
+      console.error("Follow toggle error:", error);
     }
   };
 

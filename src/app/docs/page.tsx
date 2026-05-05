@@ -14,7 +14,8 @@ import {
   Bot, 
   BookOpen, 
   ExternalLink,
-  Cpu,
+  LayoutDashboard,
+  MessageSquare,
   Briefcase,
   Network
 } from "lucide-react";
@@ -48,23 +49,21 @@ export default function DocsPage() {
       title: "Getting Started",
       links: [
         { name: "Introduction", id: "introduction" },
-        { name: "Initialize Node", id: "initialize-node" },
+        { name: "Talent Dashboard", id: "talent-dashboard" },
       ]
     },
     {
-      title: "Core Concepts",
+      title: "Core Features",
       links: [
-        { name: "Network & Handshakes", id: "network-handshakes" },
-        { name: "Secured Workspaces", id: "secured-workspaces" },
-        { name: "Global Community", id: "global-community" },
+        { name: "Connections & Calls", id: "connections-calls" },
+        { name: "Job Matching & Applications", id: "job-matching" },
       ]
     },
     {
-      title: "Features",
+      title: "AI Capabilities",
       links: [
-        { name: "beoneofus AI", id: "beoneofus-ai" },
-        { name: "Opportunities", id: "opportunities" },
-        { name: "Admin Terminal", id: "admin-terminal" },
+        { name: "AI CV Analysis", id: "cv-analysis" },
+        { name: "Smart Messaging", id: "smart-messaging" },
       ]
     }
   ];
@@ -163,152 +162,116 @@ export default function DocsPage() {
             <section id="introduction" className="mb-16 scroll-mt-24">
               <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-gray-900 dark:text-gray-100 mb-4">Introduction</h1>
               <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-6">
-                Welcome to the official documentation for <strong className="text-gray-900 dark:text-white">beoneofus</strong>. This platform is designed as the ultimate network for developers, facilitating encrypted handshakes, public broadcast pages, secured workspaces, and AI-driven workflow assistance.
+                Welcome to the official documentation for <strong className="text-gray-900 dark:text-white">BeOneOfUs</strong>. This platform is designed as the ultimate network where skills meet opportunity, facilitating secure connections, real-time communication, AI-driven CV analysis, and smart job matching.
               </p>
               <div className="p-6 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl my-8">
                 <h4 className="font-bold flex items-center gap-2 mb-2 text-gray-900 dark:text-gray-100"><Zap size={18} className="text-amber-500" /> What makes this platform different?</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                  Unlike traditional social networks, <code className="bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-900 dark:text-gray-200 text-xs">beoneofus</code> treats every user as a Node. Interaction requires mutual consent (Handshakes), workspaces are securely isolated, and an integrated AI agent is available to assist you in real-time across the entire application.
+                  <code className="bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-900 dark:text-gray-200 text-xs">BeOneOfUs</code> is built for modern talent and founders. It features real-time WebRTC calling, AI-powered resume parsing, and a connection request system ensuring that your interactions are mutual and meaningful.
                 </p>
               </div>
             </section>
 
-            {/* Initialize Node */}
-            <section id="initialize-node" className="mb-16 scroll-mt-24">
+            {/* Talent Dashboard */}
+            <section id="talent-dashboard" className="mb-16 scroll-mt-24">
               <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2">
-                <Cpu size={24} className="text-blue-500" /> Initialize Your Node
+                <LayoutDashboard size={24} className="text-blue-500" /> Talent Dashboard
               </h2>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                Your Node is your identity. When you first sign up, you must configure your node to establish your presence on the network.
+                The Talent Dashboard is your central hub for managing your career and opportunities on BeOneOfUs.
               </p>
               <ul className="list-disc list-inside space-y-3 text-gray-600 dark:text-gray-400 ml-4 mb-6 leading-relaxed">
-                <li><strong>Username & Headline:</strong> Choose a unique handle and describe your current role or tech stack.</li>
-                <li><strong>Work Status:</strong> Set your status to <code className="text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-1 rounded text-xs">Open to work</code> or <code className="text-purple-500 bg-purple-50 dark:bg-purple-900/20 px-1 rounded text-xs">Hiring</code> to broadcast your availability.</li>
-                <li><strong>External Links:</strong> Connect your GitHub and personal website to verify your developer footprint.</li>
+                <li><strong>Active Applications:</strong> Track the status of your submitted job applications (Pending, Accepted, Rejected).</li>
+                <li><strong>Profile Stats:</strong> View your weekly profile views and overall reputation score.</li>
+                <li><strong>Real-time Notifications:</strong> Get instantly notified when your connection requests are accepted or when you receive a message.</li>
               </ul>
-              <div className="bg-[#0d1117] rounded-xl p-4 overflow-x-auto border border-gray-800">
-                <pre className="text-sm text-gray-300 font-mono">
-                  <span className="text-blue-400">const</span> <span className="text-yellow-300">node</span> = <span className="text-blue-400">await</span> beoneofus.<span className="text-green-300">initialize</span>({`{`}{'\n'}
-                  {'  '}username: <span className="text-orange-300">{`'John Joe'`}</span>,{'\n'}
-                  {'  '}status: <span className="text-orange-300">{`'Full Stack Architect'`}</span>,{'\n'}
-                  {'  '}verified: <span className="text-blue-400">true</span>{'\n'}
-                  {`}`});
-                </pre>
-              </div>
             </section>
 
-            {/* Network & Handshakes */}
-            <section id="network-handshakes" className="mb-16 scroll-mt-24">
+            {/* Connections & Calls */}
+            <section id="connections-calls" className="mb-16 scroll-mt-24">
               <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2">
-                <Network size={24} className="text-emerald-500" /> Network & Handshakes
+                <Network size={24} className="text-emerald-500" /> Connections & Calls
               </h2>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                The platform prevents spam by strictly enforcing a mutual consent protocol for direct networking. This process is called a <strong>Handshake</strong>.
+                The platform strictly enforces a mutual consent protocol for direct networking. This process requires a <strong>Connection Request</strong>.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
                 <div className="border border-gray-200 dark:border-gray-800 p-5 rounded-2xl bg-white dark:bg-gray-900">
-                  <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-2 text-sm">1. Initiate</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Find a developer in the Discover tab and send a connection request. Your status changes to <em>Pending</em>.</p>
+                  <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-2 text-sm">1. Send Request</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Find a user and send a connection request. Your status changes to <em>Waiting</em>.</p>
                 </div>
                 <div className="border border-gray-200 dark:border-gray-800 p-5 rounded-2xl bg-white dark:bg-gray-900">
-                  <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-2 text-sm">2. Acknowledge</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">The recipient reviews your request in their Notifications. Once accepted, a secure channel opens.</p>
+                  <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-2 text-sm">2. Connect</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Once accepted, a secure channel opens for chatting and calling.</p>
                 </div>
               </div>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                Once a handshake is established, both nodes can securely exchange direct messages, share code snippets, and invite each other to private workspaces.
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+                Connected users can initiate <strong>WebRTC Voice and Video calls</strong> directly from the chat interface, enabling seamless collaboration without leaving the platform.
               </p>
             </section>
 
-            {/* Secured Workspaces */}
-            <section id="secured-workspaces" className="mb-16 scroll-mt-24">
+            {/* Job Matching */}
+            <section id="job-matching" className="mb-16 scroll-mt-24">
               <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2">
-                <Hash size={24} className="text-purple-500" /> Secured Workspaces
+                <Briefcase size={24} className="text-amber-500" /> Job Matching & Applications
               </h2>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                Workspaces (Channels) are collaborative environments where teams can share messages, images, and code snippets. 
+                Finding the right opportunity is powered by our proprietary matching algorithm.
               </p>
               <ul className="space-y-4 mb-6">
                 <li className="flex gap-3">
-                  <div className="mt-1 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0"><ShieldCheck size={14} /></div>
+                  <div className="mt-1 w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0"><Briefcase size={14} /></div>
                   <div>
-                    <strong className="text-gray-900 dark:text-gray-100 text-sm block">Private Workspaces</strong>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Requires an explicit invite from the Workspace Administrator. Perfect for internal teams or stealth projects.</span>
+                    <strong className="text-gray-900 dark:text-gray-100 text-sm block">Recommended Opportunities</strong>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">The platform automatically analyzes your profile against available jobs, providing a match score (%) and a specific reason why you're a good fit.</span>
                   </div>
                 </li>
                 <li className="flex gap-3">
-                  <div className="mt-1 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0"><Hash size={14} /></div>
+                  <div className="mt-1 w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0"><ShieldCheck size={14} /></div>
                   <div>
-                    <strong className="text-gray-900 dark:text-gray-100 text-sm block">Public Workspaces</strong>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Open to all nodes on the network. Excellent for open-source discussions, framework help, and community building.</span>
+                    <strong className="text-gray-900 dark:text-gray-100 text-sm block">Application Tracking</strong>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Keep an eye on roles you've applied for. Get full details including messages from the employer and next steps configurations when accepted.</span>
                   </div>
                 </li>
               </ul>
-              <div className="bg-blue-50 dark:bg-blue-900/10 border-l-4 border-blue-500 p-4 rounded-r-lg text-sm text-blue-800 dark:text-blue-200">
-                <strong>Pro Tip:</strong> You can react to messages in workspaces using the 👍 button, and reply to specific messages to create threaded context.
-              </div>
             </section>
 
-            {/* Global Community */}
-            <section id="global-community" className="mb-16 scroll-mt-24">
-              <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800">
-                 Global Community Feed
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                The Feed is the town square of beoneofus. Here, you can broadcast updates, share code snippets with syntax highlighting, and engage in technical code reviews. 
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                The feed is categorized into intuitive tabs: <strong>Following</strong> (nodes you have handshakes with), <strong>Featured</strong> (highly liked content), <strong>Rising</strong> (trending content), and <strong>Code Review</strong> (posts specifically containing code snippets).
-              </p>
-            </section>
-
-            {/* beoneofus AI */}
-            <section id="beoneofus-ai" className="mb-16 scroll-mt-24">
+            {/* AI CV Analysis */}
+            <section id="cv-analysis" className="mb-16 scroll-mt-24">
               <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2">
-                <Bot size={24} className="text-blue-500" /> beoneofus AI Assistant
+                <Bot size={24} className="text-purple-500" /> AI CV Analysis
               </h2>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                Your built-in technical co-pilot. The AI assistant is context-aware and deeply integrated into various parts of the platform to accelerate your workflow.
+                Paste your resume text into the AI CV Analyzer to get instant, actionable insights.
               </p>
-              
-              <div className="space-y-6 mt-6">
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 rounded-2xl shadow-sm">
-                  <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-2 flex items-center gap-2"><Bot size={16}/> Floating Assistant</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Available anywhere on the platform via the bottom right spark icon. Use it to ask coding questions, generate boilerplate, or debug errors while you browse.</p>
-                </div>
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 rounded-2xl shadow-sm">
-                  <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-2 flex items-center gap-2"><Search size={16}/> Feed Integrations</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">On any feed post, you can click the AI buttons to instantly <strong>Summarize</strong> long posts into bullet points, <strong>Analyze Code</strong> for security vulnerabilities, or generate a <strong>Suggested Reply</strong>.</p>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-5 mb-6 space-y-4 border border-gray-200 dark:border-gray-700">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[2px] mb-1">What the AI Extracts</p>
+                  <ul className="list-disc list-inside text-sm text-gray-800 dark:text-gray-200 space-y-2">
+                    <li><strong>Years of Experience:</strong> Accurately calculates your total experience.</li>
+                    <li><strong>Top Skills:</strong> Identifies and formats your core competencies.</li>
+                    <li><strong>Suggestions:</strong> Provides tailored advice on how to improve your CV.</li>
+                  </ul>
                 </div>
               </div>
-            </section>
-
-            {/* Opportunities */}
-            <section id="opportunities" className="mb-16 scroll-mt-24">
-              <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2">
-                <Briefcase size={24} className="text-amber-500" /> Opportunities (Jobs)
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                beoneofus streamlines technical hiring. Any node can post a job opportunity from their profile page. 
-              </p>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                When users apply to your job, you can view their application directly in your Profile tab under {`"View Applicants"`}. You can Accept or Decline applications, which automatically triggers a notification and an email to the applicant.
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                Extracted skills are automatically saved and appended to your BeOneOfUs profile to improve your job match scores.
               </p>
             </section>
 
-            {/* Admin Terminal */}
-            <section id="admin-terminal" className="mb-16 scroll-mt-24">
+            {/* Smart Messaging */}
+            <section id="smart-messaging" className="mb-16 scroll-mt-24">
               <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2">
-                <Terminal size={24} className="text-red-500" /> Admin Terminal
+                <MessageSquare size={24} className="text-blue-500" /> Smart Messaging
               </h2>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                Nodes with <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">is_admin: true</code> clearance have access to the Admin Dashboard via the <strong>Resources</strong> section.
+                The messaging experience is enriched with AI and productivity tools.
               </p>
               <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-400 ml-4 mb-6 text-sm">
-                <li>Review and approve verification requests (grants the blue checkmark).</li>
-                <li>Manage network users, including the ability to permanently delete nodes.</li>
-                <li>Monitor AI interactions in real-time via AI Logs.</li>
-                <li>Track and oversee all job applications circulating on the network.</li>
+                <li><strong>AI Suggested Replies:</strong> Stuck on what to say? Click the spark icon to draft a brief, friendly reply based on the context of the conversation.</li>
+                <li><strong>Rich Media:</strong> Share images with built-in lightbox viewing capabilities.</li>
+                <li><strong>Message Reactions:</strong> React to specific messages with emojis.</li>
+                <li><strong>Read Receipts & Typing Indicators:</strong> Know when your message is read and when the other user is typing.</li>
               </ul>
             </section>
 

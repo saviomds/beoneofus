@@ -196,39 +196,39 @@ function CallOverlay({
    MAIN COMPONENT
 ───────────────────────────────────────────────────────────── */
 export default function MessagesContent() {
-  const [contacts, setContacts] = useState([]);
-  const [activeChat, setActiveChat] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [activeChat, setActiveChat] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const { targetChatUser, setTargetChatUser } = useDashboard();
-  const [onlineUsers, setOnlineUsers] = useState({});
-  const [unreadCounts, setUnreadCounts] = useState({});
-  const [lastMessagePreviews, setLastMessagePreviews] = useState({});
+  const [currentUserId, setCurrentUserId] = useState<any>(null);
+  const { targetChatUser, setTargetChatUser } = useDashboard() as any;
+  const [onlineUsers, setOnlineUsers] = useState<Record<string, any>>({});
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [lastMessagePreviews, setLastMessagePreviews] = useState<Record<string, any>>({});
 
   // UI states
   const [searchQuery, setSearchQuery] = useState("");
   const [filterUnread, setFilterUnread] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState(null);
-  const [blockerId, setBlockerId] = useState(null);
-  const [activeConnectionId, setActiveConnectionId] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState<any>(null);
+  const [blockerId, setBlockerId] = useState<any>(null);
+  const [activeConnectionId, setActiveConnectionId] = useState<any>(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState<any>(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [lightboxImage, setLightboxImage] = useState(null);
-  const [emojiPickerMsgId, setEmojiPickerMsgId] = useState(null);
-  const [hoveredMsgId, setHoveredMsgId] = useState(null);
+  const [imageFile, setImageFile] = useState<any>(null);
+  const [imagePreview, setImagePreview] = useState<any>(null);
+  const [replyingTo, setReplyingTo] = useState<any>(null);
+  const [lightboxImage, setLightboxImage] = useState<any>(null);
+  const [emojiPickerMsgId, setEmojiPickerMsgId] = useState<any>(null);
+  const [hoveredMsgId, setHoveredMsgId] = useState<any>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [messageSendError, setMessageSendError] = useState(null);
+  const [messageSendError, setMessageSendError] = useState<any>(null);
   const forceScrollRef = useRef(false);
 
-  const [mutedChats, setMutedChats] = useState(() => {
+  const [mutedChats, setMutedChats] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       try {
         return JSON.parse(localStorage.getItem("muted_chats") || "[]");
@@ -239,8 +239,8 @@ export default function MessagesContent() {
     return [];
   });
 
-  const [deletingMsgId, setDeletingMsgId] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [deletingMsgId, setDeletingMsgId] = useState<any>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<any>(null);
 
   const imageInputRef = useRef(null);
   const textareaRef = useRef(null);
@@ -249,7 +249,7 @@ export default function MessagesContent() {
   const activeChatRef = useRef(null);
   const moreMenuRef = useRef(null);
 
-  const [typingUsers, setTypingUsers] = useState({});
+  const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
   const typingTimeoutsRef = useRef({});
   const lastTypingSentRef = useRef(0);
 
@@ -263,10 +263,10 @@ export default function MessagesContent() {
   }, []);
 
   // Call states
-  const [activeCall, setActiveCall] = useState(null);
-  const [incomingCall, setIncomingCall] = useState(null);
+  const [activeCall, setActiveCall] = useState<any>(null);
+  const [incomingCall, setIncomingCall] = useState<any>(null);
   const [callDuration, setCallDuration] = useState(0);
-  const [peerCallInfo, setPeerCallInfo] = useState(null);
+  const [peerCallInfo, setPeerCallInfo] = useState<any>(null);
   const globalCallsRef = useRef(null);
 
   // WebRTC refs
@@ -326,7 +326,7 @@ export default function MessagesContent() {
         .select("sender_id, receiver_id")
         .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
 
-      const connectedIds = (connections || []).map((c) =>
+      const connectedIds = ((connections as any[]) || []).map((c: any) =>
         c.sender_id === uid ? c.receiver_id : c.sender_id
       );
 
@@ -337,10 +337,10 @@ export default function MessagesContent() {
           .in("id", connectedIds);
 
         if (isMounted) {
-          setContacts(profiles || []);
-          setActiveChat((prev) => {
-            if (prev && profiles?.some((p) => p.id === prev.id)) return prev;
-            return profiles?.length > 0 ? profiles[0] : null;
+          setContacts((profiles as any[]) || []);
+          setActiveChat((prev: any) => {
+            if (prev && (profiles as any[])?.some((p: any) => p.id === prev.id)) return prev;
+            return (profiles as any[])?.length > 0 ? (profiles as any[])[0] : null;
           });
         }
       } else {
@@ -402,10 +402,10 @@ export default function MessagesContent() {
         )
         .order("created_at", { ascending: false });
 
-      const counts = {};
-      const previews = {};
+      const counts: Record<string, number> = {};
+      const previews: Record<string, any> = {};
 
-      (data || []).forEach((msg) => {
+      ((data as any[]) || []).forEach((msg: any) => {
         const otherId =
           msg.sender_id === currentUserId
             ? msg.receiver_id
@@ -502,7 +502,7 @@ export default function MessagesContent() {
         showToast("Failed to load messages: " + error.message, "error");
         return;
       }
-      setMessages(data || []);
+      setMessages((data as any[]) || []);
       setUnreadCounts((prev) => ({ ...prev, [chatId]: 0 }));
 
       await supabase
@@ -578,10 +578,10 @@ export default function MessagesContent() {
             )
             .eq("id", msg.id)
             .maybeSingle();
-          setMessages((prev) =>
-            prev.find((m) => m.id === msg.id)
+          setMessages((prev: any[]) =>
+            prev.find((m: any) => m.id === msg.id)
               ? prev
-              : [...prev, data || msg]
+              : [...prev, (data as any) || msg]
           );
           if (msg.receiver_id === currentUserId) {
             await supabase
@@ -601,8 +601,8 @@ export default function MessagesContent() {
             upd.receiver_id !== activeChat.id
           )
             return;
-          setMessages((prev) =>
-            prev.map((m) =>
+          setMessages((prev: any[]) =>
+            prev.map((m: any) =>
               m.id === upd.id
                 ? { ...m, is_read: upd.is_read, text: upd.text }
                 : m
@@ -614,8 +614,8 @@ export default function MessagesContent() {
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "messages" },
         (payload) => {
-          setMessages((prev) =>
-            prev.filter((m) => m.id !== payload.old.id)
+          setMessages((prev: any[]) =>
+            prev.filter((m: any) => m.id !== payload.old.id)
           );
         }
       )
@@ -1059,7 +1059,7 @@ export default function MessagesContent() {
   const handleDeleteMessage = async (msgId) => {
     setDeletingMsgId(msgId);
     // Optimistic remove
-    setMessages((prev) => prev.filter((m) => m.id !== msgId));
+    setMessages((prev: any[]) => prev.filter((m: any) => m.id !== msgId));
     setShowDeleteConfirm(null);
     const { error } = await supabase
       .from("messages")
@@ -1081,7 +1081,7 @@ export default function MessagesContent() {
     if (isSuggesting || !activeChat) return;
     const lastMsg = [...messages]
       .reverse()
-      .find((m) => m.sender_id === activeChat.id);
+      .find((m: any) => m.sender_id === activeChat.id);
     const prompt = lastMsg?.text
       ? `Draft a brief, friendly reply (1-2 sentences) to this message: "${lastMsg.text}". Return ONLY the reply text, no quotes or preamble.`
       : "Draft a friendly one-sentence opening message to start a conversation. Return ONLY the message text.";
@@ -1151,15 +1151,15 @@ export default function MessagesContent() {
      10. REACTIONS
   ───────────────────────────────────────────────────────── */
   const handleReaction = async (msgId, emoji) => {
-    const msg = messages.find((m) => m.id === msgId);
+    const msg = messages.find((m: any) => m.id === msgId);
     if (!msg) return;
-    const existing = msg.message_reactions?.find(
-      (r) => r.user_id === currentUserId && r.emoji === emoji
+    const existing = (msg.message_reactions as any[])?.find(
+      (r: any) => r.user_id === currentUserId && r.emoji === emoji
     );
 
     // Optimistic update
-    setMessages((prev) =>
-      prev.map((m) => {
+    setMessages((prev: any[]) =>
+      prev.map((m: any) => {
         if (m.id !== msgId) return m;
         const reactions = m.message_reactions || [];
         if (existing)
@@ -1270,7 +1270,7 @@ export default function MessagesContent() {
       message_reactions: [],
     };
     forceScrollRef.current = true;
-    setMessages((prev) => [...prev, optimistic]);
+    setMessages((prev: any[]) => [...prev, optimistic]);
     setLastMessagePreviews((prev) => ({
       ...prev,
       [activeChat.id]: {
@@ -1316,12 +1316,12 @@ export default function MessagesContent() {
         .single();
       if (error) throw error;
 
-      setMessages((prev) => {
+      setMessages((prev: any[]) => {
         // If realtime already added it, just remove optimistic
-        if (prev.some((m) => m.id === inserted.id && !m.isSending)) {
-          return prev.filter((m) => m.id !== optimisticId);
+        if (prev.some((m: any) => m.id === inserted.id && !m.isSending)) {
+          return prev.filter((m: any) => m.id !== optimisticId);
         }
-        return prev.map((m) =>
+        return prev.map((m: any) =>
           m.id === optimisticId
             ? {
                 ...m,
@@ -1344,7 +1344,7 @@ export default function MessagesContent() {
           : "Sent an image",
       });
     } catch (err) {
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      setMessages((prev: any[]) => prev.filter((m: any) => m.id !== optimisticId));
       setMessageSendError(err.message);
       showToast("Failed to send: " + err.message, "error");
     }
@@ -1384,7 +1384,7 @@ export default function MessagesContent() {
 
   /* ── Filtered contacts ── */
   const filteredContacts = contacts.filter((c) => {
-    const matchSearch = c.username
+    const matchSearch = c.username?.toLowerCase()
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     const matchUnread = filterUnread
@@ -1571,7 +1571,7 @@ export default function MessagesContent() {
                 [
                   ["All", false],
                   ["Unread", true],
-                ]
+                ] as [string, boolean][]
               ).map(([label, val]) => (
                 <button
                   key={label}
@@ -2153,9 +2153,9 @@ export default function MessagesContent() {
                                 }`}
                               >
                                 {Object.entries(reactionsByEmoji).map(
-                                  ([emoji, reactors]) => {
-                                    const myReaction = reactors.find(
-                                      (r) => r.user_id === currentUserId
+                          ([emoji, reactors]: any) => {
+                            const myReaction = reactors.find(
+                              (r: any) => r.user_id === currentUserId
                                     );
                                     return (
                                       <button
@@ -2556,4 +2556,4 @@ export default function MessagesContent() {
       )}
     </>
   );
-}
+}   

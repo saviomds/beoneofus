@@ -459,7 +459,9 @@ export default function MessagesContent() {
       )
       .subscribe();
 
-    return () => supabase.removeChannel(ch);
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, [currentUserId]);
 
   /* ─────────────────────────────────────────────────────────
@@ -478,7 +480,9 @@ export default function MessagesContent() {
         if (status === "SUBSCRIBED")
           await presenceCh.track({ online_at: new Date().toISOString() });
       });
-    return () => supabase.removeChannel(presenceCh);
+    return () => {
+      supabase.removeChannel(presenceCh);
+    };
   }, [currentUserId]);
 
   /* ─────────────────────────────────────────────────────────
@@ -2556,4 +2560,4 @@ export default function MessagesContent() {
       )}
     </>
   );
-}   
+} 

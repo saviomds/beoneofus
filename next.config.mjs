@@ -5,7 +5,14 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'jwjrogchwfzofpaczaah.supabase.co',
-        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
       },
     ],
   },

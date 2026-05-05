@@ -12,9 +12,9 @@ import {
   ZoomIn, Download, Clock, Users, Filter, Bell, BellOff,
   ChevronDown, CornerUpLeft
 } from "lucide-react";
-import { supabase } from "../../supabaseClient";
-import ProfileContent from "./ProfileContent";
-import { useDashboard } from "./DashboardContext";
+import { supabase } from "./src/app/supabaseClient";
+import ProfileContent from "./src/app/dash/contect/ProfileContent";
+import { useDashboard } from "./src/app/dash/contect/DashboardContext";
 
 /* ─────────────────────────────────────────────────────────────
    HELPERS

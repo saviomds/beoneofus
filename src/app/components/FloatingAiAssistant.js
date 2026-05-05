@@ -162,7 +162,7 @@ export default function FloatingAiAssistant() {
       console.error(error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `System Error: ${error.message}` },
+        { role: "assistant", content: error.message, isError: true },
       ]);
     } finally {
       setIsLoading(false);
@@ -204,7 +204,7 @@ export default function FloatingAiAssistant() {
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${msg.role === "user" ? "bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" : "bg-gray-900 dark:bg-gray-700 text-white"}`}>
                       {msg.role === "user" ? <User size={14} /> : <Bot size={14} />}
                     </div>
-                    <div className={`max-w-[80%] rounded-2xl p-3.5 text-xs ${msg.role === "user" ? "bg-blue-600 text-white shadow-md shadow-blue-500/20 whitespace-pre-wrap" : "bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200"}`}>
+                    <div className={`max-w-[80%] rounded-2xl p-3.5 text-xs ${msg.role === "user" ? "bg-blue-600 text-white shadow-md shadow-blue-500/20 whitespace-pre-wrap" : msg.isError ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 font-medium" : "bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200"}`}>
                       {msg.role === "user" ? (
                         msg.content
                       ) : msg.isNew ? (

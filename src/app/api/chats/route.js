@@ -16,7 +16,7 @@ export async function POST(req) {
     };
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'gpt-4o-mini',
       messages: [systemMessage, ...messages],
       temperature: 0.7,
     });
@@ -26,6 +26,11 @@ export async function POST(req) {
     });
   } catch (error) {
     console.error('OpenAI API Error:', error);
+    
+    if (error?.status === 429) {
+      return NextResponse.json({ error: "The AI service is currently unavailable due to capacity limits. Please try again later." }, { status: 429 });
+    }
+
     return NextResponse.json({ error: error.message || "Failed to fetch response from AI" }, { status: 500 });
   }
 }

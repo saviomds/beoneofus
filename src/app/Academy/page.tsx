@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { 
   Terminal, ArrowLeft, Search, BookOpen, PlayCircle, 
   ChevronRight, Clock, User, Laptop
 } from "lucide-react";
-import FloatingAiAssistant from "../../components/FloatingAiAssistant";
-import { supabase } from "../../supabaseClient";
+import FloatingAiAssistant from "../components/FloatingAiAssistant";
+import { supabase } from "../supabaseClient";
 
 type Course = {
   id: string;
@@ -31,31 +31,52 @@ function AcademyContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("user_id") || searchParams.get("userId");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const PAGE_SIZE = 9;
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      const { data, error } = await supabase
-        .from("courses")
-        .select("*")
-        .order("created_at", { ascending: false });
-      
-      if (!error && data) {
-        setCourses(data);
-      }
-      setIsLoading(false);
-    };
-    fetchCourses();
-  }, []);
+    const handler = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
-  const filteredCourses = courses.filter(c => {
-    const descText = (c.description || c.desc || "").toLowerCase();
-    const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) || descText.includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === "All" || c.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const fetchCourses = useCallback(async (pageIndex: number, isReset: boolean) => {
+    setIsLoading(true);
+    let query = supabase.from("courses").select("*", { count: "exact" });
+
+    if (activeCategory !== "All") {
+      query = query.eq("category", activeCategory);
+    }
+    if (debouncedSearch) {
+      query = query.or(`title.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%,desc.ilike.%${debouncedSearch}%`);
+    }
+
+    const from = pageIndex * PAGE_SIZE;
+    const { data, count, error } = await query
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+      
+    if (!error && data) {
+      setCourses(prev => (isReset ? data : [...prev, ...data]));
+      if (count !== null) setHasMore(from + data.length < count);
+    }
+    setIsLoading(false);
+  }, [activeCategory, debouncedSearch]);
+
+  useEffect(() => {
+    setPage(0);
+    fetchCourses(0, true);
+  }, [fetchCourses]);
+
+  const loadMore = () => {
+    const next = page + 1;
+    setPage(next);
+    fetchCourses(next, false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 selection:bg-blue-500/30 overflow-x-hidden relative">
@@ -135,8 +156,8 @@ function AcademyContent() {
             <div className="col-span-1 md:col-span-2 lg:col-span-3 py-20 flex justify-center">
                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
             </div>
-          ) : filteredCourses.length > 0 ? (
-            filteredCourses.map((course) => (
+          ) : courses.length > 0 ? (
+            courses.map((course) => (
               <Link href={`/LearnPage/${course.id}${userId ? `?user_id=${userId}` : ""}`} key={course.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 hover:border-blue-500/50 dark:hover:border-blue-500/50 hover:shadow-lg transition-all group cursor-pointer flex flex-col h-full">
                 {course.thumbnail_url ? (
                   <div className="relative w-full h-40 mb-4 rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-gray-800">
@@ -201,6 +222,17 @@ function AcademyContent() {
               )}
               <button onClick={() => {setSearchQuery(""); setActiveCategory("All");}} className="text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/40">
                 Clear Filters
+              </button>
+            </div>
+          )}
+          {hasMore && (
+            <div className="col-span-1 md:col-span-2 lg:col-span-3 flex justify-center mt-8">
+              <button
+                onClick={loadMore}
+                disabled={isLoading}
+                className="px-6 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm font-bold text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm active:scale-95"
+              >
+                {isLoading ? "Loading..." : "Load More Courses"}
               </button>
             </div>
           )}

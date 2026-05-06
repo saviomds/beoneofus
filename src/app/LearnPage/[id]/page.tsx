@@ -159,6 +159,28 @@ function LearnPageContent() {
 
   useEffect(() => { fetchCourse(); }, [fetchCourse]);
 
+  // ─── Fetch User Progress ──────────────────────────────────────────────────
+  const fetchProgress = useCallback(async () => {
+    if (!id || !userId) return;
+    try {
+      const { data } = await supabase
+        .from("user_progress")
+        .select("completed_lessons")
+        .eq("user_id", userId)
+        .eq("course_id", id)
+        .single();
+      if (data?.completed_lessons) {
+        setCompleted(new Set(data.completed_lessons));
+      }
+    } catch (err) {
+      console.error("Failed to fetch progress", err);
+    }
+  }, [id, userId]);
+
+  useEffect(() => { 
+    if (userId) fetchProgress(); 
+  }, [fetchProgress, userId]);
+
   // ─── Share / copy link ────────────────────────────────────────────────────
   const handleShare = async () => {
     const url = window.location.href;
@@ -175,13 +197,32 @@ function LearnPageContent() {
     }
   };
 
-  // ─── Lesson completion toggle (UI-only, stateless) ────────────────────────
-  const toggleLesson = (i: number) => {
+  // ─── Lesson completion toggle ─────────────────────────────────────────────
+  const toggleLesson = async (i: number) => {
+    let newCompleted: Set<number> = new Set();
     setCompleted(prev => {
       const next = new Set(prev);
       next.has(i) ? next.delete(i) : next.add(i);
+      newCompleted = next;
       return next;
     });
+
+    if (userId && course) {
+      try {
+        const completedArray = Array.from(newCompleted);
+        const { data } = await supabase.from('user_progress').select('id').eq('user_id', userId).eq('course_id', course.id).single();
+        if (data) {
+          await supabase.from('user_progress').update({ 
+            completed_lessons: completedArray,
+            updated_at: new Date().toISOString()
+          }).eq('id', data.id);
+        } else {
+          await supabase.from('user_progress').insert({ user_id: userId, course_id: course.id, completed_lessons: completedArray });
+        }
+      } catch (err) {
+        console.error("Error saving progress", err);
+      }
+    }
   };
 
   const progressPct = course
@@ -424,7 +465,19 @@ function LearnPageContent() {
 
                 {completed.size > 0 && (
                   <button
-                    onClick={() => setCompleted(new Set())}
+                      onClick={async () => {
+                        setCompleted(new Set());
+                        if (userId && course) {
+                          try {
+                            const { data } = await supabase.from('user_progress').select('id').eq('user_id', userId).eq('course_id', course.id).single();
+                            if (data) {
+                              await supabase.from('user_progress').update({ completed_lessons: [] }).eq('id', data.id);
+                            }
+                          } catch (err) {
+                            console.error("Error resetting progress", err);
+                          }
+                        }
+                      }}
                     className="mt-4 w-full text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors py-2"
                   >
                     Reset progress

@@ -31,6 +31,7 @@ export default function ExploreProjects() {
         const { data, error } = await supabase
           .from('projects')
           .select('*')
+          .eq('is_public', true)
           .order('created_at', { ascending: false });
         
         if (error) throw error;

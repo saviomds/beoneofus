@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   Terminal, ArrowLeft, Loader2, CheckCircle2,
@@ -46,10 +45,11 @@ const defaultForm = {
 };
 
 export default function AdminCoursesPage() {
-  const router = useRouter();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [courses, setCourses] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -120,19 +120,16 @@ export default function AdminCoursesPage() {
     let isMounted = true;
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        if (isMounted) router.push("/auth");
-        return;
+      if (session && isMounted) {
+        setUserId(session.user.id);
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", session.user.id)
+          .single();
+        if (profile?.is_admin && isMounted) setIsAdmin(true);
       }
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", session.user.id)
-        .single();
-      if (!profile?.is_admin) {
-        if (isMounted) router.push("/dash");
-        return;
-      }
+      
       if (isMounted) {
         setIsCheckingAuth(false);
         fetchCourses();
@@ -140,7 +137,7 @@ export default function AdminCoursesPage() {
     };
     init();
     return () => { isMounted = false; };
-  }, [router]);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -304,7 +301,7 @@ export default function AdminCoursesPage() {
             <span>beone<span className="text-blue-600 dark:text-blue-400">of</span>us</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link href="/learnPage" className="text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors hidden sm:block">
+            <Link href={`/LearnPage${userId ? `?userId=${userId}` : ""}`} className="text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors hidden sm:block">
               View Academy
             </Link>
             <Link href="/dash" className="text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-xl">
@@ -319,15 +316,15 @@ export default function AdminCoursesPage() {
         {/* Page Header */}
         <div className="mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 text-purple-600 dark:text-purple-400 text-xs font-bold uppercase tracking-widest mb-4">
-            <LayoutDashboard size={14} /> Admin Terminal
+            <LayoutDashboard size={14} /> {isAdmin ? "Admin Terminal" : "Course Directory"}
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tighter mb-2 text-gray-900 dark:text-gray-100">
-            {isEditing ? "Edit Course" : "Add New Course"}
+            {isAdmin ? (isEditing ? "Edit Course" : "Add New Course") : "Available Courses"}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 font-medium">
-            {isEditing
+            {isAdmin ? (isEditing
               ? "Update existing learning module details."
-              : "Publish a new learning module to the BeOneOfUs Academy."}
+              : "Publish a new learning module to the BeOneOfUs Academy.") : "Browse and explore the available learning modules."}
           </p>
         </div>
 
@@ -364,6 +361,7 @@ export default function AdminCoursesPage() {
         </div>
 
         {/* Form Card */}
+        {isAdmin && (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-10 shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -516,6 +514,7 @@ export default function AdminCoursesPage() {
             </div>
           </form>
         </div>
+        )}
 
         {/* ─── Manage Courses Section ─── */}
         <div className="mt-16 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
@@ -642,6 +641,7 @@ export default function AdminCoursesPage() {
               </div>
 
               {/* Actions */}
+              {isAdmin && (
               <div className="flex items-center gap-2 shrink-0">
                 {/* ─── NEW: Duplicate button ─── */}
                 <button
@@ -667,6 +667,7 @@ export default function AdminCoursesPage() {
                   <Trash2 size={16} />
                 </button>
               </div>
+              )}
             </div>
           ))}
 

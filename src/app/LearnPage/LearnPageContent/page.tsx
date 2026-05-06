@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { 
   Terminal, ArrowLeft, Search, BookOpen, PlayCircle, 
   Code2, Star, ChevronRight, X, Clock, Award, 
   CheckCircle2, Laptop
 } from "lucide-react";
-import FloatingAiAssistant from "./src/app/components/FloatingAiAssistant";
+import FloatingAiAssistant from "../../components/FloatingAiAssistant";
+import { supabase } from "../../supabaseClient";
 
 type Course = {
   id: number;
@@ -25,67 +27,35 @@ type Course = {
   thumbnail_url?: string;
 };
 
-const MOCK_COURSES: Course[] = [
-  {
-    id: 1,
-    title: "WebRTC & Real-time Communication",
-    category: "Networking",
-    level: "Advanced",
-    duration: "4h 30m",
-    lessons: 12,
-    rating: 4.9,
-    desc: "Learn how to build secure, peer-to-peer video and voice calls using WebRTC and signaling servers.",
-    topics: ["WebRTC", "Sockets", "Media Streams", "STUN/TURN"],
-    author: "@system"
-  },
-  {
-    id: 2,
-    title: "Next.js App Router Masterclass",
-    category: "Frontend",
-    level: "Beginner",
-    duration: "6h 15m",
-    lessons: 24,
-    rating: 4.8,
-    desc: "Master Server Components, layouts, and high-performance rendering with the modern Next.js architecture.",
-    topics: ["React 18", "Server Components", "Routing", "Suspense"],
-    author: "@frontend-team"
-  },
-  {
-    id: 3,
-    title: "AI & LLM Integration Strategies",
-    category: "Artificial Intelligence",
-    level: "Intermediate",
-    duration: "3h 45m",
-    lessons: 8,
-    rating: 5.0,
-    desc: "Integrate large language models into your applications. Learn prompt engineering, streaming, and function calling.",
-    topics: ["OpenAI", "Streaming", "Embeddings", "LangChain"],
-    author: "@ai-research"
-  },
-  {
-    id: 4,
-    title: "Secure Authentication Flows",
-    category: "Security",
-    level: "Intermediate",
-    duration: "2h 20m",
-    lessons: 6,
-    rating: 4.7,
-    desc: "Deep dive into JWTs, session management, OAuth, and Row Level Security (RLS) with Supabase.",
-    topics: ["Auth", "JWT", "Supabase RLS", "OAuth"],
-    author: "@security-ops"
-  }
-];
-
 const CATEGORIES = ["All", "Frontend", "Backend", "Artificial Intelligence", "Networking", "Security"];
 
-export default function LearnPage() {
+function LearnPageContent() {
+  const searchParams = useSearchParams();
+  const userId = searchParams.get("userId");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredCourses = MOCK_COURSES.filter(c => {
-    const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          c.desc.toLowerCase().includes(searchQuery.toLowerCase());
+  useEffect(() => {
+    const fetchCourses = async () => {
+      const { data, error } = await supabase
+        .from("courses")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (!error && data) {
+        setCourses(data);
+      }
+      setIsLoading(false);
+    };
+    fetchCourses();
+  }, []);
+
+  const filteredCourses = courses.filter(c => {
+    const descText = (c.description || c.desc || "").toLowerCase();
+    const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) || descText.includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === "All" || c.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
@@ -158,7 +128,11 @@ export default function LearnPage() {
 
         {/* Course Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCourses.length > 0 ? (
+          {isLoading ? (
+            <div className="col-span-1 md:col-span-2 lg:col-span-3 py-20 flex justify-center">
+               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          ) : filteredCourses.length > 0 ? (
             filteredCourses.map((course) => (
               <div key={course.id} onClick={() => setSelectedCourse(course)} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 hover:border-blue-500/50 dark:hover:border-blue-500/50 hover:shadow-lg transition-all group cursor-pointer flex flex-col h-full">
                 {course.thumbnail_url ? (
@@ -199,7 +173,7 @@ export default function LearnPage() {
                 />
                 
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {course.topics.slice(0, 3).map((topic, i) => (
+                  {(course.topics || []).slice(0, 3).map((topic, i) => (
                     <span key={i} className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-md border border-gray-200 dark:border-gray-700">
                       {topic}
                     </span>
@@ -218,7 +192,10 @@ export default function LearnPage() {
           ) : (
             <div className="col-span-1 md:col-span-2 lg:col-span-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-12 text-center shadow-sm">
               <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">No courses found</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">We couldnot find any learning materials matching your criteria.</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">We couldnot find any learning materials matching your criteria.</p>
+              {userId && (
+                <p className="text-sm font-mono text-gray-500 dark:text-gray-400 mb-6">User ID: {userId}</p>
+              )}
               <button onClick={() => {setSearchQuery(""); setActiveCategory("All");}} className="text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/40">
                 Clear Filters
               </button>
@@ -290,5 +267,13 @@ export default function LearnPage() {
       
       <FloatingAiAssistant />
     </div>
+  );
+}
+
+export default function LearnPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-black flex items-center justify-center text-gray-500 font-medium">Loading Academy...</div>}>
+      <LearnPageContent />
+    </Suspense>
   );
 }

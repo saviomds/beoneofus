@@ -30,7 +30,7 @@
     "**/*.mts",
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "src/app/LearnPage/page.js"  ],
   "exclude": [
     "node_modules",
     "supabase"

@@ -111,7 +111,7 @@ export default function LandingPage() {
                   <Link href="/Explore_Projects" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Explore</Link>
                   <Link href="/how_it_works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">How It Works</Link>
                   <Link href="/docs" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Docs</Link>
-                 
+                  <Link href="/LearnPage" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Learn</Link>
                   <Link href="/projects" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">My Projects</Link>
                   <Link href="#community" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Community</Link>
                    <Link href="/dash" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Jump In</Link>
@@ -141,6 +141,7 @@ export default function LandingPage() {
                   <Link href="/Explore_Projects" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Explore</Link>
                   <Link href="/how_it_works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">How It Works</Link>
                   <Link href="/docs" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Docs</Link>
+                  <Link href="/LearnPage" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Learn</Link>
                   <Link href="/community" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Community</Link>
                 </div>
                 <div className="h-6 w-px bg-gray-200 dark:bg-gray-800"></div>

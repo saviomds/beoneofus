@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import {
   Terminal, ArrowLeft, Loader2, CheckCircle2,
   AlertTriangle, BookOpen, LayoutDashboard, Pencil, Trash2, Upload,
-  X, Search, Copy, Clock, Star, Layers, BarChart2
+  X, Search, Copy, Clock, Star, Layers, BarChart2, Code2, PlayCircle
 } from "lucide-react";
 import { supabase } from "../supabaseClient";
 
@@ -50,12 +50,14 @@ export default function AdminCoursesPage() {
   const [toast, setToast] = useState(null);
   const [userId, setUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUsername, setCurrentUsername] = useState("@system");
   const [courses, setCourses] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
   const fileInputRef = useRef(null);
+  const [selectedCourse, setSelectedCourse] = useState(null);
 
   // ─── New Feature State ───
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,10 +126,17 @@ export default function AdminCoursesPage() {
         setUserId(session.user.id);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("is_admin")
+          .select("is_admin, username")
           .eq("id", session.user.id)
           .single();
-        if (profile?.is_admin && isMounted) setIsAdmin(true);
+        if (isMounted) {
+          if (profile?.is_admin) setIsAdmin(true);
+          if (profile?.username) {
+            const uname = `@${profile.username}`;
+            setCurrentUsername(uname);
+            setFormData(prev => prev.author === "@system" ? { ...prev, author: uname } : prev);
+          }
+        }
       }
       
       if (isMounted) {
@@ -158,7 +167,7 @@ export default function AdminCoursesPage() {
   };
 
   const resetForm = () => {
-    setFormData(defaultForm);
+    setFormData({ ...defaultForm, author: currentUsername });
     setThumbnailFile(null);
     setThumbnailPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -234,7 +243,7 @@ export default function AdminCoursesPage() {
       rating: course.rating || 5.0,
       description: course.description || "",
       topics: (course.topics || []).join(", "),
-      author: course.author || "@system",
+      author: course.author || currentUsername,
       thumbnail_url: course.thumbnail_url || "",
     });
     setThumbnailFile(null);
@@ -301,9 +310,9 @@ export default function AdminCoursesPage() {
             <span>beone<span className="text-blue-600 dark:text-blue-400">of</span>us</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link href={`/LearnPage${userId ? `?userId=${userId}` : ""}`} className="text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors hidden sm:block">
+            <button onClick={() => document.getElementById("courses-directory")?.scrollIntoView({ behavior: "smooth" })} className="text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors hidden sm:block">
               View Academy
-            </Link>
+            </button>
             <Link href="/dash" className="text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-xl">
               <ArrowLeft size={16} /> Back to Dash
             </Link>
@@ -517,7 +526,7 @@ export default function AdminCoursesPage() {
         )}
 
         {/* ─── Manage Courses Section ─── */}
-        <div className="mt-16 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div id="courses-directory" className="mt-16 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-2 scroll-mt-24">
           <div>
             <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-1">Manage Courses</h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
@@ -595,7 +604,8 @@ export default function AdminCoursesPage() {
           {visibleCourses.map(course => (
             <div
               key={course.id}
-              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+              onClick={() => setSelectedCourse(course)}
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-blue-300 dark:hover:border-blue-700 transition-colors cursor-pointer"
             >
               <div className="flex items-start gap-4 min-w-0">
                 {/* ─── NEW: Thumbnail preview in list ─── */}
@@ -642,7 +652,7 @@ export default function AdminCoursesPage() {
 
               {/* Actions */}
               {isAdmin && (
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                 {/* ─── NEW: Duplicate button ─── */}
                 <button
                   onClick={() => handleDuplicate(course)}
@@ -691,6 +701,64 @@ export default function AdminCoursesPage() {
           )}
         </div>
       </main>
+
+      {/* Course Detail Modal */}
+      {selectedCourse && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/40 dark:bg-black/60 backdrop-blur-sm" onClick={() => setSelectedCourse(null)} />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-6 sm:p-8 border-b border-gray-100 dark:border-gray-800 flex items-start justify-between bg-gray-50/50 dark:bg-gray-800/50 shrink-0">
+              <div className="flex items-center gap-4">
+                 {selectedCourse.thumbnail_url ? (
+                   <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0 shadow-sm border border-gray-200 dark:border-gray-700">
+                     {selectedCourse.thumbnail_url.match(/\.(mp4|webm|ogg)$/i) ? (
+                       <video src={selectedCourse.thumbnail_url} className="object-cover w-full h-full" muted loop playsInline autoPlay />
+                     ) : (
+                       <img src={selectedCourse.thumbnail_url} alt={selectedCourse.title} className="object-cover w-full h-full" />
+                     )}
+                   </div>
+                 ) : (
+                   <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 shrink-0 shadow-sm">
+                     <BookOpen size={28} />
+                   </div>
+                 )}
+                 <div>
+                   <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-1">{selectedCourse.title}</h2>
+                   <p className="text-sm font-bold text-gray-500 dark:text-gray-400">Instructed by <span className="text-blue-600 dark:text-blue-400">{selectedCourse.author}</span></p>
+                 </div>
+              </div>
+              <button onClick={() => setSelectedCourse(null)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors border border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+              <div className="flex flex-wrap items-center gap-3 mb-6">
+                <span className="flex items-center gap-1.5 text-sm font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                  <Star size={16} /> {selectedCourse.rating} Rating
+                </span>
+                <span className="flex items-center gap-1.5 text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800/50">
+                  <PlayCircle size={16} /> {selectedCourse.lessons} Interactive Lessons
+                </span>
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-auto bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hidden sm:block">
+                  Total Time: {selectedCourse.duration}
+                </span>
+              </div>
+              
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Course Overview</h3>
+              <div 
+                className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_strong]:font-bold"
+                dangerouslySetInnerHTML={{ __html: selectedCourse.desc || selectedCourse.description || "" }}
+              />
+              
+              <div className="flex flex-col sm:flex-row gap-4 pt-6 mt-4 border-t border-gray-100 dark:border-gray-800">
+                <Link href={`/LearnPage/${selectedCourse.id}`} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 active:scale-95">
+                  <Code2 size={18} /> Start Reading Code
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification — BUG FIX: X icon was not imported in original */}
       {toast && (

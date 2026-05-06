@@ -185,6 +185,9 @@ export default function LandingPage() {
               <div className={`flex flex-col space-y-1 transition-all duration-500 transform ${mobileMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '200ms' }}>
                 <Link href="/Explore_Projects" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">Explore</Link>
                 <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">Docs</Link>
+                <Link href="/LearnPage" onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors"
+                >Learn</Link>
                 <Link href="/projects" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">My Projects</Link>
                 <Link href="/dash?section=messages" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors"><MessageSquare size={18} /> Messages</Link>
               </div>

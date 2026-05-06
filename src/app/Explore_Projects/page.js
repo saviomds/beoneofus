@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Terminal, ArrowLeft, Search, Star, GitBranch, Code2, ChevronRight, X, ExternalLink, Loader2 } from "lucide-react";
+import { Terminal, ArrowLeft, Search, Star, GitBranch, Code2, ChevronRight, X, ExternalLink, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import FloatingAiAssistant from "../components/FloatingAiAssistant";
 
@@ -15,6 +15,15 @@ export default function ExploreProjects() {
   const [selectedProject, setSelectedProject] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
+
+  // Toast Notification State
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+  const showToast = useCallback((message, type = "success") => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ message, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+  }, []);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -50,8 +59,8 @@ export default function ExploreProjects() {
   }, []);
 
   const filteredProjects = projects.filter(p => 
-    (p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (p.desc || p.description || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.title || p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (p.description || p.desc || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.lang || p.language || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -65,8 +74,8 @@ export default function ExploreProjects() {
       }
 
       const { data: newGroup, error: groupError } = await supabase.from('groups').insert({
-        name: project.name,
-        description: project.desc,
+        name: project.title || project.name || "Untitled Workspace",
+        description: project.description || project.desc || "",
         is_private: false,
         created_by: session.user.id
       }).select().single();
@@ -84,10 +93,12 @@ export default function ExploreProjects() {
         throw memberError;
       }
 
+      showToast("Workspace created successfully!", "success");
+      await new Promise(resolve => setTimeout(resolve, 1000));
       router.push('/dash?section=groups');
     } catch (error) {
       console.error(error);
-      alert("Failed to create workspace: " + error.message);
+      showToast("Failed to create workspace: " + error.message, "error");
     } finally {
       setIsCreating(false);
     }
@@ -143,8 +154,8 @@ export default function ExploreProjects() {
                   {proj.lang || proj.language || "Unknown"}
                 </span>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{proj.name}</h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6 flex-1">{proj.desc || proj.description}</p>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{proj.title || proj.name}</h3>
+              <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6 flex-1">{proj.description || proj.desc}</p>
               <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-4 text-sm font-bold text-gray-500 dark:text-gray-400">
                   <span className="flex items-center gap-1.5 hover:text-amber-500 dark:hover:text-amber-400 transition-colors"><Star size={16} /> {proj.stars || 0}</span>
@@ -190,7 +201,7 @@ export default function ExploreProjects() {
                    <Code2 size={28} />
                  </div>
                  <div>
-                   <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-1">{selectedProject.name}</h2>
+                   <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-1">{selectedProject.title || selectedProject.name}</h2>
                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400">Maintained by <span className="text-blue-600 dark:text-blue-400 cursor-pointer hover:underline">{selectedProject.author || "@community"}</span></p>
                  </div>
               </div>
@@ -215,7 +226,7 @@ export default function ExploreProjects() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">About this project</h3>
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-8">
-                {selectedProject.desc || selectedProject.description} This repository serves as a foundational element for building scalable architectures. It actively welcomes contributions from the beoneofus developer community. Connect with the maintainers to learn more about the roadmap and open issues.
+                {selectedProject.description || selectedProject.desc} This repository serves as a foundational element for building scalable architectures. It actively welcomes contributions from the beoneofus developer community. Connect with the maintainers to learn more about the roadmap and open issues.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                 <button className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 active:scale-95">
@@ -234,6 +245,30 @@ export default function ExploreProjects() {
         </div>
       )}
       <FloatingAiAssistant />
+
+      {/* ── TOAST NOTIFICATION ── */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-[300] flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border animate-in slide-in-from-bottom-4 fade-in duration-300 bg-white dark:bg-gray-900 ${
+            toast.type === "error"
+              ? "border-red-200 dark:border-red-800/50"
+              : "border-emerald-200 dark:border-emerald-800/50"
+          }`}
+        >
+          {toast.type === "error"
+            ? <AlertTriangle size={18} className="text-red-500 shrink-0" />
+            : <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+          }
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            aria-label="Dismiss notification"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

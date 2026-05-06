@@ -223,14 +223,14 @@ export default function DocsPage() {
                   <div className="mt-1 w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0"><Briefcase size={14} /></div>
                   <div>
                     <strong className="text-gray-900 dark:text-gray-100 text-sm block">Recommended Opportunities</strong>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">The platform automatically analyzes your profile against available jobs, providing a match score (%) and a specific reason why you're a good fit.</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">The platform automatically analyzes your profile against available jobs, providing a match score (%) and a specific reason why you&apos;re a good fit.</span>
                   </div>
                 </li>
                 <li className="flex gap-3">
                   <div className="mt-1 w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0"><ShieldCheck size={14} /></div>
                   <div>
                     <strong className="text-gray-900 dark:text-gray-100 text-sm block">Application Tracking</strong>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Keep an eye on roles you've applied for. Get full details including messages from the employer and next steps configurations when accepted.</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Keep an eye on roles you&apos;ve applied for. Get full details including messages from the employer and next steps configurations when accepted.</span>
                   </div>
                 </li>
               </ul>

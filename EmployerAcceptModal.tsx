@@ -12,6 +12,7 @@ import {
   ZoomIn, Download, Clock, Users, Filter, Bell, BellOff,
   ChevronDown, CornerUpLeft
 } from "lucide-react";
+import Link from "next/link";
 import { supabase } from "./src/app/supabaseClient";
 import ProfileContent from "./src/app/dash/contect/ProfileContent";
 import { useDashboard } from "./src/app/dash/contect/DashboardContext";
@@ -660,6 +661,8 @@ export default function MessagesContent() {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     setActiveCall(null);
     setIncomingCall(null);
     setPeerCallInfo(null);
@@ -867,14 +870,29 @@ export default function MessagesContent() {
     let isMounted = true;
 
     navigator.mediaDevices
-      .getUserMedia({ video: activeCall.isVideo, audio: true })
+      .getUserMedia({
+        video: activeCall.isVideo ? {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 60 }
+        } : false,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      })
       .then(async (stream) => {
         if (!isMounted) return;
         localStreamRef.current = stream;
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
         const pc = new RTCPeerConnection({
-          iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" }
+          ],
+          bundlePolicy: "max-bundle",
+          rtcpMuxPolicy: "require"
         });
         peerConnectionRef.current = pc;
         stream.getTracks().forEach((t) => pc.addTrack(t, stream));
@@ -1087,8 +1105,8 @@ export default function MessagesContent() {
       .reverse()
       .find((m: any) => m.sender_id === activeChat.id);
     const prompt = lastMsg?.text
-      ? `Draft a brief, friendly reply (1-2 sentences) to this message: "${lastMsg.text}". Return ONLY the reply text, no quotes or preamble.`
-      : "Draft a friendly one-sentence opening message to start a conversation. Return ONLY the message text.";
+      ? `You are an assistant for a professional networking platform. Draft a natural, professional, and concise reply (max 1 sentence) to this message: "${lastMsg.text}". Return ONLY the raw reply text, no quotes, emojis, or conversational filler.`
+      : "Draft a concise, professional, and friendly one-sentence opening message to start a networking conversation. Return ONLY the raw message text.";
 
     setIsSuggesting(true);
     let attempt = 0;
@@ -1640,6 +1658,14 @@ export default function MessagesContent() {
                   >
                     Show all
                   </button>
+            )}
+            {!filterUnread && !searchQuery && (
+              <Link
+                href="/Explore_Projects"
+                className="mt-3 inline-block text-xs font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+              >
+                Explore Network
+              </Link>
                 )}
               </div>
             )}

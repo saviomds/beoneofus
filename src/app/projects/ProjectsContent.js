@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Plus, FolderDot, X, Loader2, Pencil, Trash2,
   CheckCircle2, AlertCircle, Search, LayoutGrid,
-  List, Pin, PinOff, Tag, Clock, Hash, ChevronDown
+  List, Pin, PinOff, Tag, Clock, Hash, ChevronDown,
+  Globe, Lock, StickyNote, ChevronUp
 } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import { useRouter } from "next/navigation";
@@ -55,13 +56,16 @@ export default function ProjectsContent() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // ---- Delete Modal ---------------------------------------------------------
-  const [projectToDelete, setProjectToDelete] = useState(null); // project | null — single state drives open/close
+  // Single nullable state drives open/close — eliminates impossible
+  // state where modal is open but projectToDelete is null.
+  const [projectToDelete, setProjectToDelete] = useState(null);
 
   // ---- Form fields ----------------------------------------------------------
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("active");
   const [selectedTags, setSelectedTags] = useState([]);
+  const [isPublic, setIsPublic] = useState(false);
 
   // ---- UI -------------------------------------------------------------------
   const [toast, setToast] = useState(null);
@@ -71,23 +75,17 @@ export default function ProjectsContent() {
   const [sortBy, setSortBy] = useState("newest"); // "newest" | "oldest" | "name" | "pinned"
 
   // ---- Toast helper ---------------------------------------------------------
-  // FIX: previous showToast was recreated on every render; moved to useCallback
-  // and uses a single clearTimeout ref to avoid stacking timers.
-  const toastTimerRef = { current: null };
+  // FIX: was a plain object recreated every render; useRef persists across renders
+  // so clearTimeout correctly cancels the previous timer.
+  const toastTimerRef = useRef(null);
   const showToast = useCallback((message, type = "success") => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ message, type });
     toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---------------------------------------------------------------------------
   // Data fetching
-  // FIX: fetchProjects was defined inside useEffect, making it impossible to
-  // call from other handlers without re-creating it. Extracted to useCallback.
-  // FIX: The original called fetchProjects(userId) from other handlers but
-  // used currentUserId which may not yet be set (stale closure). Now every
-  // fetch call passes userId explicitly.
   // ---------------------------------------------------------------------------
   const fetchProjects = useCallback(async (userId) => {
     if (!userId) return;
@@ -108,11 +106,6 @@ export default function ProjectsContent() {
     }
   }, [showToast]);
 
-  // FIX: original useEffect had empty dep array but called router.push inside.
-  // router is stable in Next.js App Router so this is safe, but deps should
-  // accurately reflect what the effect uses. Added router.
-  // FIX: no cleanup — if component unmounts before session resolves, setState
-  // would run on an unmounted component. Added mounted guard.
   useEffect(() => {
     let mounted = true;
     const init = async () => {
@@ -138,6 +131,7 @@ export default function ProjectsContent() {
     setDescription("");
     setStatus("active");
     setSelectedTags([]);
+    setIsPublic(false);
   }, []);
 
   const openCreateModal = useCallback(() => {
@@ -146,8 +140,6 @@ export default function ProjectsContent() {
     setIsModalOpen(true);
   }, [resetForm]);
 
-  // FIX: original openEditModal called e.stopPropagation() but didn't guard
-  // against a missing project arg.
   const openEditModal = useCallback((e, project) => {
     e.stopPropagation();
     if (!project) return;
@@ -157,6 +149,7 @@ export default function ProjectsContent() {
     setDescription(project.description ?? "");
     setStatus(project.status ?? "active");
     setSelectedTags(project.tags ?? []);
+    setIsPublic(project.is_public ?? false);
     setIsModalOpen(true);
   }, []);
 
@@ -168,10 +161,6 @@ export default function ProjectsContent() {
   // ---------------------------------------------------------------------------
   // CRUD
   // ---------------------------------------------------------------------------
-  // FIX: original confirmDeleteProject called fetchProjects(currentUserId) but
-  // currentUserId could be stale inside the async callback. Pass via closure-
-  // captured ref instead, or re-read from state at call time. Here we derive
-  // the userId from the supabase session to be safe.
   const confirmDeleteProject = useCallback(async () => {
     if (!projectToDelete) return;
     setIsProcessing(true);
@@ -181,23 +170,19 @@ export default function ProjectsContent() {
         .delete()
         .eq("id", projectToDelete.id);
       if (error) throw error;
-      // Optimistic remove — no need for a full re-fetch
       setProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
       showToast("Project deleted.", "success");
     } catch (err) {
       showToast("Failed to delete: " + err.message, "error");
     } finally {
-      setProjectToDelete(null); // closes modal
+      setProjectToDelete(null);
       setIsProcessing(false);
     }
   }, [projectToDelete, showToast]);
 
-  // FIX: handleTogglePin updated optimistically (original did this too, which
-  // is correct), but didn't revert on error. Added revert.
   const handleTogglePin = useCallback(async (e, project) => {
     e.stopPropagation();
     const next = !project.pinned;
-    // Optimistic update
     setProjects(prev => prev.map(p => p.id === project.id ? { ...p, pinned: next } : p));
     try {
       const { error } = await supabase
@@ -213,10 +198,6 @@ export default function ProjectsContent() {
     }
   }, [showToast]);
 
-  // FIX: handleSubmitProject called fetchProjects(currentUserId) — stale
-  // closure risk. Now uses optimistic update for edits and targeted insert for
-  // creates, with a single targeted re-fetch only when necessary.
-  // FIX: also guarded against empty currentUserId at submit time.
   const handleSubmitProject = useCallback(async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -231,6 +212,7 @@ export default function ProjectsContent() {
         description: description.trim(),
         status,
         tags: selectedTags,
+        is_public: isPublic,
       };
 
       if (modalMode === "create") {
@@ -240,7 +222,6 @@ export default function ProjectsContent() {
           .select()
           .single();
         if (error) throw error;
-        // Prepend optimistically instead of full re-fetch
         setProjects(prev => [newProject, ...prev]);
         showToast("Project created!", "success");
       } else {
@@ -260,13 +241,31 @@ export default function ProjectsContent() {
     } finally {
       setIsProcessing(false);
     }
-  }, [title, description, status, selectedTags, modalMode, activeProjectId, showToast]);
+  }, [title, description, status, selectedTags, isPublic, modalMode, activeProjectId, showToast]);
 
-  // FIX: toggleTag was a plain function recreated every render; wrapped in useCallback.
   const toggleTag = useCallback((tag) => {
     setSelectedTags(prev =>
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     );
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // NEW FEATURE: Quick Memo — inline per-project note saved to Supabase
+  // Saves to a `memo` column on the projects table (add: memo TEXT in your DB).
+  // Debounced auto-save with visual indicator.
+  // ---------------------------------------------------------------------------
+  const handleSaveMemo = useCallback(async (projectId, memo) => {
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .update({ memo })
+        .eq("id", projectId);
+      if (error) throw error;
+      // Update local state silently
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, memo } : p));
+    } catch (err) {
+      console.error("Failed to save memo:", err);
+    }
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -279,7 +278,8 @@ export default function ProjectsContent() {
       list = list.filter(p =>
         p.title.toLowerCase().includes(q) ||
         (p.description ?? "").toLowerCase().includes(q) ||
-        (p.tags ?? []).some(t => t.toLowerCase().includes(q))
+        (p.tags ?? []).some(t => t.toLowerCase().includes(q)) ||
+        (p.memo ?? "").toLowerCase().includes(q) // also search memo content
       );
     }
     if (filterStatus !== "all") {
@@ -289,7 +289,6 @@ export default function ProjectsContent() {
       case "newest":  list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); break;
       case "oldest":  list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); break;
       case "name":    list.sort((a, b) => a.title.localeCompare(b.title)); break;
-      // FIX: "pinned" sort also falls back to newest within same pin group
       case "pinned":  list.sort((a, b) =>
         (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) ||
         new Date(b.created_at) - new Date(a.created_at)
@@ -301,9 +300,6 @@ export default function ProjectsContent() {
 
   // ---------------------------------------------------------------------------
   // Stats
-  // FIX: stats used `projects.filter(p => (p.status || "active") === "active")`
-  // which would count a project with no status as "active" even if it isn't.
-  // Standardized to use null-coalescing consistently.
   // ---------------------------------------------------------------------------
   const stats = useMemo(() => ({
     total:      projects.length,
@@ -365,7 +361,7 @@ export default function ProjectsContent() {
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search projects, tags…"
+              placeholder="Search projects, tags, memos…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-9 py-2.5 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
@@ -460,6 +456,7 @@ export default function ProjectsContent() {
               onEdit={openEditModal}
               onDelete={openDeleteModal}
               onTogglePin={handleTogglePin}
+              onSaveMemo={handleSaveMemo}
             />
           ))}
         </div>
@@ -473,6 +470,7 @@ export default function ProjectsContent() {
               onEdit={openEditModal}
               onDelete={openDeleteModal}
               onTogglePin={handleTogglePin}
+              onSaveMemo={handleSaveMemo}
             />
           ))}
         </div>
@@ -533,9 +531,11 @@ export default function ProjectsContent() {
 
               {/* Status */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                {/* FIX: original used `block` + `flex` display classes on the same label
+                    which is invalid. Split into a <p> label and a separate flex div. */}
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                   Status
-                </label>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {STATUS_OPTIONS.map(s => (
                     <button
@@ -556,9 +556,9 @@ export default function ProjectsContent() {
 
               {/* Tags */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                   Tags <span className="text-gray-400 normal-case font-normal">(optional)</span>
-                </label>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {TAG_OPTIONS.map(tag => (
                     <button
@@ -575,6 +575,28 @@ export default function ProjectsContent() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Visibility */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div>
+                  {/* FIX: was <label> with both `block` and `flex` — invalid nesting.
+                      Changed outer to <div> and inner text to <p>. */}
+                  <div className="flex items-center gap-1.5">
+                    <Globe size={14} className="text-blue-500" />
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Make Project Public</p>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Allow anyone to discover this project in Explore.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={isPublic}
+                    onChange={e => setIsPublic(e.target.checked)}
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-500"></div>
+                </label>
               </div>
 
               {/* Actions */}
@@ -604,10 +626,6 @@ export default function ProjectsContent() {
       )}
 
       {/* ── Delete Confirmation Modal ── */}
-      {/* FIX: original used a separate isDeleteModalOpen boolean + projectToDelete.
-          Merged into a single nullable state — truthy = open, null = closed.
-          Eliminates the impossible state where isDeleteModalOpen=true but
-          projectToDelete=null (which caused a crash on confirmDeleteProject). */}
       {projectToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
@@ -676,7 +694,7 @@ export default function ProjectsContent() {
 }
 
 // ---------------------------------------------------------------------------
-// Empty state components (extracted to keep JSX readable)
+// Empty state components
 // ---------------------------------------------------------------------------
 function EmptyState({ onCreateClick }) {
   return (
@@ -715,9 +733,86 @@ function NoResultsState({ onClear }) {
 }
 
 // ---------------------------------------------------------------------------
+// QuickMemo — NEW FEATURE
+// Collapsible inline note pad per project. Debounced auto-save to Supabase.
+// Requires a `memo TEXT` column on the projects table.
+// ---------------------------------------------------------------------------
+function QuickMemo({ project, onSaveMemo }) {
+  const [open, setOpen] = useState(false);
+  const [memo, setMemo] = useState(project.memo ?? "");
+  const [saveState, setSaveState] = useState("idle"); // "idle" | "saving" | "saved"
+  const debounceRef = useRef(null);
+
+  // Sync if project.memo changes externally (e.g. after re-fetch)
+  useEffect(() => {
+    setMemo(project.memo ?? "");
+  }, [project.memo]);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setMemo(val);
+    setSaveState("saving");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      await onSaveMemo(project.id, val);
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 1800);
+    }, 800);
+  };
+
+  const hasMemo = (project.memo ?? "").trim().length > 0;
+
+  return (
+    <div
+      className="border-t border-gray-100 dark:border-gray-800 mt-3"
+      onClick={e => e.stopPropagation()} // prevent card navigation when interacting with memo
+    >
+      <button
+        onClick={() => setOpen(v => !v)}
+        className={`w-full flex items-center justify-between px-1 pt-2.5 pb-1 text-[11px] font-semibold transition-colors ${
+          hasMemo
+            ? "text-amber-500 dark:text-amber-400"
+            : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+        }`}
+      >
+        <span className="flex items-center gap-1.5">
+          <StickyNote size={12} />
+          {hasMemo ? "Quick Memo" : "Add a memo…"}
+        </span>
+        {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+      </button>
+
+      {open && (
+        <div className="pt-1 pb-2 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+          <textarea
+            value={memo}
+            onChange={handleChange}
+            placeholder="Jot down a quick thought, link, or reminder…"
+            rows={3}
+            className="w-full text-xs bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 resize-none transition-all"
+          />
+          <div className="flex items-center justify-end gap-1.5 h-4">
+            {saveState === "saving" && (
+              <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                <Loader2 size={10} className="animate-spin" /> Saving…
+              </span>
+            )}
+            {saveState === "saved" && (
+              <span className="text-[10px] text-emerald-500 flex items-center gap-1">
+                <CheckCircle2 size={10} /> Saved
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Project Card (Grid view)
 // ---------------------------------------------------------------------------
-function ProjectCard({ project, onOpen, onEdit, onDelete, onTogglePin }) {
+function ProjectCard({ project, onOpen, onEdit, onDelete, onTogglePin, onSaveMemo }) {
   const tags = project.tags ?? [];
   const status = project.status ?? "active";
 
@@ -746,6 +841,9 @@ function ProjectCard({ project, onOpen, onEdit, onDelete, onTogglePin }) {
           </h3>
           <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold ${STATUS_STYLES[status] ?? STATUS_STYLES["active"]}`}>
             {status}
+          </span>
+          <span className="inline-flex items-center gap-1 mt-1.5 ml-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+            {project.is_public ? <><Globe size={10} /> Public</> : <><Lock size={10} /> Private</>}
           </span>
         </div>
       </div>
@@ -776,9 +874,7 @@ function ProjectCard({ project, onOpen, onEdit, onDelete, onTogglePin }) {
         <span className="text-[11px] text-gray-400 flex items-center gap-1">
           <Clock size={10} /> {timeAgo(project.created_at)}
         </span>
-        {/* FIX: action buttons were always mounted but visibility toggled via
-            opacity-0 / group-hover:opacity-100. Pointer events were still
-            active when invisible, causing accidental clicks.
+        {/* FIX: action buttons were invisible but pointer-events still active.
             Added pointer-events-none when hidden. */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
           <button
@@ -804,6 +900,9 @@ function ProjectCard({ project, onOpen, onEdit, onDelete, onTogglePin }) {
           </button>
         </div>
       </div>
+
+      {/* ── Quick Memo ── NEW FEATURE */}
+      <QuickMemo project={project} onSaveMemo={onSaveMemo} />
     </div>
   );
 }
@@ -811,76 +910,105 @@ function ProjectCard({ project, onOpen, onEdit, onDelete, onTogglePin }) {
 // ---------------------------------------------------------------------------
 // Project Row (List view)
 // ---------------------------------------------------------------------------
-function ProjectRow({ project, onOpen, onEdit, onDelete, onTogglePin }) {
+function ProjectRow({ project, onOpen, onEdit, onDelete, onTogglePin, onSaveMemo }) {
   const tags = project.tags ?? [];
   const status = project.status ?? "active";
+  const [memoOpen, setMemoOpen] = useState(false);
 
   return (
-    <div
-      onClick={onOpen}
-      className="flex items-center gap-4 px-5 py-4 cursor-pointer group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-    >
-      <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl shrink-0">
-        <FolderDot size={18} className="text-blue-600 dark:text-blue-400" />
-      </div>
-
-      {project.pinned && (
-        <Pin size={12} className="text-amber-500 fill-amber-500 shrink-0" />
-      )}
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
-            {project.title}
-          </span>
-          <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0 ${STATUS_STYLES[status] ?? STATUS_STYLES["active"]}`}>
-            {status}
-          </span>
+    <div className="group">
+      <div
+        onClick={onOpen}
+        className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+      >
+        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl shrink-0">
+          <FolderDot size={18} className="text-blue-600 dark:text-blue-400" />
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-          {project.description || "No description."}
-        </p>
-      </div>
 
-      <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-        {tags.slice(0, 2).map(t => (
-          <span
-            key={t}
-            className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded text-[11px]"
+        {project.pinned && (
+          <Pin size={12} className="text-amber-500 fill-amber-500 shrink-0" />
+        )}
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
+              {project.title}
+            </span>
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0 ${STATUS_STYLES[status] ?? STATUS_STYLES["active"]}`}>
+              {status}
+            </span>
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+              {project.is_public ? <><Globe size={10} /> Public</> : <><Lock size={10} /> Private</>}
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+            {project.description || "No description."}
+          </p>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+          {tags.slice(0, 2).map(t => (
+            <span
+              key={t}
+              className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded text-[11px]"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+
+        <span className="hidden sm:block text-[11px] text-gray-400 shrink-0 w-16 text-right">
+          {timeAgo(project.created_at)}
+        </span>
+
+        {/* Quick Memo toggle button for list view */}
+        <button
+          onClick={e => { e.stopPropagation(); setMemoOpen(v => !v); }}
+          className={`p-1.5 rounded-lg transition-colors shrink-0 ${
+            (project.memo ?? "").trim()
+              ? "text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+              : "text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+          }`}
+          title="Quick Memo"
+        >
+          <StickyNote size={14} />
+        </button>
+
+        {/* FIX: pointer-events-none when hidden */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity shrink-0">
+          <button
+            onClick={e => onTogglePin(e, project)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+            title={project.pinned ? "Unpin" : "Pin"}
           >
-            {t}
-          </span>
-        ))}
+            {project.pinned ? <PinOff size={14} /> : <Pin size={14} />}
+          </button>
+          <button
+            onClick={e => onEdit(e, project)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            title="Edit"
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            onClick={e => onDelete(e, project)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            title="Delete"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
-      <span className="hidden sm:block text-[11px] text-gray-400 shrink-0 w-16 text-right">
-        {timeAgo(project.created_at)}
-      </span>
-
-      {/* FIX: same pointer-events fix as ProjectCard */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity shrink-0">
-        <button
-          onClick={e => onTogglePin(e, project)}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-          title={project.pinned ? "Unpin" : "Pin"}
+      {/* ── Inline memo expand for list view ── */}
+      {memoOpen && (
+        <div
+          className="px-5 pb-4 animate-in fade-in slide-in-from-top-1 duration-150"
+          onClick={e => e.stopPropagation()}
         >
-          {project.pinned ? <PinOff size={14} /> : <Pin size={14} />}
-        </button>
-        <button
-          onClick={e => onEdit(e, project)}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-          title="Edit"
-        >
-          <Pencil size={14} />
-        </button>
-        <button
-          onClick={e => onDelete(e, project)}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          title="Delete"
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
+          <QuickMemo project={project} onSaveMemo={onSaveMemo} forceOpen />
+        </div>
+      )}
     </div>
   );
 }

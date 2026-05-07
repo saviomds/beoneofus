@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Terminal, ArrowLeft, Loader2, CheckCircle2, AlertTriangle, LayoutDashboard,
   X, Search, Star, Layers, BarChart2, Download, Trash, RefreshCw
@@ -27,6 +28,7 @@ const defaultForm = {
 };
 
 export default function AdminCoursesPage() {
+  const router = useRouter();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState(null);
@@ -54,6 +56,7 @@ export default function AdminCoursesPage() {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const [userProgress, setUserProgress] = useState({});
   const [formData, setFormData] = useState(defaultForm);
 
   // ─── Stats ───
@@ -97,6 +100,25 @@ export default function AdminCoursesPage() {
 
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
+  const fetchProgress = useCallback(async (uid) => {
+    try {
+      const { data, error } = await supabase
+        .from("user_course_progress")
+        .select("*")
+        .eq("user_id", uid);
+      
+      if (data && !error) {
+        const progressMap = {};
+        data.forEach(p => {
+          progressMap[p.course_id] = p;
+        });
+        setUserProgress(progressMap);
+      }
+    } catch (err) {
+      console.error("Failed to fetch progress", err);
+    }
+  }, []);
+
   const fetchCourses = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
     try {
@@ -122,6 +144,7 @@ export default function AdminCoursesPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session && isMounted) {
         setUserId(session.user.id);
+        fetchProgress(session.user.id);
         const { data: profile } = await supabase
           .from("profiles")
           .select("is_admin, username")
@@ -143,7 +166,7 @@ export default function AdminCoursesPage() {
     };
     init();
     return () => { isMounted = false; };
-  }, [fetchCourses]);
+  }, [fetchCourses, fetchProgress]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -344,6 +367,14 @@ export default function AdminCoursesPage() {
 
   const isAllSelected = visibleCourses.length > 0 && selectedIds.size === visibleCourses.length;
   const isPartialSelected = selectedIds.size > 0 && !isAllSelected;
+
+  const handleCourseSelect = (course) => {
+    if (!userId) {
+      router.push("/auth");
+      return;
+    }
+    setSelectedCourse(course);
+  };
 
   if (isCheckingAuth) {
     return (
@@ -563,12 +594,13 @@ export default function AdminCoursesPage() {
           toggleSelectAll={toggleSelectAll}
           isAllSelected={isAllSelected}
           isPartialSelected={isPartialSelected}
-          setSelectedCourse={setSelectedCourse}
+          setSelectedCourse={handleCourseSelect}
           handleEdit={handleEdit}
           handleDuplicate={handleDuplicate}
           handleDelete={handleDelete}
           isDuplicating={isDuplicating}
           onClearFilters={clearFilters}
+          userProgress={userProgress}
         />
       </main>
 
@@ -579,6 +611,8 @@ export default function AdminCoursesPage() {
         isAdmin={isAdmin}
         handleEdit={handleEdit}
         handleDelete={handleDelete}
+        userId={userId}
+        userProgress={userProgress}
       />
 
       {/* Toast Notification */}

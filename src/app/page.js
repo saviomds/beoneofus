@@ -60,8 +60,8 @@ export default function LandingPage() {
         
         if (error) {
           if (error.message.includes('Refresh Token Not Found') || error.message.includes('Invalid Refresh Token')) {
-            if (isMounted) setAuthError('Your session has expired or is invalid. Please log in again.');
-            await supabase.auth.signOut(); // Clear invalid local session
+            // Silently handle expired sessions to avoid annoying popups on the landing page
+            await supabase.auth.signOut().catch(() => {}); // Clear invalid local session safely
           } else {
             if (isMounted) setAuthError(error.message);
           }

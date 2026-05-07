@@ -5,7 +5,7 @@ import { CATEGORY_COLORS, LEVEL_COLORS } from "./constants";
 export default function CourseList({
   courses, visibleCourses, isAdmin, selectedIds, toggleSelect, toggleSelectAll, isAllSelected, isPartialSelected,
   setSelectedCourse, handleEdit, handleDuplicate, handleDelete, isDuplicating,
-  onClearFilters
+  onClearFilters, userProgress
 }) {
   const isNewCourse = (course) => {
     if (!course.created_at) return false;
@@ -83,6 +83,15 @@ export default function CourseList({
                     {isNewCourse(course) && (
                       <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 uppercase tracking-wider shrink-0">
                         New
+                      </span>
+                    )}
+                    {userProgress && userProgress[course.id] && (
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 border ${
+                        userProgress[course.id].status === 'completed'
+                          ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'
+                          : 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'
+                      }`}>
+                        {userProgress[course.id].status === 'completed' ? 'Completed' : 'In Progress'}
                       </span>
                     )}
                   </div>

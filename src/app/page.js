@@ -66,6 +66,7 @@ export default function LandingPage() {
             if (isMounted) setAuthError(error.message);
           }
         }
+
         
         if (isMounted) setSession(session);
         
@@ -78,7 +79,7 @@ export default function LandingPage() {
           if (isMounted) setProfile(data);
         }
       } catch (err) {
-        if (isMounted) setAuthError('Authentication check failed. Please try again.');
+        if (isMounted) setAuthError('Authentication check failed! Please try again.');
       } finally {
         if (isMounted) setLoading(false);
       }

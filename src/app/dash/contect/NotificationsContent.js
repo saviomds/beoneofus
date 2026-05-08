@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   Bell, Heart, MessageSquare, Check, Zap, 
@@ -15,7 +16,8 @@ export default function NotificationsContent() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
-  const { setActiveSection, setTargetChatUser } = useDashboard();
+  const { setTargetChatUser } = useDashboard();
+  const router = useRouter();
 
   useEffect(() => {
     const init = async () => {
@@ -85,22 +87,22 @@ export default function NotificationsContent() {
     }
 
     switch (notif.type) {
-      case 'group_invite': 
+      case 'group_invite':
       case 'group_join_request':
-        setActiveSection('groups'); break;
+        router.push('/dash/groups'); break;
       case 'comment':
-      case 'like': 
-        setActiveSection('feed'); break;
+      case 'like':
+        router.push('/dash/feed'); break;
       case 'message':
         if (setTargetChatUser && notif.actor_id) {
           setTargetChatUser({ id: notif.actor_id, ...notif.actor });
         }
-        setActiveSection('messages'); break;
+        router.push('/dash/messages'); break;
       case 'connection_request':
-      case 'handshake': 
+      case 'handshake':
       case 'blocked':
-      case 'unblocked': 
-        setActiveSection('messages'); break;
+      case 'unblocked':
+        router.push('/dash/messages'); break;
       default: break;
     }
   };

@@ -80,8 +80,9 @@ export default function MemberDashboard() {
   const [filter, setFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [completingId, setCompletingId] = useState<string | null>(null);
-  const [newTaskForm, setNewTaskForm] = useState({ title: '', description: '', priority: 'medium', due_date: '' });
+  const [newTaskForm, setNewTaskForm] = useState({ title: '', description: '', priority: 'medium' });
 
   useEffect(() => {
     let isComponentMounted = true;
@@ -163,7 +164,7 @@ export default function MemberDashboard() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.key === 'n' || e.key === 'N') && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
         e.preventDefault();
-        setIsModalOpen(true);
+        setIsModalOpen(true); setSubmitError('');
       }
       if (e.key === 'Escape') setIsModalOpen(false);
     };
@@ -201,17 +202,54 @@ export default function MemberDashboard() {
     e.preventDefault();
     if (!sessionUser) return;
     setIsSubmitting(true);
-    const { data, error } = await supabase.from('tasks').insert({
-      ...newTaskForm,
-      assignee_id: sessionUser.id,
-      status: 'pending'
-    }).select().single();
-    
-    setIsSubmitting(false);
-    if (!error && data) {
+    try {
+      const { due_date, ...taskFields } = newTaskForm;
+      const { data, error } = await supabase.from('tasks').insert({
+        ...taskFields,
+        assignee_id: sessionUser.id,
+        assigner_id: sessionUser.id,
+        status: 'pending'
+      }).select().single();
+
+      if (error) throw new Error(error.message || JSON.stringify(error));
+
+      // Notify the people who assigned tasks to this member, or fall back to admins
+      const assignerIds: string[] = Array.from(
+        new Set(
+          tasks
+            .map((t: any) => t.assigner_id)
+            .filter((id: string) => id && id !== sessionUser.id)
+        )
+      );
+
+      let recipientIds = assignerIds;
+      if (recipientIds.length === 0) {
+        const { data: admins } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('is_admin', true);
+        recipientIds = (admins || []).map((a: any) => a.id);
+      }
+
+      if (recipientIds.length > 0) {
+        await supabase.from('notifications').insert(
+          recipientIds.map(rid => ({
+            receiver_id: rid,
+            actor_id: sessionUser.id,
+            type: 'message',
+            content: `reported an issue: "${newTaskForm.title}" — Priority: ${newTaskForm.priority}${newTaskForm.description ? `. Details: ${newTaskForm.description}` : ''}`,
+          }))
+        );
+      }
+
       setTasks([data, ...tasks]);
       setIsModalOpen(false);
-      setNewTaskForm({ title: '', description: '', priority: 'medium', due_date: '' });
+      setNewTaskForm({ title: '', description: '', priority: 'medium' });
+    } catch (err: any) {
+      console.error('Issue submit error:', err);
+      setSubmitError(err?.message || 'Failed to submit issue. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -550,28 +588,28 @@ export default function MemberDashboard() {
             <form onSubmit={handleAddTask} className="space-y-5">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">Title</label>
-                <input required type="text" value={newTaskForm.title} onChange={e => setNewTaskForm({...newTaskForm, title: e.target.value})} placeholder="Task identifier..." className="w-full bg-[#f8f9fa] dark:bg-[#0d0d0f] border border-gray-200 dark:border-[#222224] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
+                <input required type="text" value={newTaskForm.title} onChange={e => { setSubmitError(''); setNewTaskForm({...newTaskForm, title: e.target.value}); }} placeholder="Task identifier..." className="w-full bg-[#f8f9fa] dark:bg-[#0d0d0f] border border-gray-200 dark:border-[#222224] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors" />
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">Description</label>
                 <textarea required rows={3} value={newTaskForm.description} onChange={e => setNewTaskForm({...newTaskForm, description: e.target.value})} placeholder="Add context and details..." className="w-full bg-[#f8f9fa] dark:bg-[#0d0d0f] border border-gray-200 dark:border-[#222224] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors resize-none custom-scrollbar" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">Priority</label>
-                  <select value={newTaskForm.priority} onChange={e => setNewTaskForm({...newTaskForm, priority: e.target.value})} className="w-full bg-[#f8f9fa] dark:bg-[#0d0d0f] border border-gray-200 dark:border-[#222224] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors appearance-none cursor-pointer">
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">Due Date</label>
-                  <input type="date" value={newTaskForm.due_date} onChange={e => setNewTaskForm({...newTaskForm, due_date: e.target.value})} className="w-full bg-[#f8f9fa] dark:bg-[#0d0d0f] border border-gray-200 dark:border-[#222224] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors text-gray-500 dark:text-gray-400 [color-scheme:dark]" />
-                </div>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">Priority</label>
+                <select value={newTaskForm.priority} onChange={e => setNewTaskForm({...newTaskForm, priority: e.target.value})} className="w-full bg-[#f8f9fa] dark:bg-[#0d0d0f] border border-gray-200 dark:border-[#222224] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors appearance-none cursor-pointer">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
               </div>
+              {submitError && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl text-xs text-red-600 dark:text-red-400 font-medium">
+                  <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                  {submitError}
+                </div>
+              )}
               <button type="submit" disabled={isSubmitting || !newTaskForm.title} className="w-full mt-2 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2">
-                {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : 'Save Issue'}
+                {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : 'Submit Issue'}
               </button>
             </form>
           </div>

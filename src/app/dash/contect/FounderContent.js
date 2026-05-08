@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Rocket, Send, Loader2, CheckCircle2, AlertTriangle, Briefcase, Star, User, MessageSquare, ChevronRight, ChevronLeft, Zap, Users, UserPlus } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
-export default function FounderContent() {
+export default function FounderContent({ onSubmitSuccess } = {}) {
   const [formData, setFormData] = useState({
     name: "",
     role: "member", // default to member, can be "cofounder"
@@ -168,11 +168,12 @@ export default function FounderContent() {
       }).catch(err => console.error('Failed to trigger admin email API:', err));
 
       setIsSuccess(true);
-      
-      // Redirect to the personalized dashboard after a short delay
-      setTimeout(() => {
-        window.location.href = "/dash"; // Adjust this route if needed
-      }, 2000);
+
+      if (onSubmitSuccess) {
+        setTimeout(() => onSubmitSuccess(), 2000);
+      } else {
+        setTimeout(() => { window.location.href = "/dash/feed"; }, 2000);
+      }
 
     } catch (err) {
       console.error("Submission error details:", err);

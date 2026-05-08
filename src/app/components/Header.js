@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign, CheckCircle2, AlertTriangle } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../supabaseClient';
 import ProfileContent from '../dash/contect/ProfileContent';
@@ -28,7 +29,8 @@ const HighlightMatch = ({ text, query }) => {
 const QuickViewModal = dynamic(() => import('./QuickViewModal'), { ssr: false });
 
 export default function Header({ setActiveTab }) {
-  const { setActiveSection, setTargetChatUser } = useDashboard();
+  const { setTargetChatUser } = useDashboard();
+  const router = useRouter();
   const [showQuickView, setShowQuickView] = useState(null); // 'discuss' or 'discover'
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -65,11 +67,7 @@ export default function Header({ setActiveTab }) {
   const handleNavigate = (tab) => {
     closeQuickView();
     setShowNetworkModal(false);
-    if (setActiveSection) {
-      setActiveSection(tab);
-    } else if (setActiveTab) { // Fallback for the prop
-      setActiveTab(tab);
-    }
+    router.push('/dash/' + tab);
   };
 
   // Listen for custom events to open modals from other components (like RightSidebar on mobile)

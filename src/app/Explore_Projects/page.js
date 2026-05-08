@@ -96,7 +96,7 @@ export default function ExploreProjects() {
 
       showToast("Workspace created successfully!", "success");
       await new Promise(resolve => setTimeout(resolve, 1000));
-      router.push('/dash?section=groups');
+      router.push('/dash/groups');
     } catch (error) {
       console.error(error);
       showToast("Failed to create workspace: " + error.message, "error");

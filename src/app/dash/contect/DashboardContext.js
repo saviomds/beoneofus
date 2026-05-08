@@ -5,11 +5,10 @@ import { createContext, useContext, useState } from 'react';
 const DashboardContext = createContext();
 
 export function DashboardProvider({ children }) {
-  const [activeSection, setActiveSection] = useState('feed');
   const [targetChatUser, setTargetChatUser] = useState(null);
 
   return (
-    <DashboardContext.Provider value={{ activeSection, setActiveSection, targetChatUser, setTargetChatUser }}>
+    <DashboardContext.Provider value={{ targetChatUser, setTargetChatUser }}>
       {children}
     </DashboardContext.Provider>
   );

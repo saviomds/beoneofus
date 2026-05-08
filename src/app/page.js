@@ -177,7 +177,7 @@ export default function LandingPage() {
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100">@{profile?.username}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Active Node</p>
                   </div>
-                  <Link href="/dash?section=notifications" onClick={() => setMobileMenuOpen(false)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm relative">
+                  <Link href="/dash/notifications" onClick={() => setMobileMenuOpen(false)} className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm relative">
                     <Bell size={18} />
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
                   </Link>
@@ -190,7 +190,7 @@ export default function LandingPage() {
                   className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors"
                 >Learn</Link>
                 <Link href="/projects" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors">My Projects</Link>
-                <Link href="/dash?section=messages" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors"><MessageSquare size={18} /> Messages</Link>
+                <Link href="/dash/messages" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors"><MessageSquare size={18} /> Messages</Link>
               </div>
               <div className={`transition-all duration-500 transform ${mobileMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '300ms' }}>
                 <Link href="/dash" onClick={() => setMobileMenuOpen(false)} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-3.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/20 mt-2">

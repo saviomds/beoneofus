@@ -27,6 +27,22 @@ const formatDuration = (seconds) => {
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
+/* STUN + TURN — TURN is required for real-world NAT/firewall traversal */
+const ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  {
+    urls: [
+      "turn:openrelay.metered.ca:80",
+      "turn:openrelay.metered.ca:80?transport=tcp",
+      "turn:openrelay.metered.ca:443?transport=tcp",
+      "turns:openrelay.metered.ca:443",
+    ],
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+];
+
 /* ─────────────────────────────────────────────────────────────
    CALL OVERLAY
 ───────────────────────────────────────────────────────────── */
@@ -869,9 +885,7 @@ export default function MessagesContent() {
         localStreamRef.current = stream;
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-        const pc = new RTCPeerConnection({
-          iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-        });
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
         peerConnectionRef.current = pc;
         stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
@@ -889,6 +903,12 @@ export default function MessagesContent() {
                 candidate: e.candidate,
               },
             });
+          }
+        };
+        pc.onconnectionstatechange = () => {
+          if (pc.connectionState === "failed") {
+            showToast("Call connection failed. Check your network.", "error");
+            endCall();
           }
         };
 

@@ -6,12 +6,11 @@ import '../globals.css'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
 import RightSidebar from '../components/RightSidebar'
-import { DashboardProvider, useDashboard } from './contect/DashboardContext'
+import { DashboardProvider } from './contect/DashboardContext'
 import { useRouter } from 'next/navigation';
 import { supabase } from '../supabaseClient';
 
 function DashLayoutContent({ children }) {
-  const { activeSection, setActiveSection } = useDashboard();
   const [isLeftOpen, setIsLeftOpen] = useState(false);
   const [isRightOpen, setIsRightOpen] = useState(false);
 
@@ -67,13 +66,7 @@ function DashLayoutContent({ children }) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto no-scrollbar">
-          <Sidebar
-            activeSection={activeSection}
-            onSectionChange={(sec) => {
-              setActiveSection(sec);
-              setIsLeftOpen(false);
-            }}
-          />
+          <Sidebar onClose={() => setIsLeftOpen(false)} />
         </div>
       </aside>
 
@@ -122,13 +115,7 @@ function DashLayoutContent({ children }) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto no-scrollbar">
-          <RightSidebar
-            activeSection={activeSection}
-            onSectionChange={(sec) => {
-              setActiveSection(sec);
-              setIsRightOpen(false);
-            }}
-          />
+          <RightSidebar onClose={() => setIsRightOpen(false)} />
         </div>
       </aside>
 

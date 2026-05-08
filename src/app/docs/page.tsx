@@ -313,7 +313,7 @@ export default function DocsPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/dash?tool=support" className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 flex items-center gap-2 transition-colors">
+                  <Link href="/dash/more?tool=support" className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 flex items-center gap-2 transition-colors">
                     <ExternalLink size={14} /> Open Support Ticket
                   </Link>
                 </li>

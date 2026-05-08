@@ -7,8 +7,8 @@ import {
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { supabase } from '../supabaseClient'; 
-import { useRouter } from 'next/navigation';
+import { supabase } from '../supabaseClient';
+import { useRouter, usePathname } from 'next/navigation';
 import VerifiedBadge from './VerifiedBadge';
 
 const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index }) => (
@@ -44,7 +44,7 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction,
   </div>
 );
 
-export default function Sidebar({ activeSection, onSectionChange }) {
+export default function Sidebar({ onClose }) {
   const [profile, setProfile] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0); // State for real notification count
@@ -58,6 +58,8 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   const prevGroupsRef = useRef(0);
   const messagePopAudioRef = useRef(null);
   const router = useRouter();
+  const pathname = usePathname();
+  const activeSection = pathname?.split('/')[2] || 'feed';
   const channelRef = useRef(null);
 
   useEffect(() => {
@@ -349,7 +351,8 @@ export default function Sidebar({ activeSection, onSectionChange }) {
   };
 
   const handleNavClick = (id) => {
-    onSectionChange(id);
+    router.push('/dash/' + id);
+    onClose?.();
   };
 
   const sidebarItems = [
@@ -450,7 +453,7 @@ export default function Sidebar({ activeSection, onSectionChange }) {
           ) : (
             <div 
               className="flex items-center gap-3 py-2.5 px-3 w-full rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors select-none"
-              onClick={() => { if (profile) handleNavClick('profile'); }}
+              onClick={() => { if (profile) { router.push('/dash/profile'); onClose?.(); } }}
             >
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10 shrink-0">
                  <div className="relative w-full h-full rounded-xl bg-white flex items-center justify-center text-xs font-bold text-gray-700 uppercase overflow-hidden">

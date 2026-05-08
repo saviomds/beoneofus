@@ -13,8 +13,10 @@ import {
   CheckCircle2, Clock, XCircle, ChevronDown, MoreHorizontal,
   Shield
 } from "lucide-react";
+import Link from "next/link";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
+import FounderContent from "./FounderContent";
 import VerifiedBadge from "../../components/VerifiedBadge";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -1746,6 +1748,9 @@ const TOOLS = [
 export default function MoreContent() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isFounder, setIsFounder] = useState(false);
+  const [applicationStatus, setApplicationStatus] = useState(null); // null | 'pending' | 'accepted' | 'declined'
+  const [showApplyModal, setShowApplyModal] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -1758,9 +1763,31 @@ export default function MoreContent() {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
-        setCurrentUserId(session.user.id);
-        const { data } = await supabase.from("profiles").select("is_admin").eq("id", session.user.id).single();
-        if (data?.is_admin) setIsAdmin(true);
+        const uid = session.user.id;
+        setCurrentUserId(uid);
+        const { data } = await supabase.from("profiles").select("is_admin").eq("id", uid).single();
+        if (data?.is_admin) {
+          setIsAdmin(true);
+          setIsFounder(true);
+          setApplicationStatus('accepted');
+        } else {
+          // Check if user has a founder application
+          const { data: appData } = await supabase
+            .from("founder_applications")
+            .select("status")
+            .eq("user_id", uid)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (appData?.status === 'accepted') {
+            setIsFounder(true);
+            setApplicationStatus('accepted');
+          } else if (appData?.status === 'pending') {
+            setApplicationStatus('pending');
+          } else if (appData?.status === 'declined') {
+            setApplicationStatus('declined');
+          }
+        }
       }
     };
     init();
@@ -1811,12 +1838,99 @@ export default function MoreContent() {
         ))}
       </div>
 
-      {/* Sign out */}
+      {/* Founder Node Section */}
       <div className="mt-8">
+        <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[2px] mb-3 px-1">Founder Node</p>
+
+        {/* Accepted founder or admin: show dashboard link */}
+        {(isFounder || isAdmin) && (
+          <Link
+            href="/founder-dashboard"
+            className="group flex items-center justify-between p-5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-2xl shadow-lg shadow-blue-500/20 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                <Crown size={20} className="text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Founder Dashboard</p>
+                <p className="text-[11px] text-blue-200 font-medium mt-0.5">Team, tasks & applications</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-blue-200 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        )}
+
+        {/* Pending application */}
+        {!isFounder && !isAdmin && applicationStatus === 'pending' && (
+          <div className="flex items-center gap-4 p-5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center shrink-0">
+              <Clock size={20} className="text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-700 dark:text-amber-300">Application Under Review</p>
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">Your co-founder application is being reviewed. We will notify you soon.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Declined or no application: show apply option */}
+        {!isFounder && !isAdmin && applicationStatus !== 'pending' && (
+          <button
+            onClick={() => setShowApplyModal(true)}
+            className="group w-full flex items-center justify-between p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-blue-500/40 dark:hover:border-blue-500/30 hover:shadow-lg rounded-2xl transition-all text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0">
+                <Crown size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  {applicationStatus === 'declined' ? 'Reapply as Co-Founder' : 'Apply as Co-Founder'}
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-500 font-medium mt-0.5">
+                  {applicationStatus === 'declined' ? 'Your previous application was not accepted. Try again.' : 'Join the founding team and help shape the platform.'}
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={15} className="text-gray-400 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5 shrink-0" />
+          </button>
+        )}
+      </div>
+
+      {/* Sign out */}
+      <div className="mt-6">
         <button onClick={handleSignOut} className="flex items-center gap-2.5 p-3 text-red-400/50 hover:text-red-400 transition-colors text-sm font-bold">
           <LogOut size={16} /> Sign Out
         </button>
       </div>
+
+      {/* Co-Founder Application Modal */}
+      {showApplyModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowApplyModal(false)} />
+          <div className="relative w-full max-w-2xl max-h-[90vh] bg-gray-50 dark:bg-[#0c0c10] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                  <Crown size={16} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-gray-900 dark:text-white">Co-Founder Application</h2>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-600 font-medium">Join the founding team</p>
+                </div>
+              </div>
+              <button onClick={() => setShowApplyModal(false)}
+                className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-500 rounded-xl transition-all">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              <FounderContent onSubmitSuccess={() => { setShowApplyModal(false); setApplicationStatus('pending'); }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Full-screen Tool Modal */}
       {activeItem && (

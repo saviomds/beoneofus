@@ -237,13 +237,8 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
   };
 
   const handleDocsClick = () => {
-    if (onSectionChange) {
-      onSectionChange('docs');
-    } else if (setActiveTab) {
-      setActiveTab('docs');
-    } else {
-      router.push('/dash?tab=docs');
-    }
+    router.push('/dash/docs');
+    onClose?.();
   };
 
   return (

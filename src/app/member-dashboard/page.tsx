@@ -203,9 +203,8 @@ export default function MemberDashboard() {
     if (!sessionUser) return;
     setIsSubmitting(true);
     try {
-      const { due_date, ...taskFields } = newTaskForm;
       const { data, error } = await supabase.from('tasks').insert({
-        ...taskFields,
+        ...newTaskForm,
         assignee_id: sessionUser.id,
         assigner_id: sessionUser.id,
         status: 'pending'

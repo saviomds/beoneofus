@@ -107,15 +107,15 @@ function CallOverlay({
 
   return (
     <div className="fixed inset-0 z-[500] bg-[#050510] flex flex-col">
-      {/* Remote video */}
-      {activeCall.isVideo && isConnected && (
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-90"
-        />
-      )}
+      {/* Remote video — always mounted so the stream can attach even on audio-only calls */}
+      <video
+        ref={remoteVideoRef}
+        autoPlay
+        playsInline
+        className={`absolute inset-0 w-full h-full object-cover opacity-90 ${
+          activeCall.isVideo && isConnected ? "" : "hidden"
+        }`}
+      />
 
       {/* Background for audio/ringing state */}
       {(!activeCall.isVideo || !isConnected) && (
@@ -156,16 +156,16 @@ function CallOverlay({
           </div>
         </div>
 
-        {/* Local video PiP */}
-        {activeCall.isVideo && isConnected && (
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="absolute bottom-32 right-6 w-28 h-40 object-cover rounded-2xl border-2 border-white/20 shadow-2xl"
-          />
-        )}
+        {/* Local video PiP — always mounted to avoid null ref during attach */}
+        <video
+          ref={localVideoRef}
+          autoPlay
+          playsInline
+          muted
+          className={`absolute bottom-32 right-6 w-28 h-40 object-cover rounded-2xl border-2 border-white/20 shadow-2xl ${
+            activeCall.isVideo && isConnected ? "" : "hidden"
+          }`}
+        />
 
         {/* Controls */}
         <div className="flex justify-center gap-4 pb-4">
@@ -300,16 +300,16 @@ export default function MessagesContent() {
     activeChatRef.current = activeChat;
   }, [activeChat]);
 
-  /* ── Audio setup ── */
+  /* ── Audio setup — use universally-accessible free audio files ── */
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      ringAudioRef.current = new Audio(
-        "https://actions.google.com/sounds/v1/alarms/phone_ringing.ogg"
-      );
-      incomingRingAudioRef.current = new Audio(
-        "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
-      );
-    }
+    if (typeof window === "undefined") return;
+    // Mixkit royalty-free tones (reliable CDN, no CORS issues)
+    ringAudioRef.current = new Audio(
+      "https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"
+    );
+    incomingRingAudioRef.current = new Audio(
+      "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"
+    );
   }, []);
 
   /* ── Close more menu on outside click ── */

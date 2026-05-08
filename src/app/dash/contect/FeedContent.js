@@ -137,13 +137,13 @@ export default function FeedContent() {
   // --- LIKES LOGIC ---
   const handleLike = async (postId, hasLiked) => {
     if (!currentUserId) return;
-    
+
     // Optimistically update the UI instantly
     setPosts(prevPosts => prevPosts.map(post => {
       if (post.id === postId) {
         return {
           ...post,
-          likes: hasLiked 
+          likes: hasLiked
             ? (post.likes || []).filter(l => l.user_id !== currentUserId)
             : [...(post.likes || []), { user_id: currentUserId }]
         };
@@ -156,11 +156,20 @@ export default function FeedContent() {
         await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', currentUserId);
       } else {
         await supabase.from('likes').insert({ post_id: postId, user_id: currentUserId });
+        // Notify the post author (skip if liking own post)
+        const post = posts.find(p => p.id === postId);
+        if (post?.user_id && post.user_id !== currentUserId) {
+          await supabase.from('notifications').insert({
+            receiver_id: post.user_id,
+            actor_id: currentUserId,
+            type: 'like',
+            content: 'liked your post',
+          });
+        }
       }
-    } catch (err) { 
+    } catch (err) {
       console.error(err);
-      // Revert to the true database state if the request fails
-      fetchPosts(); 
+      fetchPosts();
     }
   };
 
@@ -178,6 +187,16 @@ export default function FeedContent() {
       setNewComments({...newComments, [postId]: ""});
       fetchPosts();
       showToast("Comment added");
+      // Notify the post author (skip if commenting on own post)
+      const post = posts.find(p => p.id === postId);
+      if (post?.user_id && post.user_id !== currentUserId) {
+        await supabase.from('notifications').insert({
+          receiver_id: post.user_id,
+          actor_id: currentUserId,
+          type: 'comment',
+          content: commentText.length > 100 ? commentText.slice(0, 100) + '…' : commentText,
+        });
+      }
     } catch (err) { alert("Error adding comment: " + err.message); }
   };
 

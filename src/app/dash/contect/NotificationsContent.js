@@ -57,8 +57,8 @@ export default function NotificationsContent() {
     fetchNotifications();
 
     const channel = supabase.channel(`notif-feed-${currentUserId}`)
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'notifications' }, 
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `receiver_id=eq.${currentUserId}` },
         () => fetchNotifications()
       )
       .subscribe();
@@ -159,14 +159,6 @@ export default function NotificationsContent() {
     e.stopPropagation();
     if (!currentUserId) return;
 
-    // If the user who sent the request was deleted, gracefully clear the notification
-    if (!notif.actor_id) {
-      await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
-      return;
-    }
-
-    // If the user who sent the request was deleted, gracefully clear the notification
     if (!notif.actor_id) {
       await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
       setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));

@@ -1,4 +1,5 @@
-"use client";
+// This file is deprecated. Use page.tsx instead.
+// "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";

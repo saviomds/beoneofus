@@ -33,20 +33,18 @@
     scrollbar-width: none;
   }
 
-  /* Advanced Thin Scrollbar */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+  /* Mobile chat improvements */
+  .mobile-chat-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-    border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(59, 130, 246, 0.6); /* Subtle blue glow on hover */
+
+  /* Better touch targets on mobile */
+  @media (max-width: 768px) {
+    .mobile-touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
   }
   .custom-scrollbar {
     scrollbar-width: thin;

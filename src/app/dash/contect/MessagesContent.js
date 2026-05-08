@@ -1562,7 +1562,7 @@ export default function MessagesContent() {
       )}
 
       {/* ── MAIN LAYOUT ── */}
-      <div className="w-full flex h-[calc(100dvh-130px)] md:h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
+      <div className="w-full flex h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] md:h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
 
         {/* ════════════════════════════════════
             SIDEBAR
@@ -1573,7 +1573,7 @@ export default function MessagesContent() {
           }`}
         >
           {/* Header */}
-          <div className="pb-3 px-1">
+          <div className="pb-3 px-4 md:px-1">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
                 Messages
@@ -1635,7 +1635,7 @@ export default function MessagesContent() {
           </div>
 
           {/* Contact list */}
-          <div className="flex-1 overflow-y-auto space-y-1 pr-1 pb-2 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto space-y-1 pr-4 md:pr-1 pb-2 custom-scrollbar">
             {filteredContacts.length === 0 && (
               <div className="text-center py-12 px-4">
                 <MessageSquare
@@ -1676,7 +1676,7 @@ export default function MessagesContent() {
                     setShowMoreMenu(false);
                     setIsMobileChatOpen(true);
                   }}
-                  className={`group flex items-center gap-3 p-3 cursor-pointer rounded-2xl border transition-all duration-200 animate-in fade-in slide-in-from-left-2 ${
+                  className={`group flex items-center gap-3 p-4 md:p-3 cursor-pointer rounded-2xl border transition-all duration-200 animate-in fade-in slide-in-from-left-2 ${
                     isActive
                       ? "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/60"
                       : "bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 border-transparent hover:border-gray-200 dark:hover:border-gray-700/50"
@@ -1792,8 +1792,8 @@ export default function MessagesContent() {
         >
           {activeChat ? (
             <>
-              {/* Chat Header */}
-              <div className="pb-3 pt-1 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0 z-10 relative">
+              {/* Chat Header - Mobile optimized */}
+              <div className="pb-2 pt-1 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0 z-10 relative bg-white dark:bg-gray-950 md:bg-transparent px-4 md:px-0">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setIsMobileChatOpen(false)}
@@ -1943,7 +1943,7 @@ export default function MessagesContent() {
               {/* ── Messages ── */}
               <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto py-4 space-y-1 no-scrollbar scroll-smooth relative"
+                className="flex-1 overflow-y-auto py-4 px-4 md:px-1 space-y-1 no-scrollbar mobile-chat-scroll relative"
               >
                 {isLoadingMessages && (
                   <div className="flex justify-center py-8">
@@ -1971,7 +1971,7 @@ export default function MessagesContent() {
                       return (
                         <div
                           key={msg.id}
-                          className={`flex gap-2 px-1 ${
+                          className={`flex gap-3 px-4 md:px-1 ${
                             isMine ? "justify-end" : "justify-start"
                           } group/msg`}
                           onMouseEnter={() => setHoveredMsgId(msg.id)}
@@ -2006,7 +2006,7 @@ export default function MessagesContent() {
                           )}
 
                           <div
-                            className={`flex flex-col max-w-[78%] ${
+                            className={`flex flex-col max-w-[85%] md:max-w-[78%] ${
                               isMine ? "items-end" : "items-start"
                             }`}
                           >
@@ -2040,14 +2040,14 @@ export default function MessagesContent() {
 
                             {/* Bubble */}
                             <div
-                              className={`relative inline-block text-[13.5px] break-words rounded-2xl shadow-sm transition-all ${
+                              className={`relative inline-block text-[14px] break-words rounded-2xl shadow-sm transition-all ${
                                 msg.isSending ? "opacity-60" : ""
                               } ${
                                 !msg.text && msg.image_url
                                   ? "bg-transparent shadow-none"
                                   : isMine
-                                  ? "bg-blue-600 text-white rounded-br-sm"
-                                  : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-sm"
+                                  ? "bg-blue-600 text-white rounded-br-md"
+                                  : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-md"
                               }`}
                             >
                               {msg.image_url && (
@@ -2075,7 +2075,7 @@ export default function MessagesContent() {
                                 </div>
                               )}
                               {msg.text && (
-                                <p className="px-3.5 py-2.5 whitespace-pre-wrap leading-relaxed">
+                                <p className="px-4 py-3 whitespace-pre-wrap leading-relaxed">
                                   {msg.text}
                                 </p>
                               )}
@@ -2242,7 +2242,7 @@ export default function MessagesContent() {
 
                     {/* Typing indicator */}
                     {typingUsers[activeChat.id] && (
-                      <div className="flex gap-2 px-1 justify-start animate-in fade-in slide-in-from-bottom-2">
+                      <div className="flex gap-3 px-4 md:px-1 justify-start animate-in fade-in slide-in-from-bottom-2">
                         {/* FIX: proper relative wrapper for avatar */}
                         <div className="relative w-7 h-7 shrink-0 rounded-full overflow-hidden">
                           {activeChat.avatar_url ? (
@@ -2366,9 +2366,9 @@ export default function MessagesContent() {
                 )}
               </div>
 
-              {/* ── Input Area ── */}
+              {/* ── Input Area ── Mobile optimized */}
               <div
-                className={`pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:pb-0 shrink-0 transition-all duration-300 ${
+                className={`pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] md:pb-0 shrink-0 transition-all duration-300 bg-white dark:bg-gray-950 md:bg-transparent border-t border-gray-200 dark:border-gray-800 md:border-0 ${
                   connectionStatus === "accepted"
                     ? "opacity-100 translate-y-0"
                     : "opacity-30 translate-y-2 pointer-events-none"
@@ -2460,11 +2460,11 @@ export default function MessagesContent() {
 
                 <form
                   onSubmit={handleSendMessage}
-                  className={`flex items-end gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 ${
+                  className={`flex items-end gap-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 ${
                     replyingTo || imagePreview
                       ? "rounded-b-2xl rounded-t-none border-t-0"
                       : "rounded-2xl"
-                  } p-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all shadow-sm`}
+                  } p-3 mx-4 md:mx-0 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all shadow-sm`}
                 >
                   <input
                     type="file"
@@ -2479,7 +2479,7 @@ export default function MessagesContent() {
                       type="button"
                       onClick={handleSuggestReply}
                       disabled={isSuggesting}
-                      className="p-2 text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors disabled:opacity-40"
+                      className="p-2 text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors disabled:opacity-40 mobile-touch-target"
                       title="AI suggest reply"
                     >
                       {isSuggesting ? (
@@ -2494,7 +2494,7 @@ export default function MessagesContent() {
                     <button
                       type="button"
                       onClick={() => imageInputRef.current?.click()}
-                      className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mobile-touch-target"
                       title="Attach image"
                     >
                       <Paperclip size={17} />
@@ -2508,16 +2508,16 @@ export default function MessagesContent() {
                     onKeyDown={handleKeyDown}
                     placeholder={`Message @${activeChat.username}…`}
                     rows={1}
-                    className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 py-2.5 resize-none max-h-[120px] leading-relaxed"
+                    className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 py-2.5 resize-none max-h-[120px] leading-relaxed placeholder:text-gray-400 dark:placeholder:text-gray-500"
                   />
 
                   <div className="pb-0.5 shrink-0">
                     <button
                       type="submit"
                       disabled={!inputValue.trim() && !imageFile}
-                      className="w-9 h-9 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex items-center justify-center transition-all shadow-md shadow-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                      className="w-10 h-10 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex items-center justify-center transition-all shadow-md shadow-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
                     >
-                      <Send size={15} strokeWidth={2.5} />
+                      <Send size={16} strokeWidth={2.5} />
                     </button>
                   </div>
                 </form>

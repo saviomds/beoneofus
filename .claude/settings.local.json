@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Dell\\\\beoneofus\\\\src\\\\app\\\\api\\\\generate-lesson\")",
+      "Bash(Out-Null)"
+    ]
+  }
+}

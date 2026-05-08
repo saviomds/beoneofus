@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, Share2, ExternalLink, Award } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
@@ -653,12 +653,25 @@ export default function ProfileContent({ viewUserId }) {
             <div className="flex items-center gap-3 pt-4 sm:pt-0 z-10 pb-2 sm:pb-4">
               {isOwnProfile ? (
                 !isEditing && (
-                  <button 
-                    onClick={() => setIsEditing(true)} 
-                    className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-6 py-3 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
-                  >
-                    <Edit3 size={18} /> Edit Profile
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-6 py-3 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+                    >
+                      <Edit3 size={18} /> Edit Profile
+                    </button>
+                    {profile?.username && (
+                      <a
+                        href={`/u/${profile.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View public profile"
+                        className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-3 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+                      >
+                        <ExternalLink size={16} /> Public Profile
+                      </a>
+                    )}
+                  </div>
                 )
               ) : (
                 <>

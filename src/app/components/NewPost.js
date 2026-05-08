@@ -217,6 +217,12 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
           .insert({ ...postData, user_id: user.id });
         if (postError) throw postError;
         setSuccessMessage('Post Deployed!');
+        supabase.from('user_activity').insert({
+          user_id: user.id,
+          type: 'post_created',
+          content: `Published a post${postData.title ? ': ' + postData.title : ''}`,
+          metadata: {},
+        }).then(() => {});
       }
 
       // Reset Form only in create mode

@@ -1,9 +1,9 @@
 "use client";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
-  FileText, Plus, X, Loader2, Globe, Send, ChevronRight, ChevronLeft, LayoutTemplate, Trash2, Pencil,
-  BadgeCheck
+  FileText, Plus, X, Loader2, Globe, Send, ChevronRight, ChevronLeft, LayoutTemplate, Trash2, Pencil, Image as ImageIcon,
+  BadgeCheck, Check, AlertTriangle
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -17,12 +17,28 @@ export default function PagesContent() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   
+  const [pageImage, setPageImage] = useState(null);
+  const [pageImagePreview, setPageImagePreview] = useState(null);
+  const pageImageInputRef = useRef(null);
+  
   const [activePage, setActivePage] = useState(null);
   const [pagePosts, setPagePosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [postInput, setPostInput] = useState("");
   const [editingPostId, setEditingPostId] = useState(null);
   const [editContent, setEditContent] = useState("");
+  
+  const [pageToDelete, setPageToDelete] = useState(null);
+  const [postToDelete, setPostToDelete] = useState(null);
+
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
+
+  const showToast = (msg, type = "success") => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
   
   useEffect(() => {
     const init = async () => {
@@ -48,7 +64,7 @@ export default function PagesContent() {
       const { data, error } = await supabase.from('pages').select('*').order('created_at', { ascending: false });
       if (!error && data) setPages(data);
     } catch (err) {
-      console.error(err);
+      showToast("Error fetching pages: " + err.message, "error");
     } finally {
       setLoading(false);
     }
@@ -82,18 +98,89 @@ export default function PagesContent() {
     return () => { supabase.removeChannel(channel); };
   }, [activePage]);
 
+  const handlePageImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert("Image file must be under 5MB.");
+        return;
+      }
+      setPageImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPageImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreatePage = async (e) => {
     e.preventDefault();
     if (!title.trim() || !currentUserId) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase.from('pages').insert({ title, description, created_by: currentUserId });
+      let imageUrl = null;
+      if (pageImage) {
+        const fileExt = pageImage.name.split('.').pop();
+        const fileName = `page-${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('pages')
+          .upload(fileName, pageImage);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('pages')
+          .getPublicUrl(fileName);
+        imageUrl = urlData.publicUrl;
+      }
+
+      const { data, error } = await supabase
+        .from('pages')
+        .insert({ title, description, created_by: currentUserId, image_url: imageUrl })
+        .select('*')
+        .single();
       if (error) throw error;
       setIsModalOpen(false);
       setTitle("");
       setDescription("");
+      setPageImage(null);
+      setPageImagePreview(null);
+      if (pageImageInputRef.current) pageImageInputRef.current.value = "";
+
+      if (data) {
+        setPages((prev) => [data, ...prev]);
+      } else {
+        await fetchPages();
+      }
+      showToast("Page created successfully!");
     } catch (err) {
-      alert(err.message);
+      showToast("Error creating page: " + err.message, "error");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const confirmDeletePage = async () => {
+    if (!pageToDelete) return;
+
+    setIsProcessing(true);
+    try {
+      // Delete all posts associated with the page first
+      await supabase.from('page_posts').delete().eq('page_id', pageToDelete);
+
+      // Then delete the page itself
+      const { error } = await supabase.from('pages').delete().eq('id', pageToDelete);
+      if (error) throw error;
+
+      setPages(prev => prev.filter(p => p.id !== pageToDelete));
+      if (activePage?.id === pageToDelete) {
+        setActivePage(null);
+      }
+      showToast("Page deleted successfully!");
+      setPageToDelete(null);
+    } catch (err) {
+      showToast("Error deleting page: " + err.message, "error");
     } finally {
       setIsProcessing(false);
     }
@@ -118,21 +205,24 @@ export default function PagesContent() {
           return [newPost, ...prev];
         });
       }
+      showToast("Post added successfully!");
     } catch (err) {
-      alert(err.message);
+      showToast("Error creating post: " + err.message, "error");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleDeletePost = async (postId) => {
-    if (!confirm("Are you sure you want to delete this post?")) return;
+  const confirmDeletePost = async () => {
+    if (!postToDelete) return;
     try {
-      const { error } = await supabase.from('page_posts').delete().eq('id', postId);
+      const { error } = await supabase.from('page_posts').delete().eq('id', postToDelete);
       if (error) throw error;
-      setPagePosts(prev => prev.filter(p => p.id !== postId));
+      setPagePosts(prev => prev.filter(p => p.id !== postToDelete));
+      showToast("Post deleted successfully!");
+      setPostToDelete(null);
     } catch (err) {
-      alert(err.message);
+      showToast("Error deleting post: " + err.message, "error");
     }
   };
 
@@ -144,8 +234,9 @@ export default function PagesContent() {
       
       setPagePosts(prev => prev.map(p => p.id === postId ? { ...p, content: editContent } : p));
       setEditingPostId(null);
+      showToast("Post updated successfully!");
     } catch (err) {
-      alert(err.message);
+      showToast("Error updating post: " + err.message, "error");
     }
   };
 
@@ -238,7 +329,7 @@ export default function PagesContent() {
                         <Pencil size={16} />
                       </button>
                       <button 
-                        onClick={() => handleDeletePost(post.id)}
+                        onClick={() => setPostToDelete(post.id)}
                         className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
                         title="Delete Post"
                       >
@@ -312,23 +403,37 @@ export default function PagesContent() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {pages.map((page) => (
-                <div 
+                <div
                   key={page.id} 
                   onClick={() => setActivePage(page)}
-                  className="group flex flex-col gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 hover:border-purple-500/30 hover:shadow-md transition-all cursor-pointer"
+                  className="group flex flex-col gap-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-purple-500/30 hover:shadow-md transition-all cursor-pointer overflow-hidden"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl text-purple-600 dark:text-purple-400 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/40 transition-colors">
-                      <LayoutTemplate size={24} />
+                  {page.image_url && (
+                    <div className="relative h-32 w-full">
+                      <Image src={page.image_url} alt={page.title} layout="fill" className="object-cover" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">{page.title}</h3>
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
-                        <Globe size={10} /> Public Space
-                      </span>
+                  )}
+                  <div className="p-5 pt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl text-purple-600 dark:text-purple-400 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/40 transition-colors">
+                          <LayoutTemplate size={24} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">{page.title}</h3>
+                          <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                            <Globe size={10} /> Public Space
+                          </span>
+                        </div>
+                      </div>
+                      {page.created_by === currentUserId && (
+                        <button onClick={(e) => { e.stopPropagation(); setPageToDelete(page.id); }} className="p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete Page">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mt-4">{page.description}</p>
                   </div>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mt-2">{page.description}</p>
                 </div>
               ))}
             </div>
@@ -352,6 +457,25 @@ export default function PagesContent() {
             <form className="p-6 space-y-5" onSubmit={handleCreatePage}>
               <div className="space-y-4">
                 <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Cover Image (Optional)</label>
+                  <div onClick={() => pageImageInputRef.current?.click()} className={`h-32 rounded-xl flex items-center justify-center cursor-pointer transition-all overflow-hidden border-2 ${pageImagePreview ? 'border-purple-500/50' : 'bg-gray-50 dark:bg-gray-800 border-dashed border-gray-300 dark:border-gray-700 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-gray-500 dark:text-gray-400 hover:text-purple-500 dark:hover:text-purple-400'}`}>
+                    <input type="file" ref={pageImageInputRef} onChange={handlePageImageChange} accept="image/*" className="hidden" />
+                    {pageImagePreview ? (
+                      <div className="relative w-full h-full group">
+                        <Image src={pageImagePreview} alt="Preview" layout="fill" className="object-cover" />
+                        <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X size={16} className="text-white bg-red-500 hover:bg-red-600 rounded-full p-0.5" onClick={(e) => { e.stopPropagation(); setPageImage(null); setPageImagePreview(null); if(pageImageInputRef.current) pageImageInputRef.current.value = ""; }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <ImageIcon size={24} />
+                        <p className="text-xs font-bold mt-1">Click to upload</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Page Title</label>
                   <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Next.js Updates" className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all" />
                 </div>
@@ -372,6 +496,58 @@ export default function PagesContent() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* DELETE PAGE MODAL */}
+      {pageToDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setPageToDelete(null)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-2xl text-center animate-in fade-in zoom-in duration-150">
+            <Trash2 size={32} className="text-red-500 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Page?</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+              Are you sure you want to delete this page and all its posts? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setPageToDelete(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                Cancel
+              </button>
+              <button onClick={confirmDeletePage} disabled={isProcessing} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center">
+                {isProcessing ? <Loader2 size={16} className="animate-spin" /> : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE POST MODAL */}
+      {postToDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setPostToDelete(null)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-2xl text-center animate-in fade-in zoom-in duration-150">
+            <Trash2 size={32} className="text-red-500 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Post?</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+              Are you sure you want to delete this post? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setPostToDelete(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                Cancel
+              </button>
+              <button onClick={confirmDeletePost} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors flex items-center justify-center">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST POPUP */}
+      {toastMessage && (
+        <div className={`fixed bottom-10 right-10 z-[150] flex items-center gap-3 bg-white dark:bg-gray-900 border px-5 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-8 duration-300 max-w-md ${toastType === 'error' ? 'border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-500' : 'border-green-200 dark:border-green-900/50 text-green-600 dark:text-green-500'}`}>
+          {toastType === 'error' ? <AlertTriangle size={18} className="text-red-500 shrink-0" /> : <Check size={18} className="text-green-500 shrink-0" />}
+          <span className="text-sm font-bold tracking-tight">{toastMessage}</span>
         </div>
       )}
     </div>

@@ -526,6 +526,11 @@ export default function PagesHub() {
       icon: createForm.icon, created_by: userId, visibility: createForm.visibility,
     }).select().single();
     if (!error && newPage) {
+      await supabase.from("page_members").insert({
+        page_id: newPage.id,
+        user_id: userId,
+        role: "admin",
+      });
       setCreateForm({ title: "", description: "", icon: "📄", visibility: "public" });
       setShowCreate(false);
       // Optimistically add to list and select it; real-time will deduplicate

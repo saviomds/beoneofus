@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import {
   CheckCircle2, ArrowLeft, ArrowRight, BookOpen,
-  Loader2, Award, Share2, X, Menu, ChevronRight,
+  Loader2, Award, Share2, X, Menu, ChevronRight, GraduationCap,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import hljs from "highlight.js";
@@ -418,6 +418,31 @@ export default function LessonViewer() {
             </div>
 
             <p className="text-center text-[10px] text-gray-300 dark:text-gray-700 mt-6 select-none">Use ← → arrow keys to navigate between lessons</p>
+
+            {/* Final Exam CTA — shows when all lessons are complete */}
+            {lessons.length > 0 && completedLessons.size >= lessons.length && (
+              <div className="mt-10 relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 p-6 sm:p-8 shadow-2xl shadow-blue-700/30">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.12),_transparent)] pointer-events-none" />
+                <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                  <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
+                    <GraduationCap size={26} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-black text-lg mb-1">You finished all lessons!</p>
+                    <p className="text-blue-200 text-sm">Take the AI-graded final exam to earn your verified certificate for <strong className="text-white">{course?.title}</strong>.</p>
+                  </div>
+                  {certificate ? (
+                    <a href={`/certificate/${certificate.id}`} className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-white font-black rounded-xl shadow-lg shadow-amber-500/30 transition-all whitespace-nowrap shrink-0">
+                      <Award size={16} /> View Certificate
+                    </a>
+                  ) : (
+                    <button onClick={() => router.push(`/LearnPage/${courseId}/exam`)} className="flex items-center gap-2 px-5 py-3 bg-white text-blue-700 hover:bg-blue-50 font-black rounded-xl shadow-lg transition-all whitespace-nowrap shrink-0">
+                      <GraduationCap size={16} /> Take Final Exam
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </main>
         </div>
       </div>

@@ -47,19 +47,23 @@ function LessonContentReader({ content }: { content: string }) {
 
   return (
     <div
-      className="prose dark:prose-invert max-w-none
-                 [&_pre]:rounded-xl [&_pre]:p-4 [&_pre]:my-4 [&_pre]:shadow-lg [&_pre]:pt-12
-                 [&_h1]:text-2xl [&_h1]:font-black [&_h1]:mb-4 [&_h1]:text-gray-900 dark:[&_h1]:text-gray-100
-                 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:text-gray-900 dark:[&_h2]:text-gray-100
-                 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:text-gray-900 dark:[&_h3]:text-gray-100
-                 [&_p]:text-gray-600 [&_p]:dark:text-gray-300 [&_p]:mb-4 [&_p]:leading-relaxed
+      className="prose dark:prose-invert max-w-none break-words
+                 [&_pre]:rounded-xl [&_pre]:p-4 [&_pre]:my-4 [&_pre]:shadow-lg [&_pre]:pt-12 [&_pre]:overflow-x-auto [&_pre]:max-w-full
+                 [&_code]:break-words [&_code]:whitespace-pre-wrap
+                 [&_h1]:text-xl [&_h1]:sm:text-2xl [&_h1]:font-black [&_h1]:mb-4 [&_h1]:text-gray-900 dark:[&_h1]:text-gray-100 [&_h1]:leading-tight
+                 [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:text-gray-900 dark:[&_h2]:text-gray-100 [&_h2]:leading-tight
+                 [&_h3]:text-base [&_h3]:sm:text-lg [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:text-gray-900 dark:[&_h3]:text-gray-100
+                 [&_p]:text-gray-600 [&_p]:dark:text-gray-300 [&_p]:mb-4 [&_p]:leading-relaxed [&_p]:break-words
                  [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4
                  [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4
-                 [&_li]:mb-1.5 [&_li]:text-gray-600 [&_li]:dark:text-gray-300
+                 [&_li]:mb-1.5 [&_li]:text-gray-600 [&_li]:dark:text-gray-300 [&_li]:break-words
                  [&_strong]:font-bold [&_strong]:text-gray-900 [&_strong]:dark:text-gray-100
                  [&_blockquote]:border-l-4 [&_blockquote]:border-blue-500 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-gray-500
-                 [&_img]:rounded-xl [&_img]:max-w-full [&_img]:my-4
-                 [&_a]:text-blue-600 [&_a]:underline [&_a]:dark:text-blue-400"
+                 [&_img]:rounded-xl [&_img]:max-w-full [&_img]:w-full [&_img]:h-auto [&_img]:my-4
+                 [&_table]:w-full [&_table]:overflow-x-auto [&_table]:block [&_table]:text-sm
+                 [&_td]:px-3 [&_td]:py-2 [&_td]:border [&_td]:border-gray-200 dark:[&_td]:border-gray-700
+                 [&_th]:px-3 [&_th]:py-2 [&_th]:border [&_th]:border-gray-200 dark:[&_th]:border-gray-700 [&_th]:font-bold [&_th]:bg-gray-50 dark:[&_th]:bg-gray-800
+                 [&_a]:text-blue-600 [&_a]:underline [&_a]:dark:text-blue-400 [&_a]:break-words"
       dangerouslySetInnerHTML={{ __html: content || "" }}
     />
   );
@@ -319,7 +323,7 @@ export default function LessonViewer() {
         <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-gray-100 pb-24">
+      <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-gray-100 pb-24 overflow-x-hidden">
         {/* Navbar */}
         <nav className="sticky top-0 w-full border-b border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl z-50">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
@@ -343,7 +347,7 @@ export default function LessonViewer() {
           </div>
         </nav>
 
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 min-w-0">
           {/* Sidebar */}
           <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 p-4 pt-5 overflow-y-auto transition-transform duration-300 shadow-2xl lg:static lg:w-auto lg:bg-transparent lg:border-0 lg:p-0 lg:shadow-none lg:block lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
             <div className="flex items-center justify-between mb-4 lg:hidden">
@@ -376,39 +380,39 @@ export default function LessonViewer() {
           </aside>
 
           {/* Main content */}
-          <main>
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-400 mb-4">
-              <span className="uppercase tracking-wide">{course?.category ?? "Course"}</span>
-              <ChevronRight size={12} />
-              <span>Lesson {currentIndex + 1} of {lessons.length}</span>
+          <main className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold text-gray-400 mb-4">
+              <span className="uppercase tracking-wide truncate max-w-[120px] sm:max-w-none">{course?.category ?? "Course"}</span>
+              <ChevronRight size={12} className="shrink-0" />
+              <span className="shrink-0">Lesson {currentIndex + 1} of {lessons.length}</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight leading-tight mb-8">{currentLesson.title}</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight leading-tight mb-8 break-words">{currentLesson.title}</h1>
             <LessonContentReader content={currentLesson.content} />
 
             <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+              <p className="text-xs text-gray-400 dark:text-gray-500 font-medium min-w-0">
                 {isCompleted ? (
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1"><CheckCircle2 size={13} /> Progress saved to your account</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 flex-wrap"><CheckCircle2 size={13} className="shrink-0" /> Progress saved to your account</span>
                 ) : "Mark as done to save your progress"}
               </p>
               <button onClick={handleMarkComplete} disabled={isCompleted || isMarking}
-                className={`flex items-center gap-2 px-6 py-3 font-bold rounded-xl transition-all shadow-sm shrink-0 ${isCompleted ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 cursor-default" : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 active:scale-95"}`}
+                className={`flex items-center justify-center gap-2 px-6 py-3 font-bold rounded-xl transition-all shadow-sm shrink-0 w-full sm:w-auto ${isCompleted ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 cursor-default" : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 active:scale-95"}`}
               >
                 {isCompleted ? <><CheckCircle2 size={18} /> Completed</> : isMarking ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : <><CheckCircle2 size={18} /> Mark Complete</>}
               </button>
             </div>
 
-            <div className="flex items-center justify-between mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 gap-4">
+            <div className="flex items-stretch justify-between mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 gap-3">
               {prevLesson ? (
-                <button onClick={() => router.push(`/LearnPage/${courseId}?lessonId=${prevLesson.id}`)} className="group flex flex-col items-start gap-1 text-left min-w-0 max-w-[48%]">
-                  <span className="flex items-center gap-1 text-xs font-bold text-gray-400 uppercase tracking-wider group-hover:text-blue-500 transition-colors"><ArrowLeft size={13} /> Previous</span>
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate w-full">{prevLesson.title}</span>
+                <button onClick={() => router.push(`/LearnPage/${courseId}?lessonId=${prevLesson.id}`)} className="group flex flex-col items-start gap-1 text-left min-w-0 flex-1 max-w-[48%]">
+                  <span className="flex items-center gap-1 text-xs font-bold text-gray-400 uppercase tracking-wider group-hover:text-blue-500 transition-colors shrink-0"><ArrowLeft size={13} className="shrink-0" /> Previous</span>
+                  <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 w-full">{prevLesson.title}</span>
                 </button>
               ) : <div />}
               {nextLesson ? (
-                <button onClick={() => router.push(`/LearnPage/${courseId}?lessonId=${nextLesson.id}`)} className="group flex flex-col items-end gap-1 text-right min-w-0 max-w-[48%]">
-                  <span className="flex items-center gap-1 text-xs font-bold text-gray-400 uppercase tracking-wider group-hover:text-blue-500 transition-colors">Next <ArrowRight size={13} /></span>
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate w-full">{nextLesson.title}</span>
+                <button onClick={() => router.push(`/LearnPage/${courseId}?lessonId=${nextLesson.id}`)} className="group flex flex-col items-end gap-1 text-right min-w-0 flex-1 max-w-[48%]">
+                  <span className="flex items-center gap-1 text-xs font-bold text-gray-400 uppercase tracking-wider group-hover:text-blue-500 transition-colors shrink-0">Next <ArrowRight size={13} className="shrink-0" /></span>
+                  <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 w-full">{nextLesson.title}</span>
                 </button>
               ) : <div />}
             </div>

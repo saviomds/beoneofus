@@ -1,8 +1,5 @@
 @import "tailwindcss";
 
-/* Bootstrap grid only — no reboot/reset so Tailwind preflight stays in charge */
-@import "bootstrap/dist/css/bootstrap-grid.min.css";
-
 @custom-variant dark (&:is(.dark, .dark *));
 
 @layer base {

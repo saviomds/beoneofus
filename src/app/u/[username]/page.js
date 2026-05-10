@@ -84,7 +84,7 @@ export default function PublicProfilePage() {
         supabase.from("user_course_progress").select("id", { count: "exact", head: true })
           .eq("user_id", profileData.id).eq("status", "completed"),
         supabase.from("user_certificates")
-          .select("id, issued_at, courses(title, category, level)")
+          .select("id, issued_at, course_id, courses!user_certificates_course_id_fkey(title, category, level)")
           .eq("user_id", profileData.id)
           .order("issued_at", { ascending: false }).limit(6),
         supabase.from("posts").select("id", { count: "exact", head: true })
@@ -102,7 +102,16 @@ export default function PublicProfilePage() {
         posts: postsRes.count ?? 0,
       });
 
-      if (certsRes.data) setCertificates(certsRes.data);
+      if (certsRes.data && !certsRes.error) {
+        setCertificates(certsRes.data);
+      } else if (certsRes.error) {
+        // FK name mismatch — fall back to plain join
+        const { data: certsRetry } = await supabase.from("user_certificates")
+          .select("id, issued_at, course_id, courses(title, category, level)")
+          .eq("user_id", profileData.id)
+          .order("issued_at", { ascending: false }).limit(6);
+        if (certsRetry) setCertificates(certsRetry);
+      }
       if (recentPostsRes.data) setRecentPosts(recentPostsRes.data);
 
       if (session && profileData.id !== session.user.id) {

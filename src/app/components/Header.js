@@ -400,78 +400,72 @@ export default function Header({ setActiveTab }) {
     <>
       {/* ══ DESKTOP HEADER ══ */}
       <header className={`
-        hidden md:flex flex-col gap-2
-        px-4 lg:px-6 py-2.5
+        hidden md:flex flex-col
+        px-4 lg:px-6 pt-2.5 pb-2
         border-b border-gray-200 dark:border-gray-800
-        bg-white/90 dark:bg-gray-900/90 backdrop-blur-md
+        bg-white/95 dark:bg-gray-900/95 backdrop-blur-md
         sticky top-0 z-40
         transition-transform duration-300 ease-in-out
         ${showHeader ? 'translate-y-0' : '-translate-y-full'}
       `}>
-        {/* Single row: nav pills + search */}
-        <div className="flex items-center gap-3 w-full min-w-0">
-
-          {/* Nav pills — horizontal scroll, never wrap */}
-          <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0">
-            {mounted && (
-              <button
-                onClick={() => {
-                  const cur = theme === 'system' ? systemTheme : theme;
-                  setTheme(cur === 'dark' ? 'light' : 'dark');
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all whitespace-nowrap"
-                title="Toggle Theme"
-              >
-                {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={14} /> : <Moon size={14} />}
-              </button>
-            )}
+        {/* Row 1: nav pills + theme toggle */}
+        <div className="flex items-center justify-between gap-2 w-full mb-2">
+          <nav className="flex items-center gap-0.5 overflow-x-auto no-scrollbar">
             <button
               id="header-btn-jobs"
               onClick={() => setShowJobsModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all whitespace-nowrap"
             >
-              <Briefcase size={14} /> Jobs
+              <Briefcase size={13} /> Jobs
             </button>
             <button
               id="header-btn-network"
               onClick={() => setShowNetworkModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all whitespace-nowrap"
             >
-              <Users size={14} /> Network
+              <Users size={13} /> Network
             </button>
             <button
               id="header-btn-discuss"
               onClick={() => setShowQuickView('discuss')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all whitespace-nowrap"
             >
-              <MessageCircle size={14} /> Discuss
+              <MessageCircle size={13} /> Discuss
             </button>
             <button
               id="header-btn-discover"
               onClick={() => setShowQuickView('discover')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all whitespace-nowrap"
             >
-              <Compass size={14} /> Discover
+              <Compass size={13} /> Discover
             </button>
           </nav>
 
-          {/* Divider */}
-          <div className="h-5 w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
+          {mounted && (
+            <button
+              onClick={() => { const cur = theme === 'system' ? systemTheme : theme; setTheme(cur === 'dark' ? 'light' : 'dark'); }}
+              className="shrink-0 p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
+              title="Toggle Theme"
+            >
+              {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+          )}
+        </div>
 
-          {/* Search bar — grows to fill remaining space */}
-          <div className="relative flex-1 min-w-0 max-w-md" ref={searchRef}>
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={14} className="text-gray-400 dark:text-gray-500" />
-            </div>
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onKeyDown={handleSearchKeyDown}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-9 pr-10 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 focus:bg-white dark:focus:bg-gray-900 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-              placeholder="Search beoneofus…"
-            />
+        {/* Row 2: full-width search */}
+        <div className="relative w-full" ref={searchRef}>
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+            <Search size={14} className="text-gray-400 dark:text-gray-500" />
+          </div>
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onKeyDown={handleSearchKeyDown}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="block w-full pl-10 pr-12 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/80 focus:bg-white dark:focus:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            placeholder="Search people, posts, groups…"
+          />
             {!searchQuery && keyboardShortcut && (
               <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none">
                 <kbd className="inline-flex items-center rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-1 py-0.5 font-mono text-[9px] font-bold text-gray-400 dark:text-gray-500">
@@ -572,7 +566,6 @@ export default function Header({ setActiveTab }) {
               )}
             </div>
           )}
-          </div>
         </div>
       </header>
 

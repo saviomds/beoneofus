@@ -361,7 +361,7 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [selectedUserId, setSelectedUserId] = useState(null);
 
   // Stats
-  const [stats, setStats] = useState({ total: null, founders: null, members: null, verified: null, pending: null, admins: null });
+  const [stats, setStats] = useState({ total: null, founders: null, members: null, verified: null, pending: null, admins: null, premium: null, premiumReq: null });
   const [statsLoading, setStatsLoading] = useState(false);
 
   // Requests
@@ -375,6 +375,15 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [usersPage, setUsersPage] = useState(0);
   const [hasMoreUsers, setHasMoreUsers] = useState(true);
   const USERS_PER_PAGE = 50;
+
+  // Premium subscriptions
+  const [premiumSubs, setPremiumSubs] = useState([]);
+  const [premiumSubsLoading, setPremiumSubsLoading] = useState(false);
+  const [premiumFilter, setPremiumFilter] = useState("pending_review");
+  const [reviewingSubId, setReviewingSubId] = useState(null);
+  const [reviewNote, setReviewNote] = useState("");
+  const [aiReviewing, setAiReviewing] = useState(null); // subId being AI reviewed
+  const [premiumActionLoading, setPremiumActionLoading] = useState(null);
 
   // AI Logs
   const [aiLogs, setAiLogs] = useState([]);
@@ -429,13 +438,15 @@ const AdminPanelTool = ({ currentUserId }) => {
     if (!isAdmin) return;
     setStatsLoading(true);
     try {
-      const [total, founders, members, verified, pending, admins] = await Promise.all([
+      const [total, founders, members, verified, pending, admins, premium, premiumReq] = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact", head: true }),
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "founder"),
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "member"),
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_verified", true),
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("verification_status", "pending"),
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_admin", true),
+        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_premium", true),
+        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("premium_requested", true),
       ]);
       setStats({
         total: total.count ?? 0,
@@ -444,6 +455,8 @@ const AdminPanelTool = ({ currentUserId }) => {
         verified: verified.count ?? 0,
         pending: pending.count ?? 0,
         admins: admins.count ?? 0,
+        premium: premium.count ?? 0,
+        premiumReq: premiumReq.count ?? 0,
       });
     } finally {
       setStatsLoading(false);
@@ -461,7 +474,7 @@ const AdminPanelTool = ({ currentUserId }) => {
     const to = from + USERS_PER_PAGE - 1;
 
     const { data, error } = await supabase.from("profiles")
-      .select("id, username, avatar_url, status, is_verified, is_admin, role")
+      .select("id, username, avatar_url, status, is_verified, is_admin, is_premium, premium_requested, role")
       .range(from, to);
     if (!error) {
       if (append) {
@@ -499,6 +512,49 @@ const AdminPanelTool = ({ currentUserId }) => {
       }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [isAdmin]);
+
+  // ── Premium Subscriptions ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (adminTab !== "premium_subs" || !isAdmin) return;
+    const fetch = async () => {
+      setPremiumSubsLoading(true);
+      const { data } = await supabase
+        .from("premium_subscriptions")
+        .select("*, profiles!premium_subscriptions_user_id_fkey(id, username, avatar_url, status, is_verified, is_premium)")
+        .order("created_at", { ascending: false });
+      if (data) setPremiumSubs(data);
+      setPremiumSubsLoading(false);
+    };
+    fetch();
+  }, [adminTab, isAdmin]);
+
+  const handlePremiumAction = async (subId, action, note = "") => {
+    setPremiumActionLoading(`${subId}-${action}`);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/premium/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscriptionId: subId, action, adminId: session.user.id, note }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      if (action === "ai_review") {
+        setPremiumSubs(prev => prev.map(s => s.id === subId ? { ...s, ai_review: json.aiReview } : s));
+        setAiReviewing(null);
+        showToast("AI review complete.");
+      } else {
+        setPremiumSubs(prev => prev.map(s => s.id === subId ? { ...s, status: json.status, review_note: note } : s));
+        setReviewingSubId(null);
+        setReviewNote("");
+        showToast(action === "accept" ? "Premium activated for user." : "Request declined.");
+      }
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setPremiumActionLoading(null);
+    }
+  };
 
   // ── AI Logs ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -614,6 +670,18 @@ const AdminPanelTool = ({ currentUserId }) => {
     } catch (err) { showToast(err.message, "error"); }
   };
 
+  const handleTogglePremium = async (userId, isPrem, username) => {
+    if (!confirm(`${isPrem ? "Revoke" : "Grant"} premium for @${username}?`)) return;
+    try {
+      const { error } = await supabase.from("profiles")
+        .update({ is_premium: !isPrem, premium_requested: false })
+        .eq("id", userId);
+      if (error) throw error;
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_premium: !isPrem, premium_requested: false } : u));
+      showToast(`Premium ${isPrem ? "revoked" : "granted"} for @${username}.`);
+    } catch (err) { showToast(err.message, "error"); }
+  };
+
   const handleDeleteUser = async (userId, username) => {
     if (!confirm(`Permanently delete @${username}?`)) return;
     try {
@@ -723,13 +791,14 @@ const AdminPanelTool = ({ currentUserId }) => {
   };
 
   const TABS = [
-    { id: "overview", label: "Overview", icon: BarChart3 },
-    { id: "requests", label: "Requests", icon: Bell },
-    { id: "users", label: "Users", icon: Users },
-    { id: "ai_logs", label: "AI Logs", icon: Bot },
-    { id: "applications", label: "Applications", icon: Briefcase },
-    { id: "founder_apps", label: "Founder Apps", icon: Crown },
-    { id: "tasks", label: "Tasks", icon: ClipboardList },
+    { id: "overview",     label: "Overview",     icon: BarChart3   },
+    { id: "requests",     label: "Requests",     icon: Bell        },
+    { id: "premium_subs", label: "Premium",      icon: Crown       },
+    { id: "users",        label: "Users",        icon: Users       },
+    { id: "ai_logs",      label: "AI Logs",      icon: Bot         },
+    { id: "applications", label: "Applications", icon: Briefcase   },
+    { id: "founder_apps", label: "Founder Apps", icon: Crown       },
+    { id: "tasks",        label: "Tasks",        icon: ClipboardList },
   ];
 
   if (loading) return <div className="p-16 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={24} /></div>;
@@ -756,6 +825,11 @@ const AdminPanelTool = ({ currentUserId }) => {
                 {requests.length}
               </span>
             )}
+            {tab.id === "premium_subs" && premiumSubs.filter(s => s.status === "pending_review").length > 0 && (
+              <span className="w-4 h-4 rounded-full bg-amber-500 text-[9px] font-black text-white flex items-center justify-center ml-0.5">
+                {premiumSubs.filter(s => s.status === "pending_review").length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -777,9 +851,11 @@ const AdminPanelTool = ({ currentUserId }) => {
               <StatCard icon={Users}      label="Total Users"   value={stats.total}    color="blue"   loading={statsLoading} sub="All registered nodes" />
               <StatCard icon={Crown}      label="Founders"      value={stats.founders} color="amber"  loading={statsLoading} sub="Founder-role accounts" />
               <StatCard icon={Users}      label="Members"       value={stats.members}  color="violet" loading={statsLoading} sub="Standard members" />
-              <StatCard icon={BadgeCheck} label="Verified"      value={stats.verified} color="emerald" loading={statsLoading} sub="Badge-verified" />
-              <StatCard icon={Clock}      label="Pending"       value={stats.pending}  color="amber"  loading={statsLoading} sub="Awaiting review" />
-              <StatCard icon={Shield}     label="Admins"        value={stats.admins}   color="rose"   loading={statsLoading} sub="Admin accounts" />
+              <StatCard icon={BadgeCheck} label="Verified"      value={stats.verified}    color="emerald" loading={statsLoading} sub="Badge-verified" />
+              <StatCard icon={Clock}      label="Pending"       value={stats.pending}     color="amber"  loading={statsLoading} sub="Awaiting review" />
+              <StatCard icon={Shield}     label="Admins"        value={stats.admins}      color="rose"   loading={statsLoading} sub="Admin accounts" />
+              <StatCard icon={Crown}      label="Premium"       value={stats.premium}     color="amber"  loading={statsLoading} sub="Active premium members" />
+              <StatCard icon={Crown}      label="Prem. Requests" value={stats.premiumReq} color="violet" loading={statsLoading} sub="Awaiting premium grant" />
             </div>
 
             {/* Verification rate */}
@@ -878,6 +954,8 @@ const AdminPanelTool = ({ currentUserId }) => {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="text-xs font-bold text-gray-900 dark:text-white hover:text-blue-500 dark:hover:text-blue-400 transition-colors">@{user.username}</p>
                             {user.is_verified && <BadgeCheck size={12} className="text-blue-500 dark:text-blue-400" />}
+                            {user.is_premium && <Crown size={12} className="text-amber-500 dark:text-amber-400" />}
+                            {user.premium_requested && !user.is_premium && <span className="text-[9px] font-black bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 px-1.5 py-0.5 rounded-full">Req</span>}
                             {user.is_admin && <Badge color="amber">Admin</Badge>}
                             {user.role && <Badge color="gray">{user.role}</Badge>}
                           </div>
@@ -885,6 +963,10 @@ const AdminPanelTool = ({ currentUserId }) => {
                         </div>
                       </div>
                       <div className="flex gap-1.5 shrink-0 ml-3">
+                        <button onClick={() => handleTogglePremium(user.id, user.is_premium, user.username)} title="Toggle Premium"
+                          className={`p-2 rounded-xl transition-all border text-xs ${user.is_premium ? "bg-amber-50 dark:bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-200 dark:border-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:text-amber-500 dark:hover:text-amber-400"}`}>
+                          <Crown size={14} />
+                        </button>
                         <button onClick={() => handleToggleAdmin(user.id, user.is_admin, user.username)} title="Toggle Admin"
                           className={`p-2 rounded-xl transition-all border text-xs ${user.is_admin ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:text-amber-500 dark:hover:text-amber-400"}`}>
                           <ShieldCheck size={14} />
@@ -909,6 +991,180 @@ const AdminPanelTool = ({ currentUserId }) => {
               )}
                 </div>
               )}
+          </div>
+        )}
+
+        {/* ── PREMIUM SUBSCRIPTIONS ── */}
+        {adminTab === "premium_subs" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-gray-900 dark:text-white font-black">Premium Requests</h3>
+              <div className="flex gap-1 flex-wrap">
+                {["pending_review", "active", "declined", "all"].map(f => (
+                  <button key={f} onClick={() => setPremiumFilter(f)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all ${
+                      premiumFilter === f
+                        ? "bg-amber-500 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    }`}>
+                    {f === "pending_review" ? "Pending" : f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {premiumSubsLoading ? (
+              <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-amber-500" size={22} /></div>
+            ) : (
+              (() => {
+                const filtered = premiumSubs.filter(s =>
+                  premiumFilter === "all" ? true : s.status === premiumFilter
+                );
+                if (filtered.length === 0) return (
+                  <div className="py-12 text-center text-gray-400 dark:text-gray-600 text-sm">
+                    No {premiumFilter === "all" ? "" : premiumFilter.replace("_", " ")} subscriptions.
+                  </div>
+                );
+                return filtered.map(sub => {
+                  const isReviewing = reviewingSubId === sub.id;
+                  const aiLoading   = aiReviewing === sub.id;
+                  return (
+                    <div key={sub.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
+                      {/* Sub header */}
+                      <div className="flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-800">
+                        <div className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center font-bold text-gray-500 shrink-0">
+                          {sub.profiles?.avatar_url
+                            ? <Image src={sub.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
+                            : sub.profiles?.username?.substring(0, 2)?.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white truncate">@{sub.profiles?.username || "unknown"}</p>
+                          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                              {sub.plan} · ${(sub.amount / 100).toFixed(2)} · {new Date(sub.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          {/* Status badge */}
+                          {(() => {
+                            const S = {
+                              pending_review: { cls: "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20", label: "Pending Review" },
+                              active:         { cls: "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20", label: "Active" },
+                              declined:       { cls: "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20", label: "Declined" },
+                              pending_payment:{ cls: "bg-gray-100 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700", label: "Awaiting Payment" },
+                              cancelled:      { cls: "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700", label: "Cancelled" },
+                            };
+                            const m = S[sub.status] || S.cancelled;
+                            return <span className={`text-[9px] font-black px-2 py-1 rounded-lg border ${m.cls}`}>{m.label}</span>;
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* AI Review section */}
+                      {(sub.status === "pending_review" || sub.ai_review) && (
+                        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+                          {sub.ai_review?.text ? (
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5 flex items-center gap-1">
+                                <Bot size={11} /> AI Pre-Screening
+                                <span className={`ml-auto px-2 py-0.5 rounded-full text-[9px] font-black ${
+                                  sub.ai_review.recommendation === "approve"
+                                    ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                                    : "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                                }`}>
+                                  {sub.ai_review.recommendation === "approve" ? "Recommend Approve" : "Review Carefully"}
+                                </span>
+                              </p>
+                              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{sub.ai_review.text.replace(/RECOMMENDATION:.*/, "").trim()}</p>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { setAiReviewing(sub.id); handlePremiumAction(sub.id, "ai_review"); }}
+                              disabled={aiLoading || premiumActionLoading?.includes(sub.id)}
+                              className="flex items-center gap-2 text-[11px] font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors disabled:opacity-50"
+                            >
+                              {aiLoading ? <Loader2 size={12} className="animate-spin" /> : <Bot size={12} />}
+                              {aiLoading ? "AI is reviewing…" : "Run AI Pre-Screening"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Review note input */}
+                      {isReviewing && (
+                        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 space-y-2">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Note to user (optional)</p>
+                          <textarea
+                            value={reviewNote}
+                            onChange={e => setReviewNote(e.target.value)}
+                            placeholder="Add a note for the user…"
+                            rows={2}
+                            className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 resize-none transition-colors"
+                          />
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      {sub.status === "pending_review" && (
+                        <div className="flex items-center gap-2 px-4 py-3 flex-wrap">
+                          {!isReviewing ? (
+                            <>
+                              <button
+                                onClick={() => setReviewingSubId(sub.id)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold rounded-xl transition-all active:scale-95"
+                              >
+                                <CheckCircle2 size={13} /> Review & Decide
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handlePremiumAction(sub.id, "accept", reviewNote)}
+                                disabled={!!premiumActionLoading}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all active:scale-95"
+                              >
+                                {premiumActionLoading === `${sub.id}-accept` ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                Accept
+                              </button>
+                              <button
+                                onClick={() => handlePremiumAction(sub.id, "decline", reviewNote)}
+                                disabled={!!premiumActionLoading}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-400 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all active:scale-95"
+                              >
+                                {premiumActionLoading === `${sub.id}-decline` ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+                                Decline
+                              </button>
+                              <button
+                                onClick={() => { setReviewingSubId(null); setReviewNote(""); }}
+                                className="px-3 py-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-xs font-bold rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          )}
+                          {sub.review_note && (
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto italic truncate max-w-[160px]">"{sub.review_note}"</p>
+                          )}
+                        </div>
+                      )}
+                      {sub.status === "active" && (
+                        <div className="px-4 py-2.5 flex items-center gap-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                          <CheckCircle2 size={13} /> Approved and active
+                          {sub.review_note && <span className="text-gray-400 dark:text-gray-500 font-normal">· "{sub.review_note}"</span>}
+                        </div>
+                      )}
+                      {sub.status === "declined" && (
+                        <div className="px-4 py-2.5 flex items-center gap-2 text-[11px] text-red-600 dark:text-red-400 font-bold">
+                          <XCircle size={13} /> Declined
+                          {sub.review_note && <span className="text-gray-400 dark:text-gray-500 font-normal">· "{sub.review_note}"</span>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()
+            )}
           </div>
         )}
 

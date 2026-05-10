@@ -34,6 +34,7 @@ export default function AdminCoursesPage() {
   const [toast, setToast] = useState(null);
   const [userId, setUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const [currentUsername, setCurrentUsername] = useState("@system");
   const [courses, setCourses] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -147,11 +148,12 @@ export default function AdminCoursesPage() {
         fetchProgress(session.user.id);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("is_admin, username")
+          .select("is_admin, is_premium, username")
           .eq("id", session.user.id)
           .single();
         if (isMounted) {
           if (profile?.is_admin) setIsAdmin(true);
+          if (profile?.is_premium || profile?.is_admin) setIsPremium(true);
           if (profile?.username) {
             const uname = `@${profile.username}`;
             setCurrentUsername(uname);
@@ -601,6 +603,7 @@ export default function AdminCoursesPage() {
           isDuplicating={isDuplicating}
           onClearFilters={clearFilters}
           userProgress={userProgress}
+          isPremium={isPremium}
         />
       </main>
 
@@ -609,6 +612,7 @@ export default function AdminCoursesPage() {
         course={selectedCourse}
         onClose={() => setSelectedCourse(null)}
         isAdmin={isAdmin}
+        isPremium={isPremium}
         handleEdit={handleEdit}
         handleDelete={handleDelete}
         userId={userId}

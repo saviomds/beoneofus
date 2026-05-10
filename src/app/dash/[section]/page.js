@@ -35,6 +35,7 @@ const contentMap = {
   settings:      dynamic(() => import('../contect/SettingsContent'),      { loading: () => <TabSkeleton /> }),
   profile:       dynamic(() => import('../contect/ProfileContent'),       { loading: () => <TabSkeleton /> }),
   docs:          dynamic(() => import('../contect/DocsContent'),          { loading: () => <TabSkeleton /> }),
+  premium:       dynamic(() => import('../contect/PremiumContent'),       { loading: () => <TabSkeleton /> }),
 };
 
 export default function DashSection() {

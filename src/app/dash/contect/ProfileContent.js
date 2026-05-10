@@ -6,6 +6,7 @@ import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, Al
 import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
+import PremiumBadge from "../../components/PremiumBadge";
 
 // --- Image Cropping Helper ---
 const createImage = (url) =>
@@ -848,6 +849,7 @@ export default function ProfileContent({ viewUserId }) {
               <h2 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white flex items-center gap-3 tracking-tight">
                 {profile?.username || 'Unknown User'}
                 {profile?.is_verified && <VerifiedBadge size={32} />}
+                {(profile?.is_premium || profile?.is_admin) && <PremiumBadge size={28} />}
               </h2>
               <p className="text-gray-600 dark:text-gray-300 text-lg sm:text-xl mt-2 font-medium max-w-2xl leading-relaxed">
                 {profile?.status || 'Software Engineer'}

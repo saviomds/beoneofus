@@ -1,9 +1,9 @@
 "use client";
-import { CheckSquare, Square, BookOpen, Clock, Star, PlayCircle, Eye, Copy, Pencil, Trash2, Search } from "lucide-react";
+import { CheckSquare, Square, BookOpen, Clock, Star, PlayCircle, Eye, Copy, Pencil, Trash2, Search, Lock, Crown } from "lucide-react";
 import { CATEGORY_COLORS, LEVEL_COLORS } from "./constants";
 
 export default function CourseList({
-  courses, visibleCourses, isAdmin, selectedIds, toggleSelect, toggleSelectAll, isAllSelected, isPartialSelected,
+  courses, visibleCourses, isAdmin, isPremium, selectedIds, toggleSelect, toggleSelectAll, isAllSelected, isPartialSelected,
   setSelectedCourse, handleEdit, handleDuplicate, handleDelete, isDuplicating,
   onClearFilters, userProgress
 }) {
@@ -80,6 +80,11 @@ export default function CourseList({
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <h3 className="font-bold text-gray-900 dark:text-gray-100 truncate">{course.title}</h3>
+                    {course.level === "Advanced" && !isPremium && !isAdmin && (
+                      <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 shrink-0">
+                        <Crown size={9} fill="currentColor" strokeWidth={1.5} stroke="white" /> Premium
+                      </span>
+                    )}
                     {isNewCourse(course) && (
                       <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 uppercase tracking-wider shrink-0">
                         New

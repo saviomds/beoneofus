@@ -2,7 +2,7 @@
 
 import {
   Home, Users, MessageSquare, Bookmark, FileText,
-  MoreHorizontal, Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus
+  MoreHorizontal, Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { supabase } from '../supabaseClient';
 import { useRouter, usePathname } from 'next/navigation';
 import VerifiedBadge from './VerifiedBadge';
+import PremiumBadge from './PremiumBadge';
 
 const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index }) => (
   <div
@@ -364,6 +365,7 @@ export default function Sidebar({ onClose }) {
     { id: 'pages', icon: FileText, label: 'Pages' },
     { id: 'messages', icon: MessageSquare, label: 'Messages', badge: unreadMessages },
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks' },
+    { id: 'premium', icon: Crown, label: 'Premium' },
     { id: 'more', icon: MoreHorizontal, label: 'More' },
   ];
 
@@ -473,6 +475,7 @@ export default function Sidebar({ onClose }) {
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-1 max-w-full">
                       <span className="truncate">@{profile.username}</span>
                       {profile.is_verified && <VerifiedBadge size={13} />}
+                      {(profile.is_premium || profile.is_admin) && <PremiumBadge size={13} />}
                     </p>
                     <div className="flex items-center gap-1.5 min-w-0">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0" />

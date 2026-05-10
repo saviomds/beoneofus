@@ -21,27 +21,56 @@ export default function CertificatePage() {
 
   useEffect(() => {
     const fetchCert = async () => {
-      // First fetch core cert data (columns guaranteed to exist)
-      const { data, error } = await supabase
-        .from("user_certificates")
-        .select(`
-          id,
-          issued_at,
-          user_id,
-          course_id,
-          courses(title, category, level, description, duration, lessons),
-          profiles!user_certificates_user_id_fkey(username, avatar_url, work_status)
-        `)
-        .eq("id", certId)
-        .single();
+      // Try with explicit FK hint first, fall back to plain join
+      let data = null;
 
-      if (error || !data) {
+      const attempts = [
+        `id, issued_at, user_id, course_id,
+         courses(title, category, level, description, duration, lessons),
+         profiles!user_certificates_user_id_fkey(username, avatar_url, work_status)`,
+        `id, issued_at, user_id, course_id,
+         courses(title, category, level, description, duration, lessons),
+         profiles(username, avatar_url, work_status)`,
+        `id, issued_at, user_id, course_id`,
+      ];
+
+      for (const selectStr of attempts) {
+        const { data: row, error } = await supabase
+          .from("user_certificates")
+          .select(selectStr)
+          .eq("id", certId)
+          .single();
+        if (!error && row) { data = row; break; }
+        if (error) console.warn("cert fetch attempt failed:", error.message);
+      }
+
+      if (!data) {
         setNotFound(true);
         setLoading(false);
         return;
       }
 
-      // Try to fetch exam columns separately (only exist after migration)
+      // If profiles join didn't resolve, fetch separately
+      if (!data.profiles && data.user_id) {
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("username, avatar_url, work_status")
+          .eq("id", data.user_id)
+          .single();
+        if (profileRow) data = { ...data, profiles: profileRow };
+      }
+
+      // If courses join didn't resolve, fetch separately
+      if (!data.courses && data.course_id) {
+        const { data: courseRow } = await supabase
+          .from("courses")
+          .select("title, category, level, description, duration, lessons")
+          .eq("id", data.course_id)
+          .single();
+        if (courseRow) data = { ...data, courses: courseRow };
+      }
+
+      // Try to fetch exam columns separately (may not exist)
       let examData = { exam_passed: false, exam_score: null };
       try {
         const { data: examRow } = await supabase

@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   BookOpen, Pencil, X, Star, PlayCircle, Clock, Code2, Trash2,
   CheckCircle2, Award, ExternalLink, Sparkles, Loader2, Eye, EyeOff,
+  Lock, Crown,
 } from "lucide-react";
 import { LEVEL_COLORS } from "./constants";
 import { supabase } from "../supabaseClient";
@@ -14,7 +15,7 @@ const CODE_LANGS = [
 ];
 
 export default function CourseDetailModal({
-  course, onClose, isAdmin, handleEdit, handleDelete, userId, userProgress
+  course, onClose, isAdmin, isPremium, handleEdit, handleDelete, userId, userProgress
 }) {
   const [lessons, setLessons] = useState([]);
   const [isLoadingLessons, setIsLoadingLessons] = useState(false);
@@ -298,7 +299,30 @@ export default function CourseDetailModal({
             )}
           </div>
 
-          {isLoadingLessons ? (
+          {/* Premium gate for Advanced courses */}
+          {course.level === "Advanced" && !isPremium && !isAdmin ? (
+            <div className="mb-4 rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/5 p-6 flex flex-col items-center text-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center">
+                <Lock size={20} className="text-amber-500 dark:text-amber-400" />
+              </div>
+              <div>
+                <h4 className="font-black text-gray-900 dark:text-white mb-1 flex items-center justify-center gap-1.5">
+                  <Crown size={14} className="text-amber-500" fill="currentColor" strokeWidth={1.5} stroke="white" />
+                  Premium Required
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs leading-relaxed">
+                  Advanced courses are exclusive to Premium members. Upgrade to access all lessons and earn a verified certificate.
+                </p>
+              </div>
+              <Link
+                href="/dash/premium"
+                className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-white font-bold text-sm rounded-xl transition-all active:scale-95 shadow-sm shadow-amber-500/25"
+              >
+                <Crown size={14} fill="currentColor" strokeWidth={1.5} stroke="white" />
+                Upgrade to Premium
+              </Link>
+            </div>
+          ) : isLoadingLessons ? (
             <div className="animate-pulse space-y-2 mb-4">
               {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 rounded-xl w-full" />)}
             </div>
@@ -346,7 +370,15 @@ export default function CourseDetailModal({
 
           {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row gap-4 pt-6 mt-4 border-t border-gray-100 dark:border-gray-800">
-            {userId ? (
+            {course.level === "Advanced" && !isPremium && !isAdmin ? (
+              <Link
+                href="/dash/premium"
+                className="flex-1 bg-amber-500 hover:bg-amber-400 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 active:scale-95"
+              >
+                <Crown size={18} fill="currentColor" strokeWidth={1.5} stroke="white" />
+                Upgrade to Access
+              </Link>
+            ) : userId ? (
               <Link
                 href={`/LearnPage/${course.id}`}
                 onClick={() =>

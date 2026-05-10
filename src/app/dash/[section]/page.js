@@ -36,6 +36,8 @@ const contentMap = {
   profile:       dynamic(() => import('../contect/ProfileContent'),       { loading: () => <TabSkeleton /> }),
   docs:          dynamic(() => import('../contect/DocsContent'),          { loading: () => <TabSkeleton /> }),
   premium:       dynamic(() => import('../contect/PremiumContent'),       { loading: () => <TabSkeleton /> }),
+  coaching:      dynamic(() => import('../contect/CoachingContent'),      { loading: () => <TabSkeleton /> }),
+  events:        dynamic(() => import('../contect/EventsContent'),        { loading: () => <TabSkeleton /> }),
 };
 
 export default function DashSection() {

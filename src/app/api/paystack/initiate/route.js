@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 /* USD prices — displayed to users; charged in KES at live rate */
 const PLANS = {
   monthly: { usdCents: 999,  label: 'Premium Monthly' },
@@ -26,6 +21,10 @@ async function getKesRate() {
 
 export async function POST(req) {
   try {
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
     const { plan, userId, email } = await req.json();
 
     if (!plan || !userId || !email) {

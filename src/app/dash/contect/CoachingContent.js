@@ -1,0 +1,538 @@
+"use client";
+
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  GraduationCap, Crown, Lock, CheckCircle2, Clock, MessageSquare,
+  Send, Loader2, X, Play, Sparkles, ChevronRight,
+} from "lucide-react";
+import { supabase } from "../../supabaseClient";
+import Link from "next/link";
+
+const TOPICS = [
+  { id: "code_review",    label: "Code Review",     desc: "Feedback on your code quality and best practices" },
+  { id: "career",         label: "Career Guidance",  desc: "Career paths, job searching, and professional growth" },
+  { id: "system_design",  label: "System Design",    desc: "Architecture, scalability, and technical design" },
+  { id: "project_help",   label: "Project Help",     desc: "Hands-on help with your current project" },
+  { id: "interview_prep", label: "Interview Prep",   desc: "Mock interviews and coding challenge preparation" },
+  { id: "custom",         label: "Custom Topic",     desc: "Something else — describe in the notes field" },
+];
+
+const STATUS_META = {
+  pending:   { label: "Awaiting Coach",  color: "text-amber-600 dark:text-amber-400",     bg: "bg-amber-50 dark:bg-amber-500/10",       icon: Clock       },
+  accepted:  { label: "Coach Assigned",  color: "text-blue-600 dark:text-blue-400",       bg: "bg-blue-50 dark:bg-blue-500/10",         icon: CheckCircle2 },
+  active:    { label: "Session Live",    color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10",   icon: Play        },
+  completed: { label: "Completed",       color: "text-gray-500 dark:text-gray-400",       bg: "bg-gray-100 dark:bg-gray-800",           icon: CheckCircle2 },
+  cancelled: { label: "Cancelled",       color: "text-red-600 dark:text-red-400",         bg: "bg-red-50 dark:bg-red-500/10",           icon: X           },
+};
+
+function StatusBadge({ status }) {
+  const m = STATUS_META[status] || STATUS_META.pending;
+  const Icon = m.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${m.color} ${m.bg}`}>
+      <Icon size={11} className={status === "pending" ? "animate-pulse" : status === "active" ? "animate-pulse" : ""} />
+      {m.label}
+    </span>
+  );
+}
+
+function ChatMessages({ messages, userId, messagesEndRef }) {
+  return (
+    <div className="h-72 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+      {messages.length === 0 && (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-600">Session chat will appear here</p>
+        </div>
+      )}
+      {messages.map(msg => {
+        const isMe = msg.sender_id === userId;
+        const initials = msg.profiles?.username?.[0]?.toUpperCase() || "?";
+        return (
+          <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${isMe ? "bg-violet-500" : "bg-gray-400 dark:bg-gray-600"}`}>
+              {initials}
+            </div>
+            <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
+              isMe
+                ? "bg-violet-600 text-white rounded-tr-sm"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-tl-sm"
+            }`}>
+              {msg.content}
+            </div>
+          </div>
+        );
+      })}
+      <div ref={messagesEndRef} />
+    </div>
+  );
+}
+
+function ChatInput({ value, onChange, onSend, sending }) {
+  return (
+    <div className="flex gap-2 p-3 border-t border-gray-100 dark:border-gray-800">
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }}
+        placeholder="Type a message…"
+        className="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+      />
+      <button
+        onClick={onSend}
+        disabled={!value.trim() || sending}
+        className="p-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl transition-all active:scale-95"
+      >
+        {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+      </button>
+    </div>
+  );
+}
+
+function SessionCard({ session, onAccept, onSelect, isSelected }) {
+  return (
+    <button
+      onClick={onSelect}
+      className={`w-full text-left bg-white dark:bg-gray-900 border rounded-xl p-4 flex items-center justify-between gap-3 shadow-sm transition-all ${
+        isSelected ? "border-violet-400 dark:border-violet-500" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+      }`}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-9 h-9 bg-violet-500 rounded-xl flex items-center justify-center text-white text-sm font-bold shrink-0">
+          {session.profiles?.username?.[0]?.toUpperCase() || "?"}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-gray-900 dark:text-white truncate">@{session.profiles?.username || "user"}</p>
+          <p className="text-xs text-gray-500 truncate">{session.topic}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <StatusBadge status={session.status} />
+        {session.status === "pending" && onAccept && (
+          <button
+            onClick={e => { e.stopPropagation(); onAccept(); }}
+            className="px-2.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded-lg transition-all"
+          >
+            Accept
+          </button>
+        )}
+        <ChevronRight size={14} className="text-gray-400" />
+      </div>
+    </button>
+  );
+}
+
+export default function CoachingContent() {
+  const [profile, setProfile]           = useState(null);
+  const [user, setUser]                 = useState(null);
+  const [sessions, setSessions]         = useState([]);
+  const [activeSession, setActiveSession] = useState(null);
+  const [messages, setMessages]         = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [topic, setTopic]               = useState("code_review");
+  const [notes, setNotes]               = useState("");
+  const [requesting, setRequesting]     = useState(false);
+  const [messageInput, setMessageInput] = useState("");
+  const [sending, setSending]           = useState(false);
+  const messagesEndRef                  = useRef(null);
+
+  const fetchData = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setLoading(false); return; }
+    setUser(session.user);
+
+    const [profileRes, sessionsRes] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", session.user.id).single(),
+      supabase.from("coaching_sessions")
+        .select("*, profiles:user_id(id, username, avatar_url)")
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (profileRes.data) setProfile(profileRes.data);
+
+    if (sessionsRes.data) {
+      setSessions(sessionsRes.data);
+      const isAdm = profileRes.data?.is_admin;
+      const open = sessionsRes.data.find(s =>
+        (isAdm || s.user_id === session.user.id) &&
+        ["pending", "accepted", "active"].includes(s.status)
+      );
+      setActiveSession(prev => prev ? (sessionsRes.data.find(s => s.id === prev.id) || open || null) : (open || null));
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const fetchMessages = useCallback(async (sessionId) => {
+    if (!sessionId) return;
+    const { data } = await supabase
+      .from("coaching_messages")
+      .select("*, profiles:sender_id(id, username, avatar_url)")
+      .eq("session_id", sessionId)
+      .order("created_at", { ascending: true });
+    if (data) setMessages(data);
+  }, []);
+
+  useEffect(() => {
+    if (activeSession) fetchMessages(activeSession.id);
+    else setMessages([]);
+  }, [activeSession?.id, fetchMessages]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  /* Realtime: session changes */
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel("coaching-sessions-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "coaching_sessions" }, fetchData)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [user, fetchData]);
+
+  /* Realtime: messages for active session */
+  useEffect(() => {
+    if (!activeSession) return;
+    const ch = supabase
+      .channel(`coaching-msgs-${activeSession.id}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "coaching_messages",
+        filter: `session_id=eq.${activeSession.id}`,
+      }, async (payload) => {
+        const { data } = await supabase
+          .from("coaching_messages")
+          .select("*, profiles:sender_id(id, username, avatar_url)")
+          .eq("id", payload.new.id)
+          .single();
+        if (data) setMessages(prev => [...prev.filter(m => m.id !== data.id), data]);
+      })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [activeSession?.id]);
+
+  const handleRequest = async () => {
+    if (!user || requesting) return;
+    setRequesting(true);
+    try {
+      const topicLabel = TOPICS.find(t => t.id === topic)?.label || topic;
+      const { data, error } = await supabase
+        .from("coaching_sessions")
+        .insert({ user_id: user.id, topic: topicLabel, notes: notes.trim() || null, status: "pending" })
+        .select("*, profiles:user_id(id, username, avatar_url)")
+        .single();
+      if (error) throw error;
+      setSessions(prev => [data, ...prev]);
+      setActiveSession(data);
+      setNotes("");
+      await fetch("/api/coaching/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: data.id, userId: user.id, topic: topicLabel }),
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!messageInput.trim() || !activeSession || sending) return;
+    const content = messageInput.trim();
+    setMessageInput("");
+    setSending(true);
+    try {
+      await supabase.from("coaching_messages").insert({
+        session_id: activeSession.id,
+        sender_id: user.id,
+        content,
+      });
+    } catch {
+      setMessageInput(content);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleAdminAction = async (sessionId, action) => {
+    const updates = {
+      accept: { status: "accepted", coach_id: user.id, updated_at: new Date().toISOString() },
+      start:  { status: "active", started_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      end:    { status: "completed", ended_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    };
+    await supabase.from("coaching_sessions").update(updates[action]).eq("id", sessionId);
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-48">
+      <Loader2 size={22} className="animate-spin text-violet-500" />
+    </div>
+  );
+
+  const isPremium = profile?.is_premium || profile?.is_admin;
+  const isAdmin   = profile?.is_admin;
+
+  /* ── Premium gate ──────────────────────────────────────────────────────── */
+  if (!isPremium) return (
+    <div className="max-w-lg mx-auto flex flex-col items-center justify-center h-80 text-center gap-4 animate-in fade-in duration-300">
+      <div className="w-16 h-16 bg-violet-50 dark:bg-violet-500/10 rounded-2xl flex items-center justify-center">
+        <Lock size={24} className="text-violet-500" />
+      </div>
+      <div>
+        <h2 className="text-lg font-black text-gray-900 dark:text-white mb-1">Premium Feature</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-xs">
+          1-on-1 coaching is exclusive to Premium members. Book private sessions with senior engineers.
+        </p>
+      </div>
+      <Link href="/dash/premium" className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-amber-500/25">
+        <Crown size={14} fill="currentColor" strokeWidth={1.5} stroke="white" />
+        Upgrade to Premium
+      </Link>
+    </div>
+  );
+
+  /* ── Admin view ────────────────────────────────────────────────────────── */
+  if (isAdmin) {
+    const pending   = sessions.filter(s => s.status === "pending");
+    const open      = sessions.filter(s => ["accepted", "active"].includes(s.status));
+    const past      = sessions.filter(s => ["completed", "cancelled"].includes(s.status)).slice(0, 5);
+
+    return (
+      <div className="max-w-2xl mx-auto space-y-5 animate-in fade-in duration-300">
+        <div>
+          <h1 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+            <GraduationCap size={22} className="text-violet-500" /> Coaching Sessions
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage member coaching requests in real-time</p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Pending",   value: pending.length,                           color: "text-amber-600 dark:text-amber-400"   },
+            { label: "Active",    value: open.length,                              color: "text-emerald-600 dark:text-emerald-400" },
+            { label: "Completed", value: sessions.filter(s => s.status === "completed").length, color: "text-gray-500 dark:text-gray-400" },
+          ].map(s => (
+            <div key={s.label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-center shadow-sm">
+              <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+              <p className="text-xs font-bold text-gray-500 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Session list */}
+          <div className="space-y-3">
+            {pending.length > 0 && (
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Pending ({pending.length})</p>
+                <div className="space-y-2">
+                  {pending.map(s => (
+                    <SessionCard key={s.id} session={s} isSelected={activeSession?.id === s.id}
+                      onAccept={() => handleAdminAction(s.id, "accept")}
+                      onSelect={() => setActiveSession(s)} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {open.length > 0 && (
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Active ({open.length})</p>
+                <div className="space-y-2">
+                  {open.map(s => (
+                    <SessionCard key={s.id} session={s} isSelected={activeSession?.id === s.id}
+                      onSelect={() => setActiveSession(s)} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {past.length > 0 && (
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Recent Past</p>
+                <div className="space-y-2">
+                  {past.map(s => (
+                    <SessionCard key={s.id} session={s} isSelected={activeSession?.id === s.id}
+                      onSelect={() => setActiveSession(s)} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {sessions.length === 0 && (
+              <div className="text-center py-10 text-gray-400 dark:text-gray-600">
+                <GraduationCap size={28} className="mx-auto mb-2 opacity-40" />
+                <p className="text-xs font-medium">No coaching requests yet</p>
+              </div>
+            )}
+          </div>
+
+          {/* Chat panel */}
+          {activeSession ? (
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                <div>
+                  <p className="text-sm font-black text-gray-900 dark:text-white">@{activeSession.profiles?.username}</p>
+                  <p className="text-xs text-gray-500">{activeSession.topic}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={activeSession.status} />
+                  {activeSession.status === "accepted" && (
+                    <button onClick={() => handleAdminAction(activeSession.id, "start")}
+                      className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold rounded-lg transition-all">
+                      Start
+                    </button>
+                  )}
+                  {activeSession.status === "active" && (
+                    <button onClick={() => handleAdminAction(activeSession.id, "end")}
+                      className="px-2.5 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-lg transition-all">
+                      End
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1">
+                <ChatMessages messages={messages} userId={user.id} messagesEndRef={messagesEndRef} />
+              </div>
+              {["accepted", "active"].includes(activeSession.status) && (
+                <ChatInput value={messageInput} onChange={setMessageInput} onSend={handleSend} sending={sending} />
+              )}
+            </div>
+          ) : (
+            <div className="bg-gray-50 dark:bg-gray-800/40 border border-dashed border-gray-200 dark:border-gray-700 rounded-2xl flex items-center justify-center h-64">
+              <div className="text-center text-gray-400 dark:text-gray-600">
+                <MessageSquare size={24} className="mx-auto mb-2 opacity-40" />
+                <p className="text-xs font-medium">Select a session to view chat</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── User view ─────────────────────────────────────────────────────────── */
+  const mySession  = sessions.find(s => s.user_id === user.id && ["pending", "accepted", "active"].includes(s.status));
+  const pastMine   = sessions.filter(s => s.user_id === user.id && ["completed", "cancelled"].includes(s.status));
+  const showChat   = mySession && ["accepted", "active"].includes(mySession.status);
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-5 animate-in fade-in duration-300">
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl border border-violet-200 dark:border-violet-500/20 bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 dark:from-violet-500/10 dark:via-violet-500/5 dark:to-transparent p-6">
+        <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-violet-200/40 dark:bg-violet-500/10" />
+        <div className="relative flex items-center gap-3">
+          <div className="w-12 h-12 bg-violet-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-violet-500/25">
+            <GraduationCap size={22} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-gray-900 dark:text-white">1-on-1 Coaching</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Private session with a senior engineer</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Current session status */}
+      {mySession && (
+        <div className={`rounded-2xl border p-5 shadow-sm ${
+          mySession.status === "pending"  ? "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20" :
+          mySession.status === "accepted" ? "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20" :
+          "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20"
+        }`}>
+          <div className="flex items-start justify-between gap-3 mb-1">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <StatusBadge status={mySession.status} />
+              </div>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">{mySession.topic}</p>
+              {mySession.notes && <p className="text-xs text-gray-500 mt-0.5">{mySession.notes}</p>}
+            </div>
+            {mySession.status === "pending" && <Loader2 size={15} className="animate-spin text-amber-500 shrink-0 mt-1" />}
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            {mySession.status === "pending"  && "Your request is in the queue. A coach will accept it shortly."}
+            {mySession.status === "accepted" && "A coach has been assigned! They'll start the session soon."}
+            {mySession.status === "active"   && "Your session is live — chat below."}
+          </p>
+        </div>
+      )}
+
+      {/* Live chat */}
+      {showChat && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Private Coaching Channel — Real-time</p>
+          </div>
+          <ChatMessages messages={messages} userId={user.id} messagesEndRef={messagesEndRef} />
+          <ChatInput value={messageInput} onChange={setMessageInput} onSend={handleSend} sending={sending} />
+        </div>
+      )}
+
+      {/* Request form */}
+      {!mySession && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
+          <h3 className="font-black text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+            <Sparkles size={15} className="text-violet-500" />
+            Book a Session
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
+            Choose a topic and we'll match you with a senior engineer. Sessions are private and recorded only for you.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+            {TOPICS.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setTopic(t.id)}
+                className={`text-left p-3 rounded-xl border transition-all ${
+                  topic === t.id
+                    ? "border-violet-400 dark:border-violet-500 bg-violet-50 dark:bg-violet-500/10"
+                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                <p className="text-sm font-bold text-gray-900 dark:text-white">{t.label}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{t.desc}</p>
+              </button>
+            ))}
+          </div>
+
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Any additional context? (optional)"
+            rows={3}
+            className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500/30 mb-4"
+          />
+
+          <button
+            onClick={handleRequest}
+            disabled={requesting}
+            className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 active:scale-[0.98] text-white font-black py-3.5 rounded-xl transition-all shadow-lg shadow-violet-500/25 text-sm"
+          >
+            {requesting ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={16} />}
+            {requesting ? "Requesting…" : "Request Coaching Session"}
+          </button>
+        </div>
+      )}
+
+      {/* Past sessions */}
+      {pastMine.length > 0 && (
+        <div>
+          <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Past Sessions</p>
+          <div className="space-y-2">
+            {pastMine.map(s => (
+              <div key={s.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{s.topic}</p>
+                  <p className="text-xs text-gray-500">{new Date(s.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                </div>
+                <StatusBadge status={s.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

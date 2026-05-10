@@ -2,29 +2,21 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Groq from 'groq-sdk';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
-const groq = process.env.GROQ_API_KEY
-  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
-  : null;
-
-async function verifyAdmin(adminId) {
-  const { data } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', adminId)
-    .single();
-  return data?.is_admin === true;
-}
-
 export async function POST(req) {
   try {
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    const groq = process.env.GROQ_API_KEY
+      ? new Groq({ apiKey: process.env.GROQ_API_KEY })
+      : null;
+
     const { subscriptionId, action, adminId, note } = await req.json();
 
-    if (!(await verifyAdmin(adminId))) {
+    const { data: adminProfile } = await supabase
+      .from('profiles').select('is_admin').eq('id', adminId).single();
+    if (!adminProfile?.is_admin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

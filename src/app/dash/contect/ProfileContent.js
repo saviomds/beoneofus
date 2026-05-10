@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, Share2, ExternalLink, Award } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, Share2, ExternalLink, Award, Eye, EyeOff, Lock } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
@@ -46,6 +46,8 @@ export default function ProfileContent({ viewUserId }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ username: "", status: "", location: "", github: "", website: "", work_status: "" });
   const [toast, setToast] = useState({ message: "", type: "success" });
+  const [visibility, setVisibility] = useState({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true });
+  const [savingVisibility, setSavingVisibility] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState('none');
   const [connectionProcessing, setConnectionProcessing] = useState(false);
@@ -144,14 +146,17 @@ export default function ProfileContent({ viewUserId }) {
         if (jobsData) setUserJobs(jobsData);
 
         if (own) {
-          setFormData({ 
-            username: profileData.username || "", 
+          setFormData({
+            username: profileData.username || "",
             status: profileData.status || "",
             location: profileData.location || "",
             github: profileData.github || "",
             website: profileData.website || "",
             work_status: profileData.work_status || ""
           });
+          if (profileData.profile_visibility) {
+            setVisibility({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, ...profileData.profile_visibility });
+          }
         }
 
         // Set up real-time listener for job opportunities
@@ -302,10 +307,35 @@ export default function ProfileContent({ viewUserId }) {
     }
   };
 
+  const handleSaveVisibility = async () => {
+    if (!currentUser) return;
+    setSavingVisibility(true);
+    try {
+      const { error, data } = await supabase
+        .from('profiles')
+        .update({ profile_visibility: visibility })
+        .eq('id', currentUser.id)
+        .select('profile_visibility')
+        .single();
+      console.log('Visibility update result:', { data, error });
+      if (error) throw error;
+      setProfile(prev => ({ ...prev, profile_visibility: visibility }));
+      setToast({ message: "Visibility settings saved", type: "success" });
+      setTimeout(() => setToast({ message: "" }), 3000);
+    } catch (err) {
+      const msg = err?.message || err?.details || err?.hint || err?.code || JSON.stringify(err);
+      console.error('Visibility save error:', msg, err);
+      setToast({ message: msg || "Could not save visibility settings", type: "error" });
+      setTimeout(() => setToast({ message: "" }), 3000);
+    } finally {
+      setSavingVisibility(false);
+    }
+  };
+
   const handleCancel = () => {
     setIsEditing(false);
-    setFormData({ 
-      username: profile?.username || "", 
+    setFormData({
+      username: profile?.username || "",
       status: profile?.status || "",
       location: profile?.location || "",
       github: profile?.github || "",
@@ -1024,6 +1054,71 @@ export default function ProfileContent({ viewUserId }) {
                   )}
                 </div>
               </div>
+
+              {/* PUBLIC PROFILE VISIBILITY CONTROLS */}
+              {isOwnProfile && (
+                <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400">
+                      <Lock size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Public Profile Visibility</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Control what others see on your public profile at <span className="font-bold text-blue-600 dark:text-blue-400">/u/{profile?.username}</span></p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[
+                      { key: 'bio',         label: 'Bio',         desc: 'Your about/bio text',           icon: FileText },
+                      { key: 'location',    label: 'Location',    desc: 'City or region you entered',    icon: MapPin },
+                      { key: 'github',      label: 'GitHub',      desc: 'Your GitHub profile link',      icon: GitBranch },
+                      { key: 'website',     label: 'Website',     desc: 'Your personal/portfolio URL',   icon: Link },
+                      { key: 'work_status', label: 'Work Status', desc: 'Open to work / hired etc.',     icon: Briefcase },
+                      { key: 'certificates',label: 'Certificates','desc': 'Earned course certificates',  icon: Award },
+                      { key: 'posts',       label: 'Recent Posts','desc': 'Your latest feed activity',   icon: Activity },
+                    ].map(({ key, label, desc, icon: Icon }) => {
+                      const on = visibility[key] !== false;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setVisibility(prev => ({ ...prev, [key]: !prev[key] }))}
+                          className={`flex items-center gap-4 p-4 rounded-2xl border transition-all text-left w-full group
+                            ${on
+                              ? 'bg-blue-50 dark:bg-blue-900/15 border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/25'
+                              : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800'
+                            }`}
+                        >
+                          <div className={`p-2.5 rounded-xl shrink-0 transition-colors ${on ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'}`}>
+                            <Icon size={16} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-bold truncate transition-colors ${on ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>{label}</p>
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate font-medium">{desc}</p>
+                          </div>
+                          <div className={`shrink-0 flex items-center gap-1.5 text-xs font-black uppercase tracking-widest transition-colors ${on ? 'text-blue-500' : 'text-gray-400'}`}>
+                            {on ? <Eye size={14} /> : <EyeOff size={14} />}
+                            <span className="hidden sm:inline">{on ? 'Public' : 'Hidden'}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-5 flex items-center gap-3">
+                    <button
+                      onClick={handleSaveVisibility}
+                      disabled={savingVisibility}
+                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-bold py-2.5 px-6 rounded-xl transition-all text-sm shadow-sm active:scale-95"
+                    >
+                      {savingVisibility ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                      {savingVisibility ? 'Saving…' : 'Save Visibility'}
+                    </button>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Changes are applied instantly to your public profile.</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -405,10 +405,10 @@ export default function FeedContent() {
   );
 
   return (
-    <div className="space-y-6">
-      
+    <div className="space-y-4">
+
       {/* --- FEED TABS --- */}
-      <div className="flex items-center gap-6 border-b border-gray-200 dark:border-gray-800 px-2 sm:px-4 mb-2 overflow-x-auto custom-scrollbar">
+      <div className="flex items-center gap-4 sm:gap-6 border-b border-gray-200 dark:border-gray-800 overflow-x-auto no-scrollbar -mx-1 px-1">
         {['Following', 'Featured', 'Rising', 'Code Review'].map((tab) => {
           const isActive = activeTab === tab.toLowerCase();
           return (
@@ -518,47 +518,57 @@ export default function FeedContent() {
         displayedPosts.map((post) => {
           const hasLiked = post.likes?.some(l => l.user_id === currentUserId);
           return (
-            <div key={post.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm relative">
-              
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase cursor-pointer hover:opacity-80 hover:shadow-lg transition-all overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700"
-                    onClick={() => setSelectedUserId(post.user_id)}
-                    title={`View @${post.profiles?.username}'s Profile`}
-                  >
-                    {post.profiles?.avatar_url ? (
-                      <Image src={post.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
-                    ) : (
-                      post.profiles?.username?.substring(0, 2) || '??'
+            <div key={post.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm card-hover relative overflow-hidden">
+
+              {/* Author row */}
+              <div className="flex items-start gap-3 mb-4 min-w-0">
+                <div
+                  className="relative w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase cursor-pointer hover:opacity-80 transition-all overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700"
+                  onClick={() => setSelectedUserId(post.user_id)}
+                  title={`View @${post.profiles?.username}'s Profile`}
+                >
+                  {post.profiles?.avatar_url ? (
+                    <Image src={post.profiles.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
+                  ) : (
+                    post.profiles?.username?.substring(0, 2) || '??'
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0 cursor-pointer group" onClick={() => setSelectedUserId(post.user_id)}>
+                  <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-[140px] sm:max-w-[200px]">
+                      {post.profiles?.username || 'Unknown User'}
+                    </span>
+                    {post.profiles?.is_verified && <VerifiedBadge size={14} />}
+                    {post.profiles?.github && (
+                      <a href={`https://github.com/${post.profiles.github}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0" title="GitHub">
+                        <GitBranch size={13} />
+                      </a>
+                    )}
+                    {post.profiles?.website && (
+                      <a href={post.profiles.website.startsWith('http') ? post.profiles.website : `https://${post.profiles.website}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0" title="Website">
+                        <LinkIcon size={13} />
+                      </a>
                     )}
                   </div>
-                  <div className="cursor-pointer group" onClick={() => setSelectedUserId(post.user_id)}>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-gray-900 dark:text-gray-100 font-bold text-sm group-hover:text-blue-600 transition-colors">{post.profiles?.username || 'Unknown User'}</h4>
-                      {post.profiles?.is_verified && <VerifiedBadge size={16} />}
-                      {post.profiles?.github && (
-                        <a href={`https://github.com/${post.profiles.github}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-900 transition-colors" title="GitHub Profile">
-                          <GitBranch size={14} />
-                        </a>
-                      )}
-                      {post.profiles?.website && (
-                        <a href={post.profiles.website.startsWith('http') ? post.profiles.website : `https://${post.profiles.website}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-900 transition-colors" title="Personal Website">
-                          <LinkIcon size={14} />
-                        </a>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">{post.profiles?.status || 'Active Node'}</p>
-                  </div>
+                  <p className="text-[10px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-widest truncate">
+                    {post.profiles?.status || 'Active Node'}
+                  </p>
                 </div>
 
                 {currentUserId === post.user_id && (
-                  <div className="relative">
-                    <button onClick={() => setActiveMenu(activeMenu === post.id ? null : post.id)} className="text-gray-400 hover:text-gray-900 transition p-1"><MoreHorizontal size={20} /></button>
+                  <div className="relative shrink-0">
+                    <button onClick={() => setActiveMenu(activeMenu === post.id ? null : post.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
+                      <MoreHorizontal size={17} />
+                    </button>
                     {activeMenu === post.id && (
-                      <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-50 py-2">
-                        <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition" onClick={() => openEditModal(post)}><Edit3 size={14} /> Edit Post</button>
-                        <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition" onClick={() => openDeleteModal(post)}><Trash2 size={14} /> Delete</button>
+                      <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100">
+                        <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onClick={() => openEditModal(post)}>
+                          <Edit3 size={13} /> Edit Post
+                        </button>
+                        <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" onClick={() => openDeleteModal(post)}>
+                          <Trash2 size={13} /> Delete
+                        </button>
                       </div>
                     )}
                   </div>
@@ -566,8 +576,14 @@ export default function FeedContent() {
               </div>
 
               <div className="space-y-3">
-                {post.title && <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{post.title}</h3>}
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+                {post.title && (
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight leading-snug break-words">
+                    {post.title}
+                  </h3>
+                )}
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-words text-sm">
+                  {post.content}
+                </p>
                 {post.code_snippet && (
                   <div className="bg-gray-50 dark:bg-gray-950 rounded-xl p-4 border border-gray-200 dark:border-gray-800 font-mono text-sm text-blue-600 overflow-x-auto relative">
                     <button 
@@ -649,31 +665,33 @@ export default function FeedContent() {
                 </div>
               )}
 
-              {/* Interaction Bar */}
-              <div className="flex items-center gap-6 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800/50 text-gray-500 dark:text-gray-400">
-                <button onClick={() => handleLike(post.id, hasLiked)} className={`flex items-center gap-2 transition-colors text-sm ${hasLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
-                  <Heart size={18} fill={hasLiked ? "currentColor" : "none"} />
+              {/* Interaction Bar — responsive, never overflows */}
+              <div className="flex items-center gap-1 sm:gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-800/50 text-gray-400 dark:text-gray-500 flex-wrap">
+                {/* Left: social actions */}
+                <button onClick={() => handleLike(post.id, hasLiked)} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${hasLiked ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10'}`}>
+                  <Heart size={15} fill={hasLiked ? "currentColor" : "none"} />
                   <span>{post.likes?.length || 0}</span>
                 </button>
-                <button onClick={() => setExpandedComments({...expandedComments, [post.id]: !expandedComments[post.id]})} className="flex items-center gap-2 hover:text-blue-600 transition-colors text-sm">
-                  <MessageSquare size={18} />
+                <button onClick={() => setExpandedComments({...expandedComments, [post.id]: !expandedComments[post.id]})} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all">
+                  <MessageSquare size={15} />
                   <span>{post.comments?.length || 0}</span>
                 </button>
-            
-            <div className="flex items-center gap-4 ml-auto">
-              <button onClick={() => handleAnalyzeCode(post)} className={`flex items-center gap-2 transition-colors text-sm ${postAnalyses[post.id] ? 'text-orange-600' : 'hover:text-orange-500'}`} title="Analyze Code">
-                {isAnalyzing[post.id] ? <Loader2 size={18} className="animate-spin text-orange-500" /> : <ShieldAlert size={18} />}
-              </button>
-              <button onClick={() => handleSummarize(post)} className={`flex items-center gap-2 transition-colors text-sm ${postSummaries[post.id] ? 'text-purple-600' : 'hover:text-purple-500'}`} title="Summarize Post">
-                {isSummarizing[post.id] ? <Loader2 size={18} className="animate-spin text-purple-500" /> : <Sparkles size={18} />}
-              </button>
-              <button onClick={() => handleBookmark(post)} className="flex items-center gap-2 hover:text-amber-500 transition-colors text-sm" title="Save to Bookmarks">
-                <Bookmark size={18} />
-              </button>
-              <button onClick={() => handleShareClick(post.id)} className="flex items-center gap-2 hover:text-green-500 transition-colors text-sm" title="Share Post">
-                <Share2 size={18} />
-              </button>
-            </div>
+
+                {/* Right: utility actions */}
+                <div className="flex items-center gap-1 ml-auto">
+                  <button onClick={() => handleAnalyzeCode(post)} className={`p-1.5 rounded-lg transition-all ${postAnalyses[post.id] ? 'text-orange-600 bg-orange-50 dark:bg-orange-900/20' : 'hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/10'}`} title="Analyze Code">
+                    {isAnalyzing[post.id] ? <Loader2 size={15} className="animate-spin text-orange-500" /> : <ShieldAlert size={15} />}
+                  </button>
+                  <button onClick={() => handleSummarize(post)} className={`p-1.5 rounded-lg transition-all ${postSummaries[post.id] ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/20' : 'hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10'}`} title="Summarize Post">
+                    {isSummarizing[post.id] ? <Loader2 size={15} className="animate-spin text-purple-500" /> : <Sparkles size={15} />}
+                  </button>
+                  <button onClick={() => handleBookmark(post)} className="p-1.5 rounded-lg hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all" title="Save to Bookmarks">
+                    <Bookmark size={15} />
+                  </button>
+                  <button onClick={() => handleShareClick(post.id)} className="p-1.5 rounded-lg hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/10 transition-all" title="Share Post">
+                    <Share2 size={15} />
+                  </button>
+                </div>
               </div>
 
               {/* Comments Section */}

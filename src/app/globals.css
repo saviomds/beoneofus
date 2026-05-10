@@ -1,9 +1,15 @@
 @import "tailwindcss";
+
+/* Bootstrap grid only — no reboot/reset so Tailwind preflight stays in charge */
+@import "bootstrap/dist/css/bootstrap-grid.min.css";
+
 @custom-variant dark (&:is(.dark, .dark *));
 
 @layer base {
   body {
     @apply bg-white dark:bg-[#0D0D0D] text-gray-900 dark:text-gray-100 transition-colors duration-300;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Smooth global transition for light/dark mode switching */
@@ -11,51 +17,85 @@
     @apply transition-colors duration-300 ease-in-out;
   }
 
-  /* 1. Global: Hide scrollbars for all elements but keep functionality */
+  /* Hide scrollbars globally but keep scroll functionality */
   * {
-    -ms-overflow-style: none;  /* Internet Explorer/Edge */
-    scrollbar-width: none;     /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
   }
 
-  *::-webkit-scrollbar {
-    display: none;             /* Chrome, Safari, and Opera */
+  /* Safe tap target size on mobile */
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
 @layer utilities {
-  /* 2. Utility: Specifically for your scrollable dashboard blocks */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+  /* ── Scrollbar helpers ── */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.15) transparent; }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
+  .dark .custom-scrollbar { scrollbar-color: rgba(255,255,255,0.15) transparent; }
 
   /* Mobile chat improvements */
-  .mobile-chat-scroll {
+  .mobile-chat-scroll { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+
+  /* ── Touch targets ── */
+  .mobile-touch-target { min-height: 44px; min-width: 44px; }
+
+  /* ── Safe area insets (for notches/home bars) ── */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+
+  /* ── Text overflow utilities ── */
+  /* One-liner: prevents a flex child from blowing out its container */
+  .flex-min-0 { min-width: 0; }
+
+  /* Clamp helpers for common line limits */
+  .line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+  .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+
+  /* ── Card hover lift ── */
+  .card-hover {
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  .dark .card-hover:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  /* ── Bottom nav clearance (mobile) ── */
+  .has-bottom-nav {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ── Horizontal pill scrollable row ── */
+  .scroll-x-snap {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
+    scrollbar-width: none;
   }
+  .scroll-x-snap > * { scroll-snap-align: start; }
 
-  /* Better touch targets on mobile */
-  @media (max-width: 768px) {
-    .mobile-touch-target {
-      min-height: 44px;
-      min-width: 44px;
-    }
-  }
-  .custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
-  }
+  /* ── Bootstrap grid dark mode ── */
+  /* Bootstrap grid uses no colours so no override needed */
 
-  /* Custom Scrollbar - Dark Mode Support */
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-  }
-  .dark .custom-scrollbar {
-    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-  }
+  /* ── Ensure Bootstrap container doesn't conflict ── */
+  /* Use .bs-container instead of .container to avoid any Tailwind conflict */
+  .bs-container { width: 100%; padding-right: 1rem; padding-left: 1rem; margin-right: auto; margin-left: auto; }
+  @media (min-width: 576px)  { .bs-container { max-width: 540px; } }
+  @media (min-width: 768px)  { .bs-container { max-width: 720px; } }
+  @media (min-width: 992px)  { .bs-container { max-width: 960px; } }
+  @media (min-width: 1200px) { .bs-container { max-width: 1140px; } }
+  @media (min-width: 1400px) { .bs-container { max-width: 1320px; } }
 }

@@ -66,25 +66,31 @@ export default function DashSection() {
   const Content = contentMap[section];
   if (!Content) notFound();
 
+  /* messages takes full height without page-level padding */
+  const isFullHeight = section === 'messages';
+  const outerCls = isFullHeight
+    ? 'w-full h-full overflow-hidden'
+    : `w-full h-full overflow-x-hidden ${section === 'docs' ? 'p-3 md:p-5' : 'p-3 sm:p-4 md:p-5 lg:p-6'}`;
+
   return (
-    <div className={`w-full h-full overflow-x-hidden transition-all ${section === 'docs' ? 'p-2 md:p-4 lg:p-6' : 'p-4 md:p-6 lg:p-8'}`}>
+    <div className={outerCls}>
       {section === 'feed' && (
-        <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="mb-6 md:mb-8">
-            <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Network Feed</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 font-medium">Broadcast your updates to the ecosystem.</p>
+        <div className="w-full animate-in fade-in slide-in-from-bottom-2 duration-400 mb-4">
+          <div className="mb-4">
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Network Feed</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5 font-medium">Broadcast your updates to the ecosystem.</p>
           </div>
 
           {session ? (
             <NewPost />
           ) : (
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm mt-4 mb-6">
-              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 text-center shadow-sm mb-4">
+              <div className="w-11 h-11 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Join the conversation</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm font-medium">Sign in to share your code, broadcast updates, and connect with the community.</p>
-              <button onClick={() => router.push('/auth')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition shadow-sm">
+              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">Join the conversation</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">Sign in to share code, broadcast updates, and connect.</p>
+              <button onClick={() => router.push('/auth')} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-5 rounded-xl transition-all text-sm shadow-sm active:scale-95">
                 Sign In to Post
               </button>
             </div>
@@ -92,7 +98,7 @@ export default function DashSection() {
         </div>
       )}
 
-      <div key={section} className="w-full h-full animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
+      <div key={section} className="w-full h-full animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
         <Content />
       </div>
     </div>

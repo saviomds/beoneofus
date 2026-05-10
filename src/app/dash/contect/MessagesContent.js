@@ -1562,7 +1562,7 @@ export default function MessagesContent() {
       )}
 
       {/* ── MAIN LAYOUT ── */}
-      <div className="w-full flex h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] md:h-[calc(100vh-180px)] bg-transparent overflow-hidden relative">
+      <div className="w-full flex h-full bg-transparent overflow-hidden relative">
 
         {/* ════════════════════════════════════
             SIDEBAR
@@ -1794,10 +1794,10 @@ export default function MessagesContent() {
             <>
               {/* Chat Header - Mobile optimized */}
               <div className="pb-2 pt-1 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0 z-10 relative bg-white dark:bg-gray-950 md:bg-transparent px-4 md:px-0">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                   <button
                     onClick={() => setIsMobileChatOpen(false)}
-                    className="md:hidden p-1.5 -ml-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
+                    className="md:hidden p-1.5 -ml-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors shrink-0"
                   >
                     <ChevronLeft size={22} />
                   </button>
@@ -1820,15 +1820,15 @@ export default function MessagesContent() {
                     )}
                   </div>
                   <div
-                    className="cursor-pointer"
+                    className="cursor-pointer min-w-0 flex-1"
                     onClick={() => setSelectedUserId(activeChat.id)}
                   >
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight flex items-center gap-1 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
-                      {activeChat.username}
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight flex items-center gap-1 hover:text-violet-600 dark:hover:text-violet-400 transition-colors min-w-0">
+                      <span className="truncate">@{activeChat.username}</span>
                       {activeChat.is_verified && (
                         <BadgeCheck
                           size={14}
-                          className="text-violet-500"
+                          className="text-violet-500 shrink-0"
                           fill="currentColor"
                           stroke="white"
                         />
@@ -1836,7 +1836,7 @@ export default function MessagesContent() {
                     </h3>
                     <p className="text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1">
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                           connectionStatus === "blocked"
                             ? "bg-red-500"
                             : Object.keys(onlineUsers).includes(activeChat.id)
@@ -1844,7 +1844,7 @@ export default function MessagesContent() {
                             : "bg-gray-300 dark:bg-gray-600"
                         }`}
                       />
-                      <span className="text-gray-400 dark:text-gray-500">
+                      <span className="text-gray-400 dark:text-gray-500 truncate">
                         {connectionStatus === "blocked"
                           ? "Blocked"
                           : Object.keys(onlineUsers).includes(activeChat.id)
@@ -1856,7 +1856,7 @@ export default function MessagesContent() {
                 </div>
 
                 {/* Header actions */}
-                <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-0.5 shrink-0">
                   {connectionStatus === "accepted" && (
                     <>
                       <button
@@ -2368,7 +2368,7 @@ export default function MessagesContent() {
 
               {/* ── Input Area ── Mobile optimized */}
               <div
-                className={`pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] md:pb-0 shrink-0 transition-all duration-300 bg-white dark:bg-gray-950 md:bg-transparent border-t border-gray-200 dark:border-gray-800 md:border-0 ${
+                className={`pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:pb-2 px-3 md:px-0 shrink-0 transition-all duration-300 bg-white dark:bg-gray-950 md:bg-transparent border-t border-gray-200 dark:border-gray-800 md:border-0 ${
                   connectionStatus === "accepted"
                     ? "opacity-100 translate-y-0"
                     : "opacity-30 translate-y-2 pointer-events-none"
@@ -2460,11 +2460,11 @@ export default function MessagesContent() {
 
                 <form
                   onSubmit={handleSendMessage}
-                  className={`flex items-end gap-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 ${
+                  className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 ${
                     replyingTo || imagePreview
                       ? "rounded-b-2xl rounded-t-none border-t-0"
                       : "rounded-2xl"
-                  } p-3 mx-4 md:mx-0 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all shadow-sm`}
+                  } focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all shadow-sm overflow-hidden`}
                 >
                   <input
                     type="file"
@@ -2474,51 +2474,58 @@ export default function MessagesContent() {
                     className="hidden"
                   />
 
-                  <div className="flex items-center pb-0.5 shrink-0">
+                  {/* Textarea row */}
+                  <div className="flex items-end gap-2 px-3 pt-3 pb-1">
+                    <textarea
+                      ref={textareaRef}
+                      value={inputValue}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Type a message…"
+                      rows={2}
+                      className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 resize-none max-h-[140px] leading-relaxed placeholder:text-gray-400 dark:placeholder:text-gray-500 py-1"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!inputValue.trim() && !imageFile}
+                      className="w-9 h-9 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex items-center justify-center transition-all shadow-md shadow-blue-600/20 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 shrink-0 mb-0.5"
+                    >
+                      <Send size={15} strokeWidth={2.5} />
+                    </button>
+                  </div>
+
+                  {/* Action bar row */}
+                  <div className="flex items-center gap-0.5 px-2 pb-2 border-t border-gray-100 dark:border-gray-800 pt-1.5 mt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                      title="Attach image"
+                    >
+                      <Paperclip size={14} />
+                      <span className="hidden sm:inline">Attach</span>
+                    </button>
                     <button
                       type="button"
                       onClick={handleSuggestReply}
                       disabled={isSuggesting}
-                      className="p-2 text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors disabled:opacity-40 mobile-touch-target"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-all disabled:opacity-40"
                       title="AI suggest reply"
                     >
-                      {isSuggesting ? (
-                        <Loader2
-                          size={17}
-                          className="animate-spin text-violet-500"
-                        />
-                      ) : (
-                        <Sparkles size={17} />
-                      )}
+                      {isSuggesting
+                        ? <Loader2 size={14} className="animate-spin text-violet-500" />
+                        : <Sparkles size={14} />}
+                      <span className="hidden sm:inline">{isSuggesting ? "Thinking…" : "AI Reply"}</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mobile-touch-target"
-                      title="Attach image"
-                    >
-                      <Paperclip size={17} />
-                    </button>
-                  </div>
-
-                  <textarea
-                    ref={textareaRef}
-                    value={inputValue}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder={`Message @${activeChat.username}…`}
-                    rows={1}
-                    className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 py-2.5 resize-none max-h-[120px] leading-relaxed placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                  />
-
-                  <div className="pb-0.5 shrink-0">
-                    <button
-                      type="submit"
-                      disabled={!inputValue.trim() && !imageFile}
-                      className="w-10 h-10 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex items-center justify-center transition-all shadow-md shadow-blue-600/20 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-                    >
-                      <Send size={16} strokeWidth={2.5} />
-                    </button>
+                    <div className="flex-1" />
+                    {inputValue.length > 0 && (
+                      <span className={`text-[10px] font-mono px-2 ${inputValue.length > 500 ? "text-red-400" : "text-gray-300 dark:text-gray-600"}`}>
+                        {inputValue.length}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-gray-300 dark:text-gray-700 font-medium hidden sm:block pr-1">
+                      Enter to send
+                    </span>
                   </div>
                 </form>
               </div>

@@ -21,6 +21,7 @@ export default function CertificatePage() {
 
   useEffect(() => {
     const fetchCert = async () => {
+      // First fetch core cert data (columns guaranteed to exist)
       const { data, error } = await supabase
         .from("user_certificates")
         .select(`
@@ -28,19 +29,30 @@ export default function CertificatePage() {
           issued_at,
           user_id,
           course_id,
-          exam_passed,
-          exam_score,
           courses(title, category, level, description, duration, lessons),
-          profiles!user_certificates_user_id_fkey(username, full_name, avatar_url, work_status)
+          profiles!user_certificates_user_id_fkey(username, avatar_url, work_status)
         `)
         .eq("id", certId)
         .single();
 
       if (error || !data) {
         setNotFound(true);
-      } else {
-        setCert(data);
+        setLoading(false);
+        return;
       }
+
+      // Try to fetch exam columns separately (only exist after migration)
+      let examData = { exam_passed: false, exam_score: null };
+      try {
+        const { data: examRow } = await supabase
+          .from("user_certificates")
+          .select("exam_passed, exam_score")
+          .eq("id", certId)
+          .single();
+        if (examRow) examData = examRow;
+      } catch (_) {}
+
+      setCert({ ...data, ...examData });
       setLoading(false);
     };
     if (certId) fetchCert();
@@ -77,10 +89,10 @@ export default function CertificatePage() {
 
   const profile = cert.profiles;
   const course = cert.courses;
-  const displayName = profile?.full_name || `@${profile?.username}` || "Developer";
-  const issuedDate = new Date(cert.issued_at).toLocaleDateString("en-US", {
-    year: "numeric", month: "long", day: "numeric",
-  });
+  const displayName = profile?.username || "Developer";
+  const issuedDate = cert.issued_at
+    ? new Date(cert.issued_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+    : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const shortId = cert.id.slice(0, 16).toUpperCase();
 
   return (

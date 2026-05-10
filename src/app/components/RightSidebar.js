@@ -242,32 +242,25 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
   };
 
   return (
-    <aside className="w-full flex flex-col p-6 space-y-8 h-screen sticky top-0 overflow-y-auto custom-scrollbar bg-transparent border-l border-gray-200 dark:border-gray-800 relative animate-in fade-in slide-in-from-right-8 duration-300 md:animate-none">
+    <aside className="w-full flex flex-col p-4 xl:p-6 space-y-6 h-screen sticky top-0 overflow-y-auto custom-scrollbar bg-transparent border-l border-gray-200 dark:border-gray-800 relative animate-in fade-in slide-in-from-right-8 duration-300 md:animate-none">
       
-      {/* Mobile-Only Header Info */}
-      <div className="md:hidden flex flex-col shrink-0 gap-1 -mt-2 mb-2">
-        <div className="flex items-center justify-between">
-          <div className="font-black text-2xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Terminal className="text-blue-500" size={28} />
-            <Link href="/" className="hover:opacity-80 transition-opacity">
-              <span>beone<span className="text-blue-600">of</span>us</span>
-            </Link>
-          </div>
-          <button onClick={() => onClose?.()} className="p-2 -mr-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+      {/* Mobile-Only Quick Links */}
+      <div className="lg:hidden flex flex-col shrink-0 gap-3">
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => handleMobileNav('jobs')} className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border transition-all ${activeModals.jobs ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-emerald-600 hover:border-emerald-200'}`}>
+            <Briefcase size={13} /> Jobs
+          </button>
+          <button onClick={() => handleMobileNav('network')} className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border transition-all ${activeModals.network ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-gray-900 dark:hover:text-gray-100'}`}>
+            <Users size={13} /> Network
+          </button>
+          <button onClick={() => handleMobileNav('discuss')} className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border transition-all ${activeModals.discuss ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-gray-900 dark:hover:text-gray-100'}`}>
+            <MessageCircle size={13} /> Discuss
+          </button>
+          <button onClick={() => handleMobileNav('discover')} className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border transition-all ${activeModals.discover ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-blue-600 hover:border-blue-200'}`}>
+            <Compass size={13} /> Discover
           </button>
         </div>
-        
-        {/* Replicated Header Navigation for Mobile */}
-        <div className="flex flex-wrap gap-2 mt-3 mb-2">
-          <button onClick={() => handleMobileNav('jobs')} className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border transition-all shadow-sm ${activeModals.jobs ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-emerald-600'}`}>
-            <Briefcase size={14} /> Jobs
-          </button>
-          <button onClick={() => handleMobileNav('network')} className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border transition-all shadow-sm ${activeModals.network ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-gray-900 dark:hover:text-gray-100'}`}>
-            <Users size={14} /> Network
-          </button>
-         
-        </div>
-        <div className="w-full h-px bg-gray-200 dark:bg-gray-800 my-2"></div>
+        <div className="w-full h-px bg-gray-200 dark:bg-gray-800" />
       </div>
 
       {/* Primary Action Button */}
@@ -309,31 +302,31 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
             ) : suggestions.length === 0 ? (
               <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">No suggestions right now.</div>
             ) : (
-              <div className="space-y-3 max-h-[190px] overflow-y-auto custom-scrollbar pr-2">
+              <div className="space-y-1 max-h-[210px] overflow-y-auto custom-scrollbar">
                 {suggestions.map((user) => {
                   const isFollowed = followedIds.includes(user.id);
                   return (
-                    <div 
-                      key={user.id} 
+                    <div
+                      key={user.id}
                       onClick={() => setSelectedUserId(user.id)}
-                      className="flex items-center justify-between group cursor-pointer p-2 -mx-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all"
+                      className="flex items-center justify-between gap-2 group cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="relative w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
                           {user.avatar_url ? (
-                            <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
+                            <Image src={user.avatar_url} alt="avatar" fill sizes="36px" className="object-cover" />
                           ) : (
-                            <div className="w-full h-full bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold text-sm uppercase">
+                            <div className="w-full h-full bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold text-xs uppercase">
                               {user.username?.[0]}
                             </div>
                           )}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
-                            @{user.username}
-                            {user.is_verified && <BadgeCheck size={14} className="text-blue-500 drop-shadow-sm hover:scale-110 hover:-rotate-3 transition-all duration-300" fill="currentColor" stroke="white" />}
+                          <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1 max-w-full">
+                            <span className="truncate">@{user.username}</span>
+                            {user.is_verified && <BadgeCheck size={12} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />}
                           </span>
-                          <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest truncate">{user.status || 'Active Node'}</span>
+                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest truncate">{user.status || 'Active Node'}</span>
                         </div>
                       </div>
                       <button 
@@ -391,22 +384,23 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
             ) : groups.length === 0 ? (
               <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">No active channels.</div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {groups.map((group) => (
-                  <div 
-                    key={group.id} 
-                    className="flex flex-col group cursor-pointer p-3 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-sm hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all"
+                  <div
+                    key={group.id}
+                    onClick={() => router.push('/dash/groups')}
+                    className="flex items-center gap-3 group cursor-pointer p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-blue-500/40 dark:hover:border-blue-500/40 hover:shadow-sm transition-all min-w-0"
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{group.name}</span>
-                        {group.is_private ? <Lock size={10} className="text-amber-500 shrink-0" /> : <Globe size={10} className="text-blue-500 shrink-0" />}
-                      </div>
-                      <ChevronRight size={14} className="text-gray-700 dark:text-gray-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all shrink-0" />
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-500 flex items-center justify-center shrink-0">
+                      {group.is_private ? <Lock size={14} /> : <Globe size={14} />}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                      {group.description || "A community node on beoneofus."}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{group.name}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                        {group.description || (group.is_private ? 'Private Channel' : 'Public Channel')}
+                      </p>
+                    </div>
+                    <ChevronRight size={12} className="text-gray-400 group-hover:text-blue-500 transition-colors shrink-0" />
                   </div>
                 ))}
               </div>
@@ -447,17 +441,17 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
               <div className="flex-grow border-t border-gray-100 dark:border-gray-800"></div>
             </div>
 
-            <form onSubmit={handleEmailInvite} className="flex gap-2">
+            <form onSubmit={handleEmailInvite} className="flex gap-2 min-w-0">
               <input
                 type="email"
-                placeholder="developer@gmail.com"
+                placeholder="dev@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 required
-                className="flex-1 w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all min-w-0"
+                className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               />
-              <button type="submit" disabled={sendingEmail} className="bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white px-3 py-2 rounded-xl transition-colors flex items-center justify-center shrink-0 disabled:opacity-50" title="Send Email">
-                {sendingEmail ? <Loader2 size={14} className="animate-spin" /> : emailSuccess ? <Check size={14} className="text-green-400" /> : <Mail size={14} />}
+              <button type="submit" disabled={sendingEmail} className="bg-gray-900 dark:bg-gray-700 hover:bg-blue-600 text-white w-9 h-9 rounded-xl transition-colors flex items-center justify-center shrink-0 disabled:opacity-50" title="Send Email">
+                {sendingEmail ? <Loader2 size={13} className="animate-spin" /> : emailSuccess ? <Check size={13} className="text-green-400" /> : <Mail size={13} />}
               </button>
             </form>
           </div>

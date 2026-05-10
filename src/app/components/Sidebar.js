@@ -13,31 +13,33 @@ import VerifiedBadge from './VerifiedBadge';
 
 const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index }) => (
   <div
-    className={`group flex items-center justify-between py-2.5 px-3 rounded-lg cursor-pointer select-none transition-colors animate-in fade-in slide-in-from-left-4 duration-500 ${
-      active ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/40 hover:text-blue-600 dark:hover:text-blue-400'
+    className={`group flex items-center justify-between py-2.5 px-3 rounded-xl cursor-pointer select-none transition-all animate-in fade-in slide-in-from-left-4 duration-500 ${
+      active
+        ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 shadow-sm'
+        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-blue-600 dark:hover:text-blue-400'
     }`}
     style={{ animationDelay: `${(index || 0) * 50}ms`, animationFillMode: 'both' }}
     onClick={onClick}
   >
-    <div className="flex items-center gap-3">
-      <div className="relative flex items-center justify-center">
+    <div className="flex items-center gap-3 min-w-0">
+      <div className="relative flex items-center justify-center shrink-0">
         <Icon size={18} className={`${isRinging ? 'animate-ring text-blue-500' : ''} ${isBouncing ? 'animate-message-bounce text-blue-500' : ''} transition-colors`} />
         {badge > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 shadow-sm shrink-0">
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 shadow-sm">
             {badge > 99 ? '99+' : badge}
           </span>
         )}
       </div>
-      <span className={`text-[13px] tracking-wide ${active ? 'font-bold' : 'font-semibold'}`}>{label}</span>
+      <span className={`text-[13px] tracking-wide truncate ${active ? 'font-bold' : 'font-semibold'}`}>{label}</span>
     </div>
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 shrink-0">
       {onBadgeAction && badge > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); onBadgeAction(); }}
-          className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 md:opacity-0 group-hover:opacity-100 transition-all p-1"
+          className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all p-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20"
           title="Mark all as read"
         >
-          <CheckCheck size={16} />
+          <CheckCheck size={14} />
         </button>
       )}
     </div>
@@ -391,10 +393,10 @@ export default function Sidebar({ onClose }) {
       <aside className="w-full h-full bg-transparent p-4 md:p-6 flex flex-col">
         
         {/* Logo Area */}
-        <div className="flex items-center mb-8 px-3 shrink-0 w-full">
-          <Link href="/" title="Go Home" className="font-black text-2xl tracking-tighter flex items-center gap-2.5 text-gray-900 dark:text-gray-100 hover:opacity-80 transition-opacity select-none group">
-            <Terminal className="text-blue-500 group-hover:scale-110 transition-transform duration-300 shrink-0" size={26} />
-            <span>beone<span className="text-blue-600">of</span>us</span>
+        <div className="flex items-center mb-6 px-3 shrink-0 w-full">
+          <Link href="/" title="Go Home" className="font-black text-xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100 hover:opacity-80 transition-opacity select-none group min-w-0">
+            <Terminal className="text-blue-500 group-hover:scale-110 transition-transform duration-300 shrink-0" size={22} />
+            <span className="truncate">beone<span className="text-blue-600">of</span>us</span>
           </Link>
         </div>
 
@@ -444,43 +446,45 @@ export default function Sidebar({ onClose }) {
         >
           {isProfileLoading ? (
             <div className="flex items-center gap-3 py-2.5 px-3 w-full">
-              <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse shrink-0"></div>
-              <div className="space-y-2 flex-1">
-                <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-24"></div>
-                <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-16"></div>
+              <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse shrink-0" />
+              <div className="space-y-2 flex-1 min-w-0">
+                <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-24" />
+                <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded animate-pulse w-16" />
               </div>
             </div>
           ) : (
-            <div 
-              className="flex items-center gap-3 py-2.5 px-3 w-full rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors select-none"
+            <div
+              className="flex items-center gap-3 py-2.5 px-3 w-full rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all select-none min-w-0"
               onClick={() => { if (profile) { router.push('/dash/profile'); onClose?.(); } }}
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1px] shadow-lg shadow-blue-500/10 shrink-0">
-                 <div className="relative w-full h-full rounded-xl bg-white flex items-center justify-center text-xs font-bold text-gray-700 uppercase overflow-hidden">
-                   {profile?.avatar_url ? (
-                     <Image src={profile.avatar_url} alt="Avatar" fill sizes="40px" className="object-cover" />
-                   ) : (
-                     profile ? profile.username?.substring(0, 2) : '??'
-                   )}
-                 </div>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1.5px] shadow-md shadow-blue-500/20 shrink-0">
+                <div className="relative w-full h-full rounded-[9px] bg-white dark:bg-gray-900 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 uppercase overflow-hidden">
+                  {profile?.avatar_url ? (
+                    <Image src={profile.avatar_url} alt="Avatar" fill sizes="40px" className="object-cover" />
+                  ) : (
+                    profile ? profile.username?.substring(0, 2) : '??'
+                  )}
+                </div>
               </div>
 
               <div className="flex-1 min-w-0">
                 {profile ? (
                   <>
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-1">
-                      @{profile.username}
-                      {profile.is_verified && <VerifiedBadge size={14} />}
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-1 max-w-full">
+                      <span className="truncate">@{profile.username}</span>
+                      {profile.is_verified && <VerifiedBadge size={13} />}
                     </p>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                      <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest">{profile.status || 'Active Node'}</p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0" />
+                      <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest truncate">
+                        {profile.status || 'Active Node'}
+                      </p>
                     </div>
                   </>
                 ) : (
-                  <Link href="/auth" className="block hover:opacity-80 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase italic">Guest_Node</p>
-                    <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Authorize Access</p>
+                  <Link href="/auth" className="block hover:opacity-80 transition-opacity min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase italic truncate">Guest_Node</p>
+                    <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest truncate">Authorize Access</p>
                   </Link>
                 )}
               </div>
@@ -488,12 +492,12 @@ export default function Sidebar({ onClose }) {
           )}
 
           {profile && (
-            <button 
+            <button
               onClick={handleLogout}
-              className="flex items-center gap-3 py-2.5 px-3 w-full rounded-lg text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group select-none"
+              className="flex items-center gap-3 py-2.5 px-3 w-full rounded-xl text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group select-none min-w-0"
             >
-              <LogOut size={18} className="group-hover:translate-x-1 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-tighter">Terminate Session</span>
+              <LogOut size={16} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
+              <span className="text-[10px] font-black uppercase tracking-tighter truncate">Sign Out</span>
             </button>
           )}
         </div>

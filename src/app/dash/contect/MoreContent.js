@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Image from "next/image";
 import {
-  Zap, HelpCircle, Code2, LogOut, ChevronRight, X, Globe, Send,
+  Zap, HelpCircle, Code2, LogOut, ChevronRight, X, Globe, Send, Quote,
   Copy, Check, Plus, Activity, Database, Key, User, AlertCircle,
   AlertTriangle, ShieldAlert, ShieldCheck, Loader2, Search, Trash2,
   Bot, UserCog, FileText, ClipboardList, UserPlus, Briefcase,
@@ -1988,6 +1988,107 @@ const UserDashboardTool = ({ currentUserId }) => {
   );
 };
 
+// ─── Quote Tool ──────────────────────────────────────────────────────────────
+
+const QUOTES = [
+  { text: "First, solve the problem. Then, write the code.", author: "John Johnson", tag: "Coding" },
+  { text: "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.", author: "Martin Fowler", tag: "Coding" },
+  { text: "Make it work, make it right, make it fast.", author: "Kent Beck", tag: "Coding" },
+  { text: "Talk is cheap. Show me the code.", author: "Linus Torvalds", tag: "Coding" },
+  { text: "Simplicity is the soul of efficiency.", author: "Austin Freeman", tag: "Coding" },
+  { text: "Code is like humor. When you have to explain it, it's bad.", author: "Cory House", tag: "Coding" },
+  { text: "Programs must be written for people to read, and only incidentally for machines to execute.", author: "Harold Abelson", tag: "Coding" },
+  { text: "The best way to predict the future is to create it.", author: "Alan Kay", tag: "Innovation" },
+  { text: "An entrepreneur is someone who jumps off a cliff and builds a plane on the way down.", author: "Reid Hoffman", tag: "Entrepreneurship" },
+  { text: "If you are not embarrassed by the first version of your product, you've launched too late.", author: "Reid Hoffman", tag: "Entrepreneurship" },
+  { text: "Your most unhappy customers are your greatest source of learning.", author: "Bill Gates", tag: "Entrepreneurship" },
+  { text: "Done is better than perfect.", author: "Sheryl Sandberg", tag: "Entrepreneurship" },
+  { text: "Stay hungry, stay foolish.", author: "Steve Jobs", tag: "Motivation" },
+  { text: "The only way to do great work is to love what you do.", author: "Steve Jobs", tag: "Motivation" },
+  { text: "In the middle of difficulty lies opportunity.", author: "Albert Einstein", tag: "Motivation" },
+  { text: "Hard work beats talent when talent doesn't work hard.", author: "Tim Notke", tag: "Motivation" },
+  { text: "The secret of getting ahead is getting started.", author: "Mark Twain", tag: "Motivation" },
+  { text: "Every expert was once a beginner.", author: "Unknown", tag: "Learning" },
+  { text: "Learning never exhausts the mind.", author: "Leonardo da Vinci", tag: "Learning" },
+  { text: "The more I learn, the more I realize how much I don't know.", author: "Albert Einstein", tag: "Learning" },
+  { text: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin", tag: "Learning" },
+  { text: "The beautiful thing about learning is that no one can take it away from you.", author: "B.B. King", tag: "Learning" },
+];
+
+const QUOTE_TAGS = ["All", "Coding", "Motivation", "Entrepreneurship", "Innovation", "Learning"];
+
+const QuoteTool = () => {
+  const [activeTag, setActiveTag] = useState("All");
+  const [featuredIdx, setFeaturedIdx] = useState(() => Math.floor(Math.random() * QUOTES.length));
+
+  const filtered = activeTag === "All" ? QUOTES : QUOTES.filter(q => q.tag === activeTag);
+  const featured = QUOTES[featuredIdx];
+
+  const shuffle = () => {
+    let next;
+    do { next = Math.floor(Math.random() * QUOTES.length); } while (next === featuredIdx && QUOTES.length > 1);
+    setFeaturedIdx(next);
+  };
+
+  return (
+    <div className="p-5 space-y-5">
+      {/* Featured quote */}
+      <div className="relative overflow-hidden rounded-2xl border border-violet-200 dark:border-violet-500/20 bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 dark:from-violet-500/10 dark:via-violet-500/5 dark:to-transparent p-6">
+        <Quote size={36} className="text-violet-300 dark:text-violet-500/30 mb-3" />
+        <p className="text-base font-bold text-gray-900 dark:text-white leading-relaxed">
+          {featured.text}
+        </p>
+        <p className="text-sm text-violet-600 dark:text-violet-400 font-bold mt-3">— {featured.author}</p>
+        <div className="flex items-center justify-between mt-4">
+          <span className="text-[10px] font-black uppercase tracking-widest text-violet-400 dark:text-violet-500/60 px-2 py-0.5 bg-violet-100 dark:bg-violet-500/10 rounded-lg">
+            {featured.tag}
+          </span>
+          <button
+            onClick={shuffle}
+            className="flex items-center gap-1.5 text-xs font-bold text-violet-500 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+          >
+            <RefreshCw size={12} /> New Quote
+          </button>
+        </div>
+        <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-violet-200/30 dark:bg-violet-500/5 blur-2xl" />
+      </div>
+
+      {/* Category filter */}
+      <div className="flex gap-2 flex-wrap">
+        {QUOTE_TAGS.map(tag => (
+          <button
+            key={tag}
+            onClick={() => setActiveTag(tag)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+              activeTag === tag
+                ? "bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/20"
+                : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-500/40"
+            }`}
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+
+      {/* Quote list */}
+      <div className="grid gap-3">
+        {filtered.map((q, i) => (
+          <div
+            key={i}
+            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 hover:border-violet-200 dark:hover:border-violet-500/20 transition-colors"
+          >
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">"{q.text}"</p>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-600">— {q.author}</p>
+              <span className="text-[10px] font-black uppercase tracking-wide text-gray-400 dark:text-gray-700">{q.tag}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── Tool Registry ────────────────────────────────────────────────────────────
 
 const TOOLS = [
@@ -1996,6 +2097,7 @@ const TOOLS = [
   { id: "status",         label: "System Status",    icon: Zap,        desc: "Platform health & latency" },
   { id: "community",      label: "Community Hub",    icon: Globe,      desc: "Global network chat" },
   { id: "support",        label: "Help & Support",   icon: HelpCircle, desc: "AI technical assistance" },
+  { id: "quotes",         label: "Daily Quotes",     icon: Quote,      desc: "Inspiration for builders & coders" },
   { id: "admin",          label: "Admin Dashboard",  icon: ShieldAlert, desc: "Platform management", adminOnly: true },
 ];
 
@@ -2218,6 +2320,7 @@ export default function MoreContent() {
                 {activeItem.id === "api" && <ApiAccessTool />}
                 {activeItem.id === "community" && <div className="h-full"><CommunityHubTool currentUserId={currentUserId} /></div>}
                 {activeItem.id === "support" && <SupportTool />}
+                {activeItem.id === "quotes" && <QuoteTool />}
                 {activeItem.id === "admin" && <AdminPanelTool currentUserId={currentUserId} />}
               </div>
             </div>

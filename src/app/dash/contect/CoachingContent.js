@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   GraduationCap, Crown, Lock, CheckCircle2, Clock, MessageSquare,
-  Send, Loader2, X, Play, Sparkles, ChevronRight,
+  Send, Loader2, X, Play, Sparkles, ChevronRight, Star, Calendar,
+  RefreshCw, Timer,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import Link from "next/link";
@@ -88,6 +89,49 @@ function ChatInput({ value, onChange, onSend, sending }) {
   );
 }
 
+function formatDuration(startedAt, endedAt) {
+  if (!startedAt || !endedAt) return null;
+  const ms = new Date(endedAt) - new Date(startedAt);
+  if (ms <= 0) return null;
+  const mins = Math.floor(ms / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
+  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+}
+
+function StarRating({ value, onChange, readonly = false }) {
+  const [hovered, setHovered] = useState(null);
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map(star => (
+        <button
+          key={star}
+          type="button"
+          disabled={readonly}
+          onMouseEnter={() => !readonly && setHovered(star)}
+          onMouseLeave={() => !readonly && setHovered(null)}
+          onClick={() => !readonly && onChange?.(star)}
+          className={`transition-colors ${readonly ? "cursor-default" : "cursor-pointer hover:scale-110 transition-transform"} ${
+            (hovered ?? value) >= star ? "text-amber-400" : "text-gray-300 dark:text-gray-700"
+          }`}
+        >
+          <Star size={14} fill="currentColor" strokeWidth={0} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CoachAvatar({ coach, size = "sm" }) {
+  if (!coach) return null;
+  const initials = coach.username?.[0]?.toUpperCase() || "C";
+  const dim = size === "sm" ? "w-7 h-7 text-xs" : "w-10 h-10 text-sm";
+  return (
+    <div className={`${dim} bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold shrink-0`}>
+      {initials}
+    </div>
+  );
+}
+
 function SessionCard({ session, onAccept, onSelect, isSelected }) {
   return (
     <button
@@ -130,9 +174,11 @@ export default function CoachingContent() {
   const [loading, setLoading]           = useState(true);
   const [topic, setTopic]               = useState("code_review");
   const [notes, setNotes]               = useState("");
+  const [scheduledAt, setScheduledAt]   = useState("");
   const [requesting, setRequesting]     = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [sending, setSending]           = useState(false);
+  const [ratingState, setRatingState]   = useState({});
   const messagesEndRef                  = useRef(null);
 
   const fetchData = useCallback(async () => {
@@ -143,7 +189,7 @@ export default function CoachingContent() {
     const [profileRes, sessionsRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", session.user.id).single(),
       supabase.from("coaching_sessions")
-        .select("*, profiles:user_id(id, username, avatar_url)")
+        .select("*, profiles:user_id(id, username, avatar_url), coach:coach_id(id, username, avatar_url)")
         .order("created_at", { ascending: false }),
     ]);
 
@@ -219,13 +265,14 @@ export default function CoachingContent() {
       const topicLabel = TOPICS.find(t => t.id === topic)?.label || topic;
       const { data, error } = await supabase
         .from("coaching_sessions")
-        .insert({ user_id: user.id, topic: topicLabel, notes: notes.trim() || null, status: "pending" })
+        .insert({ user_id: user.id, topic: topicLabel, notes: notes.trim() || null, status: "pending", scheduled_at: scheduledAt || null })
         .select("*, profiles:user_id(id, username, avatar_url)")
         .single();
       if (error) throw error;
       setSessions(prev => [data, ...prev]);
       setActiveSession(data);
       setNotes("");
+      setScheduledAt("");
       await fetch("/api/coaching/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -263,6 +310,16 @@ export default function CoachingContent() {
       end:    { status: "completed", ended_at: new Date().toISOString(), updated_at: new Date().toISOString() },
     };
     await supabase.from("coaching_sessions").update(updates[action]).eq("id", sessionId);
+  };
+
+  const handleRateSession = async (sessionId, rating) => {
+    setRatingState(prev => ({ ...prev, [sessionId]: { submitting: true, value: rating } }));
+    try {
+      await supabase.from("coaching_sessions").update({ rating }).eq("id", sessionId);
+      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, rating } : s));
+    } finally {
+      setRatingState(prev => ({ ...prev, [sessionId]: { submitting: false, value: rating } }));
+    }
   };
 
   if (loading) return (
@@ -374,6 +431,12 @@ export default function CoachingContent() {
                 <div>
                   <p className="text-sm font-black text-gray-900 dark:text-white">@{activeSession.profiles?.username}</p>
                   <p className="text-xs text-gray-500">{activeSession.topic}</p>
+                  {activeSession.scheduled_at && (
+                    <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
+                      <Calendar size={9} />
+                      {new Date(activeSession.scheduled_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge status={activeSession.status} />
@@ -449,6 +512,20 @@ export default function CoachingContent() {
             </div>
             {mySession.status === "pending" && <Loader2 size={15} className="animate-spin text-amber-500 shrink-0 mt-1" />}
           </div>
+          {mySession.coach && (mySession.status === "accepted" || mySession.status === "active") && (
+            <div className="flex items-center gap-2 mt-2">
+              <CoachAvatar coach={mySession.coach} size="sm" />
+              <div>
+                <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Coach: @{mySession.coach.username}</p>
+              </div>
+            </div>
+          )}
+          {mySession.scheduled_at && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+              <Calendar size={10} />
+              Preferred: {new Date(mySession.scheduled_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            </p>
+          )}
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
             {mySession.status === "pending"  && "Your request is in the queue. A coach will accept it shortly."}
             {mySession.status === "accepted" && "A coach has been assigned! They'll start the session soon."}
@@ -460,9 +537,17 @@ export default function CoachingContent() {
       {/* Live chat */}
       {showChat && (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Private Coaching Channel — Real-time</p>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Private Coaching Channel — Real-time</p>
+            </div>
+            {mySession.coach && (
+              <div className="flex items-center gap-1.5">
+                <CoachAvatar coach={mySession.coach} size="sm" />
+                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">@{mySession.coach.username}</span>
+              </div>
+            )}
           </div>
           <ChatMessages messages={messages} userId={user.id} messagesEndRef={messagesEndRef} />
           <ChatInput value={messageInput} onChange={setMessageInput} onSend={handleSend} sending={sending} />
@@ -497,6 +582,19 @@ export default function CoachingContent() {
             ))}
           </div>
 
+          <div className="mb-4">
+            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
+              <Calendar size={11} /> Preferred Time <span className="font-normal opacity-60">(optional)</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={e => setScheduledAt(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+              className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/30 [color-scheme:light] dark:[color-scheme:dark]"
+            />
+          </div>
+
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
@@ -521,15 +619,53 @@ export default function CoachingContent() {
         <div>
           <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Past Sessions</p>
           <div className="space-y-2">
-            {pastMine.map(s => (
-              <div key={s.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">{s.topic}</p>
-                  <p className="text-xs text-gray-500">{new Date(s.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+            {pastMine.map(s => {
+              const duration = formatDuration(s.started_at, s.ended_at);
+              const rs = ratingState[s.id];
+              const currentRating = rs?.value ?? s.rating ?? 0;
+              return (
+                <div key={s.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">{s.topic}</p>
+                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                        <p className="text-xs text-gray-500">{new Date(s.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                        {duration && (
+                          <span className="text-xs text-gray-400 dark:text-gray-600 flex items-center gap-1">
+                            <Timer size={10} /> {duration}
+                          </span>
+                        )}
+                        {s.coach && (
+                          <span className="text-xs text-gray-400 dark:text-gray-600">
+                            Coach: @{s.coach.username}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <StatusBadge status={s.status} />
+                  </div>
+                  {s.status === "completed" && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                      {currentRating > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <StarRating value={currentRating} readonly />
+                          <span className="text-xs text-gray-400">{currentRating}/5</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <p className="text-xs text-gray-400 dark:text-gray-600">Rate this session:</p>
+                          <StarRating
+                            value={0}
+                            onChange={rating => handleRateSession(s.id, rating)}
+                          />
+                          {rs?.submitting && <Loader2 size={12} className="animate-spin text-violet-500" />}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <StatusBadge status={s.status} />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

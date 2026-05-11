@@ -11,6 +11,7 @@ import {
 import ProfileContent from "./ProfileContent";
 import VerifiedBadge from "../../components/VerifiedBadge";
 import ReactMarkdown from "react-markdown";
+import StoriesBar from "./Stories";
 
 export default function FeedContent() {
   const [posts, setPosts] = useState([]);
@@ -406,6 +407,9 @@ export default function FeedContent() {
 
   return (
     <div className="space-y-4">
+
+      {/* --- STORIES BAR --- */}
+      {currentUserId && <StoriesBar currentUserId={currentUserId} />}
 
       {/* --- FEED TABS --- */}
       <div className="flex items-center gap-4 sm:gap-6 border-b border-gray-200 dark:border-gray-800 overflow-x-auto no-scrollbar -mx-1 px-1">

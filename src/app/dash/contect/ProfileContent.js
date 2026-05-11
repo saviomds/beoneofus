@@ -7,6 +7,7 @@ import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
 import PremiumBadge from "../../components/PremiumBadge";
+import { StoryRing, useUserStories, StoryViewer, StoryCreator } from "./Stories";
 
 // --- Image Cropping Helper ---
 const createImage = (url) =>
@@ -86,6 +87,12 @@ export default function ProfileContent({ viewUserId }) {
   const [loadingApplicants, setLoadingApplicants] = useState(false);
   const [selectedApplicant, setSelectedApplicant] = useState(null);
   const [activeJobForApplicants, setActiveJobForApplicants] = useState(null);
+
+  // Story viewer state
+  const [storyViewerOpen, setStoryViewerOpen] = useState(false);
+
+  // Stories for the profile being viewed (profile?.id = null while loading → hook handles it)
+  const { hasStory, stories: profileStories } = useUserStories(profile?.id);
 
   useEffect(() => {
     let channel;
@@ -599,6 +606,7 @@ export default function ProfileContent({ viewUserId }) {
   const displayAvatar = imagePreview || profile?.avatar_url;
   const displayBanner = bannerPreview || profile?.banner_url;
 
+
   return (
     <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 pt-4 px-2 sm:px-6" style={{ zoom: "0.85" }}>
       <div className="mb-8 max-w-6xl w-full mx-auto">
@@ -660,24 +668,30 @@ export default function ProfileContent({ viewUserId }) {
         <div className="px-6 sm:px-12 relative pb-12">
           {/* Header Area with Avatar and Actions */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6 -mt-16 sm:-mt-24 mb-8">
-            {/* Avatar */}
-            <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 sm:border-8 border-white dark:border-gray-900 bg-white dark:bg-gray-900 flex items-center justify-center text-5xl font-black text-gray-700 dark:text-gray-300 shadow-xl shrink-0 overflow-hidden group z-10 transition-transform hover:scale-105 duration-300">
-              {displayAvatar ? (
-                <Image src={displayAvatar} alt="Profile Avatar" fill sizes="128px" className="object-cover object-center" />
-              ) : (
-                userInitial
-              )}
-              
-              {isEditing && (
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
-                >
-                  <Camera size={24} className="text-white mb-1" />
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-white">Change</span>
-                </div>
-              )}
-            </div>
+            {/* Avatar + Story Ring */}
+            <StoryRing
+              hasStory={hasStory}
+              viewed={false}
+              onClick={hasStory && !isEditing ? () => setStoryViewerOpen(true) : undefined}
+            >
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 sm:border-8 border-white dark:border-gray-900 bg-white dark:bg-gray-900 flex items-center justify-center text-5xl font-black text-gray-700 dark:text-gray-300 shadow-xl shrink-0 overflow-hidden group z-10 transition-transform hover:scale-105 duration-300">
+                {displayAvatar ? (
+                  <Image src={displayAvatar} alt="Profile Avatar" fill sizes="128px" className="object-cover object-center" />
+                ) : (
+                  userInitial
+                )}
+
+                {isEditing && (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                  >
+                    <Camera size={24} className="text-white mb-1" />
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-white">Change</span>
+                  </div>
+                )}
+              </div>
+            </StoryRing>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
 
             {/* Action Buttons */}
@@ -690,6 +704,12 @@ export default function ProfileContent({ viewUserId }) {
                       className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-6 py-3 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
                     >
                       <Edit3 size={18} /> Edit Profile
+                    </button>
+                    <button
+                      onClick={() => setStoryViewerOpen("create")}
+                      className="flex items-center gap-2 text-sm font-bold text-white bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 px-4 py-3 rounded-full transition-all shadow-sm hover:shadow-md active:scale-95"
+                    >
+                      <Plus size={16} /> Story
                     </button>
                     {profile?.username && (
                       <a
@@ -1443,6 +1463,28 @@ export default function ProfileContent({ viewUserId }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Story Viewer — view this profile's stories */}
+      {storyViewerOpen === true && profileStories.length > 0 && (
+        <StoryViewer
+          groups={[{ user: profile, stories: profileStories }]}
+          startGroupIdx={0}
+          currentUserId={currentUser?.id}
+          onClose={() => setStoryViewerOpen(false)}
+          onDelete={async (id) => {
+            await supabase.from("stories").delete().eq("id", id);
+            setStoryViewerOpen(false);
+          }}
+        />
+      )}
+
+      {/* Story Creator — own profile only */}
+      {storyViewerOpen === "create" && isOwnProfile && (
+        <StoryCreator
+          currentUserId={currentUser?.id}
+          onClose={() => setStoryViewerOpen(false)}
+        />
       )}
 
       {/* Custom Toast Popup */}

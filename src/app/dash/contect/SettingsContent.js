@@ -6,7 +6,8 @@ import {
   Loader2, BadgeCheck, Shield, Volume2, VolumeX, Users, Crown,
   UserCheck, Activity, TrendingUp, Bell, BellOff, Settings,
   ChevronRight, BarChart3, Zap, Lock, Globe, RefreshCw, Eye,
-  UserPlus, ShieldCheck, Award
+  UserPlus, ShieldCheck, Award, Smartphone, Copy, KeyRound,
+  LogOut, Fingerprint, Clock, CheckCircle2, XCircle,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../supabaseClient";
@@ -182,6 +183,24 @@ export default function SettingsContent() {
   const [isMuted, setIsMuted] = useState(false);
   const [requestingVerification, setRequestingVerification] = useState(false);
 
+  // 2FA state
+  const [mfaEnabled, setMfaEnabled]       = useState(false);
+  const [mfaLoading, setMfaLoading]       = useState(true);
+  const [showMFAModal, setShowMFAModal]   = useState(false);
+  const [mfaStep, setMfaStep]             = useState("enroll"); // "enroll" | "verify" | "done"
+  const [mfaFactorId, setMfaFactorId]     = useState(null);
+  const [mfaQR, setMfaQR]                 = useState("");
+  const [mfaSecret, setMfaSecret]         = useState("");
+  const [mfaCode, setMfaCode]             = useState("");
+  const [mfaVerifying, setMfaVerifying]   = useState(false);
+  const [mfaCopied, setMfaCopied]         = useState(false);
+  const [mfaDisabling, setMfaDisabling]   = useState(false);
+
+  // Sessions state
+  const [showSessionsModal, setShowSessionsModal] = useState(false);
+  const [sessionInfo, setSessionInfo]             = useState(null);
+  const [revokingOthers, setRevokingOthers]       = useState(false);
+
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
@@ -199,6 +218,15 @@ export default function SettingsContent() {
   const [statsLoading, setStatsLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  const parseUA = (ua = "") => {
+    const mobile  = /Mobi|Android/i.test(ua);
+    const tablet  = /iPad|Tablet/i.test(ua);
+    const os      = /Windows/.test(ua) ? "Windows" : /Mac/.test(ua) ? "macOS" : /Linux/.test(ua) ? "Linux" : /Android/.test(ua) ? "Android" : /iOS|iPhone|iPad/.test(ua) ? "iOS" : "Unknown OS";
+    const browser = /Edg\//.test(ua) ? "Edge" : /OPR|Opera/.test(ua) ? "Opera" : /Chrome/.test(ua) ? "Chrome" : /Firefox/.test(ua) ? "Firefox" : /Safari/.test(ua) ? "Safari" : "Browser";
+    const device  = tablet ? "Tablet" : mobile ? "Mobile" : "Desktop";
+    return { os, browser, device };
+  };
+
   const showToast = useCallback((msg, type = "success") => {
     setToastMessage(msg);
     setToastType(type);
@@ -214,15 +242,27 @@ export default function SettingsContent() {
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      const { data } = await supabase
-        .from("profiles")
-        .select("username, is_verified, verification_status, role")
-        .eq("id", session.user.id)
-        .single();
-      if (data) {
-        setProfile(data);
-        setIsAdmin(data.role === "admin" || data.role === "founder");
+      const [profileRes] = await Promise.all([
+        supabase.from("profiles").select("username, is_verified, verification_status, role").eq("id", session.user.id).single(),
+      ]);
+      if (profileRes.data) {
+        setProfile(profileRes.data);
+        setIsAdmin(profileRes.data.role === "admin" || profileRes.data.role === "founder");
       }
+
+      // Check 2FA status
+      try {
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        const verified = factors?.totp?.filter(f => f.status === "verified") ?? [];
+        setMfaEnabled(verified.length > 0);
+        if (verified.length > 0) setMfaFactorId(verified[0].id);
+      } catch { /* MFA not available */ } finally {
+        setMfaLoading(false);
+      }
+
+      // Prefill session info
+      const { device, browser, os } = parseUA(typeof navigator !== "undefined" ? navigator.userAgent : "");
+      setSessionInfo({ device, browser, os, created_at: session.user.created_at, expires_at: new Date(session.expires_at * 1000).toISOString() });
     };
     fetchProfile();
   }, []);
@@ -326,6 +366,75 @@ export default function SettingsContent() {
     setIsMuted(next);
     if (typeof window !== "undefined") localStorage.setItem("beoneofus_muted", next.toString());
     showToast(next ? "Notification sounds muted" : "Notification sounds enabled");
+  };
+
+  const handleOpen2FA = async () => {
+    if (mfaEnabled) { setShowMFAModal(true); setMfaStep("enabled"); return; }
+    setShowMFAModal(true);
+    setMfaStep("enroll");
+    setMfaCode("");
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "beoneofus" });
+      if (error) throw error;
+      setMfaFactorId(data.id);
+      setMfaQR(data.totp.qr_code);
+      setMfaSecret(data.totp.secret);
+    } catch (e) {
+      showToast(e.message || "Could not start 2FA setup", "error");
+      setShowMFAModal(false);
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    if (!mfaCode || mfaCode.length !== 6 || !mfaFactorId) return;
+    setMfaVerifying(true);
+    try {
+      const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: mfaFactorId, code: mfaCode });
+      if (error) throw error;
+      setMfaEnabled(true);
+      setMfaStep("done");
+      showToast("Two-factor authentication enabled!");
+    } catch (e) {
+      showToast(e.message || "Invalid code. Please try again.", "error");
+    } finally {
+      setMfaVerifying(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!mfaFactorId) return;
+    setMfaDisabling(true);
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactorId });
+      if (error) throw error;
+      setMfaEnabled(false);
+      setMfaFactorId(null);
+      setShowMFAModal(false);
+      showToast("Two-factor authentication removed.");
+    } catch (e) {
+      showToast(e.message || "Could not disable 2FA.", "error");
+    } finally {
+      setMfaDisabling(false);
+    }
+  };
+
+  const handleRevokeOtherSessions = async () => {
+    setRevokingOthers(true);
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "others" });
+      if (error) throw error;
+      showToast("All other sessions revoked.");
+    } catch (e) {
+      showToast(e.message || "Could not revoke sessions.", "error");
+    } finally {
+      setRevokingOthers(false);
+    }
+  };
+
+  const copySecret = () => {
+    navigator.clipboard.writeText(mfaSecret);
+    setMfaCopied(true);
+    setTimeout(() => setMfaCopied(false), 2000);
   };
 
   const closeDeleteModal = () => { setShowDeleteModal(false); setDeleteInput(""); setDeleteError(""); };
@@ -481,16 +590,47 @@ export default function SettingsContent() {
             <Card>
               <SectionHeader icon={Lock} title="Security" subtitle="Manage your account security settings." accent="emerald" />
               <div className="space-y-3">
-                <RowItem title="Two-Factor Authentication" desc="Add an extra layer of security.">
-                  <button className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 transition-all">
-                    <ShieldCheck size={14} /> Enable 2FA
-                  </button>
+
+                {/* 2FA row */}
+                <RowItem
+                  title="Two-Factor Authentication"
+                  desc="Require a one-time code from your authenticator app on sign-in."
+                >
+                  <div className="flex items-center gap-2 shrink-0">
+                    {mfaLoading ? (
+                      <Loader2 size={14} className="animate-spin text-gray-400" />
+                    ) : mfaEnabled ? (
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <CheckCircle2 size={13} /> Active
+                      </span>
+                    ) : null}
+                    <button
+                      onClick={handleOpen2FA}
+                      disabled={mfaLoading}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all disabled:opacity-50 ${
+                        mfaEnabled
+                          ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+                          : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
+                      }`}
+                    >
+                      {mfaEnabled ? <><XCircle size={14} /> Disable 2FA</> : <><Fingerprint size={14} /> Enable 2FA</>}
+                    </button>
+                  </div>
                 </RowItem>
-                <RowItem title="Active Sessions" desc="View and manage logged in devices.">
-                  <button className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 transition-all">
+
+                {/* Active Sessions row */}
+                <RowItem
+                  title="Active Sessions"
+                  desc="View and manage devices currently signed in to your account."
+                >
+                  <button
+                    onClick={() => setShowSessionsModal(true)}
+                    className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-all"
+                  >
                     <Eye size={14} /> View Sessions
                   </button>
                 </RowItem>
+
               </div>
             </Card>
 
@@ -685,6 +825,202 @@ export default function SettingsContent() {
                 className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
               >
                 {isDeleting ? <Loader2 size={16} className="animate-spin" /> : "Permanently Delete Account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2FA Modal ── */}
+      {showMFAModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-500/50 dark:bg-black/70 backdrop-blur-sm" onClick={() => { setShowMFAModal(false); setMfaCode(""); }} />
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-7 animate-in fade-in zoom-in duration-200">
+            <button onClick={() => { setShowMFAModal(false); setMfaCode(""); }} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              <X size={18} />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                <Fingerprint size={22} className="text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-gray-900 dark:text-white">
+                  {mfaStep === "enabled" ? "Disable 2FA" : mfaStep === "done" ? "2FA Enabled!" : "Set Up Two-Factor Auth"}
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {mfaStep === "enabled" ? "Remove authenticator app requirement" : mfaStep === "done" ? "Your account is now more secure" : "Use an authenticator app like Google Authenticator"}
+                </p>
+              </div>
+            </div>
+
+            {/* Step: enroll — show QR + secret */}
+            {mfaStep === "enroll" && (
+              <div className="space-y-5">
+                {mfaQR ? (
+                  <>
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-3 bg-white rounded-2xl border border-gray-200 shadow-sm">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={mfaQR} alt="2FA QR Code" className="w-44 h-44" />
+                      </div>
+                      <p className="text-xs text-center text-gray-500">Scan this QR code with your authenticator app</p>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Manual entry key</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <code className="text-xs font-mono text-gray-700 dark:text-gray-300 break-all select-all">{mfaSecret}</code>
+                        <button onClick={copySecret} className="shrink-0 p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors text-gray-500">
+                          {mfaCopied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Enter the 6-digit code from your app</p>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={mfaCode}
+                        onChange={e => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        onKeyDown={e => { if (e.key === "Enter") handleVerify2FA(); }}
+                        placeholder="000000"
+                        className="w-full text-center text-2xl font-black tracking-[0.5em] bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 focus:border-emerald-500/50 rounded-xl py-3 px-4 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-700 outline-none transition-all"
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleVerify2FA}
+                      disabled={mfaCode.length !== 6 || mfaVerifying}
+                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-all text-sm"
+                    >
+                      {mfaVerifying ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
+                      {mfaVerifying ? "Verifying…" : "Verify & Enable"}
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 size={24} className="animate-spin text-emerald-400" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step: done — success */}
+            {mfaStep === "done" && (
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto">
+                  <CheckCircle2 size={32} className="text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Two-factor authentication is active</p>
+                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">You'll be asked for a code from your authenticator app each time you sign in.</p>
+                </div>
+                <button
+                  onClick={() => setShowMFAModal(false)}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all text-sm"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+
+            {/* Step: enabled — disable confirm */}
+            {mfaStep === "enabled" && (
+              <div className="space-y-5">
+                <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4">
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium leading-relaxed">
+                    Disabling 2FA will make your account less secure. Anyone with your password could sign in without a second check.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setShowMFAModal(false)}
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDisable2FA}
+                    disabled={mfaDisabling}
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white transition-all"
+                  >
+                    {mfaDisabling ? <Loader2 size={15} className="animate-spin" /> : <XCircle size={15} />}
+                    {mfaDisabling ? "Removing…" : "Disable 2FA"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Active Sessions Modal ── */}
+      {showSessionsModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-500/50 dark:bg-black/70 backdrop-blur-sm" onClick={() => setShowSessionsModal(false)} />
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-7 animate-in fade-in zoom-in duration-200">
+            <button onClick={() => setShowSessionsModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                <Smartphone size={20} className="text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-gray-900 dark:text-white">Active Sessions</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Devices signed in to your account</p>
+              </div>
+            </div>
+
+            {/* Current session card */}
+            <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
+                  {sessionInfo?.device === "Mobile" ? <Smartphone size={17} className="text-blue-400" /> : <Monitor size={17} className="text-blue-400" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-black text-gray-900 dark:text-white">
+                      {sessionInfo?.browser} on {sessionInfo?.os}
+                    </p>
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg shrink-0">
+                      Current
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">{sessionInfo?.device} device</p>
+                  {sessionInfo?.expires_at && (
+                    <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-1.5">
+                      <Clock size={9} />
+                      Session expires {new Date(sessionInfo.expires_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-5 leading-relaxed">
+              Supabase manages session tokens per device. Use the button below to invalidate all other active sessions — they will need to sign in again.
+            </p>
+
+            <div className="space-y-3">
+              <button
+                onClick={handleRevokeOtherSessions}
+                disabled={revokingOthers}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 disabled:opacity-50 transition-all"
+              >
+                {revokingOthers ? <Loader2 size={15} className="animate-spin" /> : <KeyRound size={15} />}
+                {revokingOthers ? "Revoking…" : "Revoke All Other Sessions"}
+              </button>
+              <button
+                onClick={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all"
+              >
+                <LogOut size={15} /> Sign Out Everywhere
               </button>
             </div>
           </div>

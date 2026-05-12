@@ -15,6 +15,7 @@ const TOPICS = [
   { id: "system_design",  label: "System Design",    desc: "Architecture, scalability, and technical design" },
   { id: "project_help",   label: "Project Help",     desc: "Hands-on help with your current project" },
   { id: "interview_prep", label: "Interview Prep",   desc: "Mock interviews and coding challenge preparation" },
+  { id: "mentorship",     label: "Mentorship",       desc: "Guidance and advice from experienced professionals" },
   { id: "custom",         label: "Custom Topic",     desc: "Something else — describe in the notes field" },
 ];
 
@@ -179,7 +180,18 @@ export default function CoachingContent() {
   const [messageInput, setMessageInput] = useState("");
   const [sending, setSending]           = useState(false);
   const [ratingState, setRatingState]   = useState({});
+  const [mentors, setMentors]           = useState([]);
+  const [selectedMentor, setSelectedMentor] = useState(null);
   const messagesEndRef                  = useRef(null);
+
+  useEffect(() => {
+    if (topic !== "mentorship") return;
+    supabase
+      .from("mentors")
+      .select("*, profiles:user_id(id, username, avatar_url)")
+      .eq("is_active", true)
+      .then(({ data }) => { if (data) setMentors(data); });
+  }, [topic]);
 
   const fetchData = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -263,9 +275,17 @@ export default function CoachingContent() {
     setRequesting(true);
     try {
       const topicLabel = TOPICS.find(t => t.id === topic)?.label || topic;
+      const insertPayload = {
+        user_id: user.id,
+        topic: topicLabel,
+        notes: notes.trim() || null,
+        status: "pending",
+        scheduled_at: scheduledAt || null,
+        ...(selectedMentor ? { coach_id: selectedMentor.user_id } : {}),
+      };
       const { data, error } = await supabase
         .from("coaching_sessions")
-        .insert({ user_id: user.id, topic: topicLabel, notes: notes.trim() || null, status: "pending", scheduled_at: scheduledAt || null })
+        .insert(insertPayload)
         .select("*, profiles:user_id(id, username, avatar_url)")
         .single();
       if (error) throw error;
@@ -273,6 +293,15 @@ export default function CoachingContent() {
       setActiveSession(data);
       setNotes("");
       setScheduledAt("");
+      setSelectedMentor(null);
+      if (selectedMentor) {
+        await supabase.from("notifications").insert({
+          receiver_id: selectedMentor.user_id,
+          actor_id: user.id,
+          type: "message",
+          content: `booked a mentorship session with you. /dash/coaching`,
+        });
+      }
       await fetch("/api/coaching/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -581,6 +610,51 @@ export default function CoachingContent() {
               </button>
             ))}
           </div>
+
+          {/* Mentor picker — only shown when Mentorship topic is selected */}
+          {topic === "mentorship" && (
+            <div className="mb-4 space-y-2">
+              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                <GraduationCap size={11} /> Choose a Mentor <span className="font-normal opacity-60">(optional)</span>
+              </p>
+              {mentors.length === 0 ? (
+                <p className="text-xs text-gray-400 py-3 text-center border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+                  No mentors registered yet.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                  {mentors.map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setSelectedMentor(selectedMentor?.user_id === m.user_id ? null : m)}
+                      className={`flex items-center gap-2.5 p-3 rounded-xl border text-left transition-all ${
+                        selectedMentor?.user_id === m.user_id
+                          ? "border-violet-400 dark:border-violet-500 bg-violet-50 dark:bg-violet-500/10"
+                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {m.profiles?.username?.[0]?.toUpperCase() || "M"}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate">@{m.profiles?.username}</p>
+                        <p className="text-[10px] text-gray-400 truncate">{m.skills?.slice(0, 2).join(", ")}</p>
+                      </div>
+                      {selectedMentor?.user_id === m.user_id && (
+                        <Check size={13} className="text-violet-600 dark:text-violet-400 shrink-0 ml-auto" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedMentor && (
+                <p className="text-[11px] font-bold text-violet-600 dark:text-violet-400">
+                  Selected: @{selectedMentor.profiles?.username}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="mb-4">
             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">

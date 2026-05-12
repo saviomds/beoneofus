@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { escapeHtml } from '../../../../lib/escapeHtml';
 
 export async function POST(request) {
   try {
@@ -17,37 +18,36 @@ export async function POST(request) {
     }
     
     const applicantEmail = userResponse.user.email;
-    // Extract name from user_metadata (or default to "there")
-    const candidateName = userResponse.user.user_metadata?.full_name || userResponse.user.user_metadata?.name || 'there';
-    const formattedStatus = status === 'accepted' ? 'Accepted' : 'Declined';
-    
-    // Check if the admin wrote a custom message
-    const personalNoteHtml = customMessage 
+    const candidateName = escapeHtml(
+      userResponse.user.user_metadata?.full_name ||
+      userResponse.user.user_metadata?.name ||
+      'there'
+    );
+    const safeJobTitle       = escapeHtml(jobTitle);
+    const safeStatus         = escapeHtml(status === 'accepted' ? 'Accepted' : 'Declined');
+    const safeCustomMessage  = escapeHtml(customMessage);
+
+    const personalNoteHtml = safeCustomMessage
       ? `<div style="padding: 12px; border-left: 4px solid #2563eb; background: #f3f4f6; margin: 16px 0;">
-           <p style="margin: 0; font-style: italic;"><strong>Note from the team:</strong> "${customMessage}"</p>
-         </div>` 
+           <p style="margin: 0; font-style: italic;"><strong>Note from the team:</strong> "${safeCustomMessage}"</p>
+         </div>`
       : '';
 
-    // --- SEND YOUR EMAIL HERE ---
-    console.log(`Sending email to ${applicantEmail}: Application for ${jobTitle} was ${formattedStatus}. Message: ${customMessage}`);
-    
-    // Using Resend API directly via fetch to avoid "Module not found" build errors
-    
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         from: 'BeOneOfUs <notifications@beoneofus.com>',
         to: applicantEmail,
-        subject: `Update on your application for ${jobTitle}`,
+        subject: `Update on your application for ${safeJobTitle}`,
         html: `
           <div style="font-family: sans-serif; color: #111827; max-width: 600px; margin: 0 auto;">
             <h2>Application Update</h2>
             <p>Hi ${candidateName},</p>
-            <p>Your job application for <strong>${jobTitle}</strong> has been <strong>${formattedStatus}</strong>.</p>
+            <p>Your job application for <strong>${safeJobTitle}</strong> has been <strong>${safeStatus}</strong>.</p>
             
             ${personalNoteHtml}
   

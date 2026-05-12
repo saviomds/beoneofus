@@ -1,0 +1,534 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  Users, Star, BookOpen, Plus, X, Crown, Lock, Loader2,
+  Sparkles, Clock, BadgeCheck, Edit2, Check, ChevronRight,
+  GraduationCap, Handshake, Search,
+} from "lucide-react";
+import { supabase } from "../../supabaseClient";
+
+const SKILL_SUGGESTIONS = [
+  "React", "Next.js", "TypeScript", "Node.js", "Python", "Go", "Rust",
+  "System Design", "Career Guidance", "Code Review", "Interview Prep",
+  "AWS", "Docker", "PostgreSQL", "GraphQL", "AI/ML", "Web3", "DevOps",
+  "Leadership", "Agile", "Mobile", "Flutter", "Swift", "Kotlin",
+];
+
+const AVAILABILITY_OPTIONS = ["Flexible", "Weekdays", "Weekends", "Evenings", "Mornings"];
+
+const inputCls =
+  "w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all";
+
+function SkillTag({ skill, onRemove }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg border border-indigo-100 dark:border-indigo-500/20">
+      {skill}
+      {onRemove && (
+        <button type="button" onClick={() => onRemove(skill)} className="hover:text-red-500 transition-colors">
+          <X size={10} />
+        </button>
+      )}
+    </span>
+  );
+}
+
+function MentorCard({ mentor, isPremium, onBook, isMe, onEdit }) {
+  const profile = mentor.profiles;
+  const initials = profile?.username?.[0]?.toUpperCase() || "M";
+  const rating = mentor.rating ? Number(mentor.rating).toFixed(1) : "5.0";
+
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800/50 transition-all flex flex-col gap-3">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
+            {profile?.avatar_url ? (
+              <Image src={profile.avatar_url} alt="" fill sizes="48px" className="object-cover" />
+            ) : (
+              <span className="text-white font-black text-lg">{initials}</span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1 flex-wrap">
+              <p className="text-sm font-black text-gray-900 dark:text-white truncate">@{profile?.username}</p>
+              {profile?.is_verified && (
+                <BadgeCheck size={14} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />
+              )}
+              {profile?.is_premium && (
+                <Crown size={12} className="text-amber-500 shrink-0" fill="currentColor" strokeWidth={1} />
+              )}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{mentor.headline || "Mentor"}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0 ml-2">
+          <Star size={12} className="text-amber-400" fill="currentColor" strokeWidth={0} />
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{rating}</span>
+        </div>
+      </div>
+
+      {/* Bio */}
+      {mentor.bio && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">{mentor.bio}</p>
+      )}
+
+      {/* Skills */}
+      {mentor.skills?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {mentor.skills.slice(0, 5).map(skill => (
+            <SkillTag key={skill} skill={skill} />
+          ))}
+          {mentor.skills.length > 5 && (
+            <span className="text-[10px] font-bold px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-lg">
+              +{mentor.skills.length - 5}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Meta */}
+      <div className="flex items-center gap-4 text-[10px] font-bold text-gray-400">
+        <span className="flex items-center gap-1">
+          <BookOpen size={10} /> {mentor.session_count || 0} sessions
+        </span>
+        <span className="flex items-center gap-1">
+          <Clock size={10} /> {mentor.availability || "Flexible"}
+        </span>
+      </div>
+
+      {/* CTA */}
+      {isMe ? (
+        <button
+          onClick={onEdit}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl transition-all"
+        >
+          <Edit2 size={12} /> Edit Your Profile
+        </button>
+      ) : isPremium ? (
+        <button
+          onClick={() => onBook(mentor)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
+        >
+          <Sparkles size={12} /> Book Mentorship Session
+        </button>
+      ) : (
+        <Link
+          href="/dash/premium"
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-xl transition-all border border-amber-200 dark:border-amber-500/20"
+        >
+          <Crown size={12} /> Premium to Book
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function MentorForm({ initial, onSave, onCancel, saving }) {
+  const [form, setForm] = useState({
+    headline: initial?.headline || "",
+    bio: initial?.bio || "",
+    skills: initial?.skills || [],
+    availability: initial?.availability || "Flexible",
+  });
+  const [skillInput, setSkillInput] = useState("");
+
+  const addSkill = (s) => {
+    const trimmed = s.trim();
+    if (trimmed && !form.skills.includes(trimmed) && form.skills.length < 15) {
+      setForm(f => ({ ...f, skills: [...f.skills, trimmed] }));
+    }
+    setSkillInput("");
+  };
+
+  const removeSkill = (s) => setForm(f => ({ ...f, skills: f.skills.filter(x => x !== s) }));
+
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-5 animate-in fade-in slide-in-from-top-2 duration-200">
+      <h3 className="font-black text-gray-900 dark:text-white flex items-center gap-2 text-sm">
+        <Handshake size={16} className="text-indigo-500" />
+        {initial ? "Edit Mentor Profile" : "Become a Mentor"}
+      </h3>
+
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Headline</label>
+        <input
+          value={form.headline}
+          onChange={e => setForm(f => ({ ...f, headline: e.target.value }))}
+          placeholder="e.g. Senior Full-Stack Engineer at Acme"
+          className={inputCls}
+          maxLength={80}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Bio</label>
+        <textarea
+          value={form.bio}
+          onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
+          placeholder="What can you help others with? What's your background?"
+          rows={3}
+          className={inputCls + " resize-none"}
+          maxLength={300}
+        />
+        <p className="text-[10px] text-gray-400 text-right">{form.bio.length}/300</p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Skills</label>
+        <div className="flex flex-wrap gap-1.5 min-h-[32px]">
+          {form.skills.map(s => <SkillTag key={s} skill={s} onRemove={removeSkill} />)}
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={skillInput}
+            onChange={e => setSkillInput(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSkill(skillInput); } }}
+            placeholder="Type a skill and press Enter"
+            className={inputCls}
+          />
+          <button
+            type="button"
+            onClick={() => addSkill(skillInput)}
+            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shrink-0"
+          >
+            <Plus size={14} />
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {SKILL_SUGGESTIONS.filter(s => !form.skills.includes(s)).slice(0, 8).map(s => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => addSkill(s)}
+              className="text-[10px] font-bold px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition-all border border-transparent hover:border-indigo-200 dark:hover:border-indigo-500/30"
+            >
+              + {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Availability</label>
+        <div className="flex flex-wrap gap-2">
+          {AVAILABILITY_OPTIONS.map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => setForm(f => ({ ...f, availability: opt }))}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                form.availability === opt
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-300"
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-3 pt-1">
+        <button
+          onClick={onCancel}
+          className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-xl transition-all"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => onSave(form)}
+          disabled={saving || form.skills.length === 0 || !form.headline.trim()}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20"
+        >
+          {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+          {saving ? "Saving…" : "Save Profile"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function MentorshipContent() {
+  const router = useRouter();
+  const [mentors, setMentors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [myMentor, setMyMentor] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [booking, setBooking] = useState(null);
+  const [search, setSearch] = useState("");
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const fetchMentors = useCallback(async () => {
+    const { data } = await supabase
+      .from("mentors")
+      .select("*, profiles:user_id(id, username, avatar_url, is_verified, is_premium)")
+      .eq("is_active", true)
+      .order("session_count", { ascending: false });
+    if (data) setMentors(data);
+  }, []);
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        const { data: prof } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+        if (prof) setProfile(prof);
+        const { data: me } = await supabase.from("mentors").select("*").eq("user_id", session.user.id).maybeSingle();
+        if (me) setMyMentor(me);
+      }
+      await fetchMentors();
+      setLoading(false);
+    };
+    init();
+
+    const ch = supabase.channel("mentors-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "mentors" }, fetchMentors)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [fetchMentors]);
+
+  const canBeMentor = profile?.role === "member" || profile?.role === "founder" || profile?.is_admin || profile?.is_premium;
+  const isPremium   = profile?.is_premium || profile?.is_admin;
+
+  const handleSave = async (form) => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      if (myMentor) {
+        const { error } = await supabase.from("mentors").update(form).eq("user_id", user.id);
+        if (error) throw error;
+        setMyMentor({ ...myMentor, ...form });
+        showToast("Mentor profile updated!");
+      } else {
+        const { data, error } = await supabase
+          .from("mentors")
+          .insert({ user_id: user.id, ...form })
+          .select("*")
+          .single();
+        if (error) throw error;
+        setMyMentor(data);
+        showToast("You're now a mentor!");
+      }
+      setShowForm(false);
+      fetchMentors();
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBook = async (mentor) => {
+    if (!user || !isPremium) return;
+    setBooking(mentor.user_id);
+    try {
+      const { data, error } = await supabase
+        .from("coaching_sessions")
+        .insert({
+          user_id: user.id,
+          coach_id: mentor.user_id,
+          topic: "Mentorship",
+          notes: `Requested mentorship with @${mentor.profiles?.username}`,
+          status: "accepted",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+
+      await supabase.from("notifications").insert({
+        receiver_id: mentor.user_id,
+        actor_id: user.id,
+        type: "message",
+        content: `booked a mentorship session with you. /dash/coaching`,
+      });
+
+      await supabase.from("mentors")
+        .update({ session_count: (mentor.session_count || 0) + 1 })
+        .eq("user_id", mentor.user_id);
+
+      showToast("Session booked! Redirecting to Coaching…");
+      setTimeout(() => router.push("/dash/coaching"), 1200);
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setBooking(null);
+    }
+  };
+
+  const filtered = mentors.filter(m => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      m.profiles?.username?.toLowerCase().includes(q) ||
+      m.headline?.toLowerCase().includes(q) ||
+      m.bio?.toLowerCase().includes(q) ||
+      m.skills?.some(s => s.toLowerCase().includes(q))
+    );
+  });
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-52">
+      <Loader2 size={24} className="animate-spin text-indigo-500" />
+    </div>
+  );
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6 pb-12 animate-in fade-in duration-300">
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-bold text-white animate-in fade-in slide-in-from-top-2 duration-200 ${toast.type === "error" ? "bg-red-600" : "bg-indigo-600"}`}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-3xl border border-indigo-200 dark:border-indigo-800/50 bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50 dark:from-indigo-950/20 dark:via-violet-950/20 dark:to-transparent p-8">
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-indigo-200/30 dark:bg-indigo-500/10" />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-violet-200/30 dark:bg-violet-500/10" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
+              <Handshake size={26} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Mentorship</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mt-0.5">
+                {mentors.length} mentor{mentors.length !== 1 ? "s" : ""} available in the community
+              </p>
+            </div>
+          </div>
+          {user && canBeMentor && !myMentor && !showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/25 active:scale-95 shrink-0"
+            >
+              <Plus size={15} /> Become a Mentor
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Become a mentor form */}
+      {showForm && (
+        <MentorForm
+          initial={null}
+          onSave={handleSave}
+          onCancel={() => setShowForm(false)}
+          saving={saving}
+        />
+      )}
+
+      {/* My mentor profile — edit inline */}
+      {myMentor && showForm === "edit" && (
+        <MentorForm
+          initial={myMentor}
+          onSave={handleSave}
+          onCancel={() => setShowForm(false)}
+          saving={saving}
+        />
+      )}
+
+      {/* Premium notice for non-premium */}
+      {user && !isPremium && mentors.length > 0 && (
+        <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl">
+          <Crown size={18} className="text-amber-500 shrink-0" fill="currentColor" strokeWidth={1} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">Premium members can book mentors</p>
+            <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Upgrade to unlock 1-on-1 mentorship sessions.</p>
+          </div>
+          <Link href="/dash/premium" className="shrink-0 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold rounded-xl transition-all">
+            Upgrade
+          </Link>
+        </div>
+      )}
+
+      {/* Search */}
+      {mentors.length > 0 && (
+        <div className="relative">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search mentors by name, skill, or topic…"
+            className="w-full pl-10 pr-4 py-2.5 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-sm"
+          />
+        </div>
+      )}
+
+      {/* Mentors grid */}
+      {filtered.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(mentor => (
+            <div key={mentor.id} className="relative">
+              {booking === mentor.user_id && (
+                <div className="absolute inset-0 z-10 bg-white/70 dark:bg-gray-900/70 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                  <Loader2 size={20} className="animate-spin text-indigo-600" />
+                </div>
+              )}
+              <MentorCard
+                mentor={mentor}
+                isPremium={isPremium}
+                isMe={user?.id === mentor.user_id}
+                onBook={handleBook}
+                onEdit={() => setShowForm("edit")}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="py-20 flex flex-col items-center justify-center border border-dashed border-gray-200 dark:border-gray-700 rounded-3xl bg-gray-50 dark:bg-gray-800/30 text-center gap-3">
+          <div className="w-16 h-16 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl flex items-center justify-center">
+            <Users size={28} className="text-gray-400" />
+          </div>
+          <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+            {search ? "No mentors match your search" : "No mentors yet"}
+          </p>
+          <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
+            {search
+              ? "Try a different skill or name."
+              : "Be the first! Members and founders can register as mentors."}
+          </p>
+          {user && canBeMentor && !myMentor && !search && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="mt-2 flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/25 active:scale-95"
+            >
+              <Plus size={15} /> Be the first mentor
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Link to Coaching */}
+      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-violet-100 dark:bg-violet-500/10 rounded-xl flex items-center justify-center">
+            <GraduationCap size={16} className="text-violet-600 dark:text-violet-400" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">1-on-1 Coaching</p>
+            <p className="text-xs text-gray-500">View all your active and past sessions</p>
+          </div>
+        </div>
+        <Link href="/dash/coaching" className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+          Open <ChevronRight size={14} />
+        </Link>
+      </div>
+    </div>
+  );
+}

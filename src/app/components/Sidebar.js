@@ -3,7 +3,7 @@
 import {
   Home, Users, MessageSquare, Bookmark, FileText,
   MoreHorizontal, Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
-  GraduationCap, CalendarDays
+  GraduationCap, CalendarDays, Handshake
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -367,9 +367,11 @@ export default function Sidebar({ onClose }) {
     { id: 'messages', icon: MessageSquare, label: 'Messages', badge: unreadMessages },
     { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks' },
     { id: 'premium',  icon: Crown,          label: 'Premium'  },
-    { id: 'coaching', icon: GraduationCap,  label: 'Coaching' },
-    { id: 'events',   icon: CalendarDays,   label: 'Events'   },
-    { id: 'more',     icon: MoreHorizontal, label: 'More'     },
+    { id: 'coaching',      icon: GraduationCap,  label: 'Coaching'      },
+    { id: 'events',        icon: CalendarDays,   label: 'Events'        },
+    { id: 'mentorship',    icon: GraduationCap,  label: 'Mentorship'    },
+    { id: 'partnerships',  icon: Handshake,      label: 'Partnerships'  },
+    { id: 'more',          icon: MoreHorizontal, label: 'More'          },
   ];
 
   const bottomItems = [

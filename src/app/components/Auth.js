@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useRouter } from 'next/navigation';
 import {
@@ -10,7 +10,15 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const USERNAME_RE = /^[a-z0-9_-]{3,20}$/;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -104,6 +112,10 @@ export default function AuthForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState('');
+  // 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+  const [usernameStatus, setUsernameStatus] = useState('idle');
+  const usernameTimer = useRef(null);
 
   const [error, setError] = useState(null);
   const [successInfo, setSuccessInfo] = useState(null); // { title, message } | null
@@ -157,6 +169,15 @@ export default function AuthForm() {
         }
         // NEW: handle token refresh / sign-in events that arrive via the listener
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+          const pendingUsername = localStorage.getItem('pending_username');
+          if (pendingUsername) {
+            localStorage.removeItem('pending_username');
+            supabase.from('profiles')
+              .update({ username: pendingUsername })
+              .eq('id', session.user.id)
+              .is('username', null)
+              .then(() => {});
+          }
           window.location.href = '/dash';
         }
       });
@@ -172,12 +193,36 @@ export default function AuthForm() {
   }, []);
 
   // -------------------------------------------------------------------------
+  // Username debounced uniqueness check
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (view !== 'sign-up') return;
+    clearTimeout(usernameTimer.current);
+
+    if (!username) { setUsernameStatus('idle'); return; }
+    if (!USERNAME_RE.test(username)) { setUsernameStatus('invalid'); return; }
+
+    setUsernameStatus('checking');
+    usernameTimer.current = setTimeout(async () => {
+      const { count } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('username', username);
+      setUsernameStatus(count === 0 ? 'available' : 'taken');
+    }, 450);
+
+    return () => clearTimeout(usernameTimer.current);
+  }, [username, view]);
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
   const resetForm = useCallback(() => {
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setUsername('');
+    setUsernameStatus('idle');
     setError(null);
   }, []);
 
@@ -199,6 +244,18 @@ export default function AuthForm() {
 
     // Client-side validation
     if (view === 'sign-up') {
+      if (!USERNAME_RE.test(username)) {
+        setError('Username must be 3–20 characters: lowercase letters, numbers, _ or -');
+        return;
+      }
+      if (usernameStatus === 'taken') {
+        setError('That username is already taken. Please choose another.');
+        return;
+      }
+      if (usernameStatus === 'checking') {
+        setError('Still checking username availability, please wait a moment.');
+        return;
+      }
       if (password !== confirmPassword) {
         setError('Passwords do not match.');
         return;
@@ -221,13 +278,20 @@ export default function AuthForm() {
     try {
       switch (view) {
         case 'sign-up': {
+          localStorage.setItem('pending_username', username);
           // Note: a SQL trigger on Supabase handles `profiles` table insertion.
           const { error: err } = await supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: `${window.location.origin}/auth` },
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth`,
+              data: { username },
+            },
           });
-          if (err) throw err;
+          if (err) {
+            localStorage.removeItem('pending_username');
+            throw err;
+          }
           setSuccessInfo({
             title: 'Verify your email',
             message:
@@ -505,6 +569,57 @@ export default function AuthForm() {
               placeholder="you@example.com"
               autoComplete="email"
             />
+          </div>
+        )}
+
+        {/* Username — sign-up only */}
+        {view === 'sign-up' && (
+          <div>
+            <label
+              htmlFor="auth-username"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+            >
+              Username
+            </label>
+            <div className="relative">
+              <input
+                id="auth-username"
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                className={`w-full bg-white dark:bg-gray-900 border rounded-xl py-3 px-4 pr-11 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${
+                  usernameStatus === 'taken' || usernameStatus === 'invalid'
+                    ? 'border-red-400 dark:border-red-500'
+                    : usernameStatus === 'available'
+                    ? 'border-emerald-400 dark:border-emerald-500'
+                    : 'border-gray-300 dark:border-gray-700'
+                }`}
+                placeholder="your_username"
+                autoComplete="username"
+                maxLength={20}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {usernameStatus === 'checking' && (
+                  <Loader2 size={16} className="animate-spin text-gray-400" />
+                )}
+                {usernameStatus === 'available' && (
+                  <CheckCircle2 size={16} className="text-emerald-500" />
+                )}
+                {(usernameStatus === 'taken' || usernameStatus === 'invalid') && (
+                  <XCircle size={16} className="text-red-500" />
+                )}
+              </div>
+            </div>
+            {usernameStatus === 'invalid' && username && (
+              <p className="mt-1 text-xs text-red-500">3–20 chars: lowercase, numbers, _ or -</p>
+            )}
+            {usernameStatus === 'taken' && (
+              <p className="mt-1 text-xs text-red-500">Username already taken</p>
+            )}
+            {usernameStatus === 'available' && (
+              <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">Username available</p>
+            )}
           </div>
         )}
 

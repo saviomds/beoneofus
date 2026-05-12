@@ -3,12 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { 
-  Bell, Heart, MessageSquare, Check, Zap, 
+import {
+  Bell, Heart, MessageSquare, Check, Zap,
   ShieldAlert, ShieldCheck, MoreHorizontal, Users, ChevronRight, Clock, UserPlus,
-  BadgeCheck,
-  Briefcase
-} from "lucide-react"; 
+  BadgeCheck, Briefcase, Handshake
+} from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import { useDashboard } from "./DashboardContext";
 
@@ -103,6 +102,8 @@ export default function NotificationsContent() {
       case 'blocked':
       case 'unblocked':
         router.push('/dash/messages'); break;
+      case 'partnership_update':
+        router.push('/dash/partnerships'); break;
       default: break;
     }
   };
@@ -111,20 +112,38 @@ export default function NotificationsContent() {
     e.stopPropagation();
     if (!currentUserId) return;
 
-    await supabase.from('connections')
+    const { error: connErr } = await supabase.from('connections')
       .update({ status: 'accepted' })
       .eq('sender_id', notif.actor_id)
       .eq('receiver_id', currentUserId);
+
+    if (connErr) {
+      console.error('Connection accept failed:', connErr.message);
+      return;
+    }
 
     await supabase.from('notifications').insert({
       receiver_id: notif.actor_id,
       actor_id: currentUserId,
       type: 'handshake',
-      content: 'accepted your connection request'
+      content: 'accepted your connection request',
     });
 
-    await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
-    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+    // Mark ALL connection_request notifications from this actor as read
+    // (handles duplicates that occur when someone taps Connect more than once)
+    await supabase.from('notifications')
+      .update({ unread: false })
+      .eq('receiver_id', currentUserId)
+      .eq('actor_id', notif.actor_id)
+      .eq('type', 'connection_request');
+
+    setNotifications(prev =>
+      prev.map(n =>
+        n.type === 'connection_request' && n.actor_id === notif.actor_id
+          ? { ...n, unread: false }
+          : n
+      )
+    );
   };
 
   const renderWithLinks = (text) => {
@@ -159,19 +178,27 @@ export default function NotificationsContent() {
     e.stopPropagation();
     if (!currentUserId) return;
 
-    if (!notif.actor_id) {
-      await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
-      return;
+    if (notif.actor_id) {
+      await supabase.from('connections')
+        .delete()
+        .eq('sender_id', notif.actor_id)
+        .eq('receiver_id', currentUserId);
     }
 
-    await supabase.from('connections')
-      .delete()
-      .eq('sender_id', notif.actor_id)
-      .eq('receiver_id', currentUserId);
+    // Mark ALL connection_request notifications from this actor as read (handles duplicates)
+    await supabase.from('notifications')
+      .update({ unread: false })
+      .eq('receiver_id', currentUserId)
+      .eq('actor_id', notif.actor_id)
+      .eq('type', 'connection_request');
 
-    await supabase.from('notifications').update({ unread: false }).eq('id', notif.id);
-    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+    setNotifications(prev =>
+      prev.map(n =>
+        n.type === 'connection_request' && n.actor_id === notif.actor_id
+          ? { ...n, unread: false }
+          : n
+      )
+    );
   };
 
   const handleAcceptGroupJoin = async (e, notif, groupId, groupName) => {
@@ -216,6 +243,7 @@ export default function NotificationsContent() {
       case 'group_invite': return <Users size={14} className="text-purple-500" />;
       case 'group_join_request': return <Users size={14} className="text-blue-500" />;
       case 'connection_request': return <UserPlus size={14} className="text-blue-500" />;
+      case 'partnership_update': return <Handshake size={14} className="text-indigo-500" />;
       default: return <Zap size={14} className="text-amber-500" />;
     }
   };
@@ -278,7 +306,7 @@ export default function NotificationsContent() {
               className={`group relative flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-[1.5rem] transition-all border cursor-pointer overflow-hidden ${notif.unread ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 shadow-sm' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-blue-500/30 hover:shadow-md'}`}
             >
               {/* Subtle background glow effect on hover */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 dark:from-blue-900/0 via-blue-50/50 dark:via-blue-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-blue-50/0 dark:from-blue-900/0 via-blue-50/50 dark:via-blue-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
               <div className="relative flex-shrink-0 z-10">
                 <div className={`relative w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg transition-colors overflow-hidden ${notif.unread ? 'bg-blue-600 shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 group-hover:bg-gray-200 dark:group-hover:bg-gray-700'}`}>
@@ -306,7 +334,8 @@ export default function NotificationsContent() {
                   {notif.type === 'blocked' && 'severed the connection.'}
                   {notif.type === 'group_join_request' && <>requested to join <span className="font-bold text-gray-900 dark:text-gray-100">{displayContent}</span>.</>}
                   {notif.type === 'group_invite' && <>granted you access to <span className="font-bold text-gray-900 dark:text-gray-100">{displayContent}</span>.</>}
-                {!['like', 'comment', 'message', 'handshake', 'connection_request', 'blocked', 'unblocked', 'group_invite', 'group_join_request'].includes(notif.type) && renderWithLinks(displayContent)}
+                  {notif.type === 'partnership_update' && <>{renderWithLinks(displayContent)}</>}
+                {!['like', 'comment', 'message', 'handshake', 'connection_request', 'blocked', 'unblocked', 'group_invite', 'group_join_request', 'partnership_update'].includes(notif.type) && renderWithLinks(displayContent)}
                 </div>
                 
                 <div className="flex items-center gap-3 mt-3">

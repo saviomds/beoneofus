@@ -7,8 +7,10 @@ import {
   Loader2, AlertTriangle, Crown, BadgeCheck, X,
   Tag, CheckCircle2, Library, ArrowRight, BookOpen, Sparkles,
   CreditCard, ExternalLink, Eye, EyeOff, Pencil, Trash2, Store,
+  Handshake,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import PartnershipsContent from "./PartnershipsContent";
 
 const CATEGORIES = ["All", "Course", "Credential", "Service", "Template", "Asset"];
 
@@ -1323,6 +1325,7 @@ const TABS = [
   { key: 'sell',        label: 'Sell',             icon: Store },
   { key: 'issue',       label: 'Issue Credential', icon: Plus },
   { key: 'verify',      label: 'Verify',           icon: Shield },
+  { key: 'partnerships', label: 'Partnerships',    icon: Handshake },
 ];
 
 export default function MarketplaceContent() {
@@ -1407,6 +1410,7 @@ export default function MarketplaceContent() {
         {activeTab === 'sell'        && <SellTab currentUserId={currentUserId} isPremium={isPremium} isAdmin={currentProfile?.is_admin === true || currentProfile?.role === 'founder'} />}
         {activeTab === 'issue'       && <IssueCredentialTab currentUserId={currentUserId} currentProfile={currentProfile} />}
         {activeTab === 'verify'      && <VerifyTab />}
+        {activeTab === 'partnerships' && <PartnershipsContent />}
       </div>
 
       {/* Toast */}

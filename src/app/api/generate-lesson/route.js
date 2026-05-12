@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '../../../lib/rateLimit';
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 
@@ -67,6 +68,15 @@ async function callAI(systemPrompt, userPrompt) {
 }
 
 export async function POST(req) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
+  const rl = checkRateLimit(ip, '/api/generate-lesson', { max: 5, windowMs: 60_000 });
+  if (rl.limited) {
+    return NextResponse.json({ error: 'Too many requests' }, {
+      status: 429,
+      headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) },
+    });
+  }
+
   try {
     const { courseTitle, lessonTitle, category, level, type = 'lesson' } = await req.json();
 

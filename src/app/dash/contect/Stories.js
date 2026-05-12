@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Plus, Camera, Type, Loader2, ChevronLeft, ChevronRight, Trash2, Sparkles } from "lucide-react";
+import { X, Plus, Camera, Type, Loader2, ChevronLeft, ChevronRight, Trash2, Sparkles, Video } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STORY_DURATION = 5000; // ms per story slide
+const STORY_DURATION = 5000;  // ms per photo/text slide
+const VIDEO_DURATION  = 30000; // ms max for video slide (onEnded fires first)
 
 const BG_COLORS = [
   "#7c3aed", "#db2777", "#ea580c", "#16a34a",
@@ -137,10 +138,11 @@ export function StoryViewer({ groups, startGroupIdx, currentUserId, onClose, onD
     setProgress(0);
     cancelAnimationFrame(rafRef.current);
     startRef.current = performance.now();
+    const duration = story.type === "video" ? VIDEO_DURATION : STORY_DURATION;
 
     const tick = (now) => {
       const elapsed = now - startRef.current;
-      const pct = Math.min((elapsed / STORY_DURATION) * 100, 100);
+      const pct = Math.min((elapsed / duration) * 100, 100);
       setProgress(pct);
       if (pct < 100) rafRef.current = requestAnimationFrame(tick);
       else goToNext();
@@ -188,6 +190,16 @@ export function StoryViewer({ groups, startGroupIdx, currentUserId, onClose, onD
             src={story.media_url}
             alt="story"
             className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+        {story.type === "video" && story.media_url && (
+          <video
+            key={story.id}
+            src={story.media_url}
+            className="absolute inset-0 w-full h-full object-cover"
+            autoPlay
+            playsInline
+            onEnded={goToNext}
           />
         )}
         {story.type === "text" && (
@@ -288,8 +300,11 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
   const [caption, setCaption]     = useState("");
   const [bgColor, setBgColor]     = useState(BG_COLORS[0]);
   const [textContent, setTextContent] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const fileRef                   = useRef(null);
+  const [uploading, setUploading]     = useState(false);
+  const [videoFile, setVideoFile]     = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const fileRef                       = useRef(null);
+  const videoRef                      = useRef(null);
 
   const handleFileChange = (e) => {
     const f = e.target.files?.[0];
@@ -297,6 +312,18 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
     setFile(f);
     setPreview(URL.createObjectURL(f));
     setMode("image");
+  };
+
+  const handleVideoChange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > 50 * 1024 * 1024) {
+      alert("Video must be under 50 MB");
+      return;
+    }
+    setVideoFile(f);
+    setVideoPreview(URL.createObjectURL(f));
+    setMode("video");
   };
 
   const handleShare = async () => {
@@ -312,6 +339,19 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
         const { data: { publicUrl } } = supabase.storage.from("stories").getPublicUrl(path);
         const { error: dbErr } = await supabase.from("stories").insert({
           user_id: currentUserId, type: "image",
+          media_url: publicUrl, caption: caption.trim() || null, expires_at: expiresAt,
+        });
+        if (dbErr) throw dbErr;
+      } else if (mode === "video" && videoFile) {
+        const ext = videoFile.name.split(".").pop() || "mp4";
+        const path = `${currentUserId}/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("stories")
+          .upload(path, videoFile, { contentType: videoFile.type });
+        if (upErr) throw upErr;
+        const { data: { publicUrl } } = supabase.storage.from("stories").getPublicUrl(path);
+        const { error: dbErr } = await supabase.from("stories").insert({
+          user_id: currentUserId, type: "video",
           media_url: publicUrl, caption: caption.trim() || null, expires_at: expiresAt,
         });
         if (dbErr) throw dbErr;
@@ -343,14 +383,14 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
           <div className="flex items-center gap-2">
             {mode !== "pick" && (
               <button
-                onClick={() => { setMode("pick"); setPreview(null); setFile(null); setCaption(""); setTextContent(""); }}
+                onClick={() => { setMode("pick"); setPreview(null); setFile(null); setCaption(""); setTextContent(""); setVideoFile(null); setVideoPreview(null); }}
                 className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
               >
                 <ChevronLeft size={17} />
               </button>
             )}
             <h3 className="text-sm font-black text-gray-900 dark:text-white">
-              {mode === "pick" ? "Create Story" : mode === "image" ? "Photo Story" : "Text Story"}
+              {mode === "pick" ? "Create Story" : mode === "image" ? "Photo Story" : mode === "video" ? "Video Story" : "Text Story"}
             </h3>
           </div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">
@@ -360,22 +400,30 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
 
         {/* Pick mode */}
         {mode === "pick" && (
-          <div className="p-5 grid grid-cols-2 gap-3">
+          <div className="p-5 grid grid-cols-3 gap-3">
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-dashed border-violet-200 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/5 text-violet-600 dark:text-violet-400 hover:border-violet-400 transition-all"
+              className="flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-dashed border-violet-200 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/5 text-violet-600 dark:text-violet-400 hover:border-violet-400 transition-all"
             >
-              <Camera size={26} />
+              <Camera size={24} />
               <span className="text-xs font-bold">Photo</span>
             </button>
             <button
-              onClick={() => setMode("text")}
-              className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-dashed border-pink-200 dark:border-pink-500/30 bg-pink-50 dark:bg-pink-500/5 text-pink-600 dark:text-pink-400 hover:border-pink-400 transition-all"
+              onClick={() => videoRef.current?.click()}
+              className="flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-dashed border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/5 text-blue-600 dark:text-blue-400 hover:border-blue-400 transition-all"
             >
-              <Type size={26} />
+              <Video size={24} />
+              <span className="text-xs font-bold">Video</span>
+            </button>
+            <button
+              onClick={() => setMode("text")}
+              className="flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-dashed border-pink-200 dark:border-pink-500/30 bg-pink-50 dark:bg-pink-500/5 text-pink-600 dark:text-pink-400 hover:border-pink-400 transition-all"
+            >
+              <Type size={24} />
               <span className="text-xs font-bold">Text</span>
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+            <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} />
           </div>
         )}
 
@@ -401,6 +449,37 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
             >
               {uploading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
               {uploading ? "Sharing…" : "Share to Story"}
+            </button>
+          </div>
+        )}
+
+        {/* Video preview mode */}
+        {mode === "video" && videoPreview && (
+          <div className="p-5 space-y-4">
+            <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ aspectRatio: "9/16" }}>
+              <video
+                src={videoPreview}
+                className="w-full h-full object-cover"
+                controls
+                playsInline
+              />
+            </div>
+            <input
+              type="text"
+              value={caption}
+              onChange={e => setCaption(e.target.value)}
+              placeholder="Add a caption… (optional)"
+              maxLength={120}
+              className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+            <p className="text-[11px] text-gray-400 text-center">Max 50 MB · visible for 24 hours</p>
+            <button
+              onClick={handleShare}
+              disabled={uploading}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black py-3 rounded-xl text-sm transition-all"
+            >
+              {uploading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+              {uploading ? "Uploading…" : "Share to Story"}
             </button>
           </div>
         )}

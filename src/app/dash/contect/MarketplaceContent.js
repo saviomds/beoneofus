@@ -6,7 +6,7 @@ import {
   ShoppingBag, Award, Shield, Copy, Check, Share2, Plus, Search,
   Loader2, AlertTriangle, Crown, BadgeCheck, X,
   Tag, CheckCircle2, Library, ArrowRight, BookOpen, Sparkles,
-  CreditCard, ExternalLink,
+  CreditCard, ExternalLink, Eye, EyeOff, Pencil, Trash2, Store,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -34,6 +34,8 @@ function truncateHash(hash) {
   if (!hash || hash.length <= 20) return hash;
   return `${hash.slice(0, 8)}...${hash.slice(-8)}`;
 }
+
+const inputCls = "w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all";
 
 function generateHash(userId, credId) {
   const raw = btoa(`${userId}${credId}${Date.now()}`).replace(/[^a-z0-9]/gi, '').toLowerCase();
@@ -512,19 +514,28 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
   const [activeFilter, setActiveFilter] = useState("All");
   const [authError, setAuthError] = useState(false);
 
-  useEffect(() => {
-    const fetchListings = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('marketplace_listings')
-        .select('id, title, description, category, price, currency, image_url, tags, purchases, created_at, profiles:seller_id(id, username, avatar_url, is_verified, is_premium)')
-        .eq('is_active', true)
-        .order('purchases', { ascending: false });
-      if (!error && data) setListings(data);
-      setLoading(false);
-    };
-    fetchListings();
+  const fetchListings = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('marketplace_listings')
+      .select('id, title, description, category, price, currency, image_url, tags, purchases, created_at, profiles:seller_id(id, username, avatar_url, is_verified, is_premium)')
+      .eq('is_active', true)
+      .order('purchases', { ascending: false });
+    if (!error && data) setListings(data);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    fetchListings();
+    const ch = supabase.channel('mkt-listings-browse')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'marketplace_listings' }, () => fetchListings())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'marketplace_listings' }, () => fetchListings())
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'marketplace_listings' }, (payload) => {
+        setListings(prev => prev.filter(l => l.id !== payload.old.id));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [fetchListings]);
 
   const filtered = activeFilter === "All" ? listings : listings.filter(l => l.category === activeFilter);
 
@@ -906,8 +917,6 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
     </div>
   );
 
-  const inputCls = "w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all";
-
   return (
     <div className="max-w-xl mx-auto">
       <form onSubmit={handleSubmit} className="space-y-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
@@ -984,6 +993,268 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
   );
 }
 
+/* ── Sell Tab ─────────────────────────────────────── */
+const SELL_CATEGORIES = ["Service", "Template", "Asset"];
+const emptyListingForm = { title: '', description: '', category: 'Service', price: '', image_url: '', tags: '' };
+
+function SellTab({ currentUserId, isPremium, isAdmin }) {
+  const canSell = isPremium || isAdmin;
+
+  const [myListings, setMyListings] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [form, setForm] = useState(emptyListingForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+  const [formError, setFormError] = useState('');
+
+  const fetchMyListings = useCallback(async () => {
+    if (!currentUserId) { setLoadingList(false); return; }
+    setLoadingList(true);
+    const { data } = await supabase
+      .from('marketplace_listings')
+      .select('id, title, description, category, price, image_url, tags, is_active, purchases, created_at')
+      .eq('seller_id', currentUserId)
+      .order('created_at', { ascending: false });
+    if (data) setMyListings(data);
+    setLoadingList(false);
+  }, [currentUserId]);
+
+  useEffect(() => { fetchMyListings(); }, [fetchMyListings]);
+
+  const openNew = () => { setEditItem(null); setForm(emptyListingForm); setFormError(''); setShowForm(true); };
+
+  const openEdit = (listing) => {
+    setEditItem(listing);
+    setForm({
+      title: listing.title,
+      description: listing.description || '',
+      category: listing.category,
+      price: listing.price?.toString() || '',
+      image_url: listing.image_url || '',
+      tags: (listing.tags || []).join(', '),
+    });
+    setFormError('');
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+    setSubmitting(true); setFormError('');
+    const payload = {
+      seller_id: currentUserId,
+      title: form.title.trim(),
+      description: form.description.trim(),
+      category: form.category,
+      price: form.price !== '' ? parseFloat(form.price) : 0,
+      currency: 'USD',
+      image_url: form.image_url.trim() || null,
+      tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+      is_active: true,
+    };
+    try {
+      if (editItem) {
+        const { error } = await supabase.from('marketplace_listings').update(payload).eq('id', editItem.id);
+        if (error) throw error;
+        setSuccessMsg('Listing updated!');
+      } else {
+        const { error } = await supabase.from('marketplace_listings').insert({ ...payload, purchases: 0 });
+        if (error) throw error;
+        setSuccessMsg('Listing published! It\'s now live in Browse.');
+      }
+      setShowForm(false); setEditItem(null); setForm(emptyListingForm);
+      setTimeout(() => setSuccessMsg(''), 4000);
+      fetchMyListings();
+    } catch (err) {
+      setFormError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleToggleActive = async (listing) => {
+    await supabase.from('marketplace_listings').update({ is_active: !listing.is_active }).eq('id', listing.id);
+    setMyListings(prev => prev.map(l => l.id === listing.id ? { ...l, is_active: !l.is_active } : l));
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this listing permanently?')) return;
+    await supabase.from('marketplace_listings').delete().eq('id', id);
+    setMyListings(prev => prev.filter(l => l.id !== id));
+  };
+
+  if (!currentUserId) return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Store size={40} className="text-gray-300 dark:text-gray-700 mb-4" />
+      <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">Sign in to sell</h3>
+    </div>
+  );
+
+  if (!canSell) return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Crown size={40} className="text-amber-300 mb-4" />
+      <h3 className="font-black text-gray-900 dark:text-gray-100 text-lg mb-2">Premium Required to Sell</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mb-5">
+        Upgrade to Premium to list your services, templates, and assets in the marketplace and earn from the community.
+      </p>
+      <a
+        href="/dash/premium"
+        className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-white font-black text-sm rounded-xl transition-all shadow-lg shadow-amber-500/30"
+      >
+        <Crown size={14} /> Upgrade to Premium
+      </a>
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-black text-gray-900 dark:text-gray-100">My Listings</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{myListings.length} listing{myListings.length !== 1 ? 's' : ''} published</p>
+        </div>
+        {!showForm && (
+          <button onClick={openNew} className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 transition-all">
+            <Plus size={13} /> New Listing
+          </button>
+        )}
+      </div>
+
+      {/* Success */}
+      {successMsg && (
+        <div className="flex items-center gap-2 text-sm font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl px-4 py-3 animate-in fade-in duration-200">
+          <CheckCircle2 size={15} /> {successMsg}
+        </div>
+      )}
+
+      {/* Form */}
+      {showForm && (
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between">
+            <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm">{editItem ? 'Edit Listing' : 'New Listing'}</h3>
+            <button type="button" onClick={() => { setShowForm(false); setEditItem(null); }} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+              <X size={15} />
+            </button>
+          </div>
+
+          {formError && (
+            <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl px-3 py-2">
+              <AlertTriangle size={13} /> {formError}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Category *</label>
+              <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className={inputCls}>
+                {SELL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_ICON[c]} {c}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Price USD (0 = free)</label>
+              <input type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} placeholder="0" className={inputCls} />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Title *</label>
+            <input required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. React Dashboard Template" className={inputCls} />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Description</label>
+            <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="What does this include? Who is it for?" rows={3} className={`${inputCls} resize-none`} />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Cover Image URL</label>
+            <input value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://images.unsplash.com/..." className={inputCls} />
+            {form.image_url && (
+              <div className="relative w-full h-24 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 mt-1.5">
+                <Image src={form.image_url} alt="preview" fill sizes="100%" className="object-cover" />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Tags (comma-separated)</label>
+            <input value={form.tags} onChange={e => setForm(p => ({ ...p, tags: e.target.value }))} placeholder="React, Tailwind, Next.js" className={inputCls} />
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={() => { setShowForm(false); setEditItem(null); }} className="flex-1 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all">
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all disabled:opacity-60">
+              {submitting ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+              {submitting ? 'Publishing...' : editItem ? 'Save Changes' : 'Publish Listing'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* My listings grid */}
+      {loadingList ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[1, 2].map(i => <div key={i} className="h-40 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />)}
+        </div>
+      ) : myListings.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Store size={36} className="text-gray-300 dark:text-gray-700 mb-3" />
+          <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">No listings yet</p>
+          <p className="text-xs text-gray-400">Click "New Listing" to publish your first item.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {myListings.map(listing => (
+            <div key={listing.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+              <div className="relative w-full h-32 bg-gray-100 dark:bg-gray-800">
+                <Image
+                  src={listing.image_url || `https://picsum.photos/seed/${listing.id}/400/200`}
+                  alt={listing.title} fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover"
+                />
+                <div className="absolute top-2 left-2">
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${CATEGORY_BADGE[listing.category] || CATEGORY_BADGE.Asset}`}>
+                    {CATEGORY_ICON[listing.category]} {listing.category}
+                  </span>
+                </div>
+                <div className="absolute top-2 right-2">
+                  <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${listing.is_active ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'}`}>
+                    {listing.is_active ? 'Live' : 'Hidden'}
+                  </span>
+                </div>
+              </div>
+              <div className="p-3">
+                <p className="font-black text-sm text-gray-900 dark:text-gray-100 line-clamp-1 mb-2">{listing.title}</p>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 shrink-0">
+                    {listing.price === 0 ? 'Free' : `$${listing.price}`} · {listing.purchases || 0} sold
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => handleToggleActive(listing)} title={listing.is_active ? 'Hide listing' : 'Show listing'} className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all">
+                      {listing.is_active ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </button>
+                    <button onClick={() => openEdit(listing)} title="Edit" className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all">
+                      <Pencil size={13} />
+                    </button>
+                    <button onClick={() => handleDelete(listing.id)} title="Delete" className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Verify Tab ───────────────────────────────────── */
 function VerifyTab() {
   const [input, setInput] = useState('');
@@ -1038,6 +1309,7 @@ const TABS = [
   { key: 'browse',      label: 'Browse',          icon: ShoppingBag },
   { key: 'library',     label: 'My Library',       icon: Library },
   { key: 'credentials', label: 'My Credentials',   icon: Award },
+  { key: 'sell',        label: 'Sell',             icon: Store },
   { key: 'issue',       label: 'Issue Credential', icon: Plus },
   { key: 'verify',      label: 'Verify',           icon: Shield },
 ];
@@ -1121,6 +1393,7 @@ export default function MarketplaceContent() {
         {activeTab === 'browse'      && <BrowseTab currentUserId={currentUserId} libraryIds={libraryIds} isPremium={isPremium} onAddToLibrary={handleAddToLibrary} onSelectListing={setSelectedListing} />}
         {activeTab === 'library'     && <MyLibraryTab currentUserId={currentUserId} onSelectItem={setSelectedLibItem} />}
         {activeTab === 'credentials' && <MyCredentialsTab currentUserId={currentUserId} onSelectCred={setSelectedCred} />}
+        {activeTab === 'sell'        && <SellTab currentUserId={currentUserId} isPremium={isPremium} isAdmin={currentProfile?.is_admin === true || currentProfile?.role === 'founder'} />}
         {activeTab === 'issue'       && <IssueCredentialTab currentUserId={currentUserId} currentProfile={currentProfile} />}
         {activeTab === 'verify'      && <VerifyTab />}
       </div>

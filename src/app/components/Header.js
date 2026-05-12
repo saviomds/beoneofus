@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign, CheckCircle2, AlertTriangle, Bookmark, BookmarkCheck, Clock, Building2, ExternalLink, Filter, ChevronRight, TrendingUp } from 'lucide-react';
+import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign, CheckCircle2, AlertTriangle, Bookmark, BookmarkCheck, Clock, Building2, ExternalLink, Filter, ChevronRight, TrendingUp, ShoppingBag } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -438,6 +438,13 @@ export default function Header({ setActiveTab }) {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all whitespace-nowrap"
             >
               <Compass size={13} /> Discover
+            </button>
+            <button
+              id="header-btn-marketplace"
+              onClick={() => router.push('/dash/marketplace')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 transition-all whitespace-nowrap"
+            >
+              <ShoppingBag size={13} /> Marketplace
             </button>
           </nav>
 

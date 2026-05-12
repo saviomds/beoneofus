@@ -14,14 +14,21 @@
     @apply transition-colors duration-300 ease-in-out;
   }
 
-  /* Hide scrollbars globally but keep scroll functionality */
+  /* Thin scrollbars globally — visible but unobtrusive */
   * {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156,163,175,0.4) transparent;
   }
-  *::-webkit-scrollbar {
-    display: none;
+  *::-webkit-scrollbar { width: 5px; height: 5px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: rgba(156,163,175,0.4); border-radius: 99px; }
+  *::-webkit-scrollbar-thumb:hover { background: rgba(156,163,175,0.7); }
+
+  .dark * {
+    scrollbar-color: rgba(75,85,99,0.5) transparent;
   }
+  .dark *::-webkit-scrollbar-thumb { background: rgba(75,85,99,0.5); }
+  .dark *::-webkit-scrollbar-thumb:hover { background: rgba(107,114,128,0.7); }
 
   /* Safe tap target size on mobile */
   button, a, [role="button"] {
@@ -29,14 +36,23 @@
   }
 }
 
+@keyframes shrink {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
 @layer utilities {
   /* ── Scrollbar helpers ── */
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-  .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.15) transparent; }
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
-  .dark .custom-scrollbar { scrollbar-color: rgba(255,255,255,0.15) transparent; }
+  .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.2) transparent; }
+  .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 99px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.35); }
+  .dark .custom-scrollbar { scrollbar-color: rgba(255,255,255,0.18) transparent; }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
   /* Mobile chat improvements */
   .mobile-chat-scroll { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }

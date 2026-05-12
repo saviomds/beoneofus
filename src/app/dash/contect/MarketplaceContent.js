@@ -1378,14 +1378,14 @@ export default function MarketplaceContent() {
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5 font-medium">Courses, credentials, templates, and more from the beoneofus community.</p>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto no-scrollbar border-b border-gray-200 dark:border-gray-800">
+      <div className="flex gap-1 overflow-x-auto custom-scrollbar border-b border-gray-200 dark:border-gray-800 flex-nowrap pb-1">
         {TABS.map(tab => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-black uppercase tracking-widest whitespace-nowrap border-b-2 transition-all -mb-px ${
+              className={`flex items-center shrink-0 gap-1.5 px-4 py-2.5 text-xs font-black uppercase tracking-widest whitespace-nowrap border-b-2 transition-all -mb-px ${
                 activeTab === tab.key
                   ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-gray-100'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -1400,7 +1400,7 @@ export default function MarketplaceContent() {
         })}
       </div>
 
-      <div>
+      <div className="max-h-[calc(100vh-220px)] sm:max-h-[calc(100vh-280px)] lg:max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar transition-all duration-300 border-t border-gray-100 dark:border-gray-800/50 pt-4 sticky top-0 z-10 bg-white dark:bg-gray-900">
         {activeTab === 'browse'      && <BrowseTab currentUserId={currentUserId} libraryIds={libraryIds} isPremium={isPremium} onAddToLibrary={handleAddToLibrary} onSelectListing={setSelectedListing} />}
         {activeTab === 'library'     && <MyLibraryTab currentUserId={currentUserId} onSelectItem={setSelectedLibItem} />}
         {activeTab === 'credentials' && <MyCredentialsTab currentUserId={currentUserId} onSelectCred={setSelectedCred} />}

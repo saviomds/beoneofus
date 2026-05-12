@@ -128,9 +128,18 @@ export default function AdminCoursesPage() {
         .select("*")
         .order("created_at", { ascending: false });
       if (!error && data) {
-        setCourses(data);
+        // Deduplicate courses by title + category (case-insensitive)
+        // Keep the first occurrence (most recent due to ordering)
+        const seen = new Set();
+        const deduplicated = data.filter(course => {
+          const key = `${(course.title || '').toLowerCase().trim()}|${(course.category || '').toLowerCase()}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setCourses(deduplicated);
         // Sync selectedCourse if modal is open
-        setSelectedCourse(prev => prev ? (data.find(d => d.id === prev.id) ?? null) : null);
+        setSelectedCourse(prev => prev ? (deduplicated.find(d => d.id === prev.id) ?? null) : null);
       }
     } catch (err) {
       console.error(err);

@@ -521,7 +521,18 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
       .select('id, title, description, category, price, currency, image_url, tags, purchases, created_at, profiles:seller_id(id, username, avatar_url, is_verified, is_premium)')
       .eq('is_active', true)
       .order('purchases', { ascending: false });
-    if (!error && data) setListings(data);
+    if (!error && data) {
+      // Deduplicate listings by title + category (case-insensitive)
+      // Keep the first occurrence (highest purchases due to ordering)
+      const seen = new Set();
+      const deduplicated = data.filter(listing => {
+        const key = `${listing.title.toLowerCase().trim()}|${listing.category.toLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setListings(deduplicated);
+    }
     setLoading(false);
   }, []);
 

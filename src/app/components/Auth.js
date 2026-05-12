@@ -144,9 +144,9 @@ export default function AuthForm() {
         if (!isMounted) return;
 
         if (session) {
-          // Always use window.location.href for post-auth navigation to avoid
-          // "Router action dispatched before initialization" errors.
-          window.location.href = '/dash';
+          const params = new URLSearchParams(window.location.search);
+          const next = params.get('next');
+          window.location.href = (next && next.startsWith('/')) ? next : '/dash';
         } else {
           setIsCheckingAuth(false);
         }
@@ -178,7 +178,9 @@ export default function AuthForm() {
               .is('username', null)
               .then(() => {});
           }
-          window.location.href = '/dash';
+          const params = new URLSearchParams(window.location.search);
+          const next = params.get('next');
+          window.location.href = (next && next.startsWith('/')) ? next : '/dash';
         }
       });
       subscription = result.data?.subscription ?? null;

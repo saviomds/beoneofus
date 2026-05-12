@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import Image from 'next/image';
 import { 
@@ -13,6 +13,14 @@ import VerifiedBadge from "../../components/VerifiedBadge";
 import ReactMarkdown from "react-markdown";
 import StoriesBar from "./Stories";
 
+// Stable seeded hash: consistent within a session, different across page loads
+function feedHash(id, seed) {
+  const s = id + seed;
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i);
+  return (h >>> 0) / 4294967296;
+}
+
 export default function FeedContent() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +28,15 @@ export default function FeedContent() {
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [activeTab, setActiveTab] = useState('following');
+  // Seed regenerated on manual refresh or page mount → different feed order each time
+  const [feedSeed, setFeedSeed] = useState(() => Math.random());
+  const [newPostBanner, setNewPostBanner] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Pull-to-refresh tracking
+  const pullStartY = useRef(0);
+  const pullDistance = useRef(0);
+  const [pullIndicator, setPullIndicator] = useState(0); // 0-100 px visual pull
 
   // Interaction States
   const [expandedComments, setExpandedComments] = useState({});
@@ -53,26 +70,7 @@ export default function FeedContent() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  useEffect(() => {
-    const initFeed = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setCurrentUserId(session?.user?.id);
-      await fetchPosts();
-    };
-
-    initFeed();
-
-    // Set up real-time listeners for everything
-    const subscription = supabase.channel('feed-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => fetchPosts())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => fetchPosts())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => fetchPosts())
-      .subscribe();
-
-    return () => supabase.removeChannel(subscription);
-  }, []);
-
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async (silent = false) => {
     try {
       const { data, error } = await supabase
         .from('posts')
@@ -92,9 +90,65 @@ export default function FeedContent() {
     } catch (error) {
       console.error('Error fetching:', error.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
+
+  const handleManualRefresh = useCallback(async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setNewPostBanner(false);
+    setFeedSeed(Math.random());
+    await fetchPosts(true);
+    setIsRefreshing(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [isRefreshing, fetchPosts]);
+
+  // Touch handlers for pull-to-refresh (mobile)
+  const onTouchStart = useCallback((e) => {
+    if (window.scrollY > 10) return;
+    pullStartY.current = e.touches[0].clientY;
+    pullDistance.current = 0;
+  }, []);
+
+  const onTouchMove = useCallback((e) => {
+    if (pullStartY.current === 0) return;
+    const delta = e.touches[0].clientY - pullStartY.current;
+    if (delta < 0) { pullDistance.current = 0; setPullIndicator(0); return; }
+    pullDistance.current = Math.min(delta, 90);
+    setPullIndicator(Math.min(delta, 90));
+  }, []);
+
+  const onTouchEnd = useCallback(() => {
+    if (pullDistance.current > 65) handleManualRefresh();
+    pullStartY.current = 0;
+    pullDistance.current = 0;
+    setPullIndicator(0);
+  }, [handleManualRefresh]);
+
+  useEffect(() => {
+    const initFeed = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setCurrentUserId(session?.user?.id);
+      await fetchPosts();
+    };
+
+    initFeed();
+
+    // Real-time: new posts show a banner; likes/comments update silently
+    const subscription = supabase.channel('feed-updates')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+        setNewPostBanner(true);
+        fetchPosts(true);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, () => fetchPosts(true))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, () => fetchPosts(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => fetchPosts(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => fetchPosts(true))
+      .subscribe();
+
+    return () => supabase.removeChannel(subscription);
+  }, [fetchPosts]);
 
   // --- SORTING LOGIC ---
   const displayedPosts = React.useMemo(() => {
@@ -102,24 +156,35 @@ export default function FeedContent() {
     if (activeTab === 'code review') {
       return sorted.filter(p => p.code_snippet && p.code_snippet.trim().length > 0)
                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (activeTab === 'following' || activeTab === 'latest') {
-      return sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (activeTab === 'featured') {
+    }
+    if (activeTab === 'featured') {
       return sorted.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
-    } else if (activeTab === 'rising') {
+    }
+    if (activeTab === 'rising') {
       const now = new Date();
       return sorted.sort((a, b) => {
         const aScore = (a.likes?.length || 0) * 2 + (a.comments?.length || 0) * 3;
         const bScore = (b.likes?.length || 0) * 2 + (b.comments?.length || 0) * 3;
-        const aAge = Math.max(1, (now - new Date(a.created_at)) / 3600000); 
+        const aAge = Math.max(1, (now - new Date(a.created_at)) / 3600000);
         const bAge = Math.max(1, (now - new Date(b.created_at)) / 3600000);
-        const aVelocity = aScore / Math.pow(aAge, 1.5);
-        const bVelocity = bScore / Math.pow(bAge, 1.5);
-        return bVelocity - aVelocity;
+        return (bScore / Math.pow(bAge, 1.5)) - (aScore / Math.pow(aAge, 1.5));
       });
     }
-    return sorted;
-  }, [posts, activeTab]);
+    // 'following' / 'latest' — social feed: recency + engagement + session variety
+    // feedSeed changes on each page mount → different order every refresh
+    const now = Date.now();
+    return sorted.sort((a, b) => {
+      const aHours = Math.max(0, (now - new Date(a.created_at)) / 3600000);
+      const bHours = Math.max(0, (now - new Date(b.created_at)) / 3600000);
+      // Recency score decays over 72 h; engagement multiplied in
+      const aBase = Math.max(0, 100 - aHours * 1.1) + (a.likes?.length || 0) * 5 + (a.comments?.length || 0) * 8;
+      const bBase = Math.max(0, 100 - bHours * 1.1) + (b.likes?.length || 0) * 5 + (b.comments?.length || 0) * 8;
+      // ±20 pts of session-unique variance: same session = stable order, new refresh = new mix
+      const aVar = (feedHash(a.id, feedSeed) - 0.5) * 40;
+      const bVar = (feedHash(b.id, feedSeed) - 0.5) * 40;
+      return (bBase + bVar) - (aBase + aVar);
+    });
+  }, [posts, activeTab, feedSeed]);
 
   // --- SHARE LOGIC ---
   const handleShareClick = (postId) => {
@@ -406,12 +471,34 @@ export default function FeedContent() {
   );
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Pull-to-refresh indicator (mobile) */}
+      {pullIndicator > 0 && (
+        <div
+          className="flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 text-sm font-bold overflow-hidden transition-all"
+          style={{ height: `${pullIndicator}px`, opacity: pullIndicator / 90 }}
+        >
+          <Loader2 size={16} className={pullIndicator > 65 ? 'animate-spin' : ''} />
+          {pullIndicator > 65 ? 'Release to refresh' : 'Pull to refresh'}
+        </div>
+      )}
+
+      {/* Refreshing overlay */}
+      {isRefreshing && (
+        <div className="flex items-center justify-center gap-2 py-3 text-blue-600 dark:text-blue-400 text-sm font-bold animate-pulse">
+          <Loader2 size={16} className="animate-spin" /> Refreshing feed…
+        </div>
+      )}
 
       {/* --- STORIES BAR --- */}
       {currentUserId && <StoriesBar currentUserId={currentUserId} />}
 
-      {/* --- FEED TABS --- */}
+      {/* --- FEED TABS + REFRESH BUTTON --- */}
       <div className="flex items-center gap-4 sm:gap-6 border-b border-gray-200 dark:border-gray-800 overflow-x-auto no-scrollbar -mx-1 px-1">
         {['Following', 'Featured', 'Rising', 'Code Review'].map((tab) => {
           const isActive = activeTab === tab.toLowerCase();
@@ -430,8 +517,18 @@ export default function FeedContent() {
             </button>
           );
         })}
+
+        {/* Refresh button — sits at the far right of the tabs row */}
+        <button
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          title="Refresh feed"
+          className="ml-auto shrink-0 pb-3 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors disabled:opacity-40"
+        >
+          <Loader2 size={16} className={isRefreshing ? 'animate-spin text-blue-600 dark:text-blue-400' : ''} />
+        </button>
       </div>
-      
+
       {/* --- SHARE MODAL --- */}
       {showShareModal && (
         <div className="fixed inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
@@ -513,6 +610,16 @@ export default function FeedContent() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* --- NEW POSTS BANNER (real-time) --- */}
+      {newPostBanner && (
+        <button
+          onClick={handleManualRefresh}
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl shadow-lg transition-all animate-in slide-in-from-top-2 duration-300"
+        >
+          <Sparkles size={15} /> New posts available — tap to refresh
+        </button>
       )}
 
       {/* --- FEED LIST --- */}

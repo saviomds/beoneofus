@@ -7,7 +7,7 @@ import {
   PenLine, Eye, Trash2, Plus, Save, Send, X, Tag, Image as ImageIcon,
   Loader2, CheckCircle2, AlertTriangle, MessageSquare, Heart, FileText,
   Globe, Lock, Clock, ChevronRight, RefreshCw, BookOpen, ArrowLeft,
-  TrendingUp, Hash,
+  TrendingUp, Hash, Star, Crown, ShieldCheck,
 } from "lucide-react";
 
 function slugify(t) {
@@ -31,11 +31,13 @@ const TAG_COLORS = [
 function tagColor(tag) { let h = 0; for (const c of tag) h = (h * 31 + c.charCodeAt(0)) & 0xff; return TAG_COLORS[h % TAG_COLORS.length]; }
 
 /* ─── Initial editor state ────────────────────────── */
-const BLANK = { id: null, title: "", slug: "", excerpt: "", content: "", cover_url: "", tags: [], published: false };
+const BLANK = { id: null, title: "", slug: "", excerpt: "", content: "", cover_url: "", tags: [], published: false, is_featured: false };
 
 export default function BlogContent() {
   const [profile, setProfile] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const [view, setView] = useState("list"); // "list" | "editor" | "preview"
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ export default function BlogContent() {
   const [form, setForm] = useState(BLANK);
   const [tagInput, setTagInput] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [stats, setStats] = useState({ total: 0, published: 0, totalViews: 0, totalLikes: 0 });
+  const [stats, setStats] = useState({ total: 0, published: 0, totalViews: 0, totalLikes: 0, featured: 0 });
   const channelRef = useRef(null);
 
   const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
@@ -55,19 +57,24 @@ export default function BlogContent() {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setLoading(false); return; }
-      const { data: p } = await supabase.from("profiles").select("id, username, avatar_url, is_admin, role").eq("id", session.user.id).single();
+      const { data: p } = await supabase.from("profiles").select("id, username, avatar_url, is_admin, role, is_verified, is_premium").eq("id", session.user.id).single();
       setProfile(p);
       if (p?.is_admin || p?.role === "founder") setIsAdmin(true);
+      setIsVerified(!!p?.is_verified);
+      setIsPremium(!!p?.is_premium);
       setLoading(false);
     };
     load();
   }, []);
 
   const fetchPosts = useCallback(async () => {
-    const { data } = await supabase
+    if (!profile) return;
+    let query = supabase
       .from("blog_posts")
-      .select(`id, title, slug, excerpt, cover_url, tags, published, views, created_at, updated_at, blog_likes(count), blog_comments(count)`)
+      .select(`id, title, slug, excerpt, cover_url, tags, published, is_featured, views, created_at, updated_at, blog_likes(count), blog_comments(count)`)
       .order("created_at", { ascending: false });
+    if (!isAdmin) query = query.eq("author_id", profile.id);
+    const { data } = await query;
     if (data) {
       setPosts(data);
       setStats({
@@ -75,20 +82,21 @@ export default function BlogContent() {
         published: data.filter((p) => p.published).length,
         totalViews: data.reduce((a, p) => a + (p.views || 0), 0),
         totalLikes: data.reduce((a, p) => a + (p.blog_likes?.[0]?.count || 0), 0),
+        featured: data.filter((p) => p.is_featured).length,
       });
     }
-  }, []);
+  }, [isAdmin, profile]);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!profile) return;
     fetchPosts();
-    const name = `blog-admin-${Date.now()}`;
+    const name = `blog-user-${Date.now()}`;
     channelRef.current = supabase
       .channel(name)
       .on("postgres_changes", { event: "*", schema: "public", table: "blog_posts" }, fetchPosts)
       .subscribe();
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current); };
-  }, [isAdmin, fetchPosts]);
+  }, [profile, fetchPosts]);
 
   /* slug auto-gen */
   const handleTitleChange = (val) => {
@@ -110,6 +118,7 @@ export default function BlogContent() {
     if (!form.title.trim() || !form.content.trim()) { showToast("error", "Title and content are required."); return; }
     if (publish) setPublishing(true); else setSaving(true);
 
+    const canFeature = isAdmin || isVerified || isPremium;
     const payload = {
       title: form.title.trim(),
       slug: form.slug || slugify(form.title),
@@ -118,6 +127,7 @@ export default function BlogContent() {
       cover_url: form.cover_url.trim() || null,
       tags: form.tags,
       published: publish ? true : form.published,
+      is_featured: canFeature ? !!form.is_featured : false,
       author_id: profile.id,
       updated_at: new Date().toISOString(),
     };
@@ -146,6 +156,7 @@ export default function BlogContent() {
       cover_url: post.cover_url || "",
       tags: post.tags || [],
       published: post.published,
+      is_featured: post.is_featured || false,
     });
     setView("editor");
   };
@@ -165,18 +176,25 @@ export default function BlogContent() {
     fetchPosts();
   };
 
-  /* ── Not admin ─── */
-  if (!loading && !isAdmin) {
+  /* ── Not signed in ─── */
+  if (!loading && !profile) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-20 text-center px-4">
-        <div className="w-14 h-14 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mb-4">
-          <Lock size={22} className="text-red-500" />
+        <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mb-4">
+          <PenLine size={22} className="text-blue-500" />
         </div>
-        <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">Admin Access Only</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">The blog editor is only available to admins and founders.</p>
-        <a href="/blog" className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors">
-          <BookOpen size={15} /> Read the Blog
-        </a>
+        <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">Sign in to write</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
+          Create an account to publish blog posts. Verified and Premium members get featured placement and extra visibility.
+        </p>
+        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+          <a href="/auth" className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors">
+            Sign In / Join Free
+          </a>
+          <a href="/blog" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+            <BookOpen size={15} /> Read the Blog
+          </a>
+        </div>
       </div>
     );
   }
@@ -265,12 +283,25 @@ export default function BlogContent() {
         {view === "list" && (
           <div className="space-y-3">
             {/* Stats row */}
+            {/* Writer tier badge */}
+            <div className="flex items-center gap-2 mb-4">
+              {isAdmin ? (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40"><ShieldCheck size={12} /> Admin</span>
+              ) : isPremium ? (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40"><Crown size={12} /> Premium Writer — Featured posts & priority placement</span>
+              ) : isVerified ? (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40"><ShieldCheck size={12} /> Verified Author — Featured posts unlocked</span>
+              ) : (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10"><PenLine size={12} /> Community Writer — <a href="/dash/premium" className="text-amber-500 hover:underline">Upgrade to Premium</a> for featured placement</span>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
               {[
                 { label: "Total Posts", val: stats.total, icon: <FileText size={16} />, color: "text-blue-600" },
                 { label: "Published", val: stats.published, icon: <Globe size={16} />, color: "text-emerald-600" },
                 { label: "Total Views", val: stats.totalViews, icon: <Eye size={16} />, color: "text-violet-600" },
-                { label: "Total Likes", val: stats.totalLikes, icon: <Heart size={16} />, color: "text-rose-500" },
+                { label: "Featured", val: stats.featured, icon: <Star size={16} />, color: "text-amber-500" },
               ].map((s) => (
                 <div key={s.label} className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-2xl p-4">
                   <div className={`${s.color} mb-1`}>{s.icon}</div>
@@ -302,9 +333,12 @@ export default function BlogContent() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3 mb-1">
                       <h3 className="font-black text-gray-900 dark:text-white text-sm truncate">{p.title}</h3>
-                      <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${p.published ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10"}`}>
-                        {p.published ? "Live" : "Draft"}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {p.is_featured && <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase border bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/40">⭐ Featured</span>}
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${p.published ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10"}`}>
+                          {p.published ? "Live" : "Draft"}
+                        </span>
+                      </div>
                     </div>
                     {p.excerpt && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mb-2">{p.excerpt}</p>}
                     <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500 flex-wrap">
@@ -385,6 +419,25 @@ export default function BlogContent() {
                   <X size={14} />
                 </button>
               </div>
+            )}
+
+            {/* featured toggle — verified / premium / admin only */}
+            {(isAdmin || isVerified || isPremium) && (
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, is_featured: !f.is_featured }))}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${form.is_featured ? "bg-amber-50 dark:bg-amber-900/10 border-amber-300 dark:border-amber-700/50" : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-amber-300 dark:hover:border-amber-700/40"}`}
+              >
+                <div className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ${form.is_featured ? "bg-amber-500" : "bg-gray-200 dark:bg-gray-700"}`}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${form.is_featured ? "translate-x-4" : "translate-x-0"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-amber-700 dark:text-amber-400">Feature this post</p>
+                  <p className="text-[10px] text-amber-600/70 dark:text-amber-500/70">Appears at the top of the blog and gets priority visibility</p>
+                </div>
+                {isPremium && <span className="shrink-0 text-[9px] font-black px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full border border-amber-300 dark:border-amber-700/40 uppercase tracking-widest flex items-center gap-1"><Crown size={9} /> Premium</span>}
+                {isVerified && !isPremium && <span className="shrink-0 text-[9px] font-black px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-700/40 uppercase tracking-widest flex items-center gap-1"><ShieldCheck size={9} /> Verified</span>}
+              </button>
             )}
 
             {/* excerpt */}

@@ -68,8 +68,8 @@ export default function BlogPostPage() {
     setPost(data);
     setLoading(false);
 
-    /* increment view count */
-    await supabase.from("blog_posts").update({ views: (data.views || 0) + 1 }).eq("id", data.id);
+    /* increment view count via security-definer function (works for all readers) */
+    await supabase.rpc("increment_blog_views", { post_id: data.id });
   }, [slug]);
 
   const fetchLikes = useCallback(async (postId) => {

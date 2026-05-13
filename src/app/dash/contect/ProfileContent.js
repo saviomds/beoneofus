@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, Share2, ExternalLink, Award, Eye, EyeOff, Lock } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, ChevronLeft, Share2, ExternalLink, Award, Eye, EyeOff, Lock, Heart, MessageSquare, Code2 } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
@@ -91,6 +91,14 @@ export default function ProfileContent({ viewUserId }) {
   // Story viewer state
   const [storyViewerOpen, setStoryViewerOpen] = useState(false);
 
+  // Posts & Liked posts
+  const [profilePosts, setProfilePosts] = useState([]);
+  const [likedPosts, setLikedPosts] = useState([]);
+  const postsScrollRef = useRef(null);
+  const likedScrollRef = useRef(null);
+  const [postsEdge, setPostsEdge] = useState({ left: false, right: true });
+  const [likedEdge, setLikedEdge] = useState({ left: false, right: true });
+
   // Stories for the profile being viewed (profile?.id = null while loading → hook handles it)
   const { hasStory, stories: profileStories } = useUserStories(profile?.id);
 
@@ -152,6 +160,26 @@ export default function ProfileContent({ viewUserId }) {
           .eq('user_id', targetUserId)
           .order('created_at', { ascending: false });
         if (jobsData) setUserJobs(jobsData);
+
+        setPostsEdge({ left: false, right: true });
+        setLikedEdge({ left: false, right: true });
+
+        // Fetch user's posts
+        const { data: postsData } = await supabase
+          .from('posts')
+          .select('id, title, content, image_url, image_fit, code_snippet, created_at, likes(user_id), comments(id)')
+          .eq('user_id', targetUserId)
+          .order('created_at', { ascending: false })
+          .limit(20);
+        if (postsData) setProfilePosts(postsData);
+
+        // Fetch posts this user liked
+        const { data: likedData } = await supabase
+          .from('likes')
+          .select('posts(id, title, content, image_url, image_fit, code_snippet, created_at, profiles:user_id(username, avatar_url), likes(user_id), comments(id))')
+          .eq('user_id', targetUserId)
+          .limit(20);
+        if (likedData) setLikedPosts(likedData.map(l => l.posts).filter(Boolean));
 
         if (own) {
           setFormData({
@@ -602,13 +630,22 @@ export default function ProfileContent({ viewUserId }) {
     );
   }
 
+  const scrollRow = (ref, dir) => {
+    if (ref.current) ref.current.scrollBy({ left: dir === 'right' ? 290 : -290, behavior: 'smooth' });
+  };
+  const syncEdge = (ref, setState) => {
+    const el = ref.current;
+    if (!el) return;
+    setState({ left: el.scrollLeft > 8, right: el.scrollLeft < el.scrollWidth - el.clientWidth - 8 });
+  };
+
   const userInitial = profile?.username?.[0]?.toUpperCase() || currentUser?.email?.[0]?.toUpperCase() || "I";
   const displayAvatar = imagePreview || profile?.avatar_url;
   const displayBanner = bannerPreview || profile?.banner_url;
 
 
   return (
-    <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 pt-4 px-2 sm:px-6" style={{ zoom: "0.85" }}>
+    <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 pt-4 px-2 sm:px-4 md:px-6">
       <div className="mb-8 max-w-6xl w-full mx-auto">
         <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Profile</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your professional identity and network status." : "Viewing professional network identity."}</p>
@@ -644,9 +681,9 @@ export default function ProfileContent({ viewUserId }) {
         </div>
       )}
 
-      <div className="max-w-6xl w-full mx-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2.5rem] relative overflow-visible shadow-xl shadow-gray-200/50 dark:shadow-black/50 mb-10">
+      <div className="max-w-6xl w-full mx-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl sm:rounded-[2.5rem] relative overflow-visible shadow-lg sm:shadow-xl shadow-gray-200/50 dark:shadow-black/50 mb-10 transition-all duration-300">
         {/* Banner Section */}
-        <div className="h-40 sm:h-56 w-full bg-gradient-to-tr from-slate-900 via-indigo-900 to-slate-800 rounded-t-[2.5rem] relative overflow-hidden group">
+        <div className="h-32 sm:h-48 md:h-56 w-full bg-gradient-to-tr from-slate-900 via-indigo-900 to-slate-800 rounded-t-2xl sm:rounded-t-[2.5rem] relative overflow-hidden group">
           {displayBanner ? (
             <Image src={displayBanner} alt="Profile Banner" fill priority quality={75} className="object-cover object-center" />
           ) : (
@@ -665,16 +702,16 @@ export default function ProfileContent({ viewUserId }) {
         </div>
         <input type="file" ref={bannerInputRef} onChange={handleBannerFileChange} accept="image/*" className="hidden" />
         
-        <div className="px-6 sm:px-12 relative pb-12">
+        <div className="px-4 sm:px-8 md:px-12 relative pb-10 sm:pb-12">
           {/* Header Area with Avatar and Actions */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6 -mt-16 sm:-mt-24 mb-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 sm:gap-6 -mt-14 sm:-mt-20 md:-mt-24 mb-6 sm:mb-8">
             {/* Avatar + Story Ring */}
             <StoryRing
               hasStory={hasStory}
               viewed={false}
               onClick={hasStory && !isEditing ? () => setStoryViewerOpen(true) : undefined}
             >
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 sm:border-8 border-white dark:border-gray-900 bg-white dark:bg-gray-900 flex items-center justify-center text-5xl font-black text-gray-700 dark:text-gray-300 shadow-xl shrink-0 overflow-hidden group z-10 transition-transform hover:scale-105 duration-300">
+              <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full border-4 sm:border-[6px] md:border-8 border-white dark:border-gray-900 bg-white dark:bg-gray-900 flex items-center justify-center text-4xl sm:text-5xl font-black text-gray-700 dark:text-gray-300 shadow-xl shrink-0 overflow-hidden group z-10 transition-transform hover:scale-105 duration-300">
                 {displayAvatar ? (
                   <Image src={displayAvatar} alt="Profile Avatar" fill sizes="128px" className="object-cover object-center" />
                 ) : (
@@ -695,21 +732,21 @@ export default function ProfileContent({ viewUserId }) {
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3 pt-4 sm:pt-0 z-10 pb-2 sm:pb-4">
+            <div className="flex items-center gap-2 pt-4 sm:pt-0 z-10 pb-2 sm:pb-4 flex-wrap">
               {isOwnProfile ? (
                 !isEditing && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-6 py-3 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+                      className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-3 sm:px-5 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
                     >
-                      <Edit3 size={18} /> Edit Profile
+                      <Edit3 size={16} /> <span className="hidden xs:inline sm:inline">Edit Profile</span>
                     </button>
                     <button
                       onClick={() => setStoryViewerOpen("create")}
-                      className="flex items-center gap-2 text-sm font-bold text-white bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 px-4 py-3 rounded-full transition-all shadow-sm hover:shadow-md active:scale-95"
+                      className="flex items-center gap-1.5 text-sm font-bold text-white bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 px-3 sm:px-4 py-2.5 rounded-full transition-all shadow-sm hover:shadow-md active:scale-95"
                     >
-                      <Plus size={16} /> Story
+                      <Plus size={15} /> <span className="hidden sm:inline">Story</span>
                     </button>
                     {profile?.username && (
                       <a
@@ -717,9 +754,9 @@ export default function ProfileContent({ viewUserId }) {
                         target="_blank"
                         rel="noopener noreferrer"
                         title="View public profile"
-                        className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-3 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+                        className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-3 sm:px-4 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
                       >
-                        <ExternalLink size={16} /> Public Profile
+                        <ExternalLink size={15} /> <span className="hidden sm:inline">Public</span>
                       </a>
                     )}
                   </div>
@@ -921,6 +958,168 @@ export default function ProfileContent({ viewUserId }) {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* POSTS & LIKED ACTIVITY SECTION */}
+              <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">
+                {/* My Posts */}
+                <div className="mb-10">
+                  <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-5">Posts</h3>
+                  {profilePosts.length > 0 ? (
+                    <div className="relative">
+                      {postsEdge.left && (
+                        <button
+                          onClick={() => scrollRow(postsScrollRef, 'left')}
+                          className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+                      )}
+                      {postsEdge.right && (
+                        <button
+                          onClick={() => scrollRow(postsScrollRef, 'right')}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      )}
+                    <div
+                      ref={postsScrollRef}
+                      onScroll={() => syncEdge(postsScrollRef, setPostsEdge)}
+                      className="flex gap-4 overflow-x-auto pb-3 -mx-1 px-1 snap-x snap-mandatory scrollbar-track-x"
+                    >
+                      {profilePosts.map(post => (
+                        <a
+                          key={post.id}
+                          href={`/posts/${post.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="snap-start shrink-0 w-56 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col group"
+                        >
+                          {post.image_url ? (
+                            <div className="relative h-32 w-full bg-gray-100 dark:bg-gray-700 shrink-0">
+                              <Image
+                                src={post.image_url}
+                                alt={post.title || 'Post image'}
+                                fill
+                                sizes="224px"
+                                className={(post.image_fit || 'cover') === 'contain' ? 'object-contain' : 'object-cover'}
+                              />
+                            </div>
+                          ) : post.code_snippet ? (
+                            <div className="h-32 w-full bg-gray-900 dark:bg-gray-950 flex items-center justify-center shrink-0 border-b border-gray-700">
+                              <Code2 size={28} className="text-blue-400 opacity-60" />
+                            </div>
+                          ) : (
+                            <div className="h-20 w-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 shrink-0" />
+                          )}
+                          <div className="p-3 flex-1 flex flex-col justify-between min-h-0">
+                            <div>
+                              {post.title && (
+                                <p className="text-xs font-black text-gray-900 dark:text-gray-100 truncate mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{post.title}</p>
+                              )}
+                              {post.content && (
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">{post.content.replace(/[#*`_]/g, '')}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-[11px] text-gray-400 dark:text-gray-500 font-semibold">
+                              <span className="flex items-center gap-1"><Heart size={11} /> {post.likes?.length || 0}</span>
+                              <span className="flex items-center gap-1"><MessageSquare size={11} /> {post.comments?.length || 0}</span>
+                              <span className="ml-auto">{new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            </div>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                      <Activity size={28} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                      <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No posts yet.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Liked Posts */}
+                <div>
+                  <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-5">Liked</h3>
+                  {likedPosts.length > 0 ? (
+                    <div className="relative">
+                      {likedEdge.left && (
+                        <button
+                          onClick={() => scrollRow(likedScrollRef, 'left')}
+                          className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+                      )}
+                      {likedEdge.right && (
+                        <button
+                          onClick={() => scrollRow(likedScrollRef, 'right')}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      )}
+                    <div
+                      ref={likedScrollRef}
+                      onScroll={() => syncEdge(likedScrollRef, setLikedEdge)}
+                      className="flex gap-4 overflow-x-auto pb-3 -mx-1 px-1 snap-x snap-mandatory scrollbar-track-x"
+                    >
+                      {likedPosts.map(post => (
+                        <a
+                          key={post.id}
+                          href={`/posts/${post.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="snap-start shrink-0 w-56 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col group"
+                        >
+                          {post.image_url ? (
+                            <div className="relative h-32 w-full bg-gray-100 dark:bg-gray-700 shrink-0">
+                              <Image
+                                src={post.image_url}
+                                alt={post.title || 'Post image'}
+                                fill
+                                sizes="224px"
+                                className={(post.image_fit || 'cover') === 'contain' ? 'object-contain' : 'object-cover'}
+                              />
+                            </div>
+                          ) : post.code_snippet ? (
+                            <div className="h-32 w-full bg-gray-900 dark:bg-gray-950 flex items-center justify-center shrink-0 border-b border-gray-700">
+                              <Code2 size={28} className="text-blue-400 opacity-60" />
+                            </div>
+                          ) : (
+                            <div className="h-20 w-full bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 shrink-0" />
+                          )}
+                          <div className="p-3 flex-1 flex flex-col justify-between min-h-0">
+                            <div>
+                              {post.profiles?.username && (
+                                <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 mb-1 truncate">@{post.profiles.username}</p>
+                              )}
+                              {post.title && (
+                                <p className="text-xs font-black text-gray-900 dark:text-gray-100 truncate mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{post.title}</p>
+                              )}
+                              {post.content && (
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">{post.content.replace(/[#*`_]/g, '')}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-[11px] text-gray-400 dark:text-gray-500 font-semibold">
+                              <span className="flex items-center gap-1 text-red-500"><Heart size={11} fill="currentColor" /> {post.likes?.length || 0}</span>
+                              <span className="flex items-center gap-1"><MessageSquare size={11} /> {post.comments?.length || 0}</span>
+                              <span className="ml-auto">{new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            </div>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                      <Heart size={28} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                      <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No liked posts yet.</p>
                     </div>
                   )}
                 </div>

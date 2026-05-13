@@ -3,13 +3,14 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import Image from 'next/image';
-import { 
-  MessageSquare, Heart, Share2, MoreHorizontal, 
-  Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark, GitBranch, Link as LinkIcon,
+import {
+  MessageSquare, Heart, Share2, MoreHorizontal,
+  Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark, GitBranch, Link as LinkIcon, ExternalLink,
   Sparkles, Loader2, ShieldAlert
 } from 'lucide-react';
 import ProfileContent from "./ProfileContent";
 import VerifiedBadge from "../../components/VerifiedBadge";
+import PremiumBadge from "../../components/PremiumBadge";
 import ReactMarkdown from "react-markdown";
 import StoriesBar from "./Stories";
 
@@ -65,6 +66,9 @@ export default function FeedContent() {
   // Toast State
   const [toastMessage, setToastMessage] = useState("");
 
+  // Member Spotlight
+  const [memberSpotlight, setMemberSpotlight] = useState([]);
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(""), 3000);
@@ -76,7 +80,7 @@ export default function FeedContent() {
         .from('posts')
         .select(`
           *,
-          profiles:user_id (username, status, avatar_url, github, website, is_verified),
+          profiles:user_id (username, status, avatar_url, github, website, is_verified, is_premium, is_admin),
           likes (user_id),
           comments (
             id, content, created_at, user_id,
@@ -131,6 +135,30 @@ export default function FeedContent() {
       const { data: { session } } = await supabase.auth.getSession();
       setCurrentUserId(session?.user?.id);
       await fetchPosts();
+
+      // Build member spotlight: one card per user showing their first post
+      const { data: oldestPosts } = await supabase
+        .from('posts')
+        .select('id, title, content, image_url, image_fit, created_at, user_id, profiles:user_id(username, avatar_url, status, is_verified, is_premium, is_admin)')
+        .order('created_at', { ascending: true })
+        .limit(300);
+      if (oldestPosts) {
+        const seen = new Set();
+        const spotlight = [];
+        for (const post of oldestPosts) {
+          if (!seen.has(post.user_id) && post.profiles) {
+            seen.add(post.user_id);
+            spotlight.push(post);
+          }
+          if (spotlight.length >= 24) break;
+        }
+        // Verified first, then premium, then rest
+        spotlight.sort((a, b) => {
+          const score = (p) => (p?.is_verified ? 4 : 0) + (p?.is_premium || p?.is_admin ? 2 : 0);
+          return score(b.profiles) - score(a.profiles);
+        });
+        setMemberSpotlight(spotlight);
+      }
     };
 
     initFeed();
@@ -189,7 +217,7 @@ export default function FeedContent() {
   // --- SHARE LOGIC ---
   const handleShareClick = (postId) => {
     const baseUrl = window.location.origin;
-    setShareLink(`${baseUrl}/p/${postId}`);
+    setShareLink(`${baseUrl}/posts/${postId}`);
     setShowShareModal(true);
     setCopied(false);
   };
@@ -266,6 +294,11 @@ export default function FeedContent() {
     } catch (err) { alert("Error adding comment: " + err.message); }
   };
 
+  const aiErrorMessage = (error) =>
+    error instanceof TypeError
+      ? 'AI unavailable — check your connection or restart the dev server.'
+      : error.message;
+
   // --- AI SUGGEST REPLY LOGIC ---
   const handleSuggestReply = async (post) => {
     if (isSuggesting[post.id]) return;
@@ -282,14 +315,14 @@ export default function FeedContent() {
       const text = await res.text();
       let data;
       try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
-      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
+      if (!res.ok) throw new Error(data.error || "Failed to get AI response");
 
       // Strip any accidental quotes from the start/end of the AI response
       const cleanReply = data.message.content.replace(/^["']|["']$/g, '').trim();
       setNewComments(prev => ({ ...prev, [post.id]: cleanReply }));
-      
+
     } catch (error) {
-      showToast(error.message);
+      showToast(aiErrorMessage(error));
     } finally {
       setIsSuggesting(prev => ({ ...prev, [post.id]: false }));
     }
@@ -320,11 +353,11 @@ export default function FeedContent() {
       const text = await res.text();
       let data;
       try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
-      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
+      if (!res.ok) throw new Error(data.error || "Failed to get AI response");
 
       setPostSummaries(prev => ({ ...prev, [post.id]: data.message.content.trim() }));
     } catch (error) {
-      showToast(error.message);
+      showToast(aiErrorMessage(error));
     } finally {
       setIsSummarizing(prev => ({ ...prev, [post.id]: false }));
     }
@@ -355,11 +388,11 @@ export default function FeedContent() {
       const text = await res.text();
       let data;
       try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
-      if (!res.ok) throw new Error(data.error || "Failed to fetch response");
+      if (!res.ok) throw new Error(data.error || "Failed to get AI response");
 
       setPostAnalyses(prev => ({ ...prev, [post.id]: data.message.content.trim() }));
     } catch (error) {
-      showToast(error.message);
+      showToast(aiErrorMessage(error));
     } finally {
       setIsAnalyzing(prev => ({ ...prev, [post.id]: false }));
     }
@@ -369,7 +402,7 @@ export default function FeedContent() {
   const handleBookmark = async (post) => {
     if (!currentUserId) return;
     try {
-      const postUrl = `${window.location.origin}/p/${post.id}`;
+      const postUrl = `${window.location.origin}/posts/${post.id}`;
       
       // 1. Check if already bookmarked (Toggle behavior)
       const { data: existing } = await supabase
@@ -497,6 +530,79 @@ export default function FeedContent() {
 
       {/* --- STORIES BAR --- */}
       {currentUserId && <StoriesBar currentUserId={currentUserId} />}
+
+      {/* --- MEMBER SPOTLIGHT --- */}
+      {memberSpotlight.length > 0 && (
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 px-0.5">Network Members</p>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 snap-x snap-mandatory">
+            {memberSpotlight.map((post) => {
+              const p = post.profiles;
+              const isPremium = p?.is_premium || p?.is_admin;
+              const isVerified = p?.is_verified;
+              const initial = p?.username?.[0]?.toUpperCase() || '?';
+              return (
+                <div
+                  key={post.user_id}
+                  onClick={() => setSelectedUserId(post.user_id)}
+                  className={`snap-start shrink-0 cursor-pointer rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 flex flex-col ${
+                    isPremium
+                      ? 'w-52 border-2 border-yellow-400/70 dark:border-yellow-500/50 bg-gradient-to-b from-yellow-50 to-white dark:from-yellow-900/10 dark:to-gray-900 shadow-yellow-100 dark:shadow-yellow-900/10 shadow-md'
+                      : 'w-44 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900'
+                  }`}
+                >
+                  {/* Image or color header */}
+                  {post.image_url ? (
+                    <div className="relative h-20 w-full shrink-0">
+                      <Image src={post.image_url} alt="" fill sizes="208px" className={(post.image_fit || 'cover') === 'contain' ? 'object-contain' : 'object-cover'} />
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
+                    </div>
+                  ) : (
+                    <div className={`h-10 w-full shrink-0 ${isPremium ? 'bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500' : isVerified ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gradient-to-r from-slate-600 to-slate-800'}`} />
+                  )}
+
+                  {/* Avatar + info */}
+                  <div className={`px-3 pb-3 flex flex-col flex-1 ${post.image_url ? '-mt-5' : '-mt-4'}`}>
+                    <div className={`relative w-9 h-9 rounded-full border-2 ${isPremium ? 'border-yellow-400 dark:border-yellow-500' : 'border-white dark:border-gray-900'} bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-black uppercase overflow-hidden shrink-0 mb-1.5 shadow-sm`}>
+                      {p?.avatar_url ? (
+                        <Image src={p.avatar_url} alt="" fill sizes="36px" className="object-cover" />
+                      ) : (
+                        <span className="text-gray-600 dark:text-gray-300">{initial}</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="text-[11px] font-black text-gray-900 dark:text-gray-100 truncate">@{p?.username}</span>
+                      {isVerified && <VerifiedBadge size={11} />}
+                      {isPremium && <PremiumBadge size={11} />}
+                    </div>
+
+                    <p className="text-[9px] text-gray-400 dark:text-gray-500 truncate font-medium mt-0.5">{p?.status || 'Network Member'}</p>
+
+                    {isPremium && (
+                      <span className="mt-1.5 self-start text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800/50">
+                        Premium
+                      </span>
+                    )}
+
+                    {(post.title || post.content) && (
+                      <p className={`text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed mt-2 ${isPremium ? 'line-clamp-3' : 'line-clamp-2'}`}>
+                        {(post.title || post.content || '').replace(/[#*`_[\]()]/g, '').slice(0, isPremium ? 80 : 55)}
+                      </p>
+                    )}
+
+                    {isVerified && (
+                      <div className="flex items-center gap-1 mt-2">
+                        <span className="text-[8px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Verified Member</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* --- FEED TABS + REFRESH BUTTON --- */}
       <div className="flex items-center gap-4 sm:gap-6 border-b border-gray-200 dark:border-gray-800 overflow-x-auto no-scrollbar -mx-1 px-1">
@@ -651,6 +757,7 @@ export default function FeedContent() {
                       {post.profiles?.username || 'Unknown User'}
                     </span>
                     {post.profiles?.is_verified && <VerifiedBadge size={14} />}
+                    {(post.profiles?.is_premium || post.profiles?.is_admin) && <PremiumBadge size={14} />}
                     {post.profiles?.github && (
                       <a href={`https://github.com/${post.profiles.github}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0" title="GitHub">
                         <GitBranch size={13} />
@@ -688,9 +795,11 @@ export default function FeedContent() {
 
               <div className="space-y-3">
                 {post.title && (
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight leading-snug break-words">
-                    {post.title}
-                  </h3>
+                  <a href={`/posts/${post.id}`} target="_blank" rel="noopener noreferrer" className="group/title block">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 group-hover/title:text-blue-600 dark:group-hover/title:text-blue-400 tracking-tight leading-snug break-words transition-colors">
+                      {post.title}
+                    </h3>
+                  </a>
                 )}
                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-words text-sm">
                   {post.content}
@@ -712,8 +821,8 @@ export default function FeedContent() {
                   </div>
                 )}
                 {post.image_url && (
-                  <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
-                    <Image src={post.image_url} alt="Post media" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
+                  <div className={`relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 ${(post.image_fit || 'cover') === 'contain' ? 'bg-gray-50 dark:bg-gray-900' : ''}`}>
+                    <Image src={post.image_url} alt="Post media" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className={(post.image_fit || 'cover') === 'contain' ? 'object-contain' : 'object-cover'} />
                   </div>
                 )}
               </div>
@@ -802,6 +911,9 @@ export default function FeedContent() {
                   <button onClick={() => handleShareClick(post.id)} className="p-1.5 rounded-lg hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/10 transition-all" title="Share Post">
                     <Share2 size={15} />
                   </button>
+                  <a href={`/posts/${post.id}`} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all" title="Open post in new tab">
+                    <ExternalLink size={15} />
+                  </a>
                 </div>
               </div>
 

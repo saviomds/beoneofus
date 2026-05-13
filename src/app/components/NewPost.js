@@ -54,6 +54,7 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
   
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [imageFit, setImageFit] = useState('cover');
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
   const MAX_CHARS = 2500;
@@ -67,6 +68,7 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
       setCodeSnippet(postToEdit.code_snippet || '');
       setCodeLanguage(postToEdit.code_language || 'javascript');
       setSelectedImage(postToEdit.image_url || null);
+      setImageFit(postToEdit.image_fit || 'cover');
       setImageFile(null); // Reset any selected file
       setShowCodeInput(!!postToEdit.code_snippet);
     }
@@ -200,6 +202,7 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
         title,
         content,
         image_url: publicImageUrl,
+        image_fit: publicImageUrl ? imageFit : null,
         code_snippet: codeSnippet,
         code_language: codeLanguage,
       };
@@ -233,6 +236,7 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
         setCodeLanguage('javascript');
         setSelectedImage(null);
         setImageFile(null);
+        setImageFit('cover');
         setShowCodeInput(false);
         setShowPreview(false);
         if (typeof window !== 'undefined') {
@@ -366,7 +370,7 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
                 )}
                 {selectedImage && (
                   <div className="mt-4 relative w-full h-64 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <Image src={selectedImage} alt="Preview" fill className="object-cover" />
+                    <Image src={selectedImage} alt="Preview" fill className={imageFit === 'contain' ? 'object-contain' : 'object-cover'} />
                   </div>
                 )}
               </>
@@ -409,14 +413,33 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
           )}
 
         {!showPreview && selectedImage && (
-            <div className="relative w-full h-64 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
-              <button 
-                onClick={() => { setSelectedImage(null); setImageFile(null); }}
-                className="absolute top-2 right-2 bg-white/80 dark:bg-black/50 p-1 rounded-full text-gray-700 dark:text-gray-300 hover:text-white hover:bg-red-500 z-10"
-              >
-                <X size={16} />
-              </button>
-              <Image src={selectedImage} alt="Preview" fill className="object-cover" />
+            <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+              <div className="relative w-full h-64">
+                <button
+                  onClick={() => { setSelectedImage(null); setImageFile(null); setImageFit('cover'); }}
+                  className="absolute top-2 right-2 bg-white/80 dark:bg-black/50 p-1 rounded-full text-gray-700 dark:text-gray-300 hover:text-white hover:bg-red-500 z-10"
+                >
+                  <X size={16} />
+                </button>
+                <Image src={selectedImage} alt="Preview" fill className={imageFit === 'contain' ? 'object-contain' : 'object-cover'} />
+              </div>
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mr-1">Fit:</span>
+                <button
+                  type="button"
+                  onClick={() => setImageFit('cover')}
+                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${imageFit === 'cover' ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                >
+                  Fill (Crop)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImageFit('contain')}
+                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${imageFit === 'contain' ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                >
+                  Fit (Full)
+                </button>
+              </div>
             </div>
           )}
 

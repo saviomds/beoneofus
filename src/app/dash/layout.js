@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Menu, X, Home, MessageSquare, Bell, User, Users } from 'lucide-react';
+import { Menu, X, Home, MessageSquare, Bell, User, Users, ShoppingBag } from 'lucide-react';
 import '../globals.css'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
@@ -12,9 +12,10 @@ import { supabase } from '../supabaseClient';
 
 /* ── Bottom nav items shown on mobile ── */
 const BOTTOM_NAV = [
-  { id: 'feed',          icon: Home,         label: 'Home' },
+  { id: 'feed',          icon: Home,          label: 'Home' },
   { id: 'messages',      icon: MessageSquare, label: 'Msgs' },
   { id: 'notifications', icon: Bell,          label: 'Alerts' },
+  { id: 'marketplace',   icon: ShoppingBag,   label: 'Market' },
   { id: 'connections',   icon: Users,         label: 'Network' },
   { id: 'profile',       icon: User,          label: 'Profile' },
 ];

@@ -61,6 +61,13 @@
   .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
   .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
+  /* Horizontal scroll: track line only, no visible thumb */
+  .scrollbar-track-x { scrollbar-width: thin; scrollbar-color: transparent transparent; overflow-x: auto; }
+  .scrollbar-track-x::-webkit-scrollbar { height: 2px; }
+  .scrollbar-track-x::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); border-radius: 99px; }
+  .scrollbar-track-x::-webkit-scrollbar-thumb { background: transparent; }
+  .dark .scrollbar-track-x::-webkit-scrollbar-track { background: rgba(255,255,255,0.08); }
+
   /* Mobile chat improvements */
   .mobile-chat-scroll { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
 

@@ -126,6 +126,18 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
 
   // Foolproof handler to trigger the exact modals from the Header component
   const handleMobileNav = (type) => {
+    if (type === 'marketplace') {
+      router.push('/dash/marketplace');
+      onClose?.();
+      return;
+    }
+    if (type === 'premium') {
+      setIsPremiumOpen(true);
+      setTimeout(() => {
+        document.getElementById('sidebar-premium-insights')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+      return;
+    }
     const btn = document.getElementById(`header-btn-${type}`);
     if (btn) {
       btn.click();
@@ -439,6 +451,12 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
           </button>
           <button onClick={() => handleMobileNav('discover')} className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border transition-all ${activeModals.discover ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-blue-600 hover:border-blue-200'}`}>
             <Compass size={13} /> Discover
+          </button>
+          <button onClick={() => handleMobileNav('marketplace')} className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-violet-600 hover:border-violet-200 dark:hover:text-violet-400 dark:hover:border-violet-800 transition-all">
+            <Rocket size={13} /> Market
+          </button>
+          <button onClick={() => handleMobileNav('premium')} className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl border bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-all">
+            <Crown size={13} /> Premium
           </button>
         </div>
         <div className="w-full h-px bg-gray-200 dark:bg-gray-800" />
@@ -790,7 +808,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
 
       {/* 5. Premium Insights — only shown to premium members */}
       {isPremium && (
-        <div className="relative">
+        <div className="relative" id="sidebar-premium-insights">
           {/* Gold gradient border wrapper */}
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-yellow-400/30 via-amber-400/20 to-orange-400/30 dark:from-yellow-500/20 dark:via-amber-500/15 dark:to-orange-500/20 blur-[2px] -z-10" />
           <div className="bg-gradient-to-br from-yellow-50/80 via-white to-amber-50/60 dark:from-yellow-900/10 dark:via-gray-900 dark:to-amber-900/10 border border-yellow-300/60 dark:border-yellow-700/40 rounded-2xl overflow-hidden">

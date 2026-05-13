@@ -33,7 +33,7 @@ export async function POST(request) {
                 <tr>
                   <td align="center" style="padding-bottom:24px;">
                     <table cellpadding="0" cellspacing="0"><tr>
-                      <td><img src="https://beoneofus.com/logo.png" alt="beoneofus logo" width="48" height="48" style="display:inline-block;border-radius:12px;vertical-align:middle;"/></td>
+                      <td><img src="https://beoneofus.work/logo.png" alt="beoneofus logo" width="48" height="48" style="display:inline-block;border-radius:12px;vertical-align:middle;"/></td>
                       <td style="padding-left:10px;vertical-align:middle;"><span style="font-size:22px;font-weight:900;letter-spacing:-0.5px;color:#0f172a;">beone<span style="color:#2563eb;">of</span>us</span></td>
                     </tr></table>
                   </td>
@@ -46,7 +46,7 @@ export async function POST(request) {
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 60%,#0f172a 100%);padding:36px 40px 32px;text-align:center;">
-                          <img src="https://beoneofus.com/logo.png" alt="beoneofus" width="72" height="72" style="display:block;margin:0 auto 16px;border-radius:18px;"/>
+                          <img src="https://beoneofus.work/logo.png" alt="beoneofus" width="72" height="72" style="display:block;margin:0 auto 16px;border-radius:18px;"/>
                           <h1 style="margin:0;font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.3px;">You've been invited!</h1>
                           <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.65);">Someone thinks you belong here</p>
                         </td>
@@ -84,7 +84,7 @@ export async function POST(request) {
                 <!-- Footer -->
                 <tr>
                   <td style="padding:28px 0 0;text-align:center;">
-                    <img src="https://beoneofus.com/logo.png" alt="" width="28" height="28" style="display:inline-block;border-radius:6px;margin-bottom:8px;opacity:0.6;"/>
+                    <img src="https://beoneofus.work/logo.png" alt="" width="28" height="28" style="display:inline-block;border-radius:6px;margin-bottom:8px;opacity:0.6;"/>
                     <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;font-weight:700;">beoneofus</p>
                     <p style="margin:0;font-size:11px;color:#cbd5e1;">Developer Network &amp; Collaboration</p>
                   </td>

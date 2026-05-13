@@ -7,7 +7,8 @@ import Link from "next/link";
 import {
   Users, Star, BookOpen, Plus, X, Crown, Lock, Loader2,
   Sparkles, Clock, BadgeCheck, Edit2, Check, ChevronRight,
-  GraduationCap, Handshake, Search,
+  GraduationCap, Handshake, Search, ShieldCheck, AlertTriangle,
+  Camera, FileText, Award,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -285,7 +286,7 @@ export default function MentorshipContent() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        const { data: prof } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+        const { data: prof } = await supabase.from("profiles").select("id, username, avatar_url, is_verified, is_premium, is_admin, role, status, bio").eq("id", session.user.id).single();
         if (prof) setProfile(prof);
         const { data: me } = await supabase.from("mentors").select("*").eq("user_id", session.user.id).maybeSingle();
         if (me) setMyMentor(me);
@@ -301,8 +302,11 @@ export default function MentorshipContent() {
     return () => supabase.removeChannel(ch);
   }, [fetchMentors]);
 
-  const canBeMentor = profile?.role === "member" || profile?.role === "founder" || profile?.is_admin || profile?.is_premium;
-  const isPremium   = profile?.is_premium || profile?.is_admin;
+  const isVerified       = !!profile?.is_verified;
+  const isPremium        = !!(profile?.is_premium || profile?.is_admin || profile?.role === "founder");
+  const profileComplete  = !!(profile?.avatar_url && (profile?.status || profile?.bio));
+  /* Must be verified OR premium/admin to become a mentor */
+  const canBeMentor      = isVerified || isPremium;
 
   const handleSave = async (form) => {
     if (!user) return;
@@ -369,16 +373,24 @@ export default function MentorshipContent() {
     }
   };
 
-  const filtered = mentors.filter(m => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      m.profiles?.username?.toLowerCase().includes(q) ||
-      m.headline?.toLowerCase().includes(q) ||
-      m.bio?.toLowerCase().includes(q) ||
-      m.skills?.some(s => s.toLowerCase().includes(q))
-    );
-  });
+  const tierWeight = (m) => {
+    if (m.profiles?.is_premium || m.profiles?.is_admin) return 3;
+    if (m.profiles?.is_verified) return 2;
+    return 1;
+  };
+
+  const filtered = mentors
+    .filter(m => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        m.profiles?.username?.toLowerCase().includes(q) ||
+        m.headline?.toLowerCase().includes(q) ||
+        m.bio?.toLowerCase().includes(q) ||
+        m.skills?.some(s => s.toLowerCase().includes(q))
+      );
+    })
+    .sort((a, b) => tierWeight(b) - tierWeight(a) || (b.session_count || 0) - (a.session_count || 0));
 
   if (loading) return (
     <div className="flex items-center justify-center h-52">
@@ -412,16 +424,44 @@ export default function MentorshipContent() {
               </p>
             </div>
           </div>
-          {user && canBeMentor && !myMentor && !showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/25 active:scale-95 shrink-0"
-            >
-              <Plus size={15} /> Become a Mentor
-            </button>
+          {user && !myMentor && !showForm && (
+            canBeMentor && profileComplete ? (
+              <button
+                onClick={() => setShowForm(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/25 active:scale-95 shrink-0"
+              >
+                <Plus size={15} /> Become a Mentor
+              </button>
+            ) : canBeMentor && !profileComplete ? (
+              <Link href="/dash/profile"
+                className="flex items-center gap-2 px-5 py-2.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 text-sm font-bold rounded-xl transition-all shrink-0">
+                <Camera size={14} /> Complete Profile First
+              </Link>
+            ) : null
           )}
         </div>
       </div>
+
+      {/* Privilege info */}
+      {user && !canBeMentor && (
+        <div className="p-4 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-2xl space-y-3">
+          <p className="text-sm font-black text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+            <Award size={16} /> How to become a mentor on beoneofus
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { icon: Camera, label: "Upload a profile photo", done: !!profile?.avatar_url },
+              { icon: FileText, label: "Fill in your bio / status", done: !!(profile?.status || profile?.bio) },
+              { icon: ShieldCheck, label: "Get verified or upgrade to Premium", done: isVerified || isPremium },
+            ].map(({ icon: Icon, label, done }) => (
+              <div key={label} className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-bold ${done ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400"}`}>
+                {done ? <Check size={14} className="text-emerald-500 shrink-0" /> : <Icon size={14} className="shrink-0 opacity-50" />}
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Become a mentor form */}
       {showForm && (

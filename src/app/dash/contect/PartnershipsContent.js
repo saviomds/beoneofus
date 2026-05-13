@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
-  Handshake, Send, Loader2, CheckCircle2, AlertTriangle, Briefcase, 
+  Handshake, Send, Loader2, CheckCircle2, AlertTriangle, Briefcase,
   Globe, Mail, Sparkles, Building, Target, DollarSign,
-  Shield, Filter, Check, X, Clock, Calendar, ChevronRight
+  Shield, Filter, Check, X, Clock, Calendar, ChevronRight,
+  ShieldCheck, Crown, Camera, FileText, Award,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -24,6 +26,7 @@ const STATUS_COLORS = {
 
 export default function PartnershipsContent() {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -64,13 +67,15 @@ export default function PartnershipsContent() {
         setUser(session.user);
         setForm(f => ({ ...f, contact_email: session.user.email || "" }));
 
-        const { data: profile } = await supabase
+        const { data: prof } = await supabase
           .from('profiles')
-          .select('is_admin, role')
+          .select('id, username, avatar_url, is_admin, role, is_verified, is_premium, status, bio')
           .eq('id', session.user.id)
           .single();
 
-        if (profile?.is_admin || profile?.role === 'founder') {
+        if (prof) setProfile(prof);
+
+        if (prof?.is_admin || prof?.role === 'founder') {
           setIsAdmin(true);
           fetchProposals();
 
@@ -211,6 +216,65 @@ export default function PartnershipsContent() {
           </p>
         </div>
       </div>
+
+      {/* Profile completeness + privilege info */}
+      {activeTab === "submit" && (() => {
+        const profileComplete = !!(profile?.avatar_url && (profile?.status || profile?.bio));
+        const isVerified = !!profile?.is_verified;
+        const isPremiumUser = !!(profile?.is_premium || profile?.is_admin || profile?.role === "founder");
+
+        if (user && !profileComplete) {
+          return (
+            <div className="bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-500/10 rounded-xl flex items-center justify-center shrink-0">
+                  <AlertTriangle size={18} className="text-amber-500" />
+                </div>
+                <div>
+                  <p className="font-black text-gray-900 dark:text-white text-sm">Complete your profile to submit a proposal</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">A strong profile helps us evaluate proposals faster and builds trust with the community.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  { icon: Camera, label: "Profile photo", done: !!profile?.avatar_url },
+                  { icon: FileText, label: "Bio / status filled in", done: !!(profile?.status || profile?.bio) },
+                ].map(({ icon: Icon, label, done }) => (
+                  <div key={label} className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-bold ${done ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500"}`}>
+                    {done ? <Check size={13} className="text-emerald-500 shrink-0" /> : <Icon size={13} className="shrink-0 opacity-40" />}
+                    {label}
+                  </div>
+                ))}
+              </div>
+              <Link href="/dash/profile" className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl transition-all">
+                Go to Profile →
+              </Link>
+            </div>
+          );
+        }
+
+        return null;
+      })()}
+
+      {/* Verified priority banner */}
+      {activeTab === "submit" && profile?.is_verified && (
+        <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl">
+          <ShieldCheck size={18} className="text-emerald-500 shrink-0" />
+          <div>
+            <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">Verified member — your proposal gets priority review</p>
+            <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">Verified proposals are reviewed within 24 hours and shown first to the team.</p>
+          </div>
+        </div>
+      )}
+      {activeTab === "submit" && (profile?.is_premium || profile?.is_admin) && (
+        <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl">
+          <Crown size={18} className="text-amber-500 shrink-0" fill="currentColor" strokeWidth={1} />
+          <div>
+            <p className="text-sm font-black text-amber-700 dark:text-amber-400">Premium member — top-priority partnership review</p>
+            <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Premium proposals are escalated directly to founders for faster decisions.</p>
+          </div>
+        </div>
+      )}
 
       {activeTab === "submit" ? (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6">

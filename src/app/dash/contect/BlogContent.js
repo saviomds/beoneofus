@@ -71,7 +71,7 @@ export default function BlogContent() {
     if (!profile) return;
     let query = supabase
       .from("blog_posts")
-      .select(`id, title, slug, excerpt, cover_url, tags, published, is_featured, views, created_at, updated_at, blog_likes(count), blog_comments(count)`)
+      .select(`id, title, slug, excerpt, content, cover_url, tags, published, is_featured, views, created_at, updated_at, blog_likes(count), blog_comments(count)`)
       .order("created_at", { ascending: false });
     if (!isAdmin) query = query.eq("author_id", profile.id);
     const { data } = await query;

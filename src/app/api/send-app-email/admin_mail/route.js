@@ -40,7 +40,7 @@ export async function POST(request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'BeOneOfUs <notifications@beoneofus.com>',
+        from: `BeOneOfUs <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
         to: applicantEmail,
         subject: `Update on your application for ${safeJobTitle}`,
         html: `

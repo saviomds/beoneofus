@@ -4,7 +4,12 @@ export async function POST(request) {
   try {
     const { email, inviteLink } = await request.json();
 
-    // Make sure you have RESEND_API_KEY defined in your .env.local file
+    if (!process.env.RESEND_API_KEY) {
+      return NextResponse.json({ error: 'Email service not configured' }, { status: 503 });
+    }
+
+    const fromAddress = `BeOneOfUs <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`;
+
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -12,37 +17,82 @@ export async function POST(request) {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        from: 'onboarding@resend.dev', // Resend testing domain. You cannot use @gmail.com here.
+        from: fromAddress,
         to: email,
         subject: "You're invited to join beoneofus!",
         html: `
           <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              @media (prefers-color-scheme: dark) {
-                .email-bg { background-color: #111827 !important; }
-                .card-bg { background-color: #1f2937 !important; border-color: #374151 !important; }
-                .text-main { color: #f9fafb !important; }
-                .text-muted { color: #d1d5db !important; }
-              }
-            </style>
-          </head>
-          <body style="margin: 0; padding: 0;">
-          <div class="email-bg" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f9fafb;">
-            <div class="card-bg" style="background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #f3f4f6;">
-              <h2 class="text-main" style="color: #111827; margin-top: 0; font-size: 24px; font-weight: 800;">You've been invited!</h2>
-              <p class="text-muted" style="color: #4b5563; font-size: 16px; line-height: 1.6;">Hi there,</p>
-              <p class="text-muted" style="color: #4b5563; font-size: 16px; line-height: 1.6;">I'd like to invite you to join the <span style="color: #2563eb; font-weight: bold;">beoneofus</span> developer network. It's an exclusive space to connect, discuss, and discover new nodes.</p>
-              <div style="margin: 32px 0;">
-                <a href="${inviteLink}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">Accept Invitation</a>
-              </div>
-              <p class="text-muted" style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 0;">See you inside!</p>
-            </div>
-            <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">
-              © ${new Date().getFullYear()} beoneofus network. All systems operational.
-            </p>
-          </div>
+          <html lang="en">
+          <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+          <body style="margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:40px 16px;">
+            <tr><td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+
+                <!-- Logo row -->
+                <tr>
+                  <td align="center" style="padding-bottom:24px;">
+                    <table cellpadding="0" cellspacing="0"><tr>
+                      <td><img src="https://beoneofus.com/logo.png" alt="beoneofus logo" width="48" height="48" style="display:inline-block;border-radius:12px;vertical-align:middle;"/></td>
+                      <td style="padding-left:10px;vertical-align:middle;"><span style="font-size:22px;font-weight:900;letter-spacing:-0.5px;color:#0f172a;">beone<span style="color:#2563eb;">of</span>us</span></td>
+                    </tr></table>
+                  </td>
+                </tr>
+
+                <!-- Card -->
+                <tr>
+                  <td style="background-color:#ffffff;border-radius:20px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+                    <!-- Dark header -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 60%,#0f172a 100%);padding:36px 40px 32px;text-align:center;">
+                          <img src="https://beoneofus.com/logo.png" alt="beoneofus" width="72" height="72" style="display:block;margin:0 auto 16px;border-radius:18px;"/>
+                          <h1 style="margin:0;font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.3px;">You've been invited!</h1>
+                          <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.65);">Someone thinks you belong here</p>
+                        </td>
+                      </tr>
+                    </table>
+                    <!-- Blue accent bar -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr><td style="background:linear-gradient(90deg,#2563eb,#3b82f6);height:3px;font-size:0;">&nbsp;</td></tr>
+                    </table>
+                    <!-- Body -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:36px 40px;">
+                          <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.7;">Hi there,</p>
+                          <p style="margin:0 0 28px;font-size:15px;color:#374151;line-height:1.7;">
+                            You've been invited to join <strong style="color:#111827;">beoneofus</strong> — Africa's developer network for engineers to connect, collaborate, and grow together.
+                          </p>
+                          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                            <tr>
+                              <td align="center">
+                                <a href="${inviteLink}" style="display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;font-weight:800;font-size:15px;padding:15px 40px;border-radius:12px;letter-spacing:0.2px;box-shadow:0 4px 14px rgba(37,99,235,0.40);">Join the Network &rarr;</a>
+                              </td>
+                            </tr>
+                          </table>
+                          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                            <tr><td style="border-top:1px solid #f1f5f9;font-size:0;">&nbsp;</td></tr>
+                          </table>
+                          <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.7;">If you weren't expecting this, you can safely ignore this email.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="padding:28px 0 0;text-align:center;">
+                    <img src="https://beoneofus.com/logo.png" alt="" width="28" height="28" style="display:inline-block;border-radius:6px;margin-bottom:8px;opacity:0.6;"/>
+                    <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;font-weight:700;">beoneofus</p>
+                    <p style="margin:0;font-size:11px;color:#cbd5e1;">Developer Network &amp; Collaboration</p>
+                  </td>
+                </tr>
+
+              </table>
+            </td></tr>
+          </table>
           </body>
           </html>
         `
@@ -52,13 +102,14 @@ export async function POST(request) {
     const data = await res.json();
 
     if (!res.ok) {
-      console.error("Resend API Error:", data);
-      throw new Error(data.message || 'Failed to dispatch email');
+      console.error('Resend API Error:', data);
+      const msg = data?.message || data?.name || 'Failed to send invite';
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error('Email API Error:', error);
+    console.error('Invite API Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

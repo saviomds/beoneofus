@@ -48,6 +48,14 @@ function DashLayoutContent({ children }) {
   const [isRightOpen, setIsRightOpen] = useState(false);
   const pathname = usePathname();
 
+  /* Patch Performance.measure to swallow Next.js negative-timestamp bug in dev */
+  useEffect(() => {
+    if (typeof performance === 'undefined') return;
+    const orig = performance.measure.bind(performance);
+    performance.measure = (...args) => { try { return orig(...args); } catch {} };
+    return () => { performance.measure = orig; };
+  }, []);
+
   /* Close drawers on route change */
   useEffect(() => {
     setIsLeftOpen(false);

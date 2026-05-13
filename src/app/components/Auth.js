@@ -158,17 +158,26 @@ export default function AuthForm() {
 
     bootstrap();
 
-    // BUG FIX: destructure safely; the listener setup itself can throw
     let subscription = null;
     try {
       const result = supabase.auth.onAuthStateChange((event, session) => {
         if (!isMounted) return;
+
         if (event === 'PASSWORD_RECOVERY') {
           setView('update-password');
           setIsCheckingAuth(false);
+          return; // stay on page — user must set new password
         }
-        // NEW: handle token refresh / sign-in events that arrive via the listener
+
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+          // If the URL hash contains type=recovery the user arrived via a reset
+          // link — do NOT redirect yet, let them set their new password first.
+          if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+            setView('update-password');
+            setIsCheckingAuth(false);
+            return;
+          }
+
           const pendingUsername = localStorage.getItem('pending_username');
           if (pendingUsername) {
             localStorage.removeItem('pending_username');
@@ -332,10 +341,13 @@ export default function AuthForm() {
         case 'update-password': {
           const { error: err } = await supabase.auth.updateUser({ password });
           if (err) throw err;
+          // Clear the recovery hash so it doesn't interfere on next visit
+          if (typeof window !== 'undefined') {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
           setSuccessInfo({
-            title: 'Password updated',
-            message:
-              'Your password has been successfully updated. You can now access your dashboard.',
+            title: 'Password updated!',
+            message: 'Your new password is set. You\'re now signed in — go to your dashboard.',
           });
           break;
         }
@@ -393,29 +405,33 @@ export default function AuthForm() {
   if (successInfo) {
     return (
       <div className="w-full animate-in fade-in zoom-in-95 duration-500">
-        <div className="py-8 text-center space-y-4">
-          <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-200 dark:border-green-900/50">
-            <ShieldCheck size={32} />
+        <div className="py-6 text-center space-y-3">
+          <div className="relative w-16 h-16 mx-auto mb-2">
+            <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl flex items-center justify-center">
+              <ShieldCheck size={30} className="text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+          <p className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
             {successInfo.title}
           </p>
-          <p className="text-gray-600 dark:text-gray-400 text-sm max-w-xs mx-auto leading-relaxed">
+          <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs mx-auto leading-relaxed">
             {successInfo.message}
           </p>
           <button
             onClick={() => {
               setSuccessInfo(null);
               if (view === 'update-password') {
-                // BUG FIX: was router.push which errors before full init; use href.
                 window.location.href = '/dash';
               } else {
                 switchView('sign-in');
               }
             }}
-            className="mt-6 px-6 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition-all rounded-xl font-bold text-sm w-full"
+            className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white transition-all rounded-xl font-bold text-sm w-full shadow-sm"
           >
-            {view === 'update-password' ? 'Go to dashboard' : 'Return to sign in'}
+            {view === 'update-password' ? 'Go to dashboard →' : 'Back to sign in'}
           </button>
         </div>
       </div>
@@ -520,32 +536,47 @@ export default function AuthForm() {
 
       {/* Sub-view headers */}
       {view === 'forgot-password' && (
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Reset password
+        <div className="mb-8 text-center">
+          <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
+              <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+            </svg>
+          </div>
+          <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-1.5 tracking-tight">
+            Forgot your password?
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Enter your email address and we will send you a link to reset your password.
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-xs mx-auto">
+            No worries — enter your email and we'll send a secure reset link right away.
           </p>
         </div>
       )}
       {view === 'magic-link' && (
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+        <div className="mb-8 text-center">
+          <div className="w-14 h-14 bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-600 dark:text-violet-400">
+              <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>
+            </svg>
+          </div>
+          <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-1.5 tracking-tight">
             Passwordless sign-in
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Enter your email address and we will send you a secure magic link to log in.
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-xs mx-auto">
+            Enter your email and we'll send a secure magic link — no password needed.
           </p>
         </div>
       )}
       {view === 'update-password' && (
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+        <div className="mb-8 text-center">
+          <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600 dark:text-emerald-400">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-1.5 tracking-tight">
             Set new password
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Please enter your new password below.
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-xs mx-auto">
+            Choose a strong password to secure your beoneofus account.
           </p>
         </div>
       )}

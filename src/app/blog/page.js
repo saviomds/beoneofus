@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "../supabaseClient";
@@ -55,10 +56,11 @@ const SELECT = `
 
 /* ─── main component ────────────────────────────── */
 export default function BlogPage() {
+  const searchParams = useSearchParams();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeTag, setActiveTag] = useState(null);
+  const [activeTag, setActiveTag] = useState(() => searchParams?.get("tag") || null);
   const [allTags, setAllTags] = useState([]);
   const [newBanner, setNewBanner] = useState(false);
   const [sortBy, setSortBy] = useState("latest"); // "latest" | "popular" | "liked"

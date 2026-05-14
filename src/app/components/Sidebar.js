@@ -13,8 +13,11 @@ import { supabase } from '../supabaseClient';
 import { useRouter, usePathname } from 'next/navigation';
 import VerifiedBadge from './VerifiedBadge';
 import PremiumBadge from './PremiumBadge';
+import { useLanguage } from '../../lib/i18n';
 
-const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index, isNew }) => (
+const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index, isNew }) => {
+  const { t } = useLanguage();
+  return (
   <div
     className={`group flex items-center justify-between py-2.5 px-3 rounded-xl cursor-pointer select-none transition-all animate-in fade-in slide-in-from-left-4 duration-500 ${
       active
@@ -36,7 +39,7 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction,
       <span className={`text-[13px] tracking-wide truncate ${active ? 'font-bold' : 'font-semibold'}`}>{label}</span>
       {isNew && !active && (
         <span className="shrink-0 text-[8px] font-black uppercase tracking-widest bg-green-500 text-white px-1.5 py-0.5 rounded-full">
-          New
+          {t('nav.badge_new')}
         </span>
       )}
     </div>
@@ -45,16 +48,18 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction,
         <button
           onClick={(e) => { e.stopPropagation(); onBadgeAction(); }}
           className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all p-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20"
-          title="Mark all as read"
+          title={t('nav.mark_all_read')}
         >
           <CheckCheck size={14} />
         </button>
       )}
     </div>
   </div>
-);
+  );
+};
 
 export default function Sidebar({ onClose }) {
+  const { t } = useLanguage();
   const [profile, setProfile] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0); // State for real notification count
@@ -367,53 +372,53 @@ export default function Sidebar({ onClose }) {
 
   const navGroups = [
     {
-      label: 'Core',
+      label: t('nav.groups.core'),
       items: [
-        { id: 'home',          icon: LayoutDashboard, label: 'Dashboard'     },
-        { id: 'feed',          icon: Home,            label: 'Network Feed'  },
-        { id: 'messages',      icon: MessageSquare,   label: 'Messages',      badge: unreadMessages, onBadge: handleMarkAllMessagesRead, isBouncing },
-        { id: 'notifications', icon: Bell,            label: 'Notifications', badge: unreadNotifs,   onBadge: handleMarkAllNotifsRead,   isRinging  },
+        { id: 'home',          icon: LayoutDashboard, label: t('nav.items.dashboard')     },
+        { id: 'feed',          icon: Home,            label: t('nav.items.feed')           },
+        { id: 'messages',      icon: MessageSquare,   label: t('nav.items.messages'),      badge: unreadMessages, onBadge: handleMarkAllMessagesRead, isBouncing },
+        { id: 'notifications', icon: Bell,            label: t('nav.items.notifications'), badge: unreadNotifs,   onBadge: handleMarkAllNotifsRead,   isRinging  },
       ],
     },
     {
-      label: 'Network',
+      label: t('nav.groups.network'),
       items: [
-        { id: 'connections', icon: UserPlus,      label: 'Connections' },
-        { id: 'groups',      icon: Users,         label: 'Groups',   badge: unreadGroups, onBadge: handleMarkAllGroupsRead, isRinging: isGroupRinging },
-        { id: 'pages',       icon: FileText,      label: 'Pages'       },
-        { id: 'events',      icon: CalendarDays,  label: 'Events'      },
+        { id: 'connections', icon: UserPlus,      label: t('nav.items.connections') },
+        { id: 'groups',      icon: Users,         label: t('nav.items.groups'),   badge: unreadGroups, onBadge: handleMarkAllGroupsRead, isRinging: isGroupRinging },
+        { id: 'pages',       icon: FileText,      label: t('nav.items.pages')       },
+        { id: 'events',      icon: CalendarDays,  label: t('nav.items.events')      },
       ],
     },
     {
-      label: 'Opportunities',
+      label: t('nav.groups.opportunities'),
       items: [
-        { id: 'marketplace',  icon: ShoppingBag,    label: 'Jobs & Market' },
-        { id: 'coaching',     icon: GraduationCap,  label: 'Coaching'      },
-        { id: 'mentorship',   icon: HeartHandshake, label: 'Mentorship'    },
-        { id: 'partnerships', icon: Handshake,      label: 'Partnerships'  },
+        { id: 'marketplace',  icon: ShoppingBag,    label: t('nav.items.marketplace')  },
+        { id: 'coaching',     icon: GraduationCap,  label: t('nav.items.coaching')     },
+        { id: 'mentorship',   icon: HeartHandshake, label: t('nav.items.mentorship')   },
+        { id: 'partnerships', icon: Handshake,      label: t('nav.items.partnerships') },
       ],
     },
     {
-      label: 'Content',
+      label: t('nav.groups.content'),
       items: [
-        { id: 'learn',     icon: Compass,   label: 'Discover & Learn', isNew: true },
-        { id: 'blog',      icon: Newspaper, label: 'Blog'      },
-        { id: 'bookmarks', icon: Bookmark,  label: 'Bookmarks' },
-        { id: 'docs',      icon: BookOpen,  label: 'Docs'      },
+        { id: 'learn',     icon: Compass,   label: t('nav.items.learn'),     isNew: true },
+        { id: 'blog',      icon: Newspaper, label: t('nav.items.blog')       },
+        { id: 'bookmarks', icon: Bookmark,  label: t('nav.items.bookmarks')  },
+        { id: 'docs',      icon: BookOpen,  label: t('nav.items.docs')       },
       ],
     },
     {
-      label: 'Tools',
+      label: t('nav.groups.tools'),
       items: [
-        { id: 'ai', icon: Sparkles, label: 'AI Assistant', isNew: true },
+        { id: 'ai', icon: Sparkles, label: t('nav.items.ai'), isNew: true },
       ],
     },
     {
-      label: 'Account',
+      label: t('nav.groups.account'),
       items: [
-        { id: 'profile',  icon: User,     label: 'My Profile' },
-        { id: 'premium',  icon: Crown,    label: 'Premium'    },
-        { id: 'settings', icon: Settings, label: 'Settings'   },
+        { id: 'profile',  icon: User,     label: t('nav.items.profile')  },
+        { id: 'premium',  icon: Crown,    label: t('nav.items.premium')  },
+        { id: 'settings', icon: Settings, label: t('nav.items.settings') },
       ],
     },
   ];
@@ -520,14 +525,14 @@ export default function Sidebar({ onClose }) {
                     <div className="flex items-center gap-1.5 min-w-0">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0" />
                       <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest truncate">
-                        {profile.status || 'Active Node'}
+                        {profile.status || t('nav.active_node')}
                       </p>
                     </div>
                   </>
                 ) : (
                   <Link href="/auth" className="block hover:opacity-80 transition-opacity min-w-0" onClick={(e) => e.stopPropagation()}>
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase italic truncate">Guest_Node</p>
-                    <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest truncate">Authorize Access</p>
+                    <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest truncate">{t('nav.authorize_access')}</p>
                   </Link>
                 )}
               </div>
@@ -540,7 +545,7 @@ export default function Sidebar({ onClose }) {
               className="flex items-center gap-3 py-2.5 px-3 w-full rounded-xl text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group select-none min-w-0"
             >
               <LogOut size={16} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
-              <span className="text-[10px] font-black uppercase tracking-tighter truncate">Sign Out</span>
+              <span className="text-[10px] font-black uppercase tracking-tighter truncate">{t('nav.sign_out')}</span>
             </button>
           )}
         </div>

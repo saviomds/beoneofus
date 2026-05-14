@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign, CheckCircle2, AlertTriangle, Bookmark, BookmarkCheck, Clock, Building2, ExternalLink, Filter, ChevronRight, TrendingUp, ShoppingBag } from 'lucide-react';
+import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign, CheckCircle2, AlertTriangle, Bookmark, BookmarkCheck, Clock, Building2, ExternalLink, Filter, ChevronRight, TrendingUp, ShoppingBag, GraduationCap } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -11,6 +11,7 @@ import ProfileContent from '../dash/contect/ProfileContent';
 import { useDashboard } from '../dash/contect/DashboardContext';
 import { useTheme } from 'next-themes';
 import VerifiedBadge from './VerifiedBadge';
+import { useLanguage } from '../../lib/i18n';
 
 const HighlightMatch = ({ text, query }) => {
   if (!query || !text) return text || null;
@@ -29,12 +30,13 @@ const HighlightMatch = ({ text, query }) => {
 const QuickViewModal = dynamic(() => import('./QuickViewModal'), { ssr: false });
 
 export default function Header({ setActiveTab }) {
+  const { t, lang, setLang } = useLanguage();
   const { setTargetChatUser } = useDashboard();
   const router = useRouter();
   const [showQuickView, setShowQuickView] = useState(null); // 'discuss' or 'discover'
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState({ posts: [], groups: [], users: [] });
+  const [searchResults, setSearchResults] = useState({ posts: [], groups: [], users: [], courses: [] });
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -203,7 +205,7 @@ export default function Header({ setActiveTab }) {
   useEffect(() => {
     setFocusedIndex(-1);
     if (!searchQuery.trim()) {
-      setSearchResults({ posts: [], groups: [], users: [] });
+      setSearchResults({ posts: [], groups: [], users: [], courses: [] });
       setIsSearching(false);
       return;
     }
@@ -212,16 +214,18 @@ export default function Header({ setActiveTab }) {
 
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const [postsRes, groupsRes, usersRes] = await Promise.all([
+        const [postsRes, groupsRes, usersRes, coursesRes] = await Promise.all([
           supabase.from('posts').select('id, title, content').ilike('title', `%${searchQuery}%`).limit(3),
           supabase.from('groups').select('id, name, description').ilike('name', `%${searchQuery}%`).eq('is_private', false).limit(3),
-          supabase.from('profiles').select('id, username, status, avatar_url, is_verified, work_status').or(`username.ilike.%${searchQuery}%,status.ilike.%${searchQuery}%,work_status.ilike.%${searchQuery}%`).limit(3)
+          supabase.from('profiles').select('id, username, status, avatar_url, is_verified, work_status').or(`username.ilike.%${searchQuery}%,status.ilike.%${searchQuery}%,work_status.ilike.%${searchQuery}%`).limit(3),
+          supabase.from('courses').select('id, title, category, level').or(`title.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`).limit(3),
         ]);
 
         setSearchResults({
           posts: postsRes.data || [],
           groups: groupsRes.data || [],
-          users: usersRes.data || []
+          users: usersRes.data || [],
+          courses: coursesRes.data || [],
         });
       } catch (error) {
         console.error("Search error:", error);
@@ -237,7 +241,8 @@ export default function Header({ setActiveTab }) {
     return [
       ...searchResults.posts.map(p => ({ ...p, _type: 'post' })),
       ...searchResults.groups.map(g => ({ ...g, _type: 'group' })),
-      ...searchResults.users.map(u => ({ ...u, _type: 'user' }))
+      ...searchResults.users.map(u => ({ ...u, _type: 'user' })),
+      ...searchResults.courses.map(c => ({ ...c, _type: 'course' }))
     ];
   }, [searchResults]);
 
@@ -318,7 +323,12 @@ export default function Header({ setActiveTab }) {
   const COMPANY_COLORS = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#3b82f6','#84cc16','#f97316'];
   const getCompanyColor = (name) => COMPANY_COLORS[(name?.charCodeAt(0) || 0) % COMPANY_COLORS.length];
 
-  const APP_STEPS = ['Applied','Reviewing','Interview','Decision'];
+  const APP_STEPS = [
+    t('header.jobs_modal.steps.applied'),
+    t('header.jobs_modal.steps.reviewing'),
+    t('header.jobs_modal.steps.interview'),
+    t('header.jobs_modal.steps.decision'),
+  ];
   const getAppStep = (status) => {
     if (status === 'reviewing') return 1;
     if (status === 'interview') return 2;
@@ -338,8 +348,8 @@ export default function Header({ setActiveTab }) {
 
   const handleApplyJob = async (e) => {
     e.preventDefault();
-    if (!currentUserId) return setShowAppError("You must be logged in to apply.");
-    if (!resumeFile && !portfolioUrl) return setShowAppError("Please upload a resume or provide a portfolio link.");
+    if (!currentUserId) return setShowAppError(t('header.errors.must_login'));
+    if (!resumeFile && !portfolioUrl) return setShowAppError(t('header.errors.resume_required'));
 
     setIsSubmittingApp(true);
     try {
@@ -416,47 +426,56 @@ export default function Header({ setActiveTab }) {
               onClick={() => setShowJobsModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all whitespace-nowrap"
             >
-              <Briefcase size={13} /> Jobs
+              <Briefcase size={13} /> {t('header.jobs')}
             </button>
             <button
               id="header-btn-network"
               onClick={() => setShowNetworkModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all whitespace-nowrap"
             >
-              <Users size={13} /> Network
+              <Users size={13} /> {t('header.network')}
             </button>
             <button
               id="header-btn-discuss"
               onClick={() => setShowQuickView('discuss')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all whitespace-nowrap"
             >
-              <MessageCircle size={13} /> Discuss
+              <MessageCircle size={13} /> {t('header.discuss')}
             </button>
             <button
               id="header-btn-discover"
               onClick={() => setShowQuickView('discover')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all whitespace-nowrap"
             >
-              <Compass size={13} /> Discover
+              <Compass size={13} /> {t('header.discover')}
             </button>
             <button
               id="header-btn-marketplace"
               onClick={() => router.push('/dash/marketplace')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 transition-all whitespace-nowrap"
             >
-              <ShoppingBag size={13} /> Marketplace
+              <ShoppingBag size={13} /> {t('header.marketplace')}
             </button>
           </nav>
 
-          {mounted && (
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
-              onClick={() => { const cur = theme === 'system' ? systemTheme : theme; setTheme(cur === 'dark' ? 'light' : 'dark'); }}
-              className="shrink-0 p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
-              title="Toggle Theme"
+              onClick={() => setLang(lang === 'en' ? 'fr' : 'en')}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all border border-gray-200 dark:border-gray-700"
+              title={t('header.switch_lang')}
             >
-              {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={15} /> : <Moon size={15} />}
+              {lang === 'en' ? '🇫🇷 FR' : '🇬🇧 EN'}
             </button>
-          )}
+            {mounted && (
+              <button
+                onClick={() => { const cur = theme === 'system' ? systemTheme : theme; setTheme(cur === 'dark' ? 'light' : 'dark'); }}
+                className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
+                title={t('header.toggle_theme')}
+              >
+                {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={15} /> : <Moon size={15} />}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Row 2: full-width search */}
@@ -471,7 +490,7 @@ export default function Header({ setActiveTab }) {
             onKeyDown={handleSearchKeyDown}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="block w-full pl-10 pr-12 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/80 focus:bg-white dark:focus:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-            placeholder="Search people, posts, groups…"
+            placeholder={t('header.search_placeholder')}
           />
             {!searchQuery && keyboardShortcut && (
               <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none">
@@ -501,7 +520,7 @@ export default function Header({ setActiveTab }) {
                     </div>
                   ))}
                 </div>
-              ) : (searchResults.posts.length === 0 && searchResults.groups.length === 0 && searchResults.users.length === 0) ? (
+              ) : (searchResults.posts.length === 0 && searchResults.groups.length === 0 && searchResults.users.length === 0 && searchResults.courses.length === 0) ? (
                 <div 
                   onClick={() => { setSearchQuery(''); setIsMobileSearchOpen(false); handleNavigate('feed'); }}
                   className="p-6 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all group"
@@ -509,15 +528,15 @@ export default function Header({ setActiveTab }) {
                   <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-500 mx-auto flex items-center justify-center mb-3">
                     <MessageCircle size={20} className="group-hover:scale-110 transition-transform" />
                   </div>
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Nothing found for &quot;{searchQuery}&quot;</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Press <kbd className="mx-1 px-1.5 py-0.5 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 font-mono text-[10px] font-bold text-gray-500 dark:text-gray-400">Enter</kbd> to ask the community</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{t('header.nothing_found')} &quot;{searchQuery}&quot;</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('header.press_enter')}</p>
                 </div>
               ) : (
                 <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
                   {/* Posts Results */}
                   {searchResults.posts.length > 0 && (
                     <div className="p-2">
-                      <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">Discussions</div>
+                      <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">{t('header.search_sections.discussions')}</div>
                   {searchResults.posts.map((post, i) => (
                     <div key={`post-${post.id}`} onClick={() => { setSearchQuery(''); handleNavigate('feed'); }} onMouseEnter={() => setFocusedIndex(i)} className={`p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
                           <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={post.title || 'Untitled Node'} query={searchQuery} /></p>
@@ -530,7 +549,7 @@ export default function Header({ setActiveTab }) {
                   {/* Groups Results */}
                   {searchResults.groups.length > 0 && (
                     <div className={`p-2 ${searchResults.posts.length > 0 ? 'border-t border-gray-100 dark:border-gray-800' : ''}`}>
-                      <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">Groups</div>
+                      <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">{t('header.search_sections.groups')}</div>
                   {searchResults.groups.map((group, i) => (
                     <div key={`group-${group.id}`} onClick={() => { setSearchQuery(''); handleNavigate('groups'); }} onMouseEnter={() => setFocusedIndex(searchResults.posts.length + i)} className={`p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === searchResults.posts.length + i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
                           <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={group.name} query={searchQuery} /></p>
@@ -543,7 +562,7 @@ export default function Header({ setActiveTab }) {
                   {/* Users Results */}
                   {searchResults.users.length > 0 && (
                     <div className={`p-2 ${(searchResults.posts.length > 0 || searchResults.groups.length > 0) ? 'border-t border-gray-100 dark:border-gray-800' : ''}`}>
-                      <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">Users</div>
+                      <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">{t('header.search_sections.users')}</div>
                   {searchResults.users.map((user, i) => (
                     <div key={`user-${user.id}`} onClick={() => { setSearchQuery(''); setSelectedUserId(user.id); }} onMouseEnter={() => setFocusedIndex(searchResults.posts.length + searchResults.groups.length + i)} className={`flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === searchResults.posts.length + searchResults.groups.length + i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
                           <div className="relative w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">
@@ -564,6 +583,24 @@ export default function Header({ setActiveTab }) {
                               )}
                             </p>
                             <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5 uppercase tracking-widest font-black"><HighlightMatch text={user.status || 'Active Node'} query={searchQuery} /></p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Courses Results */}
+                  {searchResults.courses.length > 0 && (
+                    <div className={`p-2 ${(searchResults.posts.length > 0 || searchResults.groups.length > 0 || searchResults.users.length > 0) ? 'border-t border-gray-100 dark:border-gray-800' : ''}`}>
+                      <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">{t('header.search_sections.courses')}</div>
+                      {searchResults.courses.map((course) => (
+                        <div key={`course-${course.id}`} onClick={() => { setSearchQuery(''); handleNavigate('learn'); }} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group">
+                          <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0 text-blue-600 dark:text-blue-400">
+                            <GraduationCap size={14} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={course.title} query={searchQuery} /></p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest">{course.category} · {course.level}</p>
                           </div>
                         </div>
                       ))}
@@ -592,7 +629,7 @@ export default function Header({ setActiveTab }) {
           <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl flex flex-col max-h-[70vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center shrink-0">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">My Network</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('header.network_modal.title')}</h2>
               <button onClick={() => setShowNetworkModal(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors">
                 <X size={20} />
               </button>
@@ -603,13 +640,13 @@ export default function Header({ setActiveTab }) {
                 onClick={() => setNetworkTab('connections')}
                 className={`py-3 text-sm font-bold flex items-center gap-2 transition-all ${networkTab === 'connections' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border-b-2 border-transparent'}`}
               >
-                <Users size={14} /> Connections ({networkData.connections.length})
+                <Users size={14} /> {t('header.network_modal.connections')} ({networkData.connections.length})
               </button>
               <button 
                 onClick={() => setNetworkTab('groups')}
                 className={`py-3 text-sm font-bold flex items-center gap-2 transition-all ${networkTab === 'groups' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border-b-2 border-transparent'}`}
               >
-                <Hash size={14} /> Channels ({networkData.groups.length})
+                <Hash size={14} /> {t('header.network_modal.channels')} ({networkData.groups.length})
               </button>
             </div>
             {/* Content */}
@@ -656,7 +693,7 @@ export default function Header({ setActiveTab }) {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center text-xs text-gray-500 dark:text-gray-400 font-medium p-10">No active connections.</div>
+                      <div className="text-center text-xs text-gray-500 dark:text-gray-400 font-medium p-10">{t('header.network_modal.no_connections')}</div>
                     )
                   )}
                   {networkTab === 'groups' && (
@@ -669,13 +706,13 @@ export default function Header({ setActiveTab }) {
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{group.name}</p>
-                              <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{group.description || (group.is_private ? 'Private Channel' : 'Public Channel')}</p>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{group.description || (group.is_private ? t('header.network_modal.private_channel') : t('header.network_modal.public_channel'))}</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center text-xs text-gray-500 dark:text-gray-400 font-medium p-10">You are not a member of any channels.</div>
+                      <div className="text-center text-xs text-gray-500 dark:text-gray-400 font-medium p-10">{t('header.network_modal.no_channels')}</div>
                     )
                   )}
                 </>
@@ -698,8 +735,8 @@ export default function Header({ setActiveTab }) {
                   <Briefcase size={17} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-base font-black text-gray-900 dark:text-gray-100 leading-tight">Job Board</h2>
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{jobs.length} opportunities · {Object.keys(userApplications).length} applied</p>
+                  <h2 className="text-base font-black text-gray-900 dark:text-gray-100 leading-tight">{t('header.jobs_modal.title')}</h2>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{jobs.length} {t('header.jobs_modal.opportunities')} · {Object.keys(userApplications).length} {t('header.jobs_modal.applied_count')}</p>
                 </div>
               </div>
               <button onClick={() => setShowJobsModal(false)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors">
@@ -713,7 +750,7 @@ export default function Header({ setActiveTab }) {
                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search role, company, or skill…"
+                  placeholder={t('header.jobs_modal.search_placeholder')}
                   value={jobSearchQuery}
                   onChange={(e) => setJobSearchQuery(e.target.value)}
                   className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-8 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
@@ -725,17 +762,17 @@ export default function Header({ setActiveTab }) {
                 )}
               </div>
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
-                {JOB_TYPES.map(t => (
+                {JOB_TYPES.map(jobType => (
                   <button
-                    key={t}
-                    onClick={() => setJobTypeFilter(t)}
+                    key={jobType}
+                    onClick={() => setJobTypeFilter(jobType)}
                     className={`shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${
-                      jobTypeFilter === t
+                      jobTypeFilter === jobType
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
                   >
-                    {t === 'all' ? 'All Types' : t}
+                    {jobType === 'all' ? t('header.jobs_modal.all_types') : jobType}
                   </button>
                 ))}
                 <button
@@ -746,7 +783,7 @@ export default function Header({ setActiveTab }) {
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                   }`}
                 >
-                  <Bookmark size={12} /> Saved
+                  <Bookmark size={12} /> {t('header.jobs_modal.saved')}
                 </button>
               </div>
             </div>
@@ -758,8 +795,8 @@ export default function Header({ setActiveTab }) {
               ) : filteredJobs.length === 0 ? (
                 <div className="text-center py-16">
                   <Briefcase size={36} className="mx-auto text-gray-300 dark:text-gray-700 mb-3" />
-                  <p className="font-bold text-gray-500 dark:text-gray-400 text-sm">No jobs match your filters</p>
-                  <button onClick={() => { setJobSearchQuery(''); setJobTypeFilter('all'); setShowOnlySaved(false); }} className="mt-2 text-xs text-blue-500 font-bold hover:underline">Clear filters</button>
+                  <p className="font-bold text-gray-500 dark:text-gray-400 text-sm">{t('header.jobs_modal.no_jobs')}</p>
+                  <button onClick={() => { setJobSearchQuery(''); setJobTypeFilter('all'); setShowOnlySaved(false); }} className="mt-2 text-xs text-blue-500 font-bold hover:underline">{t('header.jobs_modal.clear_filters')}</button>
                 </div>
               ) : filteredJobs.map(job => {
                 const app = userApplications[job.id];
@@ -793,9 +830,9 @@ export default function Header({ setActiveTab }) {
                               </p>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              {job.featured && <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">⭐ Featured</span>}
+                              {job.featured && <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">{t('header.jobs_modal.featured')}</span>}
                               {app && <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${isAccepted ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' : isRejected ? 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 border border-red-200 dark:border-red-800' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800'}`}>
-                                {isAccepted ? '✓ Accepted' : isRejected ? '✕ Rejected' : '● Applied'}
+                                {isAccepted ? t('header.jobs_modal.accepted') : isRejected ? t('header.jobs_modal.rejected') : t('header.jobs_modal.bullet_applied')}
                               </span>}
                               <button
                                 onClick={(e) => { e.stopPropagation(); toggleSaveJob(job.id); }}
@@ -830,7 +867,7 @@ export default function Header({ setActiveTab }) {
                       {/* Application tracker OR action row */}
                       {app ? (
                         <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Application Progress</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('header.jobs_modal.app_progress')}</p>
                           <div className="flex items-center gap-0">
                             {APP_STEPS.map((step, i) => {
                               const done = i <= appStep;
@@ -862,7 +899,7 @@ export default function Header({ setActiveTab }) {
                       ) : (
                         <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
                           <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium flex items-center gap-1">
-                            <Clock size={11} /> {job.postedAt || 'Recently'}
+                            <Clock size={11} /> {job.postedAt || t('header.jobs_modal.recently')}
                           </span>
                           <div className="flex items-center gap-2">
                             {(job.external_url || job.externalUrl) && (
@@ -873,14 +910,14 @@ export default function Header({ setActiveTab }) {
                                 onClick={() => currentUserId && supabase.from('job_applications').insert({ job_id: job.id, user_id: currentUserId, status: 'external_redirect' }).then(() => setUserApplications(prev => ({ ...prev, [job.id]: { status: 'external_redirect', created_at: new Date().toISOString() } })))}
                                 className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"
                               >
-                                <ExternalLink size={12} /> External
+                                <ExternalLink size={12} /> {t('header.jobs_modal.external')}
                               </a>
                             )}
                             <button
                               onClick={() => setApplyingJob(job)}
                               className="flex items-center gap-1.5 text-xs font-black px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all shadow-sm shadow-blue-500/20 active:scale-95"
                             >
-                              Apply Now <ChevronRight size={13} />
+                              {t('header.jobs_modal.apply_now')} <ChevronRight size={13} />
                             </button>
                           </div>
                         </div>
@@ -902,7 +939,7 @@ export default function Header({ setActiveTab }) {
             <button onClick={() => setApplyingJob(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
               <X size={18} />
             </button>
-            <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 pr-10 tracking-tight">Apply for {applyingJob.title}</h2>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 pr-10 tracking-tight">{t('header.jobs_modal.apply_for')} {applyingJob.title}</h2>
             <p className="text-sm font-bold text-blue-600 dark:text-blue-400 mb-6 mt-1">{applyingJob.company} • {applyingJob.location}</p>
             
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-300 font-medium mb-6">
@@ -913,7 +950,7 @@ export default function Header({ setActiveTab }) {
 
             {applyingJob.description && (
               <div className="mb-6">
-                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Description</p>
+                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('header.jobs_modal.description')}</p>
                 <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto custom-scrollbar p-1">
                   {applyingJob.description}
                 </div>
@@ -922,22 +959,22 @@ export default function Header({ setActiveTab }) {
 
             <form onSubmit={handleApplyJob} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Upload Resume (PDF/DOC)</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">{t('header.jobs_modal.upload_resume')}</label>
                 <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setResumeFile(e.target.files[0])} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-gray-900 dark:text-gray-100 shadow-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-50 dark:file:bg-blue-900/20 file:text-blue-700 dark:file:text-blue-400 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/40 cursor-pointer" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Portfolio Link (Optional)</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">{t('header.jobs_modal.portfolio_link')}</label>
                 <input type="url" value={portfolioUrl} onChange={(e) => setPortfolioUrl(e.target.value)} placeholder="https://your-portfolio.com" className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-gray-900 dark:text-gray-100 shadow-sm" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Cover Letter (Optional)</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">{t('header.jobs_modal.cover_letter')}</label>
                 <textarea value={coverLetter} onChange={(e) => setCoverLetter(e.target.value)} placeholder="Why are you a great fit for this role?" rows={4} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none resize-none transition-all text-gray-900 dark:text-gray-100 shadow-sm"></textarea>
               </div>
               
               <div className="pt-4 flex flex-col sm:flex-row gap-3">
                 {(applyingJob.external_url || applyingJob.externalUrl) && (
                   <button 
-                    type="button" 
+                    type="button"
                     onClick={() => {
                       window.open(applyingJob.external_url || applyingJob.externalUrl, '_blank', 'noopener,noreferrer');
                       if (currentUserId) {
@@ -947,14 +984,14 @@ export default function Header({ setActiveTab }) {
                           status: 'external_redirect'
                         }).then(({ error }) => { if (error) console.error('Error logging external application:', error); });
                       }
-                    }} 
+                    }}
                     className="py-3.5 px-5 bg-transparent border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-colors text-sm text-center shadow-sm"
                   >
-                    External Apply
+                    {t('header.jobs_modal.external_apply')}
                   </button>
                 )}
                 <button type="submit" disabled={isSubmittingApp} className="flex-1 flex justify-center items-center py-3.5 px-5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 text-sm active:scale-95 disabled:opacity-50">
-                  {isSubmittingApp ? <Loader2 size={16} className="animate-spin" /> : "Submit Quick Apply"}
+                  {isSubmittingApp ? <Loader2 size={16} className="animate-spin" /> : t('header.jobs_modal.submit_apply')}
                 </button>
               </div>
             </form>
@@ -970,15 +1007,15 @@ export default function Header({ setActiveTab }) {
             <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
               <CheckCircle2 size={40} className="animate-bounce" />
             </div>
-            <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2 tracking-tight">Application Sent!</h3>
+            <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2 tracking-tight">{t('header.app_success.title')}</h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6">
-              Your application has been successfully submitted to the poster.
+              {t('header.app_success.body')}
             </p>
-            <button 
+            <button
               onClick={() => setShowAppSuccess(false)}
               className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
             >
-              Dismiss
+              {t('header.app_success.dismiss')}
             </button>
           </div>
         </div>
@@ -992,15 +1029,15 @@ export default function Header({ setActiveTab }) {
             <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
               <AlertTriangle size={40} className="animate-pulse" />
             </div>
-            <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2 tracking-tight">Application Issue</h3>
+            <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2 tracking-tight">{t('header.app_error.title')}</h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6">
               {showAppError}
             </p>
-            <button 
+            <button
               onClick={() => setShowAppError(null)}
               className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
             >
-              Dismiss
+              {t('header.app_error.dismiss')}
             </button>
           </div>
         </div>

@@ -9,8 +9,9 @@ import {
   Terminal, Briefcase, Share2, CheckCircle2, Clock,
   ArrowLeft, Loader2, Copy, Check, MessageSquare,
   Heart, Code, ExternalLink, BadgeCheck, Zap, Star,
-  Eye, EyeOff
+  Eye, EyeOff, Wifi
 } from "lucide-react";
+import GitHubStats from "../../components/GitHubStats";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
 import PremiumBadge from "../../components/PremiumBadge";
@@ -252,12 +253,21 @@ export default function PublicProfilePage() {
             {/* Action buttons */}
             <div className="flex items-center gap-2 sm:pb-2">
               {isOwnProfile ? (
-                <Link
-                  href="/dash/profile"
-                  className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-sm rounded-xl transition-all border border-gray-200 dark:border-gray-700 shadow-sm"
-                >
-                  Edit Profile
-                </Link>
+                <>
+                  <Link
+                    href="/dash/profile"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-sm rounded-xl transition-all border border-gray-200 dark:border-gray-700 shadow-sm"
+                  >
+                    Edit Profile
+                  </Link>
+                  <Link
+                    href={`/resume/${profile.username}`}
+                    target="_blank"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-blue-500/20"
+                  >
+                    <Star size={13} /> Resume
+                  </Link>
+                </>
               ) : currentUserId ? (
                 connectionStatus === "connected" ? (
                   <span className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm rounded-xl border border-emerald-200 dark:border-emerald-800/50">
@@ -309,11 +319,14 @@ export default function PublicProfilePage() {
                 </span>
               )}
               {vis(profile, "work_status") && profile.work_status && profile.work_status !== "None" && (
-                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border uppercase tracking-widest ${
+                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border uppercase tracking-widest flex items-center gap-1 ${
                   profile.work_status === "Hiring"
                     ? "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50"
+                    : (profile.work_status === "Open to Work" || profile.work_status === "Open to work")
+                    ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50"
                     : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50"
                 }`}>
+                  {(profile.work_status === "Open to Work" || profile.work_status === "Open to work") && <Wifi size={10} />}
                   {profile.work_status}
                 </span>
               )}
@@ -549,6 +562,11 @@ export default function PublicProfilePage() {
                   )}
                 </div>
               </div>
+
+              {/* GitHub Stats Card */}
+              {vis(profile, "github") && profile.github && (
+                <GitHubStats githubField={profile.github} />
+              )}
             </div>
           </div>
 

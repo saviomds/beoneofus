@@ -164,7 +164,9 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
           if (c) setContent(c);
           if (cl) setCodeLanguage(cl);
           if (cs) { setCodeSnippet(cs); setShowCodeInput(true); }
-        } catch (e) {}
+        } catch (e) {
+          console.warn('Failed to restore post draft from localStorage:', e);
+        }
       }
     }
   }, [isEditMode]);

@@ -38,25 +38,9 @@ function qualityBadgeColor(q) {
 }
 
 function VideoPlayer({ src, quality: propQuality, urlType }) {
-  // YouTube / Vimeo: render an iframe embed, no custom controls needed
-  if (urlType === 'youtube' || urlType === 'vimeo') {
-    return (
-      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
-        <iframe
-          src={src}
-          className="w-full h-full border-0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          loading="lazy"
-        />
-        <div className="absolute top-3 left-3 bg-black/70 text-white text-[9px] font-black px-2 py-0.5 rounded-md pointer-events-none z-10">
-          {urlType === 'youtube' ? 'YouTube' : 'Vimeo'}
-        </div>
-      </div>
-    );
-  }
+  const isEmbed = urlType === 'youtube' || urlType === 'vimeo';
 
-  // Direct video: native player with quality detection and auto-play
+  // All hooks must be declared unconditionally before any early return
   const videoRef = useRef(null);
   const wrapRef  = useRef(null);
   const [detQ, setDetQ] = useState(propQuality || null);
@@ -75,6 +59,7 @@ function VideoPlayer({ src, quality: propQuality, urlType }) {
   };
 
   useEffect(() => {
+    if (isEmbed) return;
     const el = wrapRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(([entry]) => {
@@ -89,9 +74,10 @@ function VideoPlayer({ src, quality: propQuality, urlType }) {
     }, { threshold: 0.5 });
     obs.observe(el);
     return () => obs.disconnect();
-  }, []);
+  }, [isEmbed]);
 
   const qualityOptions = React.useMemo(() => {
+    if (isEmbed) return [];
     const ladder = ['4K','1080p','720p','480p','360p'];
     const idx = ladder.indexOf(detQ);
     const below = idx >= 0 ? ladder.slice(idx) : [];
@@ -99,10 +85,27 @@ function VideoPlayer({ src, quality: propQuality, urlType }) {
       { v: 'auto', l: detQ ? `Auto (${detQ})` : 'Auto' },
       ...below.map(q => ({ v: q, l: q === '4K' ? '4K Ultra HD' : q === '1080p' ? '1080p HD' : q === '720p' ? '720p HD' : q })),
     ];
-  }, [detQ]);
+  }, [detQ, isEmbed]);
 
   const qFilter = selQ === '480p' ? 'contrast(0.93)' : selQ === '360p' ? 'blur(0.5px) contrast(0.87) saturate(0.88)' : 'none';
   const dispQ   = selQ === 'auto' ? detQ : selQ;
+
+  if (isEmbed) {
+    return (
+      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+        <iframe
+          src={src}
+          className="w-full h-full border-0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          loading="lazy"
+        />
+        <div className="absolute top-3 left-3 bg-black/70 text-white text-[9px] font-black px-2 py-0.5 rounded-md pointer-events-none z-10">
+          {urlType === 'youtube' ? 'YouTube' : 'Vimeo'}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={wrapRef} className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">

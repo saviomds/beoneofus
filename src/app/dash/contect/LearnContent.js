@@ -1,16 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-// import { supabase } from "../../supabaseClient"; // Uncomment in your project
-
-// ── Mock supabase for standalone use ─────────────────────────────────────────
-const supabase = {
-  auth: { getSession: async () => ({ data: { session: null } }) },
-  from: () => ({
-    select: () => ({ order: async () => ({ data: null, error: new Error("mock") }) }),
-    eq: () => ({ single: async () => ({ data: null }) }),
-  }),
-};
+import { supabase } from "../../supabaseClient";
 
 import {
   Search, X, Bookmark, BookmarkCheck, Play,

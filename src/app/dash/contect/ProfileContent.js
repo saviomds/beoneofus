@@ -7,6 +7,7 @@ import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
 import PremiumBadge from "../../components/PremiumBadge";
+import GitHubStats from "../../components/GitHubStats";
 import { StoryRing, useUserStories, StoryViewer, StoryCreator } from "./Stories";
 
 // --- Image Cropping Helper ---
@@ -745,15 +746,26 @@ export default function ProfileContent({ viewUserId }) {
                       <Plus size={15} /> <span className="hidden sm:inline">Story</span>
                     </button>
                     {profile?.username && (
-                      <a
-                        href={`/u/${profile.username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="View public profile"
-                        className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-3 sm:px-4 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
-                      >
-                        <ExternalLink size={15} /> <span className="hidden sm:inline">Public</span>
-                      </a>
+                      <>
+                        <a
+                          href={`/u/${profile.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="View public profile"
+                          className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-3 sm:px-4 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+                        >
+                          <ExternalLink size={15} /> <span className="hidden sm:inline">Public</span>
+                        </a>
+                        <a
+                          href={`/resume/${profile.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Generate resume"
+                          className="flex items-center gap-1.5 text-sm font-bold text-white bg-blue-600/90 hover:bg-blue-500 backdrop-blur-md px-3 sm:px-4 py-2.5 rounded-full transition-all shadow-sm hover:shadow-md active:scale-95"
+                        >
+                          <FileText size={15} /> <span className="hidden sm:inline">Resume</span>
+                        </a>
+                      </>
                     )}
                   </div>
                 )
@@ -874,8 +886,10 @@ export default function ProfileContent({ viewUserId }) {
                         className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm appearance-none"
                       >
                         <option value="">Not Specified</option>
-                        <option value="Open to work">Open to work</option>
+                        <option value="Open to Work">Open to Work</option>
                         <option value="Hiring">Hiring</option>
+                        <option value="Freelancing">Freelancing</option>
+                        <option value="Employed">Employed</option>
                       </select>
                     </div>
                   </div>
@@ -926,7 +940,7 @@ export default function ProfileContent({ viewUserId }) {
               
               <div className="flex flex-wrap items-center gap-3 mt-6 text-sm text-gray-600 dark:text-gray-400 font-medium">
                 {visibility.work_status && profile?.work_status && profile.work_status !== 'None' && (
-                  <span className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border shadow-sm transition-transform hover:-translate-y-0.5 ${profile.work_status === 'Hiring' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'}`}>
+                  <span className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border shadow-sm transition-transform hover:-translate-y-0.5 ${profile.work_status === 'Hiring' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' : profile.work_status === 'Open to Work' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'}`}>
                     <Briefcase size={14} /> {profile.work_status}
                   </span>
                 )}
@@ -994,6 +1008,13 @@ export default function ProfileContent({ viewUserId }) {
                   )}
                 </div>
               </div>
+
+              {/* GITHUB STATS */}
+              {visibility.github && profile?.github && (
+                <div className="mt-8">
+                  <GitHubStats githubField={profile.github} />
+                </div>
+              )}
 
               {/* POSTS & LIKED ACTIVITY SECTION */}
               <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-// @ts-ignore
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+import { escapeHtml } from '../../../lib/escapeHtml';
 
 export async function POST(req: Request) {
   try {
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
         <h2 style="color: #2563eb;">Application Update</h2>
         <p>Hello,</p>
-        <p>Your job application for <strong>${jobTitle}</strong> was <strong>${status}</strong>.</p>
+        <p>Your job application for <strong>${escapeHtml(jobTitle)}</strong> was <strong>${escapeHtml(status)}</strong>.</p>
     `;
 
     if (status === 'accepted') {
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       htmlContent += `
         <div style="background-color: #f3f4f6; padding: 15px; border-left: 4px solid #2563eb; margin: 20px 0; border-radius: 4px;">
           <p style="margin-top: 0; font-weight: bold; font-size: 14px;">Note from the team:</p>
-          <p style="margin-bottom: 0;">${customMessage.replace(/\n/g, '<br/>')}</p>
+          <p style="margin-bottom: 0;">${escapeHtml(customMessage).replace(/\n/g, '<br/>')}</p>
         </div>
       `;
     }
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
 
     // Send the email
     const { data, error } = await resend.emails.send({
-      from: 'BeOneOfUs <onboarding@resend.dev>', // Replace with your verified sender domain when ready
+      from: `BeOneOfUs <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
       to: [applicantEmail],
       subject: `Update on your Job Application for ${jobTitle}`,
       html: htmlContent,

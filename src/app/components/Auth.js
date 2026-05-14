@@ -116,9 +116,14 @@ export default function AuthForm() {
   // 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
   const [usernameStatus, setUsernameStatus] = useState('idle');
   const usernameTimer = useRef(null);
+  const suppressRedirect = useRef(false); // suppresses SIGNED_IN redirect during 2FA credential check
 
   const [error, setError] = useState(null);
   const [successInfo, setSuccessInfo] = useState(null); // { title, message } | null
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(null); // email string | null
+  const [signInStep, setSignInStep] = useState('email'); // 'email' | 'otp'
+  const [otpCode, setOtpCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // -------------------------------------------------------------------------
   // Auth state bootstrap
@@ -144,6 +149,26 @@ export default function AuthForm() {
         if (!isMounted) return;
 
         if (session) {
+          // Send welcome/login email for OAuth sign-ins detected on this page load.
+          // We use last_sign_in_at < 30s as a reliable "just signed in" signal,
+          // and gate on provider !== 'email' to skip the password/OTP flow.
+          const provider = session.user.app_metadata?.provider;
+          const isRecentSignIn = Date.now() - new Date(session.user.last_sign_in_at).getTime() < 30000;
+          if (provider && provider !== 'email' && isRecentSignIn) {
+            const isNewUser = Date.now() - new Date(session.user.created_at).getTime() < 120000;
+            try {
+              await fetch('/api/auth/send-welcome', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  email: session.user.email,
+                  name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+                  isNewUser,
+                }),
+              });
+            } catch {}
+          }
+
           const params = new URLSearchParams(window.location.search);
           const next = params.get('next');
           window.location.href = (next && next.startsWith('/')) ? next : '/dash';
@@ -170,11 +195,28 @@ export default function AuthForm() {
         }
 
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+          // Suppress redirect during 2FA credential verification step
+          if (suppressRedirect.current) {
+            suppressRedirect.current = false;
+            return;
+          }
+
           // If the URL hash contains type=recovery the user arrived via a reset
           // link — do NOT redirect yet, let them set their new password first.
           if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
             setView('update-password');
             setIsCheckingAuth(false);
+            return;
+          }
+
+          // Block unconfirmed emails from accessing the platform
+          if (!session.user.email_confirmed_at) {
+            const unconfirmedEmail = session.user.email;
+            supabase.auth.signOut().then(() => {
+              if (!isMounted) return;
+              setEmailNotConfirmed(unconfirmedEmail);
+              setIsCheckingAuth(false);
+            });
             return;
           }
 
@@ -187,6 +229,7 @@ export default function AuthForm() {
               .is('username', null)
               .then(() => {});
           }
+
           const params = new URLSearchParams(window.location.search);
           const next = params.get('next');
           window.location.href = (next && next.startsWith('/')) ? next : '/dash';
@@ -235,6 +278,8 @@ export default function AuthForm() {
     setUsername('');
     setUsernameStatus('idle');
     setError(null);
+    setSignInStep('email');
+    setOtpCode('');
   }, []);
 
   const switchView = useCallback(
@@ -245,6 +290,41 @@ export default function AuthForm() {
     },
     [resetForm],
   );
+
+  // Countdown timer for OTP resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendCooldown]);
+
+  // Returns wait seconds if err is a Supabase email rate-limit, otherwise null.
+  const parseRateLimit = useCallback((err) => {
+    const msg = err?.message ?? '';
+    if (!msg.toLowerCase().includes('rate limit') && !msg.includes('over_email_send_rate_limit')) {
+      return null;
+    }
+    const match = msg.match(/after\s+(\d+)\s+second/i);
+    return match ? parseInt(match[1], 10) : 60;
+  }, []);
+
+  const handleResendOtp = async () => {
+    setError(null);
+    const res = await fetch('/api/auth/resend-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const wait = res.status === 429 ? (data.waitSeconds ?? 60) : null;
+      if (wait) setResendCooldown(wait);
+      setError(data.error || 'Failed to resend code');
+      return;
+    }
+    setResendCooldown(60);
+    setOtpCode('');
+  };
 
   // -------------------------------------------------------------------------
   // Submission handler
@@ -353,19 +433,48 @@ export default function AuthForm() {
         }
 
         default: {
-          // sign-in
-          const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-          if (err) {
-            if (err.message.toLowerCase().includes('email not confirmed')) {
-              throw new Error(
-                'Please verify your email address before signing in. Check your inbox.',
-              );
+          if (signInStep === 'email') {
+            // Step 1: verify password, keep session briefly to prove identity
+            suppressRedirect.current = true;
+            const { data: signInData, error: credErr } = await supabase.auth.signInWithPassword({ email, password });
+            if (credErr) {
+              suppressRedirect.current = false;
+              if (credErr.message.toLowerCase().includes('email not confirmed')) {
+                setEmailNotConfirmed(email);
+                setLoading(false);
+                return;
+              }
+              throw credErr;
             }
-            throw err;
+            // Send OTP before signing out
+            const otpRes = await fetch('/api/auth/send-otp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email }),
+            });
+
+            // Sign out regardless of OTP result
+            await supabase.auth.signOut({ scope: 'local' });
+            suppressRedirect.current = false;
+
+            if (!otpRes.ok) {
+              const otpData = await otpRes.json();
+              throw new Error(otpData.error || 'Failed to send verification code');
+            }
+            setSignInStep('otp');
+          } else {
+            // Step 2: verify code via our API
+            const res = await fetch('/api/auth/verify-otp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, code: otpCode.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Invalid or expired code');
+            // Code is valid — sign in with password (still in state), let onAuthStateChange redirect
+            const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+            if (signInErr) throw signInErr;
           }
-          // Navigation is handled by the onAuthStateChange listener (SIGNED_IN event).
-          // Fallback in case the listener fires before this line:
-          window.location.href = '/dash';
           break;
         }
       }
@@ -439,6 +548,75 @@ export default function AuthForm() {
   }
 
   // -------------------------------------------------------------------------
+  // Email not confirmed wall
+  // -------------------------------------------------------------------------
+  if (emailNotConfirmed) {
+    const handleResend = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { error: err } = await supabase.auth.resend({
+          type: 'signup',
+          email: emailNotConfirmed,
+          options: { emailRedirectTo: `${window.location.origin}/auth` },
+        });
+        if (err) throw err;
+        setSuccessInfo({
+          title: 'Confirmation email sent',
+          message: `We re-sent the confirmation link to ${emailNotConfirmed}. Click it to activate your account.`,
+        });
+        setEmailNotConfirmed(null);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <div className="w-full animate-in fade-in zoom-in-95 duration-500">
+        <div className="py-6 text-center space-y-3">
+          <div className="w-16 h-16 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl flex items-center justify-center mx-auto mb-2">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500">
+              <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+            </svg>
+          </div>
+          <p className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
+            Confirm your email first
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs mx-auto leading-relaxed">
+            Your account isn't active yet. We sent a confirmation link to{' '}
+            <strong className="text-gray-700 dark:text-gray-300">{emailNotConfirmed}</strong>.
+            Click it to unlock your account.
+          </p>
+
+          {error && (
+            <div className="text-red-600 dark:text-red-400 text-sm flex items-start gap-2 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/50 text-left">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5 text-red-500" />
+              <span className="leading-relaxed">{error}</span>
+            </div>
+          )}
+
+          <button
+            onClick={handleResend}
+            disabled={loading}
+            className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white transition-all rounded-xl font-bold text-sm w-full shadow-sm flex items-center justify-center gap-2 disabled:opacity-70"
+          >
+            {loading ? <><Loader2 size={16} className="animate-spin" /> Sending…</> : 'Resend confirmation email'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setEmailNotConfirmed(null); setError(null); }}
+            className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold transition-all border border-gray-200 dark:border-gray-700 text-sm flex items-center justify-center gap-2"
+          >
+            <ArrowLeft size={14} /> Back to sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // Loading skeleton (checking session)
   // -------------------------------------------------------------------------
   if (isCheckingAuth) {
@@ -470,8 +648,8 @@ export default function AuthForm() {
 
   return (
     <div className="w-full animate-in fade-in zoom-in-95 duration-500">
-      {/* Tab bar */}
-      {isSignInOrUp && (
+      {/* Tab bar — hidden during OTP verification step */}
+      {isSignInOrUp && !(view === 'sign-in' && signInStep === 'otp') && (
         <div className="flex gap-6 mb-8 border-b border-gray-200 dark:border-gray-800 pb-px text-sm font-medium">
           {['sign-in', 'sign-up'].map((v) => (
             <button
@@ -490,8 +668,8 @@ export default function AuthForm() {
         </div>
       )}
 
-      {/* OAuth buttons — shown only on sign-in / sign-up */}
-      {isSignInOrUp && (
+      {/* OAuth buttons — shown only on sign-in (email step) / sign-up */}
+      {isSignInOrUp && !(view === 'sign-in' && signInStep === 'otp') && (
         <>
           <div className="flex gap-3 mb-6">
             {/* GitHub */}
@@ -581,10 +759,25 @@ export default function AuthForm() {
         </div>
       )}
 
+      {/* OTP step header — shown when sign-in is in otp step */}
+      {view === 'sign-in' && signInStep === 'otp' && (
+        <div className="mb-6 text-center">
+          <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
+              <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+            </svg>
+          </div>
+          <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-1.5 tracking-tight">Check your email</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-xs mx-auto">
+            We sent a 6-digit code to <strong className="text-gray-700 dark:text-gray-300">{email}</strong>. Enter it below to sign in.
+          </p>
+        </div>
+      )}
+
       {/* Form */}
       <form onSubmit={handleAuth} className="space-y-5">
-        {/* Email — hidden only on update-password */}
-        {view !== 'update-password' && (
+        {/* Email — hidden on update-password and sign-in OTP step */}
+        {view !== 'update-password' && !(view === 'sign-in' && signInStep === 'otp') && (
           <div>
             <label
               htmlFor="auth-email"
@@ -601,6 +794,27 @@ export default function AuthForm() {
               className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               placeholder="you@example.com"
               autoComplete="email"
+            />
+          </div>
+        )}
+
+        {/* OTP code input — sign-in OTP step only */}
+        {view === 'sign-in' && signInStep === 'otp' && (
+          <div>
+            <label htmlFor="otp-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              6-digit code
+            </label>
+            <input
+              id="otp-code"
+              type="text"
+              inputMode="text"
+              maxLength={6}
+              required
+              autoFocus
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value)}
+              className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-4 px-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-center text-2xl font-black tracking-[0.4em]"
+              placeholder="000000"
             />
           </div>
         )}
@@ -656,8 +870,8 @@ export default function AuthForm() {
           </div>
         )}
 
-        {/* Password — hidden on forgot-password and magic-link */}
-        {view !== 'forgot-password' && view !== 'magic-link' && (
+        {/* Password — sign-in step 1, sign-up, update-password */}
+        {(view === 'sign-up' || view === 'update-password' || (view === 'sign-in' && signInStep === 'email')) && (
           <div>
             <PasswordInput
               id="auth-password"
@@ -676,10 +890,7 @@ export default function AuthForm() {
                 ) : null
               }
             />
-            {/* NEW: password strength meter on sign-up and update-password */}
-            {(view === 'sign-up' || view === 'update-password') && (
-              <PasswordStrength password={password} />
-            )}
+            {(view === 'sign-up' || view === 'update-password') && <PasswordStrength password={password} />}
           </div>
         )}
 
@@ -720,20 +931,33 @@ export default function AuthForm() {
             'Update password'
           ) : view === 'magic-link' ? (
             'Send magic link'
+          ) : view === 'sign-in' && signInStep === 'otp' ? (
+            'Verify code'
+          ) : view === 'sign-in' ? (
+            'Continue →'
           ) : (
             'Sign in'
           )}
         </button>
 
-        {/* Magic-link toggle (sign-in only) */}
-        {view === 'sign-in' && (
-          <div className="mt-4 text-center">
+        {/* OTP step — resend + change email */}
+        {view === 'sign-in' && signInStep === 'otp' && (
+          <div className="flex flex-col gap-2 mt-1">
             <button
               type="button"
-              onClick={() => switchView('magic-link')}
-              className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+              onClick={handleResendOtp}
+              disabled={resendCooldown > 0 || loading}
+              className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold transition-all border border-gray-200 dark:border-gray-700 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Use a magic link instead
+              {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSignInStep('email'); setOtpCode(''); setError(null); setResendCooldown(0); }}
+              className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-bold transition-all border border-gray-200 dark:border-gray-700 flex items-center justify-center gap-2 text-sm"
+            >
+              <ArrowLeft size={14} />
+              Change email
             </button>
           </div>
         )}

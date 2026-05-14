@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 // API routes that do NOT require authentication
 const PUBLIC_API_ROUTES = [
   '/api/invite',
+  '/api/auth/',
+  '/api/otp-email',
 ];
 
 const SECURITY_HEADERS = [

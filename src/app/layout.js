@@ -5,17 +5,18 @@ import { InstallPrompt } from './components/InstallPrompt';
 export const metadata = {
   title: 'beoneofus - The network for developers',
   description: 'Connect with developers worldwide. Broadcast your code. Join secure workspaces.',
-  icons: {
-    icon: [
-      { url: '/favicon.ico' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-    ],
-    apple: [
-      { url: '/apple-touch-icon.png' },
-      { url: '/appIcon.png' },
-    ],
-  },
+icons: {
+  icon: [
+    { url: '/appIcon.png', sizes: '512x512', type: 'image/png' },
+    { url: '/appIcon.png', sizes: '192x192', type: 'image/png' },
+    { url: '/favicon.ico' },
+  ],
+  apple: [
+    { url: '/apple-touch-icon.png' },
+    { url: '/appIcon.png' },
+  ],
+},
+
   manifest: '/manifest.json',
   openGraph: {
     title: 'beoneofus',

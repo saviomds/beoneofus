@@ -46,7 +46,7 @@ export default function ProfileContent({ viewUserId }) {
   const [profile, setProfile] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({ username: "", status: "", location: "", github: "", website: "", work_status: "" });
+  const [formData, setFormData] = useState({ username: "", status: "", location: "", github: "", website: "", work_status: "", full_name: "" });
   const [toast, setToast] = useState({ message: "", type: "success" });
   const [visibility, setVisibility] = useState({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true });
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -185,7 +185,8 @@ export default function ProfileContent({ viewUserId }) {
             location: profileData.location || "",
             github: profileData.github || "",
             website: profileData.website || "",
-            work_status: profileData.work_status || ""
+            work_status: profileData.work_status || "",
+            full_name: profileData.full_name || ""
           });
           if (profileData.profile_visibility) {
             setVisibility({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, ...profileData.profile_visibility });
@@ -297,6 +298,7 @@ export default function ProfileContent({ viewUserId }) {
         .from('profiles')
         .update({
           username: cleanUsername,
+          full_name: formData.full_name.trim(),
           status: formData.status.trim(),
           location: formData.location.trim(),
           github: formData.github.trim(),
@@ -312,22 +314,24 @@ export default function ProfileContent({ viewUserId }) {
         throw error;
       }
 
-      setProfile({ 
-        ...profile, 
-        username: cleanUsername, 
-        status: formData.status.trim(), 
-        location: formData.location.trim(), 
-        github: formData.github.trim(), 
+      setProfile({
+        ...profile,
+        username: cleanUsername,
+        full_name: formData.full_name.trim(),
+        status: formData.status.trim(),
+        location: formData.location.trim(),
+        github: formData.github.trim(),
         website: formData.website.trim(),
         work_status: formData.work_status,
         avatar_url: avatarUrl,
         banner_url: bannerUrl
       });
-      setFormData({ 
-        username: cleanUsername, 
-        status: formData.status.trim(), 
-        location: formData.location.trim(), 
-        github: formData.github.trim(), 
+      setFormData({
+        username: cleanUsername,
+        full_name: formData.full_name.trim(),
+        status: formData.status.trim(),
+        location: formData.location.trim(),
+        github: formData.github.trim(),
         website: formData.website.trim(),
         work_status: formData.work_status
       });
@@ -813,6 +817,19 @@ export default function ProfileContent({ viewUserId }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 dark:bg-gray-800/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-800">
                 <div className="space-y-4">
                   <div>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Full Name</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><User size={14} /></span>
+                      <input
+                        type="text"
+                        value={formData.full_name}
+                        onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                        placeholder="Your real name (optional)"
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
                     <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Username</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 font-bold">@</span>
@@ -896,10 +913,13 @@ export default function ProfileContent({ viewUserId }) {
           ) : (
             <div className="animate-in fade-in duration-500 pt-4">
               <h2 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white flex items-center gap-3 tracking-tight">
-                {profile?.username || 'Unknown User'}
+                {profile?.full_name || profile?.username || 'Unknown User'}
                 {profile?.is_verified && <VerifiedBadge size={32} />}
                 {(profile?.is_premium || profile?.is_admin) && <PremiumBadge size={28} />}
               </h2>
+              {profile?.full_name && (
+                <p className="text-sm font-bold text-gray-400 dark:text-gray-500 mt-1">@{profile.username}</p>
+              )}
               <p className="text-gray-600 dark:text-gray-300 text-lg sm:text-xl mt-2 font-medium max-w-2xl leading-relaxed">
                 {profile?.status || 'Software Engineer'}
               </p>

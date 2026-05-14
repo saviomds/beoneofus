@@ -27,10 +27,10 @@ export default function CertificatePage() {
       const attempts = [
         `id, issued_at, user_id, course_id,
          courses(title, category, level, description, duration, lessons),
-         profiles!user_certificates_user_id_fkey(username, avatar_url, work_status)`,
+         profiles!user_certificates_user_id_fkey(username, full_name, avatar_url, work_status)`,
         `id, issued_at, user_id, course_id,
          courses(title, category, level, description, duration, lessons),
-         profiles(username, avatar_url, work_status)`,
+         profiles(username, full_name, avatar_url, work_status)`,
         `id, issued_at, user_id, course_id`,
       ];
 
@@ -54,7 +54,7 @@ export default function CertificatePage() {
       if (!data.profiles && data.user_id) {
         const { data: profileRow } = await supabase
           .from("profiles")
-          .select("username, avatar_url, work_status")
+          .select("username, full_name, avatar_url, work_status")
           .eq("id", data.user_id)
           .single();
         if (profileRow) data = { ...data, profiles: profileRow };
@@ -118,7 +118,7 @@ export default function CertificatePage() {
 
   const profile = cert.profiles;
   const course = cert.courses;
-  const displayName = profile?.username || "Developer";
+  const displayName = profile?.full_name || profile?.username || "Developer";
   const issuedDate = cert.issued_at
     ? new Date(cert.issued_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
     : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });

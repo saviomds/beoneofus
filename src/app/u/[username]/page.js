@@ -299,7 +299,7 @@ export default function PublicProfilePage() {
           <div className="mb-5">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-gray-100">
-                @{profile.username}
+                {profile.full_name || `@${profile.username}`}
               </h1>
               {profile.is_verified && <VerifiedBadge size={22} />}
               {(profile.is_premium || profile.is_admin) && <PremiumBadge size={20} />}
@@ -318,6 +318,10 @@ export default function PublicProfilePage() {
                 </span>
               )}
             </div>
+
+            {profile.full_name && (
+              <p className="text-sm font-bold text-gray-400 dark:text-gray-500 mb-1">@{profile.username}</p>
+            )}
 
             {vis(profile, "bio") && profile.status && (
               <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base leading-relaxed max-w-2xl mb-3">

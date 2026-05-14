@@ -6,7 +6,8 @@ import Image from 'next/image';
 import {
   MessageSquare, Heart, Share2, MoreHorizontal,
   Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark, GitBranch, Link as LinkIcon, ExternalLink,
-  Sparkles, Loader2, ShieldAlert
+  Sparkles, Loader2, ShieldAlert,
+  Play, Pause, Volume2, VolumeX, Maximize, List, LayoutGrid
 } from 'lucide-react';
 import ProfileContent from "./ProfileContent";
 import VerifiedBadge from "../../components/VerifiedBadge";
@@ -22,6 +23,223 @@ function feedHash(id, seed) {
   return (h >>> 0) / 4294967296;
 }
 
+// Normalize post media: supports new media_items array and old image_url fallback
+function getMediaItems(post) {
+  if (post.media_items?.length > 0) return post.media_items;
+  if (post.image_url) return [{ type: 'image', url: post.image_url, fit: post.image_fit || 'cover', quality: null }];
+  return [];
+}
+
+function qualityBadgeColor(q) {
+  if (q === '4K') return 'bg-blue-600';
+  if (q === '1080p') return 'bg-green-600';
+  if (q === '720p') return 'bg-yellow-600';
+  return 'bg-gray-500';
+}
+
+function VideoPlayer({ src, quality: propQuality, urlType }) {
+  // YouTube / Vimeo: render an iframe embed, no custom controls needed
+  if (urlType === 'youtube' || urlType === 'vimeo') {
+    return (
+      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+        <iframe
+          src={src}
+          className="w-full h-full border-0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          loading="lazy"
+        />
+        <div className="absolute top-3 left-3 bg-black/70 text-white text-[9px] font-black px-2 py-0.5 rounded-md pointer-events-none z-10">
+          {urlType === 'youtube' ? 'YouTube' : 'Vimeo'}
+        </div>
+      </div>
+    );
+  }
+
+  // Direct video: native player with quality detection and auto-play
+  const videoRef = useRef(null);
+  const wrapRef  = useRef(null);
+  const [detQ, setDetQ] = useState(propQuality || null);
+  const [selQ, setSelQ] = useState('auto');
+  const [qMenu, setQMenu] = useState(false);
+
+  const onMeta = () => {
+    const v = videoRef.current;
+    if (!v || propQuality) return;
+    const p = Math.max(v.videoWidth, v.videoHeight);
+    if      (p >= 3840) setDetQ('4K');
+    else if (p >= 1920) setDetQ('1080p');
+    else if (p >= 1280) setDetQ('720p');
+    else if (p >= 854)  setDetQ('480p');
+    else if (p >  0)    setDetQ('360p');
+  };
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      const v = videoRef.current;
+      if (!v) return;
+      if (entry.isIntersecting) {
+        v.muted = true;
+        v.play().catch(() => {});
+      } else if (!v.paused) {
+        v.requestPictureInPicture?.().catch(() => v.pause());
+      }
+    }, { threshold: 0.5 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const qualityOptions = React.useMemo(() => {
+    const ladder = ['4K','1080p','720p','480p','360p'];
+    const idx = ladder.indexOf(detQ);
+    const below = idx >= 0 ? ladder.slice(idx) : [];
+    return [
+      { v: 'auto', l: detQ ? `Auto (${detQ})` : 'Auto' },
+      ...below.map(q => ({ v: q, l: q === '4K' ? '4K Ultra HD' : q === '1080p' ? '1080p HD' : q === '720p' ? '720p HD' : q })),
+    ];
+  }, [detQ]);
+
+  const qFilter = selQ === '480p' ? 'contrast(0.93)' : selQ === '360p' ? 'blur(0.5px) contrast(0.87) saturate(0.88)' : 'none';
+  const dispQ   = selQ === 'auto' ? detQ : selQ;
+
+  return (
+    <div ref={wrapRef} className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+      <video
+        ref={videoRef}
+        src={src}
+        controls
+        playsInline
+        preload="metadata"
+        onLoadedMetadata={onMeta}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full h-full object-contain"
+        style={{ filter: qFilter }}
+      />
+
+      {dispQ && (
+        <div className={`absolute top-3 left-3 ${qualityBadgeColor(dispQ)} text-white text-[10px] font-black px-2 py-0.5 rounded-md pointer-events-none z-10`}>
+          {dispQ}
+        </div>
+      )}
+
+      <div className="absolute top-3 right-3 z-10">
+        <button
+          onClick={(e) => { e.stopPropagation(); setQMenu(v => !v); }}
+          className={`text-[10px] font-black px-2 py-0.5 rounded shadow ${dispQ ? qualityBadgeColor(dispQ) + ' text-white' : 'bg-black/60 text-white/80'}`}
+        >
+          {dispQ || 'HD'} ▾
+        </button>
+        {qMenu && (
+          <div
+            className="absolute top-7 right-0 bg-gray-950/95 border border-white/10 rounded-xl overflow-hidden shadow-2xl min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-white/40 text-[9px] font-black uppercase tracking-widest px-3 pt-2 pb-1 border-b border-white/10">Quality</p>
+            {qualityOptions.map(o => (
+              <button
+                key={o.v}
+                onClick={(e) => { e.stopPropagation(); setSelQ(o.v); setQMenu(false); }}
+                className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between gap-3 transition-colors ${selQ === o.v ? 'bg-white/15 text-white' : 'text-white/65 hover:bg-white/10 hover:text-white'}`}
+              >
+                {o.l} {selQ === o.v && <Check size={11} />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Multi-media grid display for post cards
+function MediaGrid({ items }) {
+  const count = items.length;
+  if (count === 0) return null;
+
+  const MediaItem = ({ item, className }) => (
+    <div className={`relative overflow-hidden bg-gray-100 dark:bg-gray-900 ${className}`}>
+      {item.type === 'video' ? (
+        <VideoPlayer src={item.url} quality={item.quality} urlType={item.videoUrlType} />
+      ) : (
+        <Image
+          src={item.url}
+          alt="Post media"
+          fill
+          sizes="(max-width: 768px) 100vw, 600px"
+          className={item.fit === 'contain' ? 'object-contain' : 'object-cover'}
+        />
+      )}
+    </div>
+  );
+
+  if (count === 1) {
+    const item = items[0];
+    return (
+      <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
+        {item.type === 'video' ? (
+          <VideoPlayer src={item.url} quality={item.quality} urlType={item.videoUrlType} />
+        ) : (
+          <div className={`relative w-full aspect-video ${item.fit === 'contain' ? 'bg-gray-50 dark:bg-gray-900' : ''}`}>
+            <Image src={item.url} alt="Post media" fill sizes="(max-width: 768px) 100vw, 600px" className={item.fit === 'contain' ? 'object-contain' : 'object-cover'} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (count === 2) {
+    return (
+      <div className="grid grid-cols-2 gap-0.5 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
+        {items.map(item => <MediaItem key={item.url} item={item} className="aspect-square" />)}
+      </div>
+    );
+  }
+
+  if (count === 3) {
+    return (
+      <div className="flex gap-0.5 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800" style={{ height: '300px' }}>
+        <div className="flex-1 relative overflow-hidden bg-gray-100 dark:bg-gray-900">
+          {items[0].type === 'video' ? (
+            <VideoPlayer src={items[0].url} quality={items[0].quality} urlType={items[0].videoUrlType} />
+          ) : (
+            <Image src={items[0].url} alt="" fill sizes="300px" className={items[0].fit === 'contain' ? 'object-contain' : 'object-cover'} />
+          )}
+        </div>
+        <div className="w-5/12 flex flex-col gap-0.5">
+          {items.slice(1).map(item => <MediaItem key={item.url} item={item} className="flex-1" />)}
+        </div>
+      </div>
+    );
+  }
+
+  // 4+ items: 2×2 grid with overflow badge
+  const visible = items.slice(0, 4);
+  const overflow = count - 4;
+  return (
+    <div className="grid grid-cols-2 gap-0.5 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
+      {visible.map((item, i) => (
+        <div key={item.url + i} className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-900">
+          {item.type === 'video' ? (
+            <VideoPlayer src={item.url} quality={item.quality} urlType={item.videoUrlType} />
+          ) : (
+            <Image src={item.url} alt="" fill sizes="200px" className="object-cover" />
+          )}
+          {item.type === 'video' && item.quality && (
+            <span className={`absolute top-2 left-2 text-white text-[9px] font-black px-1.5 py-0.5 rounded z-10 ${qualityBadgeColor(item.quality)}`}>{item.quality}</span>
+          )}
+          {i === 3 && overflow > 0 && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <span className="text-white font-black text-3xl">+{overflow}</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function FeedContent() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +247,10 @@ export default function FeedContent() {
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [activeTab, setActiveTab] = useState('following');
+  const [feedLayout, setFeedLayout] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('beoneofus_feed_layout') || 'list';
+    return 'list';
+  });
   // Seed regenerated on manual refresh or page mount → different feed order each time
   const [feedSeed, setFeedSeed] = useState(() => Math.random());
   const [newPostBanner, setNewPostBanner] = useState(false);
@@ -71,7 +293,12 @@ export default function FeedContent() {
 
   const showToast = (msg) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(""), 3000);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const toggleLayout = (layout) => {
+    setFeedLayout(layout);
+    if (typeof window !== 'undefined') localStorage.setItem('beoneofus_feed_layout', layout);
   };
 
   const fetchPosts = useCallback(async (silent = false) => {
@@ -181,16 +408,39 @@ export default function FeedContent() {
   // --- SORTING LOGIC ---
   const displayedPosts = React.useMemo(() => {
     const sorted = [...posts];
+
+    // Premium+verified always float to top across all tabs
+    // premium+verified=300, premium-only=200, verified-only=100, everyone else=0
+    const statusBoost = (p) => {
+      const isPremium = p.profiles?.is_premium || p.profiles?.is_admin;
+      const isVerified = p.profiles?.is_verified;
+      if (isPremium && isVerified) return 300;
+      if (isPremium) return 200;
+      if (isVerified) return 100;
+      return 0;
+    };
+
     if (activeTab === 'code review') {
-      return sorted.filter(p => p.code_snippet && p.code_snippet.trim().length > 0)
-                   .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      return sorted
+        .filter(p => p.code_snippet && p.code_snippet.trim().length > 0)
+        .sort((a, b) => {
+          const boost = statusBoost(b) - statusBoost(a);
+          if (boost !== 0) return boost;
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
     }
     if (activeTab === 'featured') {
-      return sorted.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
+      return sorted.sort((a, b) => {
+        const boost = statusBoost(b) - statusBoost(a);
+        if (boost !== 0) return boost;
+        return (b.likes?.length || 0) - (a.likes?.length || 0);
+      });
     }
     if (activeTab === 'rising') {
       const now = new Date();
       return sorted.sort((a, b) => {
+        const boost = statusBoost(b) - statusBoost(a);
+        if (boost !== 0) return boost;
         const aScore = (a.likes?.length || 0) * 2 + (a.comments?.length || 0) * 3;
         const bScore = (b.likes?.length || 0) * 2 + (b.comments?.length || 0) * 3;
         const aAge = Math.max(1, (now - new Date(a.created_at)) / 3600000);
@@ -198,16 +448,14 @@ export default function FeedContent() {
         return (bScore / Math.pow(bAge, 1.5)) - (aScore / Math.pow(aAge, 1.5));
       });
     }
-    // 'following' / 'latest' — social feed: recency + engagement + session variety
-    // feedSeed changes on each page mount → different order every refresh
+    // 'following' — status boost baked into base score so it dominates recency/engagement variance
     const now = Date.now();
     return sorted.sort((a, b) => {
       const aHours = Math.max(0, (now - new Date(a.created_at)) / 3600000);
       const bHours = Math.max(0, (now - new Date(b.created_at)) / 3600000);
-      // Recency score decays over 72 h; engagement multiplied in
-      const aBase = Math.max(0, 100 - aHours * 1.1) + (a.likes?.length || 0) * 5 + (a.comments?.length || 0) * 8;
-      const bBase = Math.max(0, 100 - bHours * 1.1) + (b.likes?.length || 0) * 5 + (b.comments?.length || 0) * 8;
-      // ±20 pts of session-unique variance: same session = stable order, new refresh = new mix
+      const aBase = statusBoost(a) * 2 + Math.max(0, 100 - aHours * 1.1) + (a.likes?.length || 0) * 5 + (a.comments?.length || 0) * 8;
+      const bBase = statusBoost(b) * 2 + Math.max(0, 100 - bHours * 1.1) + (b.likes?.length || 0) * 5 + (b.comments?.length || 0) * 8;
+      // ±20 pts variance never overrides the 200-600 pt status gap
       const aVar = (feedHash(a.id, feedSeed) - 0.5) * 40;
       const bVar = (feedHash(b.id, feedSeed) - 0.5) * 40;
       return (bBase + bVar) - (aBase + aVar);
@@ -510,6 +758,7 @@ export default function FeedContent() {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
+
       {/* Pull-to-refresh indicator (mobile) */}
       {pullIndicator > 0 && (
         <div
@@ -624,15 +873,32 @@ export default function FeedContent() {
           );
         })}
 
-        {/* Refresh button — sits at the far right of the tabs row */}
-        <button
-          onClick={handleManualRefresh}
-          disabled={isRefreshing}
-          title="Refresh feed"
-          className="ml-auto shrink-0 pb-3 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors disabled:opacity-40"
-        >
-          <Loader2 size={16} className={isRefreshing ? 'animate-spin text-blue-600 dark:text-blue-400' : ''} />
-        </button>
+        {/* Right side: layout toggle + refresh */}
+        <div className="ml-auto flex items-center gap-1 pb-3 shrink-0">
+          <button
+            onClick={() => toggleLayout('list')}
+            title="List view"
+            className={`p-1.5 rounded-md transition-colors ${feedLayout === 'list' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+          >
+            <List size={15} />
+          </button>
+          <button
+            onClick={() => toggleLayout('grid')}
+            title="Grid view"
+            className={`p-1.5 rounded-md transition-colors ${feedLayout === 'grid' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+          >
+            <LayoutGrid size={15} />
+          </button>
+          <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1" />
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            title="Refresh feed"
+            className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors disabled:opacity-40"
+          >
+            <Loader2 size={15} className={isRefreshing ? 'animate-spin text-blue-600 dark:text-blue-400' : ''} />
+          </button>
+        </div>
       </div>
 
       {/* --- SHARE MODAL --- */}
@@ -728,11 +994,12 @@ export default function FeedContent() {
         </button>
       )}
 
-      {/* --- FEED LIST --- */}
+      {/* --- FEED LIST / GRID --- */}
       {displayedPosts.length === 0 ? (
         <div className="h-64 border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-2xl flex items-center justify-center text-gray-500 dark:text-gray-400">No posts yet. Be the first to share!</div>
       ) : (
-        displayedPosts.map((post) => {
+        <div className={feedLayout === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'space-y-4'}>
+        {displayedPosts.map((post) => {
           const hasLiked = post.likes?.some(l => l.user_id === currentUserId);
           return (
             <div key={post.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm card-hover relative overflow-hidden">
@@ -820,11 +1087,7 @@ export default function FeedContent() {
                     <pre><code>{post.code_snippet}</code></pre>
                   </div>
                 )}
-                {post.image_url && (
-                  <div className={`relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 ${(post.image_fit || 'cover') === 'contain' ? 'bg-gray-50 dark:bg-gray-900' : ''}`}>
-                    <Image src={post.image_url} alt="Post media" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className={(post.image_fit || 'cover') === 'contain' ? 'object-contain' : 'object-cover'} />
-                  </div>
-                )}
+                <MediaGrid items={getMediaItems(post)} />
               </div>
 
               {/* AI Summary Box */}
@@ -942,7 +1205,8 @@ export default function FeedContent() {
               )}
             </div>
           );
-        })
+        })}
+        </div>
       )}
 
       {/* USER PROFILE MODAL */}

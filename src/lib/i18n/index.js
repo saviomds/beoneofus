@@ -30,23 +30,31 @@ export function LanguageProvider({ children }) {
     }
   }, []);
 
-  const loadTranslations = useCallback(async (l) => {
-    if (translations[l]) return;
+  const loadLanguage = useCallback(async (l) => {
     setIsLoading(true);
     try {
-      // Dynamically import the language file
-      const module = await import(`./${l}.js`);
-      setTranslations((prev) => ({ ...prev, [l]: module.default }));
+      const isEn = l === "en";
+      // Optimization: Concurrent loading and explicit check to skip English fallback if already loading English
+      const [targetModule, enModule] = await Promise.all([
+        import(`./${l}.js`),
+        !isEn ? import(`./en.js`) : Promise.resolve(null),
+      ]);
+
+      setTranslations((prev) => ({
+        ...prev,
+        [l]: targetModule.default,
+        ...(enModule ? { en: enModule.default } : {}),
+      }));
     } catch (error) {
-      console.error(`Failed to load translations for ${l}:`, error);
+      console.error(`Failed to load language "${l}":`, error);
     } finally {
       setIsLoading(false);
     }
-  }, [translations]);
+  }, []);
 
   useEffect(() => {
-    loadTranslations(lang);
-  }, [lang, loadTranslations]);
+    loadLanguage(lang);
+  }, [lang, loadLanguage]);
 
   const setLang = useCallback((l) => {
     setLangState(l);

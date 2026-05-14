@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, ChevronLeft, Share2, ExternalLink, Award, Eye, EyeOff, Lock, Heart, MessageSquare, Code2 } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Globe, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, ChevronLeft, Share2, ExternalLink, Award, Eye, EyeOff, Lock, Heart, MessageSquare, Code2 } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
@@ -126,14 +126,11 @@ export default function ProfileContent({ viewUserId }) {
         if (error) throw error;
         setProfile(profileData);
 
-        // Fetch followers count (accepted connections)
-        const { count } = await supabase
-          .from('connections')
-          .select('*', { count: 'exact', head: true })
-          .or(`receiver_id.eq.${targetUserId},sender_id.eq.${targetUserId}`)
-          .eq('status', 'accepted');
-          
-        setFollowersCount(count || 0);
+        // Fetch connections count via API to bypass RLS (RLS filters to viewer's rows only)
+        const countData = await fetch(`/api/connections/count?user_id=${targetUserId}`)
+          .then(r => r.ok ? r.json() : { count: 0 })
+          .catch(() => ({ count: 0 }));
+        setFollowersCount(countData.count || 0);
 
         if (!own) {
           const { data: connection } = await supabase
@@ -190,6 +187,11 @@ export default function ProfileContent({ viewUserId }) {
             website: profileData.website || "",
             work_status: profileData.work_status || ""
           });
+          if (profileData.profile_visibility) {
+            setVisibility({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, ...profileData.profile_visibility });
+          }
+        } else {
+          // Apply viewed user's visibility settings when viewing another profile
           if (profileData.profile_visibility) {
             setVisibility({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, ...profileData.profile_visibility });
           }
@@ -458,19 +460,9 @@ export default function ProfileContent({ viewUserId }) {
     
     setLoadingFollowers(true);
     try {
-      const { data: connections, error: connErr } = await supabase
-        .from('connections')
-        .select('sender_id, receiver_id')
-        .or(`receiver_id.eq.${profile.id},sender_id.eq.${profile.id}`)
-        .eq('status', 'accepted');
-        
-      if (connErr) throw connErr;
-      if (connections && connections.length > 0) {
-        const userIds = connections.map(c => c.sender_id === profile.id ? c.receiver_id : c.sender_id);
-        const { data: users, error: userErr } = await supabase.from('profiles').select('id, username, avatar_url, status, is_verified').in('id', userIds);
-        if (userErr) throw userErr;
-        setFollowersData(users || []);
-      }
+      const res = await fetch(`/api/connections/list?user_id=${profile.id}`);
+      const data = await res.json();
+      setFollowersData(data.users || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -913,15 +905,35 @@ export default function ProfileContent({ viewUserId }) {
               </p>
               
               <div className="flex flex-wrap items-center gap-3 mt-6 text-sm text-gray-600 dark:text-gray-400 font-medium">
-                {profile?.work_status && profile.work_status !== 'None' && (
+                {visibility.work_status && profile?.work_status && profile.work_status !== 'None' && (
                   <span className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border shadow-sm transition-transform hover:-translate-y-0.5 ${profile.work_status === 'Hiring' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'}`}>
                     <Briefcase size={14} /> {profile.work_status}
                   </span>
                 )}
-                {profile?.location && (
+                {visibility.location && profile?.location && (
                   <span className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-default">
                     <MapPin size={16} className="text-gray-400 dark:text-gray-500" /> {profile.location}
                   </span>
+                )}
+                {visibility.github && profile?.github && (
+                  <a
+                    href={`https://github.com/${profile.github.replace(/^@/, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                  >
+                    <GitBranch size={16} className="text-gray-400 dark:text-gray-500" /> @{profile.github.replace(/^@/, '')}
+                  </a>
+                )}
+                {visibility.website && profile?.website && (
+                  <a
+                    href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800/50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-gray-600 dark:text-gray-400"
+                  >
+                    <Globe size={16} className="text-gray-400 dark:text-gray-500" /> {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                  </a>
                 )}
                 <div className="relative">
                   <span 

@@ -315,7 +315,7 @@ export default function AuthForm() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       const wait = res.status === 429 ? (data.waitSeconds ?? 60) : null;
       if (wait) setResendCooldown(wait);
@@ -458,7 +458,7 @@ export default function AuthForm() {
             suppressRedirect.current = false;
 
             if (!otpRes.ok) {
-              const otpData = await otpRes.json();
+              const otpData = await otpRes.json().catch(() => ({}));
               throw new Error(otpData.error || 'Failed to send verification code');
             }
             setSignInStep('otp');
@@ -469,7 +469,7 @@ export default function AuthForm() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email, code: otpCode.trim() }),
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || 'Invalid or expired code');
             // Code is valid — sign in with password (still in state), let onAuthStateChange redirect
             const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });

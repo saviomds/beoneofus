@@ -83,8 +83,12 @@ export async function POST(request) {
       }),
     });
 
-    const resData = await res.json();
-    if (!res.ok) throw new Error(resData.message || 'Failed to send email');
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      let msg = `Email service error (${res.status})`;
+      try { if (text) msg = JSON.parse(text).message || msg; } catch {}
+      throw new Error(msg);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

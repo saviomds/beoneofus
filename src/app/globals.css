@@ -53,6 +53,21 @@
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+  /* Popup/modal scrollbar — always visible on desktop, hidden on mobile */
+  .popup-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(156,163,175,0.5) rgba(0,0,0,0.04); }
+  .popup-scrollbar::-webkit-scrollbar { width: 8px; }
+  .popup-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.04); border-radius: 0 16px 16px 0; }
+  .popup-scrollbar::-webkit-scrollbar-thumb { background: rgba(156,163,175,0.55); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+  .popup-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(107,114,128,0.8); background-clip: content-box; }
+  .dark .popup-scrollbar { scrollbar-color: rgba(75,85,99,0.6) rgba(255,255,255,0.03); }
+  .dark .popup-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+  .dark .popup-scrollbar::-webkit-scrollbar-thumb { background: rgba(75,85,99,0.6); background-clip: content-box; }
+  .dark .popup-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(107,114,128,0.8); background-clip: content-box; }
+  @media (max-width: 767px) {
+    .popup-scrollbar::-webkit-scrollbar { display: none; }
+    .popup-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  }
+
   .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.2) transparent; }
   .custom-scrollbar::-webkit-scrollbar { width: 5px; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 99px; }

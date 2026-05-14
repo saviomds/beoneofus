@@ -78,10 +78,10 @@ export default function PublicProfilePage() {
       if (error || !profileData) { setNotFound(true); setLoading(false); return; }
       setProfile(profileData);
 
-      const [connectionsRes, coursesRes, certsRes, postsRes, recentPostsRes] = await Promise.all([
-        supabase.from("connections").select("id", { count: "exact", head: true })
-          .eq("status", "accepted")
-          .or(`sender_id.eq.${profileData.id},receiver_id.eq.${profileData.id}`),
+      const [connCountRes, coursesRes, certsRes, postsRes, recentPostsRes] = await Promise.all([
+        fetch(`/api/connections/count?user_id=${profileData.id}`)
+          .then(r => r.ok ? r.json() : { count: 0 })
+          .catch(() => ({ count: 0 })),
         supabase.from("user_course_progress").select("id", { count: "exact", head: true })
           .eq("user_id", profileData.id).eq("status", "completed"),
         supabase.from("user_certificates")
@@ -97,7 +97,7 @@ export default function PublicProfilePage() {
       ]);
 
       setStats({
-        connections: connectionsRes.count ?? 0,
+        connections: connCountRes.count ?? 0,
         coursesCompleted: coursesRes.count ?? 0,
         certificates: certsRes.data?.length ?? 0,
         posts: postsRes.count ?? 0,

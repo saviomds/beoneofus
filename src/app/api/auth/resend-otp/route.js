@@ -88,8 +88,10 @@ export async function POST(request) {
     });
 
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Failed to send email');
+      const text = await res.text().catch(() => '');
+      let msg = `Email service error (${res.status})`;
+      try { if (text) msg = JSON.parse(text).message || msg; } catch {}
+      throw new Error(msg);
     }
 
     return NextResponse.json({ success: true });

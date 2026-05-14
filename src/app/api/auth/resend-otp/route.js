@@ -3,12 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../../lib/escapeHtml';
 
 export async function POST(request) {
-  const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
   try {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Server configuration error: missing Supabase env vars');
+    }
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
     const { email } = await request.json();
     if (!email) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
 

@@ -4,7 +4,7 @@ import {
   Home, Users, MessageSquare, Bookmark, FileText,
   Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
   GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
-  ShoppingBag, User, BookOpen, Sparkles, Zap,
+  ShoppingBag, User, BookOpen, Sparkles, Zap, Compass,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -396,6 +396,7 @@ export default function Sidebar({ onClose }) {
     {
       label: 'Content',
       items: [
+        { id: 'learn',     icon: Compass,   label: 'Discover & Learn', isNew: true },
         { id: 'blog',      icon: Newspaper, label: 'Blog'      },
         { id: 'bookmarks', icon: Bookmark,  label: 'Bookmarks' },
         { id: 'docs',      icon: BookOpen,  label: 'Docs'      },

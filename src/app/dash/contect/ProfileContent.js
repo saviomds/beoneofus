@@ -643,7 +643,7 @@ export default function ProfileContent({ viewUserId }) {
   return (
     <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 pt-4 px-2 sm:px-4 md:px-6">
       <div className="mb-8 max-w-6xl w-full mx-auto">
-        <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Profile</h1>
+        <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Profile</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your professional identity and network status." : "Viewing professional network identity."}</p>
       </div>
 
@@ -679,7 +679,7 @@ export default function ProfileContent({ viewUserId }) {
 
       <div className="max-w-6xl w-full mx-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl sm:rounded-[2.5rem] relative overflow-visible shadow-lg sm:shadow-xl shadow-gray-200/50 dark:shadow-black/50 mb-10 transition-all duration-300">
         {/* Banner Section */}
-        <div className="h-32 sm:h-48 md:h-56 w-full bg-gradient-to-tr from-slate-900 via-indigo-900 to-slate-800 rounded-t-2xl sm:rounded-t-[2.5rem] relative overflow-hidden group">
+        <div className="h-28 sm:h-40 md:h-48 w-full bg-gradient-to-tr from-slate-900 via-indigo-900 to-slate-800 rounded-t-2xl sm:rounded-t-[2.5rem] relative overflow-hidden group">
           {displayBanner ? (
             <Image src={displayBanner} alt="Profile Banner" fill priority quality={75} className="object-cover object-center" />
           ) : (
@@ -700,14 +700,14 @@ export default function ProfileContent({ viewUserId }) {
         
         <div className="px-4 sm:px-8 md:px-12 relative pb-10 sm:pb-12">
           {/* Header Area with Avatar and Actions */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 sm:gap-6 -mt-14 sm:-mt-20 md:-mt-24 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 sm:gap-6 -mt-12 sm:-mt-16 md:-mt-20 mb-6 sm:mb-8">
             {/* Avatar + Story Ring */}
             <StoryRing
               hasStory={hasStory}
               viewed={false}
               onClick={hasStory && !isEditing ? () => setStoryViewerOpen(true) : undefined}
             >
-              <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full border-4 sm:border-[6px] md:border-8 border-white dark:border-gray-900 bg-white dark:bg-gray-900 flex items-center justify-center text-4xl sm:text-5xl font-black text-gray-700 dark:text-gray-300 shadow-xl shrink-0 overflow-hidden group z-10 transition-transform hover:scale-105 duration-300">
+              <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 rounded-full border-4 sm:border-[5px] md:border-[6px] border-white dark:border-gray-900 bg-white dark:bg-gray-900 flex items-center justify-center text-3xl sm:text-4xl font-black text-gray-700 dark:text-gray-300 shadow-xl shrink-0 overflow-hidden group z-10 transition-transform hover:scale-105 duration-300">
                 {displayAvatar ? (
                   <Image src={displayAvatar} alt="Profile Avatar" fill sizes="128px" className="object-cover object-center" />
                 ) : (
@@ -912,15 +912,15 @@ export default function ProfileContent({ viewUserId }) {
             </div>
           ) : (
             <div className="animate-in fade-in duration-500 pt-4">
-              <h2 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white flex items-center gap-3 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-center gap-2 tracking-tight">
                 {profile?.full_name || profile?.username || 'Unknown User'}
-                {profile?.is_verified && <VerifiedBadge size={32} />}
-                {(profile?.is_premium || profile?.is_admin) && <PremiumBadge size={28} />}
+                {profile?.is_verified && <VerifiedBadge size={26} />}
+                {(profile?.is_premium || profile?.is_admin) && <PremiumBadge size={22} />}
               </h2>
               {profile?.full_name && (
                 <p className="text-sm font-bold text-gray-400 dark:text-gray-500 mt-1">@{profile.username}</p>
               )}
-              <p className="text-gray-600 dark:text-gray-300 text-lg sm:text-xl mt-2 font-medium max-w-2xl leading-relaxed">
+              <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg mt-2 font-medium max-w-2xl leading-relaxed">
                 {profile?.status || 'Software Engineer'}
               </p>
               
@@ -999,7 +999,7 @@ export default function ProfileContent({ viewUserId }) {
               <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">
                 {/* My Posts */}
                 <div className="mb-10">
-                  <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-5">Posts</h3>
+                  <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-5">Posts</h3>
                   {profilePosts.length > 0 ? (
                     <div className="relative">
                       {postsEdge.left && (
@@ -1077,7 +1077,7 @@ export default function ProfileContent({ viewUserId }) {
 
                 {/* Liked Posts */}
                 <div>
-                  <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-5">Liked</h3>
+                  <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-5">Liked</h3>
                   {likedPosts.length > 0 ? (
                     <div className="relative">
                       {likedEdge.left && (
@@ -1160,7 +1160,7 @@ export default function ProfileContent({ viewUserId }) {
               {/* OPPORTUNITIES (JOBS) SECTION */}
               <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">
                 <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Opportunities</h3>
+                  <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Opportunities</h3>
                   {isOwnProfile && (
                     <button 
                       onClick={() => {
@@ -1249,7 +1249,7 @@ export default function ProfileContent({ viewUserId }) {
               </div>
 
               <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">
-                <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-8">Contact & Details</h3>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-8">Contact & Details</h3>
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
                     <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-blue-500 transition-colors"><Mail size={20} /></div>
@@ -1316,7 +1316,7 @@ export default function ProfileContent({ viewUserId }) {
                       <Lock size={18} />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Public Profile Visibility</h3>
+                      <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Public Profile Visibility</h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Control what others see on your public profile at <span className="font-bold text-blue-600 dark:text-blue-400">/u/{profile?.username}</span></p>
                     </div>
                   </div>
@@ -1456,7 +1456,7 @@ export default function ProfileContent({ viewUserId }) {
           <div className="relative w-full max-w-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 sm:p-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-start shrink-0">
               <div>
-                <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Applicants</h2>
+                <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Applicants</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-bold mt-2">
                   Reviewing applications for <span className="text-blue-600 dark:text-blue-400">{activeJobForApplicants.title}</span>
                 </p>

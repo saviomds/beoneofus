@@ -8,7 +8,7 @@ const nextConfig = {
       "img-src 'self' data: blob: https:",
       "font-src 'self'",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.groq.com https://api.resend.com https://api.paystack.co https://open.er-api.com",
-      "frame-src 'none'",
+      "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.tiktok.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

@@ -2,8 +2,9 @@
 
 import {
   Home, Users, MessageSquare, Bookmark, FileText,
-  MoreHorizontal, Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
-  GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake,
+  Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
+  GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
+  ShoppingBag, User, BookOpen, Sparkles, Zap,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -13,19 +14,19 @@ import { useRouter, usePathname } from 'next/navigation';
 import VerifiedBadge from './VerifiedBadge';
 import PremiumBadge from './PremiumBadge';
 
-const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index }) => (
+const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index, isNew }) => (
   <div
     className={`group flex items-center justify-between py-2.5 px-3 rounded-xl cursor-pointer select-none transition-all animate-in fade-in slide-in-from-left-4 duration-500 ${
       active
         ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 shadow-sm'
         : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-blue-600 dark:hover:text-blue-400'
     }`}
-    style={{ animationDelay: `${(index || 0) * 50}ms`, animationFillMode: 'both' }}
+    style={{ animationDelay: `${(index || 0) * 40}ms`, animationFillMode: 'both' }}
     onClick={onClick}
   >
     <div className="flex items-center gap-3 min-w-0">
       <div className="relative flex items-center justify-center shrink-0">
-        <Icon size={18} className={`${isRinging ? 'animate-ring text-blue-500' : ''} ${isBouncing ? 'animate-message-bounce text-blue-500' : ''} transition-colors`} />
+        <Icon size={17} className={`${isRinging ? 'animate-ring text-blue-500' : ''} ${isBouncing ? 'animate-message-bounce text-blue-500' : ''} transition-colors`} />
         {badge > 0 && (
           <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 shadow-sm">
             {badge > 99 ? '99+' : badge}
@@ -33,6 +34,11 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction,
         )}
       </div>
       <span className={`text-[13px] tracking-wide truncate ${active ? 'font-bold' : 'font-semibold'}`}>{label}</span>
+      {isNew && !active && (
+        <span className="shrink-0 text-[8px] font-black uppercase tracking-widest bg-green-500 text-white px-1.5 py-0.5 rounded-full">
+          New
+        </span>
+      )}
     </div>
     <div className="flex items-center gap-2 shrink-0">
       {onBadgeAction && badge > 0 && (
@@ -359,25 +365,56 @@ export default function Sidebar({ onClose }) {
     onClose?.();
   };
 
-  const sidebarItems = [
-    { id: 'feed', icon: Home, label: 'My Feed' },
-    { id: 'connections', icon: UserPlus, label: 'Connections' },
-    { id: 'groups', icon: Users, label: 'Groups', badge: unreadGroups },
-    { id: 'pages', icon: FileText, label: 'Pages' },
-    { id: 'messages', icon: MessageSquare, label: 'Messages', badge: unreadMessages },
-    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks' },
-    { id: 'premium',  icon: Crown,          label: 'Premium'  },
-    { id: 'coaching',      icon: GraduationCap,  label: 'Coaching'      },
-    { id: 'events',        icon: CalendarDays,   label: 'Events'        },
-    { id: 'mentorship',    icon: HeartHandshake, label: 'Mentorship'    },
-    { id: 'partnerships',  icon: Handshake,      label: 'Partnerships'  },
-    { id: 'blog',          icon: Newspaper,      label: 'Blog'          },
-    { id: 'more',          icon: MoreHorizontal, label: 'More'          },
-  ];
-
-  const bottomItems = [
-    { id: 'notifications', icon: Bell, label: 'Notifications', badge: unreadNotifs }, // Now using real database count
-    { id: 'settings', icon: Settings, label: 'Settings' },
+  const navGroups = [
+    {
+      label: 'Core',
+      items: [
+        { id: 'home',          icon: LayoutDashboard, label: 'Dashboard'     },
+        { id: 'feed',          icon: Home,            label: 'Network Feed'  },
+        { id: 'messages',      icon: MessageSquare,   label: 'Messages',      badge: unreadMessages, onBadge: handleMarkAllMessagesRead, isBouncing },
+        { id: 'notifications', icon: Bell,            label: 'Notifications', badge: unreadNotifs,   onBadge: handleMarkAllNotifsRead,   isRinging  },
+      ],
+    },
+    {
+      label: 'Network',
+      items: [
+        { id: 'connections', icon: UserPlus,      label: 'Connections' },
+        { id: 'groups',      icon: Users,         label: 'Groups',   badge: unreadGroups, onBadge: handleMarkAllGroupsRead, isRinging: isGroupRinging },
+        { id: 'pages',       icon: FileText,      label: 'Pages'       },
+        { id: 'events',      icon: CalendarDays,  label: 'Events'      },
+      ],
+    },
+    {
+      label: 'Opportunities',
+      items: [
+        { id: 'marketplace',  icon: ShoppingBag,    label: 'Jobs & Market' },
+        { id: 'coaching',     icon: GraduationCap,  label: 'Coaching'      },
+        { id: 'mentorship',   icon: HeartHandshake, label: 'Mentorship'    },
+        { id: 'partnerships', icon: Handshake,      label: 'Partnerships'  },
+      ],
+    },
+    {
+      label: 'Content',
+      items: [
+        { id: 'blog',      icon: Newspaper, label: 'Blog'      },
+        { id: 'bookmarks', icon: Bookmark,  label: 'Bookmarks' },
+        { id: 'docs',      icon: BookOpen,  label: 'Docs'      },
+      ],
+    },
+    {
+      label: 'Tools',
+      items: [
+        { id: 'ai', icon: Sparkles, label: 'AI Assistant', isNew: true },
+      ],
+    },
+    {
+      label: 'Account',
+      items: [
+        { id: 'profile',  icon: User,     label: 'My Profile' },
+        { id: 'premium',  icon: Crown,    label: 'Premium'    },
+        { id: 'settings', icon: Settings, label: 'Settings'   },
+      ],
+    },
   ];
 
   return (
@@ -409,42 +446,38 @@ export default function Sidebar({ onClose }) {
         </div>
 
         {/* Navigation Groups */}
-        <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pb-2">
-          <p className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-[2px] mb-4 px-3">Main Menu</p>
-          {sidebarItems.map((item, index) => (
-            <SidebarItem
-              key={item.id}
-              index={index}
-              icon={item.icon}
-              label={item.label}
-              badge={item.badge}
-              active={activeSection === item.id}
-              onClick={() => handleNavClick(item.id)}
-              onBadgeAction={
-                item.id === 'messages' ? handleMarkAllMessagesRead : 
-                item.id === 'groups' ? handleMarkAllGroupsRead : undefined
-              }
-              isBouncing={item.id === 'messages' ? isBouncing : false}
-              isRinging={item.id === 'groups' ? isGroupRinging : false}
-            />
-          ))}
-
-          <div className="pt-8 space-y-1">
-            <p className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-[2px] mb-4 px-3">System</p>
-            {bottomItems.map((item, index) => (
-              <SidebarItem
-                key={item.id}
-                index={sidebarItems.length + index}
-                icon={item.icon}
-                label={item.label}
-                badge={item.badge}
-                active={activeSection === item.id}
-                onClick={() => handleNavClick(item.id)}
-                onBadgeAction={item.id === 'notifications' ? handleMarkAllNotifsRead : undefined}
-                isRinging={item.id === 'notifications' ? isRinging : false}
-              />
-            ))}
-          </div>
+        <nav className="flex-1 overflow-y-auto custom-scrollbar pb-2 space-y-5">
+          {navGroups.map((group, gi) => {
+            let itemIndex = 0;
+            for (let g = 0; g < gi; g++) itemIndex += navGroups[g].items.length;
+            return (
+              <div key={group.label}>
+                <div className="flex items-center gap-2 mb-1.5 px-3">
+                  <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[2.5px] shrink-0">
+                    {group.label}
+                  </p>
+                  <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+                </div>
+                <div className="space-y-0.5">
+                  {group.items.map((item, i) => (
+                    <SidebarItem
+                      key={item.id}
+                      index={itemIndex + i}
+                      icon={item.icon}
+                      label={item.label}
+                      badge={item.badge}
+                      active={activeSection === item.id}
+                      onClick={() => handleNavClick(item.id)}
+                      onBadgeAction={item.onBadge}
+                      isBouncing={item.isBouncing || false}
+                      isRinging={item.isRinging || false}
+                      isNew={item.isNew}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
         {/* User Profile Section */}

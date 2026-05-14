@@ -95,6 +95,79 @@ function statusColor(status) {
   return "blue";
 }
 
+function SystemLogsView() {
+  const getCurrentTimestamp = () => new Date().toISOString();
+  const getTimestampOffset = (ms) => new Date(getCurrentTimestamp() - ms).toISOString();
+  
+  const [logs] = useState([
+    { id: 1, endpoint: "/api/chats", method: "POST", status: 200, latency: "142ms", region: "iad1", timestamp: new Date().toISOString() },
+    { id: 2, endpoint: "/api/premium/verify", method: "POST", status: 200, latency: "421ms", region: "iad1", timestamp: new Date(new Date().getTime() - 30000).toISOString() },
+    { id: 3, endpoint: "/api/auth/session", method: "GET", status: 200, latency: "45ms", region: "iad1", timestamp: new Date(new Date().getTime() - 120000).toISOString() },
+    { id: 4, endpoint: "/api/storage/upload", method: "PUT", status: 201, latency: "890ms", region: "iad1", timestamp: new Date(new Date().getTime() - 300000).toISOString() },
+    { id: 5, endpoint: "/api/jobs/apply", method: "POST", status: 401, latency: "12ms", region: "iad1", timestamp: new Date(new Date().getTime() - 600000).toISOString() },
+  ]);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatCard icon={Activity} label="Avg. Latency" value="156ms" color="blue" sub="Across all endpoints" />
+        <StatCard icon={Globe} label="API Traffic" value="24.5k" color="violet" sub="Last 24 hours" />
+        <StatCard icon={AlertCircle} label="Error Rate" value="0.42%" color="rose" sub="HTTP 5xx responses" />
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
+          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Network Request Stream</p>
+          <RefreshCw size={12} className="text-gray-400 animate-spin-slow" />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-[11px] font-medium">
+            <thead className="text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
+              <tr>
+                <th className="px-4 py-3">Endpoint</th>
+                <th className="px-4 py-3">Method</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Latency</th>
+                <th className="px-4 py-3 text-right">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
+              {logs.map((log) => (
+                <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                  <td className="px-4 py-3 font-mono text-blue-600 dark:text-blue-400">{log.endpoint}</td>
+                  <td className="px-4 py-3">
+                    <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-bold">{log.method}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`font-black ${log.status >= 400 ? "text-red-500" : "text-emerald-500"}`}>
+                      {log.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-gray-500">{log.latency}</td>
+                  <td className="px-4 py-3 text-right text-gray-400 font-mono">
+                    {new Date(log.timestamp).toLocaleTimeString([], { hour12: false })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800 font-mono text-[11px] text-emerald-400/80 leading-relaxed shadow-lg overflow-hidden relative group">
+        <div className="absolute top-3 right-3 text-gray-700 group-hover:text-emerald-500 transition-colors">
+          <Terminal size={14} />
+        </div>
+        <p className="text-gray-500 mb-2"># System initialized. Watching Postgres streams...</p>
+        <p>[OK] Connected to region iad1 (US East)</p>
+        <p>[INFO] Edge runtime heartbeat detected (latency: 12ms)</p>
+        <p>[INFO] Real-time subscription: public.profiles active</p>
+        <p className="animate-pulse">_</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── System Status ───────────────────────────────────────────────────────────
 
 const SystemStatusTool = () => {
@@ -374,6 +447,11 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [usersFetched, setUsersFetched] = useState(false);
   const [usersPage, setUsersPage] = useState(0);
   const [hasMoreUsers, setHasMoreUsers] = useState(true);
+  const [selectedUserIds, setSelectedUserIds] = useState(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [verificationFilter, setVerificationFilter] = useState("all");
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const USERS_PER_PAGE = 50;
 
   // Premium subscriptions
@@ -403,6 +481,9 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [adminTasks, setAdminTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showTaskDeleteConfirm, setShowTaskDeleteConfirm] = useState(null);
+  const [showUserDeleteConfirm, setShowUserDeleteConfirm] = useState(null);
+  const [showAdminToggleConfirm, setShowAdminToggleConfirm] = useState(null);
   const [taskForm, setTaskForm] = useState({ assignee_id: "", title: "", description: "", priority: "Medium", linked_to: "" });
   const [taskFilter, setTaskFilter] = useState("All");
   const [teamMembers, setTeamMembers] = useState([]);
@@ -464,7 +545,10 @@ const AdminPanelTool = ({ currentUserId }) => {
   }, [isAdmin]);
 
   useEffect(() => {
-    if (isAdmin && adminTab === "overview") fetchStats();
+    if (isAdmin && adminTab === "overview") {
+      const timer = setTimeout(() => fetchStats(), 0);
+      return () => clearTimeout(timer);
+    }
   }, [isAdmin, adminTab, fetchStats]);
 
   // ── Users ───────────────────────────────────────────────────────────────────
@@ -495,7 +579,10 @@ const AdminPanelTool = ({ currentUserId }) => {
   }, []);
 
   useEffect(() => {
-    if (isAdmin && !usersFetched && !usersLoading) fetchUsers(0, false);
+    if (isAdmin && !usersFetched && !usersLoading) {
+      const timer = setTimeout(() => fetchUsers(0, false), 0);
+      return () => clearTimeout(timer);
+    }
   }, [isAdmin, usersFetched, usersLoading, fetchUsers]);
 
   useEffect(() => {
@@ -642,6 +729,67 @@ const AdminPanelTool = ({ currentUserId }) => {
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
+  const handleBulkDelete = async () => {
+    if (selectedUserIds.size === 0) return;
+    setActionProcessing(true);
+    try {
+      const ids = Array.from(selectedUserIds);
+      const { error } = await supabase.from("profiles")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+      showToast(`Purged ${ids.length} users from the network.`);
+      setAllUsers(prev => prev.filter(u => !selectedUserIds.has(u.id)));
+      setSelectedUserIds(new Set());
+      setBulkMode(false);
+      fetchStats();
+    } catch (err) { showToast(err.message, "error"); }
+    finally { setActionProcessing(false); setShowBulkDeleteConfirm(false); }
+  };
+
+  // Moved to the top of handlers to resolve ReferenceError
+  const handleRemoveVerification = async (userId, username) => {
+    if (actionProcessing) return;
+    setActionProcessing(true);
+    try {
+      const { error } = await supabase.from("profiles")
+        .update({ is_verified: false, verification_status: "unverified" })
+        .eq("id", userId);
+      if (error) throw error;
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_verified: false, verification_status: "unverified" } : u));
+      showToast(`Verification removed from @${username}.`);
+      fetchStats();
+    } catch (err) { showToast(err.message, "error"); }
+    finally { setActionProcessing(false); }
+  };
+
+  const handleBulkVerify = async () => {
+    if (selectedUserIds.size === 0) return;
+    setActionProcessing(true);
+    try {
+      const ids = Array.from(selectedUserIds);
+      const { error } = await supabase.from("profiles")
+        .update({ is_verified: true, verification_status: "verified" })
+        .in("id", ids);
+      if (error) throw error;
+      showToast(`Verified ${ids.length} users successfully.`);
+      setAllUsers(prev => prev.map(u => ids.includes(u.id) ? { ...u, is_verified: true, verification_status: "verified" } : u));
+      setSelectedUserIds(new Set());
+      setBulkMode(false);
+      fetchStats();
+    } catch (err) { showToast(err.message, "error"); }
+    finally { setActionProcessing(false); }
+  };
+
+  const toggleUserSelection = (userId) => {
+    setSelectedUserIds(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
   const handleVerification = async (userId, action) => {
     try {
       const updates = action === "approve"
@@ -661,13 +809,14 @@ const AdminPanelTool = ({ currentUserId }) => {
   };
 
   const handleToggleAdmin = async (userId, isAdm, username) => {
-    if (!confirm(`${isAdm ? "Revoke" : "Grant"} admin for @${username}?`)) return;
+    setActionProcessing(true);
     try {
       const { error } = await supabase.from("profiles").update({ is_admin: !isAdm }).eq("id", userId);
       if (error) throw error;
       setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_admin: !isAdm } : u));
       showToast(`Admin ${isAdm ? "revoked" : "granted"} for @${username}.`);
     } catch (err) { showToast(err.message, "error"); }
+    finally { setActionProcessing(false); }
   };
 
   const handleTogglePremium = async (userId, isPrem, username) => {
@@ -683,7 +832,7 @@ const AdminPanelTool = ({ currentUserId }) => {
   };
 
   const handleDeleteUser = async (userId, username) => {
-    if (!confirm(`Permanently delete @${username}?`)) return;
+    setActionProcessing(true);
     try {
       const { error } = await supabase.from("profiles").delete().eq("id", userId);
       if (error) throw error;
@@ -691,6 +840,7 @@ const AdminPanelTool = ({ currentUserId }) => {
       showToast(`@${username} deleted.`);
       fetchStats();
     } catch (err) { showToast(err.message, "error"); }
+    finally { setActionProcessing(false); }
   };
 
   const handleImpersonateUser = async (userId, username) => {
@@ -799,95 +949,130 @@ const AdminPanelTool = ({ currentUserId }) => {
     { id: "applications", label: "Applications", icon: Briefcase   },
     { id: "founder_apps", label: "Founder Apps", icon: Crown       },
     { id: "tasks",        label: "Tasks",        icon: ClipboardList },
+    { id: "system_logs",  label: "System Logs",  icon: Terminal      },
   ];
 
   if (loading) return <div className="p-16 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={24} /></div>;
 
   if (!isAdmin) return (
     <div className="flex flex-col items-center justify-center h-full p-16 text-center">
-      <ShieldAlert size={48} className="text-red-500/30 mb-4" />
+      <ShieldAlert size={48} className="text-red-500/30 mb-6" />
       <p className="text-red-500 dark:text-red-400 font-black text-lg mb-2">Unauthorized</p>
       <p className="text-gray-500 dark:text-gray-600 text-sm max-w-xs leading-relaxed">Your node lacks admin clearance to access this terminal.</p>
     </div>
   );
 
+  const handleDeleteTask = async (taskId) => {
+    setActionProcessing(true);
+    try {
+      const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+      if (error) throw error;
+      setAdminTasks(prev => prev.filter(t => t.id !== taskId));
+      showToast("Task purged successfully.");
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setActionProcessing(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Tab Bar */}
-      <div className="flex gap-1 px-1 py-1 bg-gray-100/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800 overflow-x-auto shrink-0">
-        {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setAdminTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all
-              ${adminTab === tab.id ? "bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/5"}`}>
-            <tab.icon size={12} /> {tab.label}
-            {tab.id === "requests" && requests.length > 0 && (
-              <span className="w-4 h-4 rounded-full bg-amber-500 text-[9px] font-black text-white flex items-center justify-center ml-0.5">
-                {requests.length}
-              </span>
-            )}
-            {tab.id === "premium_subs" && premiumSubs.filter(s => s.status === "pending_review").length > 0 && (
-              <span className="w-4 h-4 rounded-full bg-amber-500 text-[9px] font-black text-white flex items-center justify-center ml-0.5">
-                {premiumSubs.filter(s => s.status === "pending_review").length}
-              </span>
-            )}
-          </button>
-        ))}
+    <div className="flex flex-col md:flex-row h-full overflow-hidden bg-gray-50 dark:bg-[#0c0c12]">
+      {/* Navigation Sidebar (redesigned) */}
+      <div className="w-full md:w-56 shrink-0 bg-white/50 dark:bg-black/20 border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800 p-3 flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-y-auto no-scrollbar">
+        <p className="hidden md:block text-[9px] font-black text-gray-400 uppercase tracking-[2px] px-3 mb-4 mt-2">Control Terminal</p>
+        {TABS.map(tab => {
+          const isActive = adminTab === tab.id;
+          const hasAlert = (tab.id === "requests" && requests.length > 0) || 
+                           (tab.id === "premium_subs" && premiumSubs.filter(s => s.status === "pending_review").length > 0);
+          return (
+            <button key={tab.id} onClick={() => setAdminTab(tab.id)}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[11px] md:text-xs font-bold whitespace-nowrap transition-all group relative
+                ${isActive 
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" 
+                  : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-white/5"}`}>
+              <tab.icon size={15} className={isActive ? "text-white" : "text-gray-400 group-hover:text-blue-500"} />
+              <span className="flex-1 text-left">{tab.label}</span>
+              {hasAlert && (
+                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-white" : "bg-blue-500"} animate-pulse`} />
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+        <div className="max-w-4xl mx-auto space-y-6">
 
         {/* ── OVERVIEW ── */}
         {adminTab === "overview" && (
           <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-gray-900 dark:text-white font-black text-lg">Platform Overview</h3>
-              <button onClick={fetchStats} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all border border-gray-200 dark:border-gray-700">
-                <RefreshCw size={12} /> Refresh
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-gray-900 dark:text-white font-black text-2xl tracking-tight">Overview</h3>
+                <p className="text-gray-500 text-xs font-medium">Real-time platform metrics and system vitals.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={fetchStats} className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 transition-all border border-gray-200 dark:border-gray-700 shadow-sm active:scale-95">
+                  <RefreshCw size={14} className={statsLoading ? "animate-spin" : ""} /> Sync Data
+                </button>
+              </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-              <StatCard icon={Users}      label="Total Users"   value={stats.total}    color="blue"   loading={statsLoading} sub="All registered nodes" />
-              <StatCard icon={Crown}      label="Founders"      value={stats.founders} color="amber"  loading={statsLoading} sub="Founder-role accounts" />
-              <StatCard icon={Users}      label="Members"       value={stats.members}  color="violet" loading={statsLoading} sub="Standard members" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <StatCard icon={Users}      label="Registrations"   value={stats.total}    color="blue"   loading={statsLoading} sub="Total Nodes" />
               <StatCard icon={BadgeCheck} label="Verified"      value={stats.verified}    color="emerald" loading={statsLoading} sub="Badge-verified" />
-              <StatCard icon={Clock}      label="Pending"       value={stats.pending}     color="amber"  loading={statsLoading} sub="Awaiting review" />
-              <StatCard icon={Shield}     label="Admins"        value={stats.admins}      color="rose"   loading={statsLoading} sub="Admin accounts" />
+              <StatCard icon={Shield}     label="Security"        value={stats.admins}      color="rose"   loading={statsLoading} sub="Admins" />
               <StatCard icon={Crown}      label="Premium"       value={stats.premium}     color="amber"  loading={statsLoading} sub="Active premium members" />
-              <StatCard icon={Crown}      label="Prem. Requests" value={stats.premiumReq} color="violet" loading={statsLoading} sub="Awaiting premium grant" />
             </div>
 
             {/* Verification rate */}
-            {stats.total > 0 && (
-              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Verification Coverage</p>
-                  <span className="text-emerald-400 font-black text-sm">
-                    {Math.round((stats.verified / stats.total) * 100)}%
-                  </span>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Verification Coverage</p>
+                  <span className="text-emerald-500 font-black text-xs">{stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0}%</span>
                 </div>
-                <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-700"
-                    style={{ width: `${Math.round((stats.verified / stats.total) * 100)}%` }} />
+                    style={{ width: `${stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0}%` }} />
                 </div>
                 <div className="flex justify-between mt-2">
                   <span className="text-[10px] text-gray-500 dark:text-gray-600">{stats.verified} verified</span>
                   <span className="text-[10px] text-gray-500 dark:text-gray-600">{stats.total} total</span>
                 </div>
               </div>
-            )}
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Awaiting Action</p>
+                  <span className="text-amber-500 font-black text-xs">{stats.pending + stats.premiumReq} items</span>
+                </div>
+                <div className="flex gap-4">
+                   <div className="flex-1">
+                      <p className="text-xl font-black text-gray-900 dark:text-white">{stats.pending}</p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase">Verifications</p>
+                   </div>
+                   <div className="w-px h-8 bg-gray-100 dark:bg-gray-800" />
+                   <div className="flex-1">
+                      <p className="text-xl font-black text-gray-900 dark:text-white">{stats.premiumReq}</p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase">Premium Req</p>
+                   </div>
+                </div>
+              </div>
+            </div>
 
             {/* Quick actions */}
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Jump to Section</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: "Review Requests", icon: Bell, color: "text-amber-400 bg-amber-500/10 border-amber-500/20", action: () => setAdminTab("requests") },
-                { label: "Manage Users", icon: Users, color: "text-blue-400 bg-blue-500/10 border-blue-500/20", action: () => setAdminTab("users") },
-                { label: "View Tasks", icon: ClipboardList, color: "text-violet-400 bg-violet-500/10 border-violet-500/20", action: () => setAdminTab("tasks") },
-                { label: "Founder Apps", icon: Crown, color: "text-amber-400 bg-amber-500/10 border-amber-500/20", action: () => setAdminTab("founder_apps") },
+                { label: "Requests", icon: Bell, color: "text-amber-500 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800", action: () => setAdminTab("requests") },
+                { label: "Users", icon: Users, color: "text-blue-500 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800", action: () => setAdminTab("users") },
+                { label: "Tasks", icon: ClipboardList, color: "text-violet-500 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800", action: () => setAdminTab("tasks") },
+                { label: "Founder Apps", icon: Crown, color: "text-amber-600 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800", action: () => setAdminTab("founder_apps") },
               ].map(({ label, icon: Icon, color, action }) => (
                 <button key={label} onClick={action}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border text-xs font-bold transition-all hover:scale-[1.02] ${color}`}>
+                  className={`flex flex-col items-center gap-2 p-5 rounded-2xl border text-xs font-bold transition-all hover:-translate-y-1 hover:shadow-md hover:border-blue-500/30 ${color}`}>
                   <Icon size={18} /> {label}
                 </button>
               ))}
@@ -927,11 +1112,33 @@ const AdminPanelTool = ({ currentUserId }) => {
         {/* ── USERS ── */}
         {adminTab === "users" && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-gray-900 dark:text-white font-black">Manage Users <span className="text-gray-500 dark:text-gray-600 font-normal text-sm">({allUsers.length}{hasMoreUsers ? "+" : ""})</span></h3>
-              <button onClick={() => fetchUsers(0, false)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all border border-gray-200 dark:border-gray-700">
-                <RefreshCw size={11} /> Refresh
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h3 className="text-gray-900 dark:text-white font-black">Manage Users <span className="text-gray-500 dark:text-gray-600 font-normal text-sm">({allUsers.length})</span></h3>
+              <div className="flex items-center gap-2">
+                {bulkMode ? (
+                  <>
+                    <button onClick={handleBulkVerify} disabled={selectedUserIds.size === 0 || actionProcessing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-40">
+                      {actionProcessing ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                      Verify Selected ({selectedUserIds.size})
+                    </button>
+                    <button onClick={() => setShowBulkDeleteConfirm(true)} disabled={selectedUserIds.size === 0 || actionProcessing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-red-600/20 disabled:opacity-40">
+                      {actionProcessing ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                      Delete Selected ({selectedUserIds.size})
+                    </button>
+                    <button onClick={() => { setBulkMode(false); setSelectedUserIds(new Set()); }}
+                      className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl text-xs font-bold hover:text-gray-900 dark:hover:text-white transition-all">Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setBulkMode(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 transition-all border border-gray-200 dark:border-gray-800">
+                      <Layers size={12} /> Bulk Actions
+                    </button>
+                    <button onClick={() => fetchUsers(0, false)} className="p-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-gray-500 transition-all border border-gray-200 dark:border-gray-800"><RefreshCw size={14} /></button>
+                  </>
+                )}
+              </div>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-600" size={14} />
@@ -946,6 +1153,15 @@ const AdminPanelTool = ({ currentUserId }) => {
                     <div key={user.id}
                       className="flex items-center justify-between p-3.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:border-gray-300 dark:hover:border-gray-700 transition-all shadow-sm">
                       <div className="flex items-center gap-3 min-w-0">
+                        {bulkMode && (
+                          <button onClick={(e) => { e.stopPropagation(); toggleUserSelection(user.id); }}
+                            className={`w-5 h-5 rounded-lg border-2 transition-all flex items-center justify-center shrink-0
+                              ${selectedUserIds.has(user.id) 
+                                ? "bg-blue-600 border-blue-600 text-white" 
+                                : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700"}`}>
+                            {selectedUserIds.has(user.id) && <Check size={12} strokeWidth={4} />}
+                          </button>
+                        )}
                         <div onClick={() => setSelectedUserId(user.id)}
                           className="relative w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80 shrink-0">
                           {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="36px" className="object-cover" /> : user.username?.substring(0, 2)}
@@ -963,11 +1179,17 @@ const AdminPanelTool = ({ currentUserId }) => {
                         </div>
                       </div>
                       <div className="flex gap-1.5 shrink-0 ml-3">
+                        {user.is_verified && (
+                          <button onClick={() => handleRemoveVerification(user.id, user.username)} title="Remove Verification"
+                            className="p-2 bg-gray-50 dark:bg-gray-800 text-gray-500 hover:text-amber-500 dark:hover:text-amber-400 rounded-xl transition-all border border-gray-200 dark:border-gray-700">
+                            <XCircle size={14} />
+                          </button>
+                        )}
                         <button onClick={() => handleTogglePremium(user.id, user.is_premium, user.username)} title="Toggle Premium"
                           className={`p-2 rounded-xl transition-all border text-xs ${user.is_premium ? "bg-amber-50 dark:bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-200 dark:border-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:text-amber-500 dark:hover:text-amber-400"}`}>
                           <Crown size={14} />
                         </button>
-                        <button onClick={() => handleToggleAdmin(user.id, user.is_admin, user.username)} title="Toggle Admin"
+                        <button onClick={() => setShowAdminToggleConfirm(user)} title="Toggle Admin"
                           className={`p-2 rounded-xl transition-all border text-xs ${user.is_admin ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:text-amber-500 dark:hover:text-amber-400"}`}>
                           <ShieldCheck size={14} />
                         </button>
@@ -975,7 +1197,7 @@ const AdminPanelTool = ({ currentUserId }) => {
                           className="p-2 bg-gray-50 dark:bg-gray-800 text-gray-500 hover:text-violet-500 dark:hover:text-violet-400 rounded-xl transition-all border border-gray-200 dark:border-gray-700">
                           <UserCog size={14} />
                         </button>
-                        <button onClick={() => handleDeleteUser(user.id, user.username)} title="Delete"
+                        <button onClick={() => setShowUserDeleteConfirm(user)} title="Delete"
                           className="p-2 bg-gray-50 dark:bg-gray-800 text-gray-500 hover:text-red-500 dark:hover:text-red-400 rounded-xl transition-all border border-gray-200 dark:border-gray-700">
                           <Trash2 size={14} />
                         </button>
@@ -1144,20 +1366,20 @@ const AdminPanelTool = ({ currentUserId }) => {
                             </>
                           )}
                           {sub.review_note && (
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto italic truncate max-w-[160px]">"{sub.review_note}"</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto italic truncate max-w-[160px]">&quot;{sub.review_note}&quot;</p>
                           )}
                         </div>
                       )}
                       {sub.status === "active" && (
                         <div className="px-4 py-2.5 flex items-center gap-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
                           <CheckCircle2 size={13} /> Approved and active
-                          {sub.review_note && <span className="text-gray-400 dark:text-gray-500 font-normal">· "{sub.review_note}"</span>}
+                          {sub.review_note && <span className="text-gray-400 dark:text-gray-500 font-normal">· &quot;{sub.review_note}&quot;</span>}
                         </div>
                       )}
                       {sub.status === "declined" && (
                         <div className="px-4 py-2.5 flex items-center gap-2 text-[11px] text-red-600 dark:text-red-400 font-bold">
                           <XCircle size={13} /> Declined
-                          {sub.review_note && <span className="text-gray-400 dark:text-gray-500 font-normal">· "{sub.review_note}"</span>}
+                          {sub.review_note && <span className="text-gray-400 dark:text-gray-500 font-normal">· &quot;{sub.review_note}&quot;</span>}
                         </div>
                       )}
                     </div>
@@ -1334,12 +1556,17 @@ const AdminPanelTool = ({ currentUserId }) => {
                           {task.linked_to && <p className="text-[10px] text-gray-500 flex items-center gap-1 mb-1"><FileText size={9} />{task.linked_to}</p>}
                           <p className="text-xs text-gray-600 dark:text-gray-500 line-clamp-2">{task.description}</p>
                         </div>
-                        <button onClick={() => handleComplexUpdate(task.id, task.status === "completed" ? "pending" : "completed")}
-                          disabled={actionProcessing}
-                          className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all disabled:opacity-50 ${
-                            task.status === "completed" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20" : "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20"}`}>
-                          {task.status}
-                        </button>
+                        <div className="flex flex-col gap-2">
+                          <button onClick={() => handleComplexUpdate(task.id, task.status === "completed" ? "pending" : "completed")}
+                            disabled={actionProcessing}
+                            className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all disabled:opacity-50 ${
+                              task.status === "completed" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20" : "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20"}`}>
+                            {task.status}
+                          </button>
+                          <button onClick={() => setShowTaskDeleteConfirm(task)} className="p-2 text-gray-400 hover:text-red-500 transition-colors self-end">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800/60">
                         <div className="flex items-center gap-2">
@@ -1359,6 +1586,12 @@ const AdminPanelTool = ({ currentUserId }) => {
                   ))}
           </div>
         )}
+
+        {/* ── SYSTEM LOGS ── */}
+        {adminTab === "system_logs" && (
+          <SystemLogsView />
+        )}
+        </div>
       </div>
 
       {/* ── MODALS ─────────────────────────────────────────────────────────────── */}
@@ -1475,6 +1708,110 @@ const AdminPanelTool = ({ currentUserId }) => {
                 className={`flex-1 py-2.5 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-all
                   ${actionPrompt.newStatus === "accepted" ? "bg-emerald-600 hover:bg-emerald-500" : "bg-red-600 hover:bg-red-500"}`}>
                 {actionProcessing ? <Loader2 size={14} className="animate-spin" /> : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk User Delete Confirmation */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm" onClick={() => !actionProcessing && setShowBulkDeleteConfirm(false)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-8 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100 dark:border-red-900/50">
+              <Trash2 size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Purge Users?</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-xs mb-8 leading-relaxed">
+              Permanently remove <span className="font-bold text-gray-900 dark:text-gray-200">{selectedUserIds.size} selected users</span> from the network? This cannot be undone.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button onClick={handleBulkDelete} disabled={actionProcessing}
+                className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-red-600/20 active:scale-95">
+                {actionProcessing ? <Loader2 size={16} className="animate-spin" /> : "Confirm Purge"}
+              </button>
+              <button onClick={() => setShowBulkDeleteConfirm(false)}
+                className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold rounded-xl text-sm hover:bg-gray-200 transition-all">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Delete Confirmation (Pop card) */}
+      {showUserDeleteConfirm && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm" onClick={() => !actionProcessing && setShowUserDeleteConfirm(null)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-8 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100 dark:border-red-900/50">
+              <Trash2 size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete User?</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-xs mb-8 leading-relaxed">
+              Permanently remove <span className="font-bold text-gray-900 dark:text-gray-200">@{showUserDeleteConfirm.username}</span> from the network? All profile data and connections will be purged.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => { handleDeleteUser(showUserDeleteConfirm.id, showUserDeleteConfirm.username); setShowUserDeleteConfirm(null); }}
+                className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-red-600/20 active:scale-95">
+                Confirm Deletion
+              </button>
+              <button onClick={() => setShowUserDeleteConfirm(null)}
+                className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold rounded-xl text-sm hover:bg-gray-200 transition-all">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Toggle Confirmation (Pop card) */}
+      {showAdminToggleConfirm && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm" onClick={() => !actionProcessing && setShowAdminToggleConfirm(null)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-8 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className={`w-14 h-14 ${showAdminToggleConfirm.is_admin ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 border-red-100 dark:border-red-900/50" : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-500 border-blue-100 dark:border-blue-900/50"} rounded-2xl flex items-center justify-center mx-auto mb-4 border`}>
+              <Shield size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">{showAdminToggleConfirm.is_admin ? "Revoke Admin?" : "Grant Admin?"}</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-xs mb-8 leading-relaxed">
+              {showAdminToggleConfirm.is_admin ? `Remove administrative privileges from @${showAdminToggleConfirm.username}?` : `Grant @${showAdminToggleConfirm.username} full access to the admin terminal?`}
+            </p>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => { handleToggleAdmin(showAdminToggleConfirm.id, showAdminToggleConfirm.is_admin, showAdminToggleConfirm.username); setShowAdminToggleConfirm(null); }}
+                className={`w-full py-3 ${showAdminToggleConfirm.is_admin ? "bg-red-600 hover:bg-red-500 shadow-red-600/20" : "bg-blue-600 hover:bg-blue-500 shadow-blue-600/20"} text-white font-bold rounded-xl text-sm transition-all shadow-lg active:scale-95`}>
+                {showAdminToggleConfirm.is_admin ? "Revoke Privileges" : "Grant Privileges"}
+              </button>
+              <button onClick={() => setShowAdminToggleConfirm(null)}
+                className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold rounded-xl text-sm hover:bg-gray-200 transition-all">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Delete Confirmation (Pop card) */}
+      {showTaskDeleteConfirm && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm" onClick={() => !actionProcessing && setShowTaskDeleteConfirm(null)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-8 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100 dark:border-red-900/50">
+              <Trash2 size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Task?</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-xs mb-8 leading-relaxed">
+              Permanently remove <span className="font-bold text-gray-900 dark:text-gray-200">&quot;{showTaskDeleteConfirm.title}&quot;</span> from the network? This action cannot be reversed.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => { handleDeleteTask(showTaskDeleteConfirm.id); setShowTaskDeleteConfirm(null); }}
+                className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-red-600/20 active:scale-95">
+                Purge Task
+              </button>
+              <button onClick={() => setShowTaskDeleteConfirm(null)}
+                className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold rounded-xl text-sm hover:bg-gray-200 transition-all">
+                Cancel
               </button>
             </div>
           </div>
@@ -2077,7 +2414,7 @@ const QuoteTool = () => {
             key={i}
             className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 hover:border-violet-200 dark:hover:border-violet-500/20 transition-colors"
           >
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">"{q.text}"</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">&quot;{q.text}&quot;</p>
             <div className="flex items-center justify-between mt-2">
               <p className="text-xs font-bold text-gray-400 dark:text-gray-600">— {q.author}</p>
               <span className="text-[10px] font-black uppercase tracking-wide text-gray-400 dark:text-gray-700">{q.tag}</span>

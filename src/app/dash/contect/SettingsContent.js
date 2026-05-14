@@ -4,10 +4,11 @@ import { useTheme } from "next-themes";
 import {
   Moon, Sun, Monitor, Palette, Check, AlertTriangle, Trash2, X,
   Loader2, BadgeCheck, Shield, Volume2, VolumeX, Users, Crown,
-  UserCheck, Activity, TrendingUp, Bell, BellOff, Settings,
+  UserCheck, Activity, TrendingUp, Bell, Settings,
   ChevronRight, BarChart3, Zap, Lock, Globe, RefreshCw, Eye,
   UserPlus, ShieldCheck, Award, Smartphone, Copy, KeyRound,
   LogOut, Fingerprint, Clock, CheckCircle2, XCircle,
+  Camera, User, Link2, AtSign,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../supabaseClient";
@@ -124,11 +125,11 @@ function RecentUsersTable({ users, loading }) {
                 <td className="py-3 pr-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 shrink-0">
-                      {(u.username || u.full_name || "?")[0]?.toUpperCase()}
+                      {(u.username || "?")[0]?.toUpperCase()}
                     </div>
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs flex items-center gap-1">
-                        {u.username || u.full_name || "—"}
+                        {u.username || "—"}
                         {u.is_verified && <BadgeCheck size={12} className="text-blue-400 fill-blue-400" />}
                       </p>
                       <p className="text-[10px] text-gray-500">{u.email || ""}</p>
@@ -177,9 +178,14 @@ export default function SettingsContent() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState("settings");
+  const [settingsSection, setSettingsSection] = useState("profile");
 
   // Profile & prefs
   const [profile, setProfile] = useState(null);
+  const [editProfile, setEditProfile] = useState({ username: "", status: "", website: "", github: "", work_status: "None" });
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [requestingVerification, setRequestingVerification] = useState(false);
 
@@ -243,11 +249,20 @@ export default function SettingsContent() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const [profileRes] = await Promise.all([
-        supabase.from("profiles").select("username, is_verified, verification_status, role").eq("id", session.user.id).single(),
+        supabase.from("profiles").select("username, status, website, github, work_status, avatar_url, is_verified, verification_status, role").eq("id", session.user.id).single(),
       ]);
       if (profileRes.data) {
-        setProfile(profileRes.data);
-        setIsAdmin(profileRes.data.role === "admin" || profileRes.data.role === "founder");
+        const p = profileRes.data;
+        setProfile(p);
+        setIsAdmin(p.role === "admin" || p.role === "founder");
+        setAvatarUrl(p.avatar_url || "");
+        setEditProfile({
+          username:    p.username    || "",
+          status:      p.status      || "",
+          website:     p.website     || "",
+          github:      p.github      || "",
+          work_status: p.work_status || "None",
+        });
       }
 
       // Check 2FA status
@@ -300,7 +315,7 @@ export default function SettingsContent() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, username, full_name, email, role, is_verified, verification_status")
+        .select("id, username, email, role, is_verified, verification_status")
         .limit(10);
       if (error) throw error;
       setRecentUsers(data || []);
@@ -360,6 +375,93 @@ export default function SettingsContent() {
       setRequestingVerification(false);
     }
   };
+
+  const handleSaveProfile = async () => {
+    setProfileSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated.");
+      const { error } = await supabase.from("profiles").update({
+        username:    editProfile.username.trim(),
+        status:      editProfile.status.trim(),
+        website:     editProfile.website.trim(),
+        github:      editProfile.github.trim(),
+        work_status: editProfile.work_status,
+      }).eq("id", session.user.id);
+      if (error) throw error;
+      setProfile(p => ({ ...p, username: editProfile.username.trim() }));
+      showToast("Profile saved!");
+    } catch (e) {
+      showToast(e.message || "Failed to save profile.", "error");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = async (file) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { showToast("Image must be under 2 MB.", "error"); return; }
+    setAvatarUploading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated.");
+      const ext = file.name.split(".").pop();
+      const path = `${session.user.id}/avatar.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = urlData.publicUrl + `?t=${Date.now()}`;
+      const { error: updateErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", session.user.id);
+      if (updateErr) throw updateErr;
+      setAvatarUrl(url);
+      showToast("Profile photo updated!");
+    } catch (e) {
+      showToast(e.message || "Upload failed.", "error");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  // ── Handle profile verification status ──────────────────────────────────────
+  const handleApproveVerification = async (userId) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_verified: true, verification_status: "approved" })
+        .eq("id", userId);
+      if (error) throw error;
+      showToast("User verified successfully!");
+      fetchRecentUsers();
+      fetchAdminStats();
+    } catch (error) {
+      showToast(error.message, "error");
+    }
+  };
+
+  const handleRejectVerification = async (userId) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ verification_status: "rejected" })
+        .eq("id", userId);
+      if (error) throw error;
+      showToast("Verification request rejected.", "error");
+      fetchRecentUsers();
+      fetchAdminStats();
+    } catch (error) {
+      showToast(error.message, "error");
+    }
+  };
+
+  // ── Handle profile work status ──────────────────────────────────────────────
+  const handleWorkStatusChange = async (newStatus) => {
+    setEditProfile((p) => ({ ...p, work_status: newStatus }));
+    // Note: This state update is persisted when handleSaveProfile is called
+  };
+
+  // ── Handle profile website and github ───────────────────────────────────────
+  const handleWebsiteChange = (e) => setEditProfile((p) => ({ ...p, website: e.target.value }));
+  const handleGithubChange = (e) => setEditProfile((p) => ({ ...p, github: e.target.value.replace(/^@/, "") }));
 
   const toggleMute = () => {
     const next = !isMuted;
@@ -448,6 +550,15 @@ export default function SettingsContent() {
     { id: "system", label: "System", icon: Monitor, desc: "Matches device" },
   ];
 
+  const SETTINGS_NAV = [
+    { id: "profile",       label: "Profile",       icon: User      },
+    { id: "appearance",    label: "Appearance",    icon: Palette   },
+    { id: "notifications", label: "Notifications", icon: Bell      },
+    { id: "security",      label: "Security",      icon: Lock      },
+    { id: "verification",  label: "Verification",  icon: BadgeCheck},
+    { id: "account",       label: "Account",       icon: Settings  },
+  ];
+
   const tabs = [
     { id: "settings", label: "Settings", icon: Settings },
     ...(isAdmin ? [{ id: "admin", label: "Admin", icon: BarChart3 }] : []),
@@ -501,150 +612,310 @@ export default function SettingsContent() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════════ */}
-        {/* SETTINGS TAB */}
+        {/* SETTINGS TAB */} 
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {activeTab === "settings" && (
-          <div className="space-y-6">
+          <div className="flex gap-6 items-start">
 
-            {/* ── Appearance ── */}
-            <Card>
-              <SectionHeader icon={Palette} title="Appearance" subtitle="Choose how the app looks to you." accent="blue" />
-              <div className="grid grid-cols-3 gap-3">
-                {themeOptions.map((t) => {
-                  const Icon = t.icon;
-                  const active = theme === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => { setTheme(t.id); showToast(`Theme set to ${t.label}`); }}
-                      className={`relative flex flex-col items-center gap-3 p-5 rounded-xl border transition-all duration-200 
-                        ${active
-                          ? "bg-blue-50 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/50 text-blue-600 dark:text-blue-300"
-                          : "bg-gray-100 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/50 text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300"}`}
-                    >
-                      {active && (
-                        <div className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
-                          <Check size={10} strokeWidth={3} className="text-white" />
+            {/* ── Left sidebar nav (desktop) ── */}
+            <nav className="hidden sm:flex flex-col w-44 shrink-0 sticky top-4">
+              <p className="text-[9px] font-black text-gray-400 uppercase tracking-[2.5px] px-3 mb-2">Sections</p>
+              {SETTINGS_NAV.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setSettingsSection(s.id)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
+                    settingsSection === s.id
+                      ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100"
+                  }`}
+                >
+                  <s.icon size={15} className="shrink-0" />
+                  {s.label}
+                </button>
+              ))}
+            </nav>
+
+            {/* ── Right content area ── */}
+            <div className="flex-1 min-w-0 space-y-5">
+
+              {/* Mobile horizontal tabs */}
+              <div className="sm:hidden flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {SETTINGS_NAV.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSettingsSection(s.id)}
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                      settingsSection === s.id
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    <s.icon size={11} />
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Right content area - sections */}
+              <div className="flex-1 min-w-0 space-y-5">
+                {/* ── PROFILE ── */}
+                {settingsSection === "profile" && (
+                  <Card>
+                    <SectionHeader icon={User} title="Profile" subtitle="Update your public profile information." accent="blue" />
+
+                    {/* Avatar */}
+                    <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-gray-800">
+                      <div className="relative shrink-0">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 p-[2px] shadow-md">
+                          <div className="w-full h-full rounded-[14px] bg-white dark:bg-gray-900 overflow-hidden flex items-center justify-center text-gray-700 dark:text-gray-300 text-lg font-black uppercase">
+                            {avatarUrl
+                              // eslint-disable-next-line @next/next/no-img-element
+                              ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                              : (editProfile.username?.substring(0, 2) || "??")}
+                          </div>
                         </div>
-                      )}
-                      <Icon size={24} />
-                      <div className="text-center">
-                        <p className="text-xs font-bold">{t.label}</p>
-                        <p className="text-[10px] text-gray-600 mt-0.5">{t.desc}</p>
+                        {avatarUploading && (
+                          <div className="absolute inset-0 rounded-2xl bg-black/50 flex items-center justify-center">
+                            <Loader2 size={18} className="animate-spin text-white" />
+                          </div>
+                        )}
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </Card>
+                      <div>
+                        <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 hover:bg-blue-500/20 transition-all">
+                          <Camera size={13} />
+                          {avatarUploading ? "Uploading…" : "Change Photo"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={avatarUploading}
+                            onChange={(e) => handleAvatarUpload(e.target.files?.[0])}
+                          />
+                        </label>
+                        <p className="text-[10px] text-gray-400 mt-1.5">JPG, PNG or GIF · Max 2 MB</p>
+                      </div>
+                    </div>
 
-            {/* ── App Preferences ── */}
-            <Card>
-              <SectionHeader icon={Bell} title="Notifications" subtitle="Control alerts and sounds." accent="purple" />
-              <RowItem
-                title="Notification Sounds"
-                desc="Play audio alerts for messages and calls."
-              >
-                <button
-                  onClick={toggleMute}
-                  className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all 
-                    ${isMuted
-                      ? "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600"
-                      : "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20"}`}
-                >
-                  {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                  {isMuted ? "Muted" : "Enabled"}
-                </button>
-              </RowItem>
-            </Card>
+                    {/* Form fields */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Username</label>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold select-none">@</span>
+                          <input
+                            type="text"
+                            value={editProfile.username}
+                            onChange={(e) => setEditProfile((p) => ({ ...p, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") }))}
+                            placeholder="yourhandle"
+                            className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl pl-8 pr-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                          />
+                        </div>
+                      </div>
 
-            {/* ── Verification ── */}
-            <Card>
-              <SectionHeader icon={BadgeCheck} title="Account Verification" subtitle="Get the verified badge on your profile." accent="blue" />
-              <RowItem
-                title="Verified Node Status"
-                desc="Official verification issued by beoneofus."
-              >
-                {profile?.is_verified ? (
-                  <div className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <BadgeCheck size={14} /> Verified
-                  </div>
-                ) : profile?.verification_status === "pending" ? (
-                  <div className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                    <Loader2 size={14} className="animate-spin" /> Pending Review
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleRequestVerification}
-                    disabled={requestingVerification}
-                    className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-all disabled:opacity-50"
-                  >
-                    {requestingVerification ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />}
-                    Request Verification
-                  </button>
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Bio / Status</label>
+                        <textarea
+                          rows={2}
+                          value={editProfile.status}
+                          onChange={(e) => setEditProfile((p) => ({ ...p, status: e.target.value }))}
+                          placeholder="e.g. Full-stack developer · building in public · open to work"
+                          className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">{editProfile.status.length}/120 characters</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Website</label>
+                        <div className="relative">
+                          <Link2 size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="url"
+                            value={editProfile.website}
+                            onChange={handleWebsiteChange}
+                            placeholder="https://yoursite.com"
+                            className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">GitHub</label>
+                        <div className="relative">
+                          <AtSign size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="text"
+                            value={editProfile.github}
+                            onChange={handleGithubChange}
+                            placeholder="githubhandle"
+                            className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Work Status</label>
+                        <select
+                          value={editProfile.work_status}
+                        onChange={(e) => handleWorkStatusChange(e.target.value)}
+                          className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                        >
+                          <option value="None">Not specified</option>
+                          <option value="Open to Work">Open to Work</option>
+                          <option value="Hiring">Hiring</option>
+                          <option value="Freelancing">Freelancing</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                      <button
+                        onClick={handleSaveProfile}
+                        disabled={profileSaving}
+                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white transition-all shadow-sm shadow-blue-500/20 active:scale-95"
+                      >
+                        {profileSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                        {profileSaving ? "Saving…" : "Save Changes"}
+                      </button>
+                    </div>
+                  </Card>
                 )}
-              </RowItem>
-            </Card>
 
-            {/* ── Security ── */}
-            <Card>
-              <SectionHeader icon={Lock} title="Security" subtitle="Manage your account security settings." accent="emerald" />
-              <div className="space-y-3">
+                {/* ── APPEARANCE ── */}
+                {settingsSection === "appearance" && (
+                  <Card>
+                    <SectionHeader icon={Palette} title="Appearance" subtitle="Choose how the app looks to you." accent="blue" />
+                    <div className="grid grid-cols-3 gap-3">
+                      {themeOptions.map((t) => {
+                        const Icon = t.icon;
+                        const active = theme === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            onClick={() => { setTheme(t.id); showToast(`Theme set to ${t.label}`); }}
+                            className={`relative flex flex-col items-center gap-3 p-5 rounded-xl border transition-all duration-200
+                              ${active
+                                ? "bg-blue-50 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/50 text-blue-600 dark:text-blue-300"
+                                : "bg-gray-100 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/50 text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300"}`}
+                          >
+                            {active && (
+                              <div className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                                <Check size={10} strokeWidth={3} className="text-white" />
+                              </div>
+                            )}
+                            <Icon size={24} />
+                            <div className="text-center">
+                              <p className="text-xs font-bold">{t.label}</p>
+                              <p className="text-[10px] text-gray-600 mt-0.5">{t.desc}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                )}
 
-                {/* 2FA row */}
-                <RowItem
-                  title="Two-Factor Authentication"
-                  desc="Require a one-time code from your authenticator app on sign-in."
-                >
-                  <div className="flex items-center gap-2 shrink-0">
-                    {mfaLoading ? (
-                      <Loader2 size={14} className="animate-spin text-gray-400" />
-                    ) : mfaEnabled ? (
-                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <CheckCircle2 size={13} /> Active
-                      </span>
-                    ) : null}
-                    <button
-                      onClick={handleOpen2FA}
-                      disabled={mfaLoading}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all disabled:opacity-50 ${
-                        mfaEnabled
-                          ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
-                          : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
-                      }`}
-                    >
-                      {mfaEnabled ? <><XCircle size={14} /> Disable 2FA</> : <><Fingerprint size={14} /> Enable 2FA</>}
-                    </button>
+                {/* ── NOTIFICATIONS ── */}
+                {settingsSection === "notifications" && (
+                  <Card>
+                    <SectionHeader icon={Bell} title="Notifications" subtitle="Control alerts and sounds." accent="purple" />
+                    <RowItem title="Notification Sounds" desc="Play audio alerts for messages and calls.">
+                      <button
+                        onClick={toggleMute}
+                        className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all
+                          ${isMuted
+                            ? "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700"
+                            : "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20"}`}
+                      >
+                        {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                        {isMuted ? "Muted" : "Enabled"}
+                      </button>
+                    </RowItem>
+                  </Card>
+                )}
+
+                {/* ── SECURITY ── */}
+                {settingsSection === "security" && (
+                  <Card>
+                    <SectionHeader icon={Lock} title="Security" subtitle="Manage your account security settings." accent="emerald" />
+                    <div className="space-y-3">
+                      <RowItem title="Two-Factor Authentication" desc="Require a one-time code from your authenticator app on sign-in.">
+                        <div className="flex items-center gap-2 shrink-0">
+                          {mfaLoading ? (
+                            <Loader2 size={14} className="animate-spin text-gray-400" />
+                          ) : mfaEnabled ? (
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              <CheckCircle2 size={13} /> Active
+                            </span>
+                          ) : null}
+                          <button
+                            onClick={handleOpen2FA}
+                            disabled={mfaLoading}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all disabled:opacity-50 ${
+                              mfaEnabled
+                                ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+                                : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
+                            }`}
+                          >
+                            {mfaEnabled ? <><XCircle size={14} /> Disable 2FA</> : <><Fingerprint size={14} /> Enable 2FA</>}
+                          </button>
+                        </div>
+                      </RowItem>
+                      <RowItem title="Active Sessions" desc="View and manage devices currently signed in to your account.">
+                        <button
+                          onClick={() => setShowSessionsModal(true)}
+                          className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-all"
+                        >
+                          <Eye size={14} /> View Sessions
+                        </button>
+                      </RowItem>
+                    </div>
+                  </Card>
+                )}
+
+                {/* ── VERIFICATION ── */}
+                {settingsSection === "verification" && (
+                  <Card>
+                    <SectionHeader icon={BadgeCheck} title="Account Verification" subtitle="Get the verified badge on your profile." accent="blue" />
+                    <RowItem title="Verified Node Status" desc="Official verification issued by beoneofus.">
+                      {profile?.is_verified ? (
+                        <div className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <BadgeCheck size={14} /> Verified
+                        </div>
+                      ) : profile?.verification_status === "pending" ? (
+                        <div className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          <Loader2 size={14} className="animate-spin" /> Pending Review
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleRequestVerification}
+                          disabled={requestingVerification}
+                          className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-all disabled:opacity-50"
+                        >
+                          {requestingVerification ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />}
+                          Request Verification
+                        </button>
+                      )}
+                    </RowItem>
+                  </Card>
+                )}
+
+                {/* ── ACCOUNT ── */}
+                {settingsSection === "account" && (
+                  <div className="bg-white/80 dark:bg-gray-900/80 border border-red-200 dark:border-red-900/30 rounded-2xl p-6 backdrop-blur-sm">
+                    <SectionHeader icon={AlertTriangle} title="Danger Zone" subtitle="These actions are permanent and cannot be undone." accent="red" />
+                    <RowItem title="Delete Account" desc="Permanently delete your account and all associated data.">
+                      <button
+                        onClick={() => setShowDeleteModal(true)}
+                        className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all"
+                      >
+                        <Trash2 size={14} /> Delete Account
+                      </button>
+                    </RowItem>
                   </div>
-                </RowItem>
-
-                {/* Active Sessions row */}
-                <RowItem
-                  title="Active Sessions"
-                  desc="View and manage devices currently signed in to your account."
-                >
-                  <button
-                    onClick={() => setShowSessionsModal(true)}
-                    className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-all"
-                  >
-                    <Eye size={14} /> View Sessions
-                  </button>
-                </RowItem>
-
+                )}
               </div>
-            </Card>
 
-            {/* ── Danger Zone ── */}
-            <div className="bg-white/80 dark:bg-gray-900/80 border border-red-200 dark:border-red-900/30 rounded-2xl p-6 backdrop-blur-sm">
-              <SectionHeader icon={AlertTriangle} title="Danger Zone" subtitle="These actions are permanent and cannot be undone." accent="red" />
-              <RowItem title="Delete Account" desc="Permanently delete your account and all associated data.">
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all"
-                >
-                  <Trash2 size={14} /> Delete Account
-                </button>
-              </RowItem>
             </div>
           </div>
         )}
@@ -754,23 +1025,13 @@ export default function SettingsContent() {
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={async () => {
-                            const { error } = await supabase
-                              .from("profiles").update({ is_verified: true, verification_status: "approved" }).eq("id", u.id);
-                            if (!error) { fetchRecentUsers(); fetchAdminStats(); showToast(`${u.username} verified!`); }
-                            else showToast(error.message, "error");
-                          }}
+                          onClick={() => handleApproveVerification(u.id)}
                           className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
                         >
                           Approve
                         </button>
                         <button
-                          onClick={async () => {
-                            const { error } = await supabase
-                              .from("profiles").update({ verification_status: "rejected" }).eq("id", u.id);
-                            if (!error) { fetchRecentUsers(); fetchAdminStats(); showToast(`${u.username} rejected`, "error"); }
-                            else showToast(error.message, "error");
-                          }}
+                          onClick={() => handleRejectVerification(u.id)}
                           className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all"
                         >
                           Reject

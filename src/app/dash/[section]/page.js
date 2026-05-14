@@ -24,6 +24,8 @@ const TabSkeleton = () => (
 );
 
 const contentMap = {
+  home:          dynamic(() => import('../contect/HomeDashContent'),      { loading: () => <TabSkeleton /> }),
+  ai:            dynamic(() => import('../contect/AiAssistantContent'),   { loading: () => <TabSkeleton /> }),
   feed:          dynamic(() => import('../contect/FeedContent'),          { loading: () => <TabSkeleton /> }),
   connections:   dynamic(() => import('../contect/ConnectionsContent'),   { loading: () => <TabSkeleton /> }),
   groups:        dynamic(() => import('../contect/GroupsContent'),        { loading: () => <TabSkeleton /> }),
@@ -77,7 +79,7 @@ export default function DashSection() {
   const isFullHeight = section === 'messages';
   const outerCls = isFullHeight
     ? 'w-full h-full overflow-hidden'
-    : `w-full h-full overflow-x-hidden ${section === 'docs' ? 'p-3 md:p-5' : 'p-3 sm:p-4 md:p-5 lg:p-6'}`;
+    : `w-full h-full overflow-x-hidden ${section === 'docs' ? 'p-3 md:p-5' : section === 'home' ? 'p-3 sm:p-4 md:p-5 lg:p-6' : 'p-3 sm:p-4 md:p-5 lg:p-6'}`;
 
   return (
     <div className={outerCls}>

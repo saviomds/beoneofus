@@ -12,7 +12,7 @@ import { supabase } from '../supabaseClient';
 
 /* ── Bottom nav items shown on mobile ── */
 const BOTTOM_NAV = [
-  { id: 'feed',          icon: Home,          label: 'Home' },
+  { id: 'home',          icon: Home,          label: 'Home' },
   { id: 'messages',      icon: MessageSquare, label: 'Msgs' },
   { id: 'notifications', icon: Bell,          label: 'Alerts' },
   { id: 'marketplace',   icon: ShoppingBag,   label: 'Market' },

@@ -1,6 +1,13 @@
 /// <reference lib="webworker" />
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist } from "serwist";
+import {
+  Serwist,
+  StaleWhileRevalidate,
+  CacheFirst,
+  NetworkFirst,
+  ExpirationPlugin,
+  RangeRequestsPlugin,
+} from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -19,98 +26,89 @@ const serwist = new Serwist({
     // Static fonts
     {
       matcher: /\.(?:eot|otf|ttc|ttf|woff|woff2|font\.css)$/i,
-      handler: "StaleWhileRevalidate",
-      options: {
+      handler: new StaleWhileRevalidate({
         cacheName: "static-font-assets",
-        expiration: { maxEntries: 8, maxAgeSeconds: 7 * 24 * 60 * 60 },
-      },
+        plugins: [new ExpirationPlugin({ maxEntries: 8, maxAgeSeconds: 7 * 24 * 60 * 60 })],
+      }),
     },
     // Images
     {
       matcher: /\.(?:jpg|jpeg|gif|png|svg|ico|webp|avif)$/i,
-      handler: "StaleWhileRevalidate",
-      options: {
+      handler: new StaleWhileRevalidate({
         cacheName: "static-image-assets",
-        expiration: { maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 },
-      },
+        plugins: [new ExpirationPlugin({ maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
     },
     // Next.js image optimization
     {
       matcher: /\/_next\/image\?url=.+$/i,
-      handler: "StaleWhileRevalidate",
-      options: {
+      handler: new StaleWhileRevalidate({
         cacheName: "next-image",
-        expiration: { maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 },
-      },
+        plugins: [new ExpirationPlugin({ maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
     },
-    // Audio/video — range requests required
+    // Audio — range requests required
     {
       matcher: /\.(?:mp3|wav|ogg)$/i,
-      handler: "CacheFirst",
-      options: {
-        rangeRequests: true,
+      handler: new CacheFirst({
         cacheName: "static-audio-assets",
-        expiration: { maxEntries: 16, maxAgeSeconds: 24 * 60 * 60 },
-      },
+        plugins: [
+          new RangeRequestsPlugin(),
+          new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 24 * 60 * 60 }),
+        ],
+      }),
     },
     // JS chunks
     {
       matcher: /\.(?:js)$/i,
-      handler: "StaleWhileRevalidate",
-      options: {
+      handler: new StaleWhileRevalidate({
         cacheName: "static-js-assets",
-        expiration: { maxEntries: 48, maxAgeSeconds: 24 * 60 * 60 },
-      },
+        plugins: [new ExpirationPlugin({ maxEntries: 48, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
     },
     // CSS
     {
       matcher: /\.(?:css|less)$/i,
-      handler: "StaleWhileRevalidate",
-      options: {
+      handler: new StaleWhileRevalidate({
         cacheName: "static-style-assets",
-        expiration: { maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 },
-      },
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
     },
     // Next.js data routes
     {
       matcher: /\/_next\/data\/.+\/.+\.json$/i,
-      handler: "StaleWhileRevalidate",
-      options: {
+      handler: new StaleWhileRevalidate({
         cacheName: "next-data",
-        expiration: { maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 },
-      },
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
     },
-    // API routes — always network-first, short timeout
+    // API routes — network-first, short timeout
     {
       matcher: ({ url: { pathname } }: { url: URL }) =>
         pathname.startsWith("/api/"),
-      handler: "NetworkFirst",
-      options: {
+      handler: new NetworkFirst({
         cacheName: "apis",
-        expiration: { maxEntries: 16, maxAgeSeconds: 24 * 60 * 60 },
         networkTimeoutSeconds: 10,
-      },
+        plugins: [new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
     },
-    // HTML navigation — network first with offline fallback, no timeout so slow
-    // cold-start dev builds don't trip the SW and serve /offline prematurely.
+    // HTML navigation — no timeout so slow cold-start dev builds don't trip the SW
     {
       matcher: ({ request }: { request: Request }) =>
         request.destination === "document",
-      handler: "NetworkFirst",
-      options: {
+      handler: new NetworkFirst({
         cacheName: "documents",
-        expiration: { maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 },
-      },
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
     },
     // Everything else
     {
       matcher: ({ request, url: { pathname } }: { request: Request; url: URL }) =>
         request.destination !== "document" || pathname.startsWith("/_next/"),
-      handler: "NetworkFirst",
-      options: {
+      handler: new NetworkFirst({
         cacheName: "others",
-        expiration: { maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 },
-      },
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
     },
   ],
   fallbacks: {

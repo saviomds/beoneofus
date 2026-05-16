@@ -3,12 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import {
-  Search, MoreVertical, Phone, Video, Send,
+  Search, MoreVertical, Send,
   Paperclip, CheckCheck, UserPlus, Check, X,
   Trash2, AlertTriangle, MoreHorizontal, ShieldAlert, ShieldCheck,
   ChevronLeft, MessageSquare, BadgeCheck, Sparkles, Loader2,
-  ThumbsUp, PhoneOff, PhoneCall, VideoOff, MicOff, Mic,
-  Camera, CameraOff, Smile, Star, Pin, Copy, Reply,
+  ThumbsUp, Camera, Smile, Star, Pin, Copy, Reply,
   ZoomIn, Download, Clock, Users, Filter, Bell, BellOff,
   ChevronDown, CornerUpLeft
 } from "lucide-react";
@@ -19,194 +18,7 @@ import { useDashboard } from "./DashboardContext";
 /* ─────────────────────────────────────────────────────────────
    HELPERS
 ───────────────────────────────────────────────────────────── */
-const formatDuration = (seconds) => {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-};
-
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
-
-/* STUN + TURN — TURN is required for real-world NAT/firewall traversal */
-const ICE_SERVERS = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
-  {
-    urls: [
-      "turn:openrelay.metered.ca:80",
-      "turn:openrelay.metered.ca:80?transport=tcp",
-      "turn:openrelay.metered.ca:443?transport=tcp",
-      "turns:openrelay.metered.ca:443",
-    ],
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-];
-
-/* ─────────────────────────────────────────────────────────────
-   CALL OVERLAY
-───────────────────────────────────────────────────────────── */
-function CallOverlay({
-  activeCall, incomingCall, callDuration,
-  localVideoRef, remoteVideoRef,
-  onEnd, onAccept, onReject,
-  peerInfo,
-}) {
-  const [audioMuted, setAudioMuted] = useState(false);
-  const [videoOff, setVideoOff] = useState(false);
-
-  if (incomingCall && !activeCall) {
-    return (
-      <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-xl">
-        <div className="w-full max-w-sm bg-[#0f0f1a] border border-white/10 rounded-3xl p-8 text-center shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-300">
-          <div className="relative w-20 h-20 mx-auto mb-4">
-            <div className="absolute inset-0 rounded-full bg-violet-500/20 animate-ping" />
-            <div className="relative w-20 h-20 rounded-full bg-violet-900/60 border-2 border-violet-400 flex items-center justify-center text-3xl font-black text-violet-200 overflow-hidden">
-              {incomingCall.callerInfo?.avatar_url ? (
-                <Image
-                  src={incomingCall.callerInfo.avatar_url}
-                  alt=""
-                  fill
-                  sizes="80px"
-                  className="object-cover rounded-full"
-                />
-              ) : (
-                <span>{incomingCall.callerInfo?.username?.[0]?.toUpperCase() || "?"}</span>
-              )}
-            </div>
-          </div>
-          <p className="text-white/50 text-xs uppercase tracking-[3px] mb-1">
-            Incoming {incomingCall.isVideo ? "Video" : "Voice"} Call
-          </p>
-          <h3 className="text-white text-xl font-black mb-8">@{incomingCall.callerInfo?.username}</h3>
-          <div className="flex justify-center gap-6">
-            <button onClick={onReject} className="flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center transition-colors shadow-lg shadow-red-600/30">
-                <PhoneOff size={24} className="text-white" />
-              </div>
-              <span className="text-white/50 text-xs">Decline</span>
-            </button>
-            <button onClick={onAccept} className="flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-green-600 hover:bg-green-500 flex items-center justify-center transition-colors shadow-lg shadow-green-600/30 animate-bounce">
-                {incomingCall.isVideo
-                  ? <Video size={24} className="text-white" />
-                  : <Phone size={24} className="text-white" />}
-              </div>
-              <span className="text-white/50 text-xs">Accept</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!activeCall) return null;
-
-  const isRinging = activeCall.status === "ringing";
-  const isConnected = activeCall.status === "connected";
-
-  return (
-    <div className="fixed inset-0 z-[500] bg-[#050510] flex flex-col">
-      {/* Remote video — always mounted so the stream can attach even on audio-only calls */}
-      <video
-        ref={remoteVideoRef}
-        autoPlay
-        playsInline
-        className={`absolute inset-0 w-full h-full object-cover opacity-90 ${
-          activeCall.isVideo && isConnected ? "" : "hidden"
-        }`}
-      />
-
-      {/* Background for audio/ringing state */}
-      {(!activeCall.isVideo || !isConnected) && (
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0d0d1f] via-[#110a1f] to-[#0a0a15]">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 30% 20%, rgba(139,92,246,0.15) 0%, transparent 60%), radial-gradient(circle at 70% 80%, rgba(59,130,246,0.1) 0%, transparent 60%)",
-            }}
-          />
-        </div>
-      )}
-
-      <div className="relative z-10 flex flex-col h-full p-6">
-        {/* Peer info */}
-        <div className="flex items-center gap-4 mb-auto">
-          <div className="relative w-16 h-16 rounded-2xl overflow-hidden border border-white/20 shrink-0">
-            {peerInfo?.avatar_url ? (
-              <Image src={peerInfo.avatar_url} alt="" fill sizes="64px" className="object-cover" />
-            ) : (
-              <div className="w-full h-full bg-violet-900/60 flex items-center justify-center text-white text-2xl font-black">
-                {peerInfo?.username?.[0]?.toUpperCase() || "?"}
-              </div>
-            )}
-          </div>
-          <div>
-            <h2 className="text-white text-xl font-black">@{peerInfo?.username}</h2>
-            <p className="text-white/50 text-sm font-mono">
-              {isRinging ? (
-                <span className="animate-pulse">Ringing...</span>
-              ) : isConnected ? (
-                formatDuration(callDuration)
-              ) : (
-                "Connecting..."
-              )}
-            </p>
-          </div>
-        </div>
-
-        {/* Local video PiP — always mounted to avoid null ref during attach */}
-        <video
-          ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
-          className={`absolute bottom-32 right-6 w-28 h-40 object-cover rounded-2xl border-2 border-white/20 shadow-2xl ${
-            activeCall.isVideo && isConnected ? "" : "hidden"
-          }`}
-        />
-
-        {/* Controls */}
-        <div className="flex justify-center gap-4 pb-4">
-          <button
-            type="button"
-            onClick={() => setAudioMuted((p) => !p)}
-            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-              audioMuted ? "bg-red-600" : "bg-white/20 hover:bg-white/30"
-            }`}
-          >
-            {audioMuted
-              ? <MicOff size={20} className="text-white" />
-              : <Mic size={20} className="text-white" />}
-          </button>
-
-          {activeCall.isVideo && (
-            <button
-              type="button"
-              onClick={() => setVideoOff((p) => !p)}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                videoOff ? "bg-red-600" : "bg-white/20 hover:bg-white/30"
-              }`}
-            >
-              {videoOff
-                ? <CameraOff size={20} className="text-white" />
-                : <Camera size={20} className="text-white" />}
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={onEnd}
-            className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center transition-all shadow-lg shadow-red-600/40 active:scale-95"
-          >
-            <PhoneOff size={22} className="text-white" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ─────────────────────────────────────────────────────────────
    MAIN COMPONENT
@@ -278,39 +90,12 @@ export default function MessagesContent() {
     setTimeout(() => setToastMessage(""), 4000);
   }, []);
 
-  // Call states
-  const [activeCall, setActiveCall] = useState(null);
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [callDuration, setCallDuration] = useState(0);
-  const [peerCallInfo, setPeerCallInfo] = useState(null);
-  const globalCallsRef = useRef(null);
-
-  // WebRTC refs
-  const peerConnectionRef = useRef(null);
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-  const localStreamRef = useRef(null);
-  const pendingOfferRef = useRef(null);
-  const pendingCandidatesRef = useRef([]);
-  const ringAudioRef = useRef(null);
-  const incomingRingAudioRef = useRef(null);
+  const broadcastRef = useRef(null);
 
   /* ── Sync ref ── */
   useEffect(() => {
     activeChatRef.current = activeChat;
   }, [activeChat]);
-
-  /* ── Audio setup — use universally-accessible free audio files ── */
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    // Mixkit royalty-free tones (reliable CDN, no CORS issues)
-    ringAudioRef.current = new Audio(
-      "https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"
-    );
-    incomingRingAudioRef.current = new Audio(
-      "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"
-    );
-  }, []);
 
   /* ── Close more menu on outside click ── */
   useEffect(() => {
@@ -661,333 +446,28 @@ export default function MessagesContent() {
   }, [messages, connectionStatus, typingUsers]);
 
   /* ─────────────────────────────────────────────────────────
-     5. WEBRTC / CALLS
+     5. BROADCAST (typing only)
   ───────────────────────────────────────────────────────── */
-  const cleanupLocalMedia = useCallback(() => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((t) => t.stop());
-      localStreamRef.current = null;
-    }
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
-    }
-    setActiveCall(null);
-    setIncomingCall(null);
-    setPeerCallInfo(null);
-    pendingOfferRef.current = null;
-    pendingCandidatesRef.current = [];
-  }, []);
-
-  const endCall = useCallback(() => {
-    if (activeCall?.peerId) {
-      globalCallsRef.current?.send({
-        type: "broadcast",
-        event: "call_end",
-        payload: { targetId: activeCall.peerId },
-      });
-    }
-    cleanupLocalMedia();
-  }, [activeCall, cleanupLocalMedia]);
-
   useEffect(() => {
     if (!currentUserId) return;
 
-    globalCallsRef.current = supabase
-      .channel("global-calls")
-      .on("broadcast", { event: "call_ring" }, async ({ payload }) => {
-        if (payload.targetId !== currentUserId) return;
-        const { data } = await supabase
-          .from("profiles")
-          .select("username, avatar_url, is_verified")
-          .eq("id", payload.callerId)
-          .single();
-        setIncomingCall({ ...payload, callerInfo: data });
-      })
-      .on("broadcast", { event: "call_accept" }, ({ payload }) => {
-        if (payload.targetId !== currentUserId) return;
-        setActiveCall((prev) =>
-          prev ? { ...prev, status: "connected" } : null
-        );
-      })
-      .on("broadcast", { event: "call_reject" }, ({ payload }) => {
-        if (payload.targetId !== currentUserId) return;
-        cleanupLocalMedia();
-        showToast("Call was declined.", "error");
-      })
-      .on("broadcast", { event: "call_end" }, ({ payload }) => {
-        if (payload.targetId !== currentUserId) return;
-        cleanupLocalMedia();
-      })
+    broadcastRef.current = supabase
+      .channel(`broadcast-${currentUserId}-${Date.now()}`)
       .on("broadcast", { event: "typing" }, ({ payload }) => {
         if (payload.targetId !== currentUserId) return;
         setTypingUsers((prev) => ({ ...prev, [payload.senderId]: true }));
         if (typingTimeoutsRef.current[payload.senderId])
           clearTimeout(typingTimeoutsRef.current[payload.senderId]);
         typingTimeoutsRef.current[payload.senderId] = setTimeout(() => {
-          setTypingUsers((prev) => ({
-            ...prev,
-            [payload.senderId]: false,
-          }));
+          setTypingUsers((prev) => ({ ...prev, [payload.senderId]: false }));
         }, 3000);
       })
-      .on("broadcast", { event: "webrtc_offer" }, async ({ payload }) => {
-        if (payload.targetId !== currentUserId) return;
-        if (localStreamRef.current && peerConnectionRef.current) {
-          try {
-            const pc = peerConnectionRef.current;
-            await pc.setRemoteDescription(
-              new RTCSessionDescription(payload.offer)
-            );
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            globalCallsRef.current?.send({
-              type: "broadcast",
-              event: "webrtc_answer",
-              payload: { targetId: payload.senderId, answer },
-            });
-            pendingCandidatesRef.current.forEach((c) =>
-              pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error)
-            );
-            pendingCandidatesRef.current = [];
-          } catch (e) {
-            console.error(e);
-          }
-        } else {
-          pendingOfferRef.current = payload;
-        }
-      })
-      .on("broadcast", { event: "webrtc_answer" }, async ({ payload }) => {
-        if (
-          payload.targetId !== currentUserId ||
-          !peerConnectionRef.current
-        )
-          return;
-        try {
-          await peerConnectionRef.current.setRemoteDescription(
-            new RTCSessionDescription(payload.answer)
-          );
-          pendingCandidatesRef.current.forEach((c) =>
-            peerConnectionRef.current
-              .addIceCandidate(new RTCIceCandidate(c))
-              .catch(console.error)
-          );
-          pendingCandidatesRef.current = [];
-        } catch (e) {
-          console.error(e);
-        }
-      })
-      .on(
-        "broadcast",
-        { event: "webrtc_ice_candidate" },
-        async ({ payload }) => {
-          if (payload.targetId !== currentUserId) return;
-          if (peerConnectionRef.current?.remoteDescription) {
-            try {
-              await peerConnectionRef.current.addIceCandidate(
-                new RTCIceCandidate(payload.candidate)
-              );
-            } catch (e) {
-              console.error(e);
-            }
-          } else {
-            pendingCandidatesRef.current.push(payload.candidate);
-          }
-        }
-      )
       .subscribe();
 
     return () => {
-      if (globalCallsRef.current)
-        supabase.removeChannel(globalCallsRef.current);
+      if (broadcastRef.current) supabase.removeChannel(broadcastRef.current);
     };
-  }, [currentUserId, cleanupLocalMedia, showToast]);
-
-  /* ── Call actions ── */
-  const startCall = useCallback(
-    (isVideo) => {
-      if (!activeChat || !currentUserId) return;
-      const roomId = `call-${[currentUserId, activeChat.id]
-        .sort()
-        .join("-")}-${Date.now()}`;
-      globalCallsRef.current?.send({
-        type: "broadcast",
-        event: "call_ring",
-        payload: {
-          targetId: activeChat.id,
-          callerId: currentUserId,
-          isVideo,
-          roomId,
-        },
-      });
-      setActiveCall({
-        roomId,
-        isVideo,
-        status: "ringing",
-        peerId: activeChat.id,
-        isCaller: true,
-      });
-      setPeerCallInfo(activeChat);
-    },
-    [activeChat, currentUserId]
-  );
-
-  const acceptCall = useCallback(() => {
-    if (!incomingCall) return;
-    globalCallsRef.current?.send({
-      type: "broadcast",
-      event: "call_accept",
-      payload: { targetId: incomingCall.callerId },
-    });
-    setActiveCall({
-      roomId: incomingCall.roomId,
-      isVideo: incomingCall.isVideo,
-      status: "connected",
-      peerId: incomingCall.callerId,
-      isCaller: false,
-    });
-    setPeerCallInfo(
-      incomingCall.callerInfo
-        ? { ...incomingCall.callerInfo, id: incomingCall.callerId }
-        : null
-    );
-    if (!activeChat || activeChat.id !== incomingCall.callerId) {
-      setActiveChat({ id: incomingCall.callerId, ...incomingCall.callerInfo });
-    }
-    setIncomingCall(null);
-  }, [incomingCall, activeChat]);
-
-  const rejectCall = useCallback(() => {
-    if (!incomingCall) return;
-    globalCallsRef.current?.send({
-      type: "broadcast",
-      event: "call_reject",
-      payload: { targetId: incomingCall.callerId },
-    });
-    cleanupLocalMedia();
-  }, [incomingCall, cleanupLocalMedia]);
-
-  /* ── Media when call is connected ── */
-  // FIX: stable dependency — only trigger on status + isVideo changes, use refs for peerId/isCaller
-  const activeCallRef = useRef(null);
-  useEffect(() => {
-    activeCallRef.current = activeCall;
-  }, [activeCall]);
-
-  useEffect(() => {
-    if (activeCall?.status !== "connected") return;
-    let isMounted = true;
-
-    navigator.mediaDevices
-      .getUserMedia({ video: activeCall.isVideo, audio: true })
-      .then(async (stream) => {
-        if (!isMounted) return;
-        localStreamRef.current = stream;
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-
-        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-        peerConnectionRef.current = pc;
-        stream.getTracks().forEach((t) => pc.addTrack(t, stream));
-
-        pc.ontrack = (e) => {
-          if (remoteVideoRef.current && e.streams[0])
-            remoteVideoRef.current.srcObject = e.streams[0];
-        };
-        pc.onicecandidate = (e) => {
-          if (e.candidate && activeCallRef.current?.peerId) {
-            globalCallsRef.current?.send({
-              type: "broadcast",
-              event: "webrtc_ice_candidate",
-              payload: {
-                targetId: activeCallRef.current.peerId,
-                candidate: e.candidate,
-              },
-            });
-          }
-        };
-        pc.onconnectionstatechange = () => {
-          if (pc.connectionState === "failed") {
-            showToast("Call connection failed. Check your network.", "error");
-            endCall();
-          }
-        };
-
-        if (activeCall.isCaller) {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          globalCallsRef.current?.send({
-            type: "broadcast",
-            event: "webrtc_offer",
-            payload: {
-              targetId: activeCall.peerId,
-              senderId: currentUserId,
-              offer,
-            },
-          });
-        } else if (pendingOfferRef.current) {
-          const { offer, senderId } = pendingOfferRef.current;
-          await pc.setRemoteDescription(new RTCSessionDescription(offer));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          globalCallsRef.current?.send({
-            type: "broadcast",
-            event: "webrtc_answer",
-            payload: { targetId: senderId, answer },
-          });
-          pendingCandidatesRef.current.forEach((c) =>
-            pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.error)
-          );
-          pendingCandidatesRef.current = [];
-          pendingOfferRef.current = null;
-        }
-      })
-      .catch((err) => {
-        console.error("Media access denied:", err);
-        showToast("Camera/Microphone access required for calls.", "error");
-        endCall();
-      });
-
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCall?.status, activeCall?.isVideo]);
-
-  /* ── Ring sounds ── */
-  useEffect(() => {
-    const audio = ringAudioRef.current;
-    if (!audio) return;
-    if (activeCall?.status === "ringing") {
-      audio.loop = true;
-      audio.play().catch(() => {});
-    } else {
-      audio.pause();
-      audio.currentTime = 0;
-    }
-  }, [activeCall?.status]);
-
-  useEffect(() => {
-    const audio = incomingRingAudioRef.current;
-    if (!audio) return;
-    if (incomingCall) {
-      audio.loop = true;
-      audio.play().catch(() => {});
-    } else {
-      audio.pause();
-      audio.currentTime = 0;
-    }
-    return () => {
-      audio.pause();
-    };
-  }, [incomingCall]);
-
-  /* ── Call duration ── */
-  useEffect(() => {
-    if (activeCall?.status !== "connected") return;
-    setCallDuration(0);
-    const id = setInterval(() => setCallDuration((d) => d + 1), 1000);
-    return () => clearInterval(id);
-  }, [activeCall?.status]);
+  }, [currentUserId]);
 
   /* ─────────────────────────────────────────────────────────
      6. CONNECTION HANDLERS
@@ -1253,7 +733,7 @@ export default function MessagesContent() {
     if (!activeChat || !currentUserId) return;
     const now = Date.now();
     if (now - lastTypingSentRef.current > 1500) {
-      globalCallsRef.current?.send({
+      broadcastRef.current?.send({
         type: "broadcast",
         event: "typing",
         payload: { targetId: activeChat.id, senderId: currentUserId },
@@ -1457,19 +937,6 @@ export default function MessagesContent() {
   ───────────────────────────────────────────────────────── */
   return (
     <>
-      {/* ── CALL OVERLAY ── */}
-      <CallOverlay
-        activeCall={activeCall}
-        incomingCall={incomingCall}
-        callDuration={callDuration}
-        localVideoRef={localVideoRef}
-        remoteVideoRef={remoteVideoRef}
-        onEnd={endCall}
-        onAccept={acceptCall}
-        onReject={rejectCall}
-        peerInfo={peerCallInfo || activeChat}
-      />
-
       {/* ── IMAGE LIGHTBOX ── */}
       {lightboxImage && (
         <div
@@ -1878,24 +1345,6 @@ export default function MessagesContent() {
 
                 {/* Header actions */}
                 <div className="flex items-center gap-0.5 shrink-0">
-                  {connectionStatus === "accepted" && (
-                    <>
-                      <button
-                        onClick={() => startCall(false)}
-                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition-all"
-                        title="Voice call"
-                      >
-                        <Phone size={17} />
-                      </button>
-                      <button
-                        onClick={() => startCall(true)}
-                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all"
-                        title="Video call"
-                      >
-                        <Video size={17} />
-                      </button>
-                    </>
-                  )}
                   <div className="relative" ref={moreMenuRef}>
                     <button
                       onClick={() => setShowMoreMenu((p) => !p)}

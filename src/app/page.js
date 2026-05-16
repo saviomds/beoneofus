@@ -135,7 +135,7 @@ const COMMUNITIES = [
   { name: "AI & Machine Learning", members: "18.2k", icon: <Globe size={20} />, desc: "LLMs, prompt engineering, and neural networks.", color: "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400" },
 ];
 
-const STATS = [
+const FALLBACK_STATS = [
   { label: "Developers", value: 48200, suffix: "+" },
   { label: "Jobs Posted", value: 3100, suffix: "+" },
   { label: "Mentors", value: 420, suffix: "+" },
@@ -155,6 +155,8 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authError, setAuthError] = useState(null);
+  const [pageViews, setPageViews] = useState(null);
+  const [liveStats, setLiveStats] = useState(FALLBACK_STATS);
   const [heroVisible, setHeroVisible] = useState(false);
   const [typeText, setTypeText] = useState("");
   const words = ["developers.", "builders.", "engineers.", "founders.", "hackers."];
@@ -183,6 +185,34 @@ export default function LandingPage() {
     };
     check();
     return () => { isMounted = false; };
+  }, []);
+
+  /* live platform stats + page view counter */
+  useEffect(() => {
+    const fetchStats = async () => {
+      const [
+        { count: devCount },
+        { count: jobCount },
+        { count: mentorCount },
+        { count: courseCount },
+        { data: viewData },
+      ] = await Promise.all([
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("jobs").select("id", { count: "exact", head: true }),
+        supabase.from("mentors").select("user_id", { count: "exact", head: true }),
+        supabase.from("learn_content").select("id", { count: "exact", head: true }),
+        supabase.rpc("increment_page_views"),
+      ]);
+
+      setLiveStats([
+        { label: "Developers", value: devCount ?? 48200, suffix: "+" },
+        { label: "Jobs Posted", value: jobCount ?? 3100, suffix: "+" },
+        { label: "Mentors", value: mentorCount ?? 420, suffix: "+" },
+        { label: "Courses", value: courseCount ?? 280, suffix: "+" },
+      ]);
+      if (viewData) setPageViews(viewData);
+    };
+    fetchStats();
   }, []);
 
   /* hero entrance */
@@ -495,7 +525,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── Stats bar ───────────────────────── */}
-        <StatsBar stats={STATS} />
+        <StatsBar stats={liveStats} pageViews={pageViews} />
 
         {/* ── What is beoneofus ───────────────── */}
         <WhatIsSection />
@@ -538,11 +568,11 @@ export default function LandingPage() {
 
 /* ─── Sub-sections ─────────────────────────────────────────── */
 
-function StatsBar({ stats }) {
+function StatsBar({ stats, pageViews }) {
   const [ref, visible] = useIntersect();
   return (
     <div ref={ref} className="relative z-10 border-y border-gray-200 dark:border-white/5 bg-white/60 dark:bg-white/[0.02] backdrop-blur-sm">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-2 lg:grid-cols-5 gap-8">
         {stats.map((s, i) => (
           <div key={s.label} className={`text-center reveal ${visible ? "visible" : ""} reveal-delay-${i + 1}`}>
             <p className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tighter">
@@ -551,6 +581,18 @@ function StatsBar({ stats }) {
             <p className="text-sm font-semibold text-gray-500 dark:text-gray-500 mt-1">{s.label}</p>
           </div>
         ))}
+        {/* Live page view counter */}
+        <div className={`text-center reveal ${visible ? "visible" : ""} reveal-delay-5`}>
+          <p className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400 tracking-tighter">
+            {pageViews != null
+              ? <AnimatedCounter to={pageViews} suffix="" />
+              : <span className="animate-pulse text-gray-300 dark:text-gray-700">—</span>}
+          </p>
+          <p className="text-sm font-semibold text-gray-500 dark:text-gray-500 mt-1 flex items-center justify-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            Platform Visits
+          </p>
+        </div>
       </div>
     </div>
   );

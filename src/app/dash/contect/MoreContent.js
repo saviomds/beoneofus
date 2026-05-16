@@ -56,16 +56,19 @@ function StatCard({ icon: Icon, label, value, sub, color = "blue", loading }) {
     rose:   { border: "border-rose-200 dark:border-rose-500/20",   bg: "bg-rose-50 dark:bg-rose-500/5",   icon: "text-rose-500 dark:text-rose-400",   val: "text-rose-600 dark:text-rose-300" },
   };
   const c = palette[color];
+  const display = typeof value === "number" ? value.toLocaleString() : (value ?? "—");
+  const len = String(display).length;
+  const sizeClass = len > 9 ? "text-base" : len > 6 ? "text-xl" : len > 4 ? "text-2xl" : "text-3xl";
   return (
-    <div className={`relative overflow-hidden rounded-2xl border ${c.border} ${c.bg} p-5`}>
-      <div className="flex items-start justify-between mb-3">
-        <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.15em]">{label}</p>
-        <div className={`${c.icon} opacity-60`}><Icon size={16} /></div>
+    <div className={`relative overflow-hidden rounded-2xl border ${c.border} ${c.bg} p-4`}>
+      <div className="flex items-start justify-between mb-2">
+        <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.12em] leading-tight pr-1">{label}</p>
+        <div className={`${c.icon} opacity-60 shrink-0`}><Icon size={14} /></div>
       </div>
-      <p className={`text-3xl font-black tabular-nums ${c.val}`}>
-        {loading ? <Loader2 size={20} className="animate-spin" /> : (value ?? "—")}
+      <p className={`${sizeClass} font-black tabular-nums leading-tight ${c.val} break-all`}>
+        {loading ? <Loader2 size={18} className="animate-spin" /> : display}
       </p>
-      {sub && <p className="text-[10px] text-gray-500 dark:text-gray-600 mt-1.5 font-medium">{sub}</p>}
+      {sub && <p className="text-[9px] text-gray-500 dark:text-gray-600 mt-1 font-medium truncate">{sub}</p>}
       <div className={`absolute -bottom-6 -right-6 w-20 h-20 rounded-full blur-2xl opacity-10 ${c.icon} bg-current`} />
     </div>
   );
@@ -434,7 +437,7 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [selectedUserId, setSelectedUserId] = useState(null);
 
   // Stats
-  const [stats, setStats] = useState({ total: null, founders: null, members: null, verified: null, pending: null, admins: null, premium: null, premiumReq: null });
+  const [stats, setStats] = useState({ total: null, founders: null, members: null, verified: null, pending: null, admins: null, premium: null, premiumReq: null, pageViews: null });
   const [statsLoading, setStatsLoading] = useState(false);
 
   // Requests
@@ -519,7 +522,7 @@ const AdminPanelTool = ({ currentUserId }) => {
     if (!isAdmin) return;
     setStatsLoading(true);
     try {
-      const [total, founders, members, verified, pending, admins, premium, premiumReq] = await Promise.all([
+      const [total, founders, members, verified, pending, admins, premium, premiumReq, pageViewsRes] = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact", head: true }),
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "founder"),
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "member"),
@@ -528,6 +531,7 @@ const AdminPanelTool = ({ currentUserId }) => {
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_admin", true),
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_premium", true),
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("premium_requested", true),
+        supabase.from("platform_stats").select("value").eq("key", "page_views").single(),
       ]);
       setStats({
         total: total.count ?? 0,
@@ -538,6 +542,7 @@ const AdminPanelTool = ({ currentUserId }) => {
         admins: admins.count ?? 0,
         premium: premium.count ?? 0,
         premiumReq: premiumReq.count ?? 0,
+        pageViews: pageViewsRes.data?.value ?? 0,
       });
     } finally {
       setStatsLoading(false);
@@ -550,6 +555,18 @@ const AdminPanelTool = ({ currentUserId }) => {
       return () => clearTimeout(timer);
     }
   }, [isAdmin, adminTab, fetchStats]);
+
+  // Auto-refresh visits every 30 seconds while on overview tab
+  useEffect(() => {
+    if (adminTab !== "overview" || !isAdmin) return;
+    const interval = setInterval(() => {
+      supabase.from("platform_stats").select("value").eq("key", "page_views").single()
+        .then(({ data }) => {
+          if (data) setStats(prev => ({ ...prev, pageViews: data.value }));
+        });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [adminTab, isAdmin]);
 
   // ── Users ───────────────────────────────────────────────────────────────────
   const fetchUsers = useCallback(async (page = 0, append = false) => {
@@ -1020,11 +1037,12 @@ const AdminPanelTool = ({ currentUserId }) => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <StatCard icon={Users}      label="Registrations"   value={stats.total}    color="blue"   loading={statsLoading} sub="Total Nodes" />
-              <StatCard icon={BadgeCheck} label="Verified"      value={stats.verified}    color="emerald" loading={statsLoading} sub="Badge-verified" />
-              <StatCard icon={Shield}     label="Security"        value={stats.admins}      color="rose"   loading={statsLoading} sub="Admins" />
-              <StatCard icon={Crown}      label="Premium"       value={stats.premium}     color="amber"  loading={statsLoading} sub="Active premium members" />
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              <StatCard icon={Users}      label="Registrations"   value={stats.total}      color="blue"    loading={statsLoading} sub="Total members" />
+              <StatCard icon={BadgeCheck} label="Verified"         value={stats.verified}   color="emerald" loading={statsLoading} sub="Badge-verified" />
+              <StatCard icon={Shield}     label="Security"         value={stats.admins}     color="rose"    loading={statsLoading} sub="Admins" />
+              <StatCard icon={Crown}      label="Premium"          value={stats.premium}    color="amber"   loading={statsLoading} sub="Active premium" />
+              <StatCard icon={Activity}   label="Platform Visits"  value={stats.pageViews} color="violet" loading={statsLoading} sub="All-time visits" />
             </div>
 
             {/* Verification rate */}
@@ -1058,6 +1076,49 @@ const AdminPanelTool = ({ currentUserId }) => {
                       <p className="text-xl font-black text-gray-900 dark:text-white">{stats.premiumReq}</p>
                       <p className="text-[10px] font-bold text-gray-500 uppercase">Premium Req</p>
                    </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Traffic Panel */}
+            <div className="bg-white dark:bg-gray-900 border border-violet-200 dark:border-violet-500/20 rounded-3xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Live Traffic Monitor</p>
+                </div>
+                <span className="text-[10px] font-bold text-violet-500 bg-violet-50 dark:bg-violet-500/10 px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-500/20">
+                  Refreshes every 30s
+                </span>
+              </div>
+              <div className="flex items-end gap-4">
+                <div className="min-w-0">
+                  <p className={`font-black text-violet-600 dark:text-violet-400 tabular-nums leading-tight break-all
+                    ${String(stats.pageViews ?? "").length > 9 ? "text-2xl" : String(stats.pageViews ?? "").length > 6 ? "text-3xl" : "text-4xl"}`}>
+                    {statsLoading
+                      ? <Loader2 size={24} className="animate-spin text-violet-400" />
+                      : (stats.pageViews != null ? stats.pageViews.toLocaleString() : "—")}
+                  </p>
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-1">total landing page visits</p>
+                </div>
+                <div className="flex-1 flex flex-col gap-1.5 mb-1">
+                  <div className="flex items-center justify-between text-[10px] font-bold text-gray-400">
+                    <span>Conversion rate</span>
+                    <span className="text-emerald-500">
+                      {stats.total > 0 && stats.pageViews > 0
+                        ? `${((stats.total / stats.pageViews) * 100).toFixed(1)}%`
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-violet-500 to-blue-500 rounded-full transition-all duration-700"
+                      style={{ width: `${stats.total > 0 && stats.pageViews > 0 ? Math.min((stats.total / stats.pageViews) * 100, 100) : 0}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-600">
+                    {stats.total ?? 0} registrations out of {stats.pageViews != null ? stats.pageViews.toLocaleString() : "—"} visitors
+                  </p>
                 </div>
               </div>
             </div>

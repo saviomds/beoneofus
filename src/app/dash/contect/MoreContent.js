@@ -11,7 +11,7 @@ import {
   BarChart3, Crown, Users, Award, TrendingUp, RefreshCw, Eye,
   BadgeCheck, Filter, ArrowUpRight, Terminal, Layers, Bell,
   CheckCircle2, Clock, XCircle, ChevronDown, MoreHorizontal,
-  Shield
+  Shield, Video
 } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "../../supabaseClient";
@@ -491,6 +491,101 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [taskFilter, setTaskFilter] = useState("All");
   const [teamMembers, setTeamMembers] = useState([]);
 
+  // Free-form interview modal (Interviews tab — any user)
+  const [showFreeInterviewModal, setShowFreeInterviewModal] = useState(false);
+  const [freeInterviewUserSearch, setFreeInterviewUserSearch] = useState("");
+  const [freeInterviewSearchResults, setFreeInterviewSearchResults] = useState([]);
+  const [freeInterviewSelectedUser, setFreeInterviewSelectedUser] = useState(null);
+  const [freeInterviewJobTitle, setFreeInterviewJobTitle] = useState("");
+  const [freeInterviewCompany, setFreeInterviewCompany] = useState("");
+  const [freeInterviewQuestions, setFreeInterviewQuestions] = useState([{ text: "", context: "" }]);
+  const [freeInterviewCreating, setFreeInterviewCreating] = useState(false);
+  const [freeInterviewSearching, setFreeInterviewSearching] = useState(false);
+
+  const searchUsersForInterview = async (query) => {
+    setFreeInterviewUserSearch(query);
+    if (!query.trim()) { setFreeInterviewSearchResults([]); return; }
+    setFreeInterviewSearching(true);
+    const { data } = await supabase.from("profiles")
+      .select("id, username, avatar_url, is_verified")
+      .ilike("username", `%${query}%`)
+      .limit(6);
+    setFreeInterviewSearchResults(data || []);
+    setFreeInterviewSearching(false);
+  };
+
+  const handleFreeInterviewCreate = async () => {
+    if (!freeInterviewSelectedUser) { showToast("Select a user first.", "error"); return; }
+    const validQs = freeInterviewQuestions.filter(q => q.text.trim());
+    if (!validQs.length) { showToast("Add at least one question.", "error"); return; }
+    setFreeInterviewCreating(true);
+    try {
+      const res = await fetch("/api/interview/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adminId: currentUserId,
+          applicantId: freeInterviewSelectedUser.id,
+          jobTitle: freeInterviewJobTitle || "Interview",
+          company: freeInterviewCompany,
+          questions: validQs,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed");
+      showToast(`Interview room created for @${freeInterviewSelectedUser.username}.`);
+      setShowFreeInterviewModal(false);
+      setFreeInterviewSelectedUser(null);
+      setFreeInterviewUserSearch("");
+      setFreeInterviewSearchResults([]);
+      setFreeInterviewJobTitle("");
+      setFreeInterviewCompany("");
+      setFreeInterviewQuestions([{ text: "", context: "" }]);
+      setInterviewRooms([]); // trigger refetch
+    } catch (err) { showToast(err.message, "error"); }
+    finally { setFreeInterviewCreating(false); }
+  };
+
+  // Interview creation modal (from Applications tab)
+  const [interviewTarget, setInterviewTarget] = useState(null); // { applicantId, jobId, jobTitle, company }
+  const [interviewQuestions, setInterviewQuestions] = useState([{ text: "", context: "" }]);
+  const [creatingInterview, setCreatingInterview] = useState(false);
+  const [showInterviewModal, setShowInterviewModal] = useState(false);
+
+  const openInterviewModal = (app) => {
+    setInterviewTarget({ applicantId: app.user_id, jobId: app.job_id, jobTitle: app.jobs?.title || "", company: app.jobs?.company || "" });
+    setInterviewQuestions([{ text: "", context: "" }]);
+    setShowInterviewModal(true);
+  };
+
+  const handleCreateInterview = async () => {
+    const validQs = interviewQuestions.filter(q => q.text.trim());
+    if (!validQs.length) { showToast("Add at least one question.", "error"); return; }
+    setCreatingInterview(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/interview/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminId: currentUserId, applicantId: interviewTarget.applicantId, jobId: interviewTarget.jobId, jobTitle: interviewTarget.jobTitle, company: interviewTarget.company, questions: validQs }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed");
+      showToast("Interview room created & invite sent.");
+      setShowInterviewModal(false);
+      // Refresh rooms list if on interviews tab
+      setInterviewRooms([]);
+    } catch (err) { showToast(err.message, "error"); }
+    finally { setCreatingInterview(false); }
+  };
+
+  // Interviews
+  const [interviewRooms, setInterviewRooms] = useState([]);
+  const [interviewsLoading, setInterviewsLoading] = useState(false);
+  const [interviewStatusFilter, setInterviewStatusFilter] = useState("all");
+  const [expandedRoomId, setExpandedRoomId] = useState(null);
+  const [roomAnswers, setRoomAnswers] = useState({});
+
   // Invite
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteSearch, setInviteSearch] = useState("");
@@ -744,6 +839,35 @@ const AdminPanelTool = ({ currentUserId }) => {
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [adminTab, isAdmin]);
 
+  // ── Interviews ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (adminTab !== "interviews" || !isAdmin) return;
+    const fetchRooms = async () => {
+      setInterviewsLoading(true);
+      const { data } = await supabase
+        .from("interview_rooms")
+        .select("id, job_title, company, status, overall_score, created_at, applicant_id, questions, coding_challenge, profiles!interview_rooms_applicant_id_fkey(username, avatar_url)")
+        .order("created_at", { ascending: false });
+      if (data) setInterviewRooms(data);
+      setInterviewsLoading(false);
+    };
+    fetchRooms();
+  }, [adminTab, isAdmin]);
+
+  const fetchRoomAnswers = async (roomId) => {
+    if (roomAnswers[roomId]) {
+      setExpandedRoomId(prev => prev === roomId ? null : roomId);
+      return;
+    }
+    const { data } = await supabase
+      .from("interview_answers")
+      .select("question_index, question_text, answer_text, ai_score, ai_feedback, strengths, improvements")
+      .eq("room_id", roomId)
+      .order("question_index");
+    setRoomAnswers(prev => ({ ...prev, [roomId]: data || [] }));
+    setExpandedRoomId(roomId);
+  };
+
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
   const handleBulkDelete = async () => {
@@ -966,6 +1090,7 @@ const AdminPanelTool = ({ currentUserId }) => {
     { id: "applications", label: "Applications", icon: Briefcase   },
     { id: "founder_apps", label: "Founder Apps", icon: Crown       },
     { id: "tasks",        label: "Tasks",        icon: ClipboardList },
+    { id: "interviews",   label: "Interviews",   icon: Video         },
     { id: "system_logs",  label: "System Logs",  icon: Terminal      },
   ];
 
@@ -1524,6 +1649,14 @@ const AdminPanelTool = ({ currentUserId }) => {
                           className="flex-1 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-bold hover:bg-emerald-500 transition-all">Accept</button>
                       </div>
                     )}
+                    {app.status === "accepted" && (
+                      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => openInterviewModal(app)}
+                          className="w-full flex items-center justify-center gap-2 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-bold transition-all">
+                          <Video size={11} /> Assign Interview Room
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
           </div>
@@ -1648,6 +1781,124 @@ const AdminPanelTool = ({ currentUserId }) => {
           </div>
         )}
 
+        {/* ── INTERVIEWS ── */}
+        {adminTab === "interviews" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h3 className="text-gray-900 dark:text-white font-black text-xl">Interview Rooms</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-600 mt-0.5">All active and completed interview sessions.</p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-0.5 rounded-xl shadow-sm">
+                  {["all", "active", "answers_complete", "coding", "completed"].map(s => (
+                    <button key={s} onClick={() => setInterviewStatusFilter(s)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all whitespace-nowrap ${interviewStatusFilter === s ? "bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400"}`}>
+                      {s === "all" ? "All" : s === "answers_complete" ? "Answered" : s.charAt(0).toUpperCase() + s.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setShowFreeInterviewModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
+                  <Plus size={13} /> New Interview
+                </button>
+              </div>
+            </div>
+
+            {interviewsLoading
+              ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={22} /></div>
+              : (() => {
+                  const filtered = interviewRooms.filter(r => interviewStatusFilter === "all" || r.status === interviewStatusFilter);
+                  if (!filtered.length) return <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-sm">No interview rooms found.</div>;
+                  return filtered.map(room => {
+                    const isExpanded = expandedRoomId === room.id;
+                    const answers = roomAnswers[room.id] || [];
+                    const statusColors = { active: "blue", answers_complete: "amber", coding: "violet", completed: "emerald" };
+                    const statusColor = statusColors[room.status] || "gray";
+                    return (
+                      <div key={room.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
+                        <div className="p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
+                                <Video size={18} className="text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{room.job_title}{room.company ? ` · ${room.company}` : ""}</p>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-500 font-medium mt-0.5">
+                                  @{room.profiles?.username || room.applicant_id?.slice(0, 8)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {room.overall_score != null && (
+                                <span className={`text-xs font-black px-2 py-1 rounded-lg ${room.overall_score >= 85 ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : room.overall_score >= 70 ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400" : room.overall_score >= 55 ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"}`}>
+                                  {room.overall_score}%
+                                </span>
+                              )}
+                              <Badge color={statusColor}>{room.status === "answers_complete" ? "Answered" : room.status}</Badge>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800/60">
+                            <div className="flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-600">
+                              <span className="flex items-center gap-1"><FileText size={10} />{Array.isArray(room.questions) ? room.questions.length : 0} questions</span>
+                              {room.coding_challenge && <span className="flex items-center gap-1"><Code2 size={10} />Has coding challenge</span>}
+                              <span className="flex items-center gap-1"><Clock size={10} />{new Date(room.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <button onClick={() => fetchRoomAnswers(room.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl text-[10px] font-bold transition-all">
+                              <Eye size={11} /> {isExpanded ? "Hide" : "View"} Answers
+                              <ChevronDown size={11} className={`transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-black/20 p-4 space-y-3">
+                            {answers.length === 0
+                              ? <p className="text-xs text-gray-500 dark:text-gray-600 text-center py-4">No answers submitted yet.</p>
+                              : answers.map((ans, i) => (
+                                  <div key={i} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                      <p className="text-xs font-bold text-gray-800 dark:text-gray-200">Q{ans.question_index + 1}: {ans.question_text}</p>
+                                      <span className={`shrink-0 text-xs font-black px-2 py-0.5 rounded-lg ${ans.ai_score >= 75 ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : ans.ai_score >= 55 ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"}`}>
+                                        {ans.ai_score ?? "—"}/100
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed mb-2 line-clamp-3">{ans.answer_text}</p>
+                                    {ans.ai_feedback && (
+                                      <p className="text-[10px] text-gray-500 dark:text-gray-500 italic border-l-2 border-blue-300 dark:border-blue-700 pl-2">{ans.ai_feedback}</p>
+                                    )}
+                                    {(ans.strengths?.length > 0 || ans.improvements?.length > 0) && (
+                                      <div className="flex gap-4 mt-2">
+                                        {ans.strengths?.length > 0 && (
+                                          <div className="flex-1">
+                                            <p className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Strengths</p>
+                                            {ans.strengths.map((s, si) => <p key={si} className="text-[10px] text-gray-500 dark:text-gray-600">· {s}</p>)}
+                                          </div>
+                                        )}
+                                        {ans.improvements?.length > 0 && (
+                                          <div className="flex-1">
+                                            <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">To Improve</p>
+                                            {ans.improvements.map((s, si) => <p key={si} className="text-[10px] text-gray-500 dark:text-gray-600">· {s}</p>)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))
+                            }
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()
+            }
+          </div>
+        )}
+
         {/* ── SYSTEM LOGS ── */}
         {adminTab === "system_logs" && (
           <SystemLogsView />
@@ -1696,6 +1947,11 @@ const AdminPanelTool = ({ currentUserId }) => {
                   <button onClick={() => setActionPrompt({ type: "job", appId: selectedApp.id, newStatus: "accepted", applicantId: selectedApp.user_id, title: selectedApp.jobs?.title })}
                     className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 transition-all">Accept</button>
                 </>
+              ) : selectedApp.status === "accepted" ? (
+                <button onClick={() => { setSelectedApp(null); openInterviewModal(selectedApp); }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all">
+                  <Video size={13} /> Assign Interview Room
+                </button>
               ) : (
                 <div className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-center text-gray-500 text-xs font-bold uppercase">
                   {selectedApp.status}
@@ -1993,6 +2249,227 @@ const AdminPanelTool = ({ currentUserId }) => {
               <X size={18} />
             </button>
             <div className="p-4 sm:p-6"><ProfileContent viewUserId={selectedUserId} /></div>
+          </div>
+        </div>
+      )}
+
+      {/* ── FREE-FORM INTERVIEW MODAL ── */}
+      {showFreeInterviewModal && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFreeInterviewModal(false)} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col max-h-[88vh] overflow-hidden animate-in zoom-in-95 duration-200">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
+                  <Video size={16} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-gray-900 dark:text-white">New Interview Room</h2>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-600 font-medium">Invite any user — no application required</p>
+                </div>
+              </div>
+              <button onClick={() => setShowFreeInterviewModal(false)} className="p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl text-gray-500 border border-gray-200 dark:border-gray-800 transition-all">
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+
+              {/* User search */}
+              <div>
+                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[2px] mb-2">Select User</p>
+                {freeInterviewSelectedUser ? (
+                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0">
+                        {freeInterviewSelectedUser.avatar_url && <Image src={freeInterviewSelectedUser.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" />}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1">
+                          @{freeInterviewSelectedUser.username}
+                          {freeInterviewSelectedUser.is_verified && <BadgeCheck size={11} className="text-blue-500" />}
+                        </p>
+                        <p className="text-[10px] text-blue-500 dark:text-blue-400 font-medium">Selected</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setFreeInterviewSelectedUser(null)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    <input
+                      value={freeInterviewUserSearch}
+                      onChange={e => searchUsersForInterview(e.target.value)}
+                      placeholder="Search by username…"
+                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-all"
+                    />
+                    {freeInterviewSearching && <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}
+                    {freeInterviewSearchResults.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden z-10">
+                        {freeInterviewSearchResults.map(u => (
+                          <button key={u.id} onClick={() => { setFreeInterviewSelectedUser(u); setFreeInterviewSearchResults([]); setFreeInterviewUserSearch(""); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left">
+                            <div className="relative w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0">
+                              {u.avatar_url && <Image src={u.avatar_url} alt="avatar" fill sizes="28px" className="object-cover" />}
+                            </div>
+                            <p className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1">
+                              @{u.username} {u.is_verified && <BadgeCheck size={10} className="text-blue-500" />}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Job details */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[2px] mb-1.5">Job Title</p>
+                  <input
+                    value={freeInterviewJobTitle}
+                    onChange={e => setFreeInterviewJobTitle(e.target.value)}
+                    placeholder="e.g. Frontend Engineer"
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[2px] mb-1.5">Company</p>
+                  <input
+                    value={freeInterviewCompany}
+                    onChange={e => setFreeInterviewCompany(e.target.value)}
+                    placeholder="Optional"
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Questions */}
+              <div>
+                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[2px] mb-2">Interview Questions</p>
+                <div className="space-y-2">
+                  {freeInterviewQuestions.map((q, i) => (
+                    <div key={i} className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[9px] font-black flex items-center justify-center shrink-0">{i + 1}</span>
+                        <input
+                          value={q.text}
+                          onChange={e => setFreeInterviewQuestions(prev => prev.map((x, idx) => idx === i ? { ...x, text: e.target.value } : x))}
+                          placeholder="Question…"
+                          className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all"
+                        />
+                        {freeInterviewQuestions.length > 1 && (
+                          <button onClick={() => setFreeInterviewQuestions(prev => prev.filter((_, idx) => idx !== i))} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors shrink-0">
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        value={q.context}
+                        onChange={e => setFreeInterviewQuestions(prev => prev.map((x, idx) => idx === i ? { ...x, context: e.target.value } : x))}
+                        placeholder="Optional context or hint…"
+                        className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-[11px] text-gray-700 dark:text-gray-400 placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                  ))}
+                  <button onClick={() => setFreeInterviewQuestions(prev => [...prev, { text: "", context: "" }])}
+                    className="w-full py-2.5 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 transition-all">
+                    <Plus size={13} /> Add Question
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-2 px-5 py-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
+              <button onClick={() => setShowFreeInterviewModal(false)} disabled={freeInterviewCreating}
+                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-800 transition-all disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={handleFreeInterviewCreate}
+                disabled={freeInterviewCreating || !freeInterviewSelectedUser || !freeInterviewQuestions.some(q => q.text.trim())}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+                {freeInterviewCreating ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                {freeInterviewCreating ? "Sending…" : "Send Invite"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── INTERVIEW CREATION MODAL ── */}
+      {showInterviewModal && interviewTarget && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowInterviewModal(false)} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col max-h-[88vh] overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
+                  <Video size={16} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-gray-900 dark:text-white">Create Interview Room</h2>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-600 font-medium truncate max-w-[220px]">
+                    {interviewTarget.jobTitle}{interviewTarget.company ? ` · ${interviewTarget.company}` : ""}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setShowInterviewModal(false)} className="p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl text-gray-500 border border-gray-200 dark:border-gray-800 transition-all">
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Questions */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+              <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[2px]">Interview Questions</p>
+              {interviewQuestions.map((q, i) => (
+                <div key={i} className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[9px] font-black flex items-center justify-center shrink-0">{i + 1}</span>
+                    <input
+                      value={q.text}
+                      onChange={e => setInterviewQuestions(prev => prev.map((x, idx) => idx === i ? { ...x, text: e.target.value } : x))}
+                      placeholder="Question…"
+                      className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-all"
+                    />
+                    {interviewQuestions.length > 1 && (
+                      <button onClick={() => setInterviewQuestions(prev => prev.filter((_, idx) => idx !== i))} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors shrink-0">
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    value={q.context}
+                    onChange={e => setInterviewQuestions(prev => prev.map((x, idx) => idx === i ? { ...x, context: e.target.value } : x))}
+                    placeholder="Optional context or hint…"
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-[11px] text-gray-700 dark:text-gray-400 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-all"
+                  />
+                </div>
+              ))}
+              <button onClick={() => setInterviewQuestions(prev => [...prev, { text: "", context: "" }])}
+                className="w-full py-2.5 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-600 text-gray-400 dark:text-gray-600 hover:text-blue-500 dark:hover:text-blue-400 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 transition-all">
+                <Plus size={13} /> Add Question
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-2 px-5 py-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
+              <button onClick={() => setShowInterviewModal(false)} disabled={creatingInterview}
+                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-800 transition-all disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={handleCreateInterview} disabled={creatingInterview || !interviewQuestions.some(q => q.text.trim())}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+                {creatingInterview ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                {creatingInterview ? "Sending…" : "Send Interview Invite"}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Globe, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, ChevronLeft, Share2, ExternalLink, Award, Eye, EyeOff, Lock, Heart, MessageSquare, Code2 } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Globe, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, ChevronLeft, Share2, ExternalLink, Award, Eye, EyeOff, Lock, Heart, MessageSquare, Code2, Video, Trash } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
@@ -88,6 +88,13 @@ export default function ProfileContent({ viewUserId }) {
   const [loadingApplicants, setLoadingApplicants] = useState(false);
   const [selectedApplicant, setSelectedApplicant] = useState(null);
   const [activeJobForApplicants, setActiveJobForApplicants] = useState(null);
+
+  // Interview room creation state
+  const [showInterviewModal, setShowInterviewModal] = useState(false);
+  const [interviewTarget, setInterviewTarget] = useState(null); // { applicant, job }
+  const [interviewQuestions, setInterviewQuestions] = useState([{ text: '', context: '' }]);
+  const [creatingInterview, setCreatingInterview] = useState(false);
+  const [interviewToast, setInterviewToast] = useState('');
 
   // Story viewer state
   const [storyViewerOpen, setStoryViewerOpen] = useState(false);
@@ -615,6 +622,44 @@ export default function ProfileContent({ viewUserId }) {
       setToast({ message: `Application ${newStatus} successfully!`, type: "success" });
     } catch (err) {
       setToast({ message: "Error updating application: " + err.message, type: "error" });
+    }
+  };
+
+  const openInterviewModal = (applicant, job) => {
+    setInterviewTarget({ applicant, job });
+    setInterviewQuestions([{ text: '', context: '' }]);
+    setShowInterviewModal(true);
+  };
+
+  const handleCreateInterview = async () => {
+    const validQuestions = interviewQuestions.filter(q => q.text.trim());
+    if (!validQuestions.length) return;
+    if (!currentUser || !interviewTarget) return;
+    setCreatingInterview(true);
+    try {
+      const res = await fetch('/api/interview/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminId: currentUser.id,
+          applicantId: interviewTarget.applicant.user_id,
+          jobId: interviewTarget.job?.id || null,
+          applicationId: interviewTarget.applicant.id,
+          jobTitle: interviewTarget.job?.title || 'Position',
+          company: interviewTarget.job?.company || null,
+          questions: validQuestions,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Failed to create room');
+      setShowInterviewModal(false);
+      setInterviewToast('Interview room created and candidate notified!');
+      setTimeout(() => setInterviewToast(''), 4000);
+    } catch (err) {
+      setInterviewToast('Error: ' + err.message);
+      setTimeout(() => setInterviewToast(''), 4000);
+    } finally {
+      setCreatingInterview(false);
     }
   };
 
@@ -1532,19 +1577,27 @@ export default function ProfileContent({ viewUserId }) {
                         
                         {app.status !== 'accepted' && app.status !== 'declined' && app.status !== 'external_redirect' && (
                           <div className="flex items-center gap-2 mt-1 w-full sm:w-auto">
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'declined', app.user_id, activeJobForApplicants?.title); }} 
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'declined', app.user_id, activeJobForApplicants?.title); }}
                               className="flex-1 sm:flex-none px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold text-xs transition-colors border border-red-200 dark:border-red-800/50 uppercase"
                             >
                               Decline
                             </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'accepted', app.user_id, activeJobForApplicants?.title); }} 
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'accepted', app.user_id, activeJobForApplicants?.title); }}
                               className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white hover:bg-green-500 rounded-xl font-bold text-xs transition-colors shadow-sm uppercase"
                             >
                               Accept
                             </button>
                           </div>
+                        )}
+                        {app.status === 'accepted' && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openInterviewModal(app, activeJobForApplicants); }}
+                            className="flex items-center gap-1.5 mt-1 px-3 py-2 bg-blue-600 text-white hover:bg-blue-500 rounded-xl font-bold text-xs transition-colors shadow-sm"
+                          >
+                            <Video size={12} /> Interview Room
+                          </button>
                         )}
                       </div>
                     </div>
@@ -1615,27 +1668,135 @@ export default function ProfileContent({ viewUserId }) {
               )}
             </div>
 
-            <div className="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex flex-col gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
               {selectedApplicant.status !== 'accepted' && selectedApplicant.status !== 'declined' && selectedApplicant.status !== 'external_redirect' ? (
-                <>
-                  <button 
-                    onClick={() => { handleAppAction(selectedApplicant.id, 'declined', selectedApplicant.user_id, activeJobForApplicants?.title); setSelectedApplicant(prev => ({...prev, status: 'declined'})); }} 
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { handleAppAction(selectedApplicant.id, 'declined', selectedApplicant.user_id, activeJobForApplicants?.title); setSelectedApplicant(prev => ({...prev, status: 'declined'})); }}
                     className="flex-1 py-3.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold transition-colors border border-red-200 dark:border-red-800/50"
                   >
                     Decline Application
                   </button>
-                  <button 
-                    onClick={() => { handleAppAction(selectedApplicant.id, 'accepted', selectedApplicant.user_id, activeJobForApplicants?.title); setSelectedApplicant(prev => ({...prev, status: 'accepted'})); }} 
+                  <button
+                    onClick={() => { handleAppAction(selectedApplicant.id, 'accepted', selectedApplicant.user_id, activeJobForApplicants?.title); setSelectedApplicant(prev => ({...prev, status: 'accepted'})); }}
                     className="flex-1 py-3.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-colors shadow-sm"
                   >
                     Accept Application
                   </button>
-                </>
+                </div>
               ) : (
-                <div className="flex-1 text-center py-3.5 bg-gray-50 dark:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-xs border border-gray-200 dark:border-gray-700">
-                  Status: {selectedApplicant.status === 'external_redirect' ? 'External Redirect' : (selectedApplicant.status || 'pending')}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 text-center py-3.5 bg-gray-50 dark:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-xs border border-gray-200 dark:border-gray-700">
+                    Status: {selectedApplicant.status === 'external_redirect' ? 'External Redirect' : (selectedApplicant.status || 'pending')}
+                  </div>
                 </div>
               )}
+              {selectedApplicant.status === 'accepted' && (
+                <button
+                  onClick={() => { setSelectedApplicant(null); openInterviewModal(selectedApplicant, activeJobForApplicants); }}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-colors shadow-md shadow-blue-500/20 flex items-center justify-center gap-2"
+                >
+                  <Video size={18} /> Create Interview Room
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- INTERVIEW TOAST --- */}
+      {interviewToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[500] bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-5 py-3 rounded-xl text-sm font-bold shadow-xl animate-in slide-in-from-bottom-4 duration-300 max-w-sm text-center">
+          {interviewToast}
+        </div>
+      )}
+
+      {/* --- CREATE INTERVIEW ROOM MODAL --- */}
+      {showInterviewModal && interviewTarget && (
+        <div className="fixed inset-0 z-[450] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowInterviewModal(false)} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-start shrink-0 rounded-t-[2rem]">
+              <div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <Video size={20} className="text-blue-500" /> Create Interview Room
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  For <span className="font-bold text-blue-600 dark:text-blue-400">@{interviewTarget.applicant.profiles?.username}</span> · {interviewTarget.job?.title}
+                </p>
+              </div>
+              <button onClick={() => setShowInterviewModal(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Questions list */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
+              <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+                Interview Questions ({interviewQuestions.filter(q => q.text.trim()).length} valid)
+              </p>
+              {interviewQuestions.map((q, i) => (
+                <div key={i} className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl">
+                  <div className="flex items-start gap-2">
+                    <span className="shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-black mt-0.5">{i + 1}</span>
+                    <div className="flex-1 space-y-2">
+                      <input
+                        type="text"
+                        value={q.text}
+                        onChange={e => {
+                          const next = [...interviewQuestions];
+                          next[i] = { ...next[i], text: e.target.value };
+                          setInterviewQuestions(next);
+                        }}
+                        placeholder="e.g. Explain how you would design a REST API..."
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                      <input
+                        type="text"
+                        value={q.context}
+                        onChange={e => {
+                          const next = [...interviewQuestions];
+                          next[i] = { ...next[i], context: e.target.value };
+                          setInterviewQuestions(next);
+                        }}
+                        placeholder="Optional context or hint (shown to candidate)"
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                    {interviewQuestions.length > 1 && (
+                      <button
+                        onClick={() => setInterviewQuestions(prev => prev.filter((_, idx) => idx !== i))}
+                        className="shrink-0 p-1.5 text-gray-400 hover:text-red-500 transition-colors mt-0.5"
+                      >
+                        <Trash size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              <button
+                onClick={() => setInterviewQuestions(prev => [...prev, { text: '', context: '' }])}
+                className="w-full py-2.5 border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-600 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={16} /> Add Question
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shrink-0 flex gap-3 rounded-b-[2rem]">
+              <button onClick={() => setShowInterviewModal(false)} className="flex-1 py-3 px-4 rounded-xl text-gray-700 dark:text-gray-300 font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateInterview}
+                disabled={creatingInterview || !interviewQuestions.some(q => q.text.trim())}
+                className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {creatingInterview ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
+                {creatingInterview ? 'Creating…' : 'Send Interview Invite'}
+              </button>
             </div>
           </div>
         </div>

@@ -236,6 +236,112 @@ const templates = {
     };
   },
 
+  /* ── Interview invited ─────────────────────────────────────────── */
+  interview_invited({ name, jobTitle, company, questionCount, siteUrl }) {
+    const n  = escapeHtml(name);
+    const jt = escapeHtml(jobTitle);
+    const co = company ? escapeHtml(company) : null;
+    const qc = Number(questionCount) || 0;
+    const url = siteUrl || SITE_URL;
+    return {
+      subject: `Interview Invitation: ${jt}`,
+      html: baseShell(
+        header('linear-gradient(90deg,#2563eb,#6366f1)', "You're Invited to Interview", `${jt}${co ? ` · ${co}` : ''}`)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            You have been invited to interview for <strong>${jt}</strong>${co ? ` at <strong>${co}</strong>` : ''}.
+            Your interview has <strong>${qc} question${qc !== 1 ? 's' : ''}</strong> followed by a live coding challenge.
+            AI evaluates each response and gives you instant feedback.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:20px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr><td style="padding-bottom:10px;">
+                  <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Step 1</p>
+                  <p style="margin:4px 0 0;font-size:14px;color:#1e40af;font-weight:700;">Answer ${qc} interview question${qc !== 1 ? 's' : ''}</p>
+                </td></tr>
+                <tr><td style="border-top:1px solid #bfdbfe;padding-top:10px;">
+                  <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Step 2</p>
+                  <p style="margin:4px 0 0;font-size:14px;color:#1e40af;font-weight:700;">Complete a live coding challenge</p>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+          ${ctaButton('Start Your Interview →', url + '/dash/interview', '#2563eb')}
+          <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Take your time and answer thoughtfully. Good luck!</p>
+        </td></tr></table>`
+      ),
+    };
+  },
+
+  /* ── Interview answers complete ─────────────────────────────────── */
+  interview_answers_complete({ name, jobTitle, company, siteUrl }) {
+    const n  = escapeHtml(name);
+    const jt = escapeHtml(jobTitle);
+    const co = company ? escapeHtml(company) : null;
+    const url = siteUrl || SITE_URL;
+    return {
+      subject: `Next step: Coding challenge for ${jt}`,
+      html: baseShell(
+        header('linear-gradient(90deg,#8b5cf6,#6366f1)', 'Answers Submitted!', 'Time for the coding challenge')
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            Great work completing all interview questions for <strong>${jt}</strong>${co ? ` at <strong>${co}</strong>` : ''}.
+            The next step is your <strong>live coding challenge</strong> — a medium-difficulty algorithm problem to solve in 20-30 minutes.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:18px 24px;text-align:center;">
+              <p style="margin:0;font-size:28px;">💻</p>
+              <p style="margin:6px 0 0;font-size:14px;font-weight:700;color:#6d28d9;">Coding Challenge Unlocked</p>
+              <p style="margin:4px 0 0;font-size:12px;color:#7c3aed;">Medium difficulty \xB7 20–30 minutes</p>
+            </td></tr>
+          </table>
+          ${ctaButton('Start Coding Challenge →', url + '/dash/interview', '#7c3aed')}
+        </td></tr></table>`
+      ),
+    };
+  },
+
+  /* ── Interview completed ────────────────────────────────────────── */
+  interview_completed({ name, jobTitle, company, overallScore, grade, siteUrl }) {
+    const n  = escapeHtml(name);
+    const jt = escapeHtml(jobTitle);
+    const co = company ? escapeHtml(company) : null;
+    const sc = Number(overallScore) || 0;
+    const gr = escapeHtml(grade || 'Good');
+    const url = siteUrl || SITE_URL;
+    const scoreColor = sc >= 85 ? '#10b981' : sc >= 70 ? '#2563eb' : sc >= 55 ? '#f59e0b' : '#ef4444';
+    const headerGrad = sc >= 85
+      ? 'linear-gradient(90deg,#10b981,#34d399)'
+      : sc >= 70 ? 'linear-gradient(90deg,#2563eb,#3b82f6)'
+      : 'linear-gradient(90deg,#f59e0b,#fbbf24)';
+    return {
+      subject: `Interview Complete — Your results for ${jt}`,
+      html: baseShell(
+        header(headerGrad, 'Interview Complete!', `${jt}${co ? ` \xB7 ${co}` : ''}`)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            You have completed your interview for <strong>${jt}</strong>${co ? ` at <strong>${co}</strong>` : ''}. Here is a summary of your performance:
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:24px;text-align:center;">
+              <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Overall Score</p>
+              <p style="margin:8px 0 0;font-size:48px;font-weight:900;color:${scoreColor};">${sc}<span style="font-size:24px;color:#94a3b8;">%</span></p>
+              <p style="margin:6px 0 0;display:inline-block;background:${scoreColor}20;color:${scoreColor};font-size:13px;font-weight:800;padding:4px 16px;border-radius:8px;border:1px solid ${scoreColor}40;">${gr}</p>
+            </td></tr>
+          </table>
+          <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;text-align:center;">
+            View your full breakdown — per-question scores, AI feedback, and coding results — in your dashboard.
+          </p>
+          ${ctaButton('View Full Results →', url + '/dash/interview', scoreColor)}
+        </td></tr></table>`
+      ),
+    };
+  },
+
   /* ── Role changed ──────────────────────────────────────────────── */
   role_changed({ name, role }) {
     const n  = escapeHtml(name);

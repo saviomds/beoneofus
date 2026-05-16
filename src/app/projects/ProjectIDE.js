@@ -1,7 +1,30 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import Editor from "@monaco-editor/react";
+import dynamic from 'next/dynamic';
+
+if (typeof window !== 'undefined' && !window.MonacoEnvironment) {
+  window.MonacoEnvironment = {
+    getWorker(_, label) {
+      const blob = new Blob(['self.onmessage=function(){};'], { type: 'application/javascript' });
+      return new Worker(URL.createObjectURL(blob));
+    },
+  };
+}
+
+const _monacoLoaderSetup = typeof window !== 'undefined'
+  ? Promise.all([import('monaco-editor'), import('@monaco-editor/react')]).then(([monaco, { loader }]) => {
+      loader.config({ monaco });
+    }).catch(() => {})
+  : Promise.resolve();
+
+const Editor = dynamic(
+  async () => {
+    await _monacoLoaderSetup;
+    return import('@monaco-editor/react').then(m => m.default);
+  },
+  { ssr: false }
+);
 import {
   Loader2, FileCode2, Plus, Save, ChevronLeft, Square,
   FolderClosed, FolderOpen, File, X, TerminalSquare, Pencil,

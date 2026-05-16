@@ -173,12 +173,19 @@ function RecentUsersTable({ users, loading }) {
             <RoleBadge role={u.role} />
           </div>
 
-          {/* Joined date — desktop only */}
-          <p className="text-xs text-gray-400 dark:text-gray-500 shrink-0 hidden lg:block w-20 text-right">
-            {u.created_at
-              ? new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })
-              : "—"}
-          </p>
+          {/* Joined date + time */}
+          <div className="shrink-0 hidden sm:flex flex-col items-end gap-0.5">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+              {u.created_at
+                ? new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : "—"}
+            </p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+              {u.created_at
+                ? new Date(u.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+                : ""}
+            </p>
+          </div>
         </div>
       ))}
     </div>
@@ -353,6 +360,7 @@ export default function SettingsContent() {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, username, email, role, is_verified, verification_status, created_at, avatar_url")
+        .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
       setRecentUsers(data || []);

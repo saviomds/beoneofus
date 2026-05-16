@@ -33,6 +33,8 @@ const nextConfig = {
     ];
   },
 
+  turbopack: {},
+
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'jwjrogchwfzofpaczaah.supabase.co' },

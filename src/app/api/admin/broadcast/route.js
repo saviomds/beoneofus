@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../../lib/escapeHtml';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://beoneofus.work';
-const FROM     = `BeOneOfUs <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`;
+const FROM     = `BeOneOfUs <${process.env.RESEND_FROM_EMAIL || 'noreply@beoneofus.work'}>`;
 
 const AUDIENCE_LABELS = {
   all:      'All Users',
@@ -72,6 +72,12 @@ function buildHtml(subject, message, audienceLabel) {
       <!-- Footer -->
       <tr><td style="padding:24px 0 0;text-align:center;">
         <p style="margin:0;font-size:11px;color:#94a3b8;">beoneofus.work · Developer Community</p>
+        <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;">
+          You received this because you are a member of beoneofus.work.<br>
+          <a href="${SITE_URL}/dash?section=settings" style="color:#94a3b8;text-decoration:underline;">Manage email preferences</a>
+          &nbsp;&middot;&nbsp;
+          <a href="${SITE_URL}" style="color:#94a3b8;text-decoration:underline;">beoneofus.work</a>
+        </p>
       </td></tr>
     </table>
   </td></tr>
@@ -79,9 +85,14 @@ function buildHtml(subject, message, audienceLabel) {
 </body></html>`;
 }
 
-async function sendBatch(emails, subject, html) {
+function buildText(subject, message) {
+  return `${subject}\n${'─'.repeat(subject.length)}\n\n${message}\n\nOpen your dashboard: ${SITE_URL}/dash\n\n─\nYou received this because you are a member of beoneofus.work.\nManage preferences: ${SITE_URL}/dash?section=settings`;
+}
+
+async function sendBatch(emails, subject, html, text) {
   const CHUNK = 50; // Resend batch limit per request
   let sent = 0, failed = 0;
+  const unsubscribeUrl = `${SITE_URL}/dash?section=settings`;
 
   for (let i = 0; i < emails.length; i += CHUNK) {
     const chunk = emails.slice(i, i + CHUNK);
@@ -90,6 +101,13 @@ async function sendBatch(emails, subject, html) {
       to:   email,
       subject,
       html,
+      text,
+      headers: {
+        'List-Unsubscribe': `<${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        'Precedence': 'bulk',
+        'X-Mailer': 'BeOneOfUs Platform',
+      },
     }));
 
     try {
@@ -111,7 +129,7 @@ async function sendBatch(emails, subject, html) {
             const r = await fetch('https://api.resend.com/emails', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
-              body: JSON.stringify({ from: FROM, to: email, subject, html }),
+              body: JSON.stringify({ from: FROM, to: email, subject, html, text, headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>`, 'Precedence': 'bulk' } }),
             });
             if (r.ok) sent++; else failed++;
           } catch { failed++; }
@@ -175,7 +193,8 @@ export async function POST(request) {
     }
 
     const html = buildHtml(subject, message, AUDIENCE_LABELS[audience]);
-    const { sent, failed } = await sendBatch(emails, subject.trim(), html);
+    const text = buildText(subject, message);
+    const { sent, failed } = await sendBatch(emails, subject.trim(), html, text);
 
     return NextResponse.json({ success: true, sent, failed, total: emails.length });
   } catch (error) {

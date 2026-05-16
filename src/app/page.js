@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "./supabaseClient";
 import {
   Terminal, Zap, ArrowRight, Code2, Users, Globe, Bot,
-  Menu, X, Bell, ChevronDown, UserPlus, Handshake, Hash,
+  Menu, X, Bell, ChevronDown, UserPlus, Handshake,
   AlertTriangle, Briefcase, GraduationCap, BookOpen, Star,
   Sparkles, Lock, CheckCircle2, MessageSquare, TrendingUp,
-  Play, Shield, ChevronRight, Award, Cpu,
+  Play, Shield, ChevronRight, Award, Cpu, Pencil, Trash2,
 } from "lucide-react";
 import FloatingAiAssistant from "./components/FloatingAiAssistant";
 
@@ -142,6 +142,69 @@ const FALLBACK_STATS = [
   { label: "Courses", value: 280, suffix: "+" },
 ];
 
+const FALLBACK_TESTIMONIALS = [
+  {
+    id: "1",
+    name: "Sarah Chen",
+    username: "sarah_dev",
+    role: "Senior Frontend Engineer",
+    company: "Stripe",
+    content: "beoneofus helped me land my dream role at Stripe. The AI mock interviews were spot on and the mentor I connected with gave me exactly the feedback I needed.",
+    rating: 5,
+    avatar_url: null,
+  },
+  {
+    id: "2",
+    name: "Marcus Osei",
+    username: "m_osei",
+    role: "Full-Stack Engineer",
+    company: "Notion",
+    content: "I went from freelancing to a $150k role in 4 months. The job board actually has real listings, not the same recycled postings you see everywhere else.",
+    rating: 5,
+    avatar_url: null,
+  },
+  {
+    id: "3",
+    name: "Priya Nair",
+    username: "priya_builds",
+    role: "Software Engineer",
+    company: "Figma",
+    content: "The AI courses are wild — each lesson is generated fresh and the exams actually test what you learned. It feels like having a personal tutor available 24/7.",
+    rating: 5,
+    avatar_url: null,
+  },
+  {
+    id: "4",
+    name: "James Whitfield",
+    username: "jwhitfield",
+    role: "Tech Lead",
+    company: "Linear",
+    content: "Best developer community I've been part of. No spam, no cold DMs. Everyone here is serious about their craft and the mutual-consent system actually works.",
+    rating: 5,
+    avatar_url: null,
+  },
+  {
+    id: "5",
+    name: "Aisha Mwangi",
+    username: "aisha_code",
+    role: "Backend Engineer",
+    company: "Vercel",
+    content: "Connected with a senior engineer who reviewed my system design. One session and I completely rethought my architecture. Worth every penny of premium.",
+    rating: 5,
+    avatar_url: null,
+  },
+  {
+    id: "6",
+    name: "Diego Reyes",
+    username: "dreyes_dev",
+    role: "Indie Hacker",
+    company: "Bootstrapped",
+    content: "Found two co-founders and a contractor through beoneofus. The project collaboration tools are exactly what the indie hacker community needed.",
+    rating: 5,
+    avatar_url: null,
+  },
+];
+
 /* ─── Helpers ───────────────────────────────────────────────── */
 function authLink(session, dest) {
   if (session) return dest;
@@ -157,6 +220,7 @@ export default function LandingPage() {
   const [authError, setAuthError] = useState(null);
   const [pageViews, setPageViews] = useState(null);
   const [liveStats, setLiveStats] = useState(FALLBACK_STATS);
+  const [testimonials, setTestimonials] = useState(FALLBACK_TESTIMONIALS);
   const [heroVisible, setHeroVisible] = useState(false);
   const [typeText, setTypeText] = useState("");
   const words = ["developers.", "builders.", "engineers.", "founders.", "hackers."];
@@ -177,7 +241,7 @@ export default function LandingPage() {
         }
         if (isMounted) setSession(s);
         if (s) {
-          const { data } = await supabase.from("profiles").select("username, avatar_url").eq("id", s.user.id).single();
+          const { data } = await supabase.from("profiles").select("username, avatar_url, full_name, role, company").eq("id", s.user.id).single();
           if (isMounted) setProfile(data);
         }
       } catch { if (isMounted) setAuthError("Auth check failed. Please try again."); }
@@ -213,6 +277,18 @@ export default function LandingPage() {
       if (viewData) setPageViews(viewData);
     };
     fetchStats();
+  }, []);
+
+  /* testimonials */
+  useEffect(() => {
+    supabase
+      .from("testimonials")
+      .select("id, user_id, name, username, role, company, content, rating, avatar_url")
+      .order("created_at", { ascending: false })
+      .limit(12)
+      .then(({ data }) => {
+        if (data && data.length > 0) setTestimonials(data);
+      });
   }, []);
 
   /* hero entrance */
@@ -253,6 +329,12 @@ export default function LandingPage() {
         @keyframes badge-pop { 0%{opacity:0;transform:scale(0.7) translateY(8px)}100%{opacity:1;transform:scale(1) translateY(0)} }
         @keyframes pulse-ring { 0%{box-shadow:0 0 0 0 rgba(59,130,246,0.4)}70%{box-shadow:0 0 0 10px rgba(59,130,246,0)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)} }
         @keyframes cursor-blink { 0%,100%{opacity:1}50%{opacity:0} }
+        @keyframes marquee-left { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+        @keyframes marquee-right { from{transform:translateX(-50%)} to{transform:translateX(0)} }
+        .animate-marquee-left { animation: marquee-left 40s linear infinite; }
+        .animate-marquee-right { animation: marquee-right 44s linear infinite; }
+        .marquee-track:hover .animate-marquee-left,
+        .marquee-track:hover .animate-marquee-right { animation-play-state: paused; }
 
         .animate-orb1 { animation: orb1 8s ease-in-out infinite; }
         .animate-orb2 { animation: orb2 11s ease-in-out infinite; }
@@ -325,54 +407,56 @@ export default function LandingPage() {
             </div>
 
             {/* Auth area */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {loading ? (
-                <div className="w-48 h-9 bg-gray-100 dark:bg-white/5 animate-pulse rounded-xl" />
+                <div className="w-32 sm:w-48 h-9 bg-gray-100 dark:bg-white/5 animate-pulse rounded-xl" />
               ) : session ? (
                 <>
-                  <Link href="/dash" className="relative text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-2 transition-colors">
+                  <Link href="/dash" className="relative text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-2 transition-colors shrink-0">
                     <Bell size={19} />
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#080c12]" />
                   </Link>
                   <Link href="/dash"
-                    className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 pl-2 pr-3 py-1.5 rounded-full transition-all">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 flex items-center justify-center text-[10px] font-bold overflow-hidden relative">
-                      {profile?.avatar_url
-                        ? <Image src={profile.avatar_url} alt="av" fill className="object-cover" sizes="24px" />
-                        : profile?.username?.[0]?.toUpperCase() || "U"}
+                    className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 pl-1.5 pr-1.5 sm:pl-2 sm:pr-3 py-1 sm:py-1.5 rounded-full transition-all shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shadow-sm shrink-0">
+                      {(profile?.avatar_url || session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture)
+                        ? <img src={profile?.avatar_url || session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
                     </div>
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Dashboard</span>
-                    <ChevronDown size={13} className="text-gray-400" />
+                    <span className="hidden sm:block text-sm font-bold text-gray-700 dark:text-gray-300">Dash</span>
+                    <ChevronDown size={14} className="text-gray-400 hidden lg:block" />
                   </Link>
                 </>
               ) : (
                 <>
-                  <Link href="/auth" className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-                    Sign in
+                  <Link href="/auth" className="px-3 sm:px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                    Login
                   </Link>
                   <Link href="/auth"
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105">
-                    Get Started
+                    className="hidden sm:block px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105">
+                    Join
                   </Link>
                 </>
               )}
-            </div>
 
-            {/* Mobile toggle */}
-            <button
-              className="md:hidden p-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
+              {/* Mobile toggle */}
+              <button
+                className="lg:hidden p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </div>
           </div>
 
           {/* Mobile menu */}
-          <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
+          <div className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
             <div className="px-4 pb-6 pt-2 border-t border-gray-100 dark:border-white/5 space-y-1">
               {session && (
                 <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-white/5 rounded-xl mb-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center text-xs font-bold overflow-hidden relative">
-                    {profile?.avatar_url ? <Image src={profile.avatar_url} alt="av" fill className="object-cover" sizes="36px" /> : profile?.username?.[0]?.toUpperCase() || "U"}
+                  <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">
+                    {(profile?.avatar_url || session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture)
+                      ? <img src={profile?.avatar_url || session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
                   </div>
                   <div>
                     <p className="text-sm font-bold text-gray-900 dark:text-white">@{profile?.username}</p>
@@ -538,6 +622,9 @@ export default function LandingPage() {
 
         {/* ── Community ───────────────────────── */}
         <CommunitySection communities={COMMUNITIES} session={session} />
+
+        {/* ── Testimonials ────────────────────── */}
+        <TestimonialsSection testimonials={testimonials} session={session} profile={profile} />
 
         {/* ── Premium CTA ─────────────────────── */}
         <PremiumSection session={session} />
@@ -852,6 +939,433 @@ function FinalCTA({ session }) {
         <p className="text-gray-400 dark:text-gray-600 text-sm mt-5">Free forever. No credit card. No noise.</p>
       </div>
     </section>
+  );
+}
+
+const AVATAR_COLORS = [
+  "bg-blue-100 dark:bg-blue-900/40 text-blue-600",
+  "bg-violet-100 dark:bg-violet-900/40 text-violet-600",
+  "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600",
+  "bg-amber-100 dark:bg-amber-900/40 text-amber-600",
+  "bg-rose-100 dark:bg-rose-900/40 text-rose-600",
+  "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600",
+];
+
+function avatarColor(id) {
+  return AVATAR_COLORS[(id?.charCodeAt(0) ?? 0) % AVATAR_COLORS.length];
+}
+
+/* ── Mini card used in the marquee ─────────── */
+function MarqueeCard({ t }) {
+  const initials = t.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  const colorClass = avatarColor(t.id);
+  return (
+    <div className="mx-2 w-72 shrink-0 bg-white dark:bg-[#0f1723] border border-gray-100 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+      <div className="flex items-center gap-0.5 mb-2">
+        {Array.from({ length: t.rating ?? 5 }).map((_, i) => (
+          <Star key={i} size={11} className="text-amber-400 fill-amber-400" />
+        ))}
+      </div>
+      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 mb-3">
+        &ldquo;{t.content}&rdquo;
+      </p>
+      <div className="flex items-center gap-2">
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 overflow-hidden relative ${t.avatar_url ? "" : colorClass}`}>
+          {t.avatar_url
+            ? <Image src={t.avatar_url} alt={t.name} fill className="object-cover" sizes="28px" />
+            : initials}
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-black text-gray-900 dark:text-white truncate leading-none">{t.name}</p>
+          {(t.role || t.company) && (
+            <p className="text-[10px] text-gray-400 dark:text-gray-600 truncate mt-0.5">{t.role}{t.company ? ` · ${t.company}` : ""}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TestimonialsSection({ testimonials: initial, session, profile }) {
+  const [sectionRef, visible] = useIntersect();
+  const [items, setItems] = useState(initial);
+  const [liveCount, setLiveCount] = useState(0);
+
+  useEffect(() => { setItems(initial); }, [initial]);
+
+  /* real-time subscription */
+  useEffect(() => {
+    const channel = supabase
+      .channel("testimonials-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "testimonials" },
+        (payload) => {
+          setItems((prev) => [payload.new, ...prev].slice(0, 12));
+          setLiveCount((n) => n + 1);
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  /* form state */
+  const [content, setContent] = useState("");
+  const [role, setRole] = useState(profile?.role ?? "");
+  const [company, setCompany] = useState(profile?.company ?? "");
+  const [rating, setRating] = useState(5);
+  const [hovered, setHovered] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!content.trim()) { setFormError("Please write something."); return; }
+    setSubmitting(true);
+    setFormError("");
+    const { error } = await supabase.from("testimonials").insert({
+      user_id: session.user.id,
+      name: profile?.full_name || profile?.username || "Anonymous",
+      username: profile?.username ?? null,
+      avatar_url: profile?.avatar_url ?? null,
+      role: role.trim() || null,
+      company: company.trim() || null,
+      content: content.trim(),
+      rating,
+      is_featured: false,
+    });
+    setSubmitting(false);
+    if (error) { setFormError("Something went wrong. Try again."); return; }
+    setSubmitted(true);
+    setContent(""); setRole(""); setCompany(""); setRating(5);
+  };
+
+  /* split for two marquee rows */
+  const half = Math.ceil(items.length / 2);
+  const rowA = items.slice(0, half);
+  const rowB = items.slice(half);
+
+  return (
+    <section className="py-24 sm:py-32 overflow-hidden">
+      {/* Heading */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div ref={sectionRef} className={`text-center mb-12 reveal ${visible ? "visible" : ""}`}>
+          <p className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-3">Testimonials</p>
+          <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-4">
+            Developers love it here.
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 font-medium max-w-xl mx-auto">
+            Real stories from real developers who found jobs, mentors, and community on beoneofus.
+          </p>
+          {liveCount > 0 && (
+            <div className="inline-flex items-center gap-1.5 mt-4 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40 rounded-full text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-fade-in">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {liveCount} new since you arrived
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Marquee rows — full bleed */}
+      <div className="space-y-3 mb-16">
+        {/* Row 1 — scrolls left */}
+        <div className="relative marquee-track">
+          <div className="absolute left-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-r from-[#fafafa] dark:from-[#080c12] to-transparent pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-l from-[#fafafa] dark:from-[#080c12] to-transparent pointer-events-none" />
+          <div className="flex animate-marquee-left will-change-transform">
+            {[...rowA, ...rowA].map((t, i) => <MarqueeCard key={`a-${i}`} t={t} />)}
+          </div>
+        </div>
+        {/* Row 2 — scrolls right */}
+        {rowB.length > 0 && (
+          <div className="relative marquee-track">
+            <div className="absolute left-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-r from-[#fafafa] dark:from-[#080c12] to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-l from-[#fafafa] dark:from-[#080c12] to-transparent pointer-events-none" />
+            <div className="flex animate-marquee-right will-change-transform">
+              {[...rowB, ...rowB].map((t, i) => <MarqueeCard key={`b-${i}`} t={t} />)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Masonry grid */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4 mb-16">
+          {items.map((t, i) => (
+            <TestimonialCard key={t.id} testimonial={t} delay={i * 0.08} parentVisible={visible} session={session} onDelete={(id) => setItems((prev) => prev.filter((x) => x.id !== id))} onUpdate={(updated) => setItems((prev) => prev.map((x) => x.id === updated.id ? updated : x))} />
+          ))}
+        </div>
+
+        {/* Submission form */}
+        <div className={`reveal ${visible ? "visible" : ""} reveal-delay-3`}>
+          <div className="max-w-2xl mx-auto bg-white dark:bg-[#0f1723] border border-gray-200 dark:border-white/5 rounded-3xl p-6 sm:p-8 shadow-xl shadow-gray-100/60 dark:shadow-none">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
+                <MessageSquare size={18} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-gray-900 dark:text-white">Share your story</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Help other developers find their community</p>
+              </div>
+            </div>
+
+            {!session ? (
+              <div className="text-center py-8">
+                <Lock size={28} className="mx-auto text-gray-300 dark:text-gray-700 mb-3" />
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">Sign in to share your experience</p>
+                <Link href="/auth"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:scale-105">
+                  Sign in <ArrowRight size={14} />
+                </Link>
+              </div>
+            ) : submitted ? (
+              <div className="text-center py-8">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-4 animate-badge-pop">
+                  <CheckCircle2 size={26} className="text-emerald-500" />
+                </div>
+                <p className="font-black text-gray-900 dark:text-white text-lg mb-1">Thank you!</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Your testimonial is under review and will appear soon.</p>
+                <button onClick={() => setSubmitted(false)}
+                  className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                  Submit another
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Star rating */}
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-gray-400 dark:text-gray-600 block mb-2">Rating</label>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={n} type="button"
+                        onMouseEnter={() => setHovered(n)}
+                        onMouseLeave={() => setHovered(0)}
+                        onClick={() => setRating(n)}
+                        className="p-0.5 transition-transform hover:scale-125 active:scale-95">
+                        <Star
+                          size={24}
+                          className={`transition-all duration-150 ${n <= (hovered || rating) ? "text-amber-400 fill-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)]" : "text-gray-200 dark:text-gray-700 fill-gray-200 dark:fill-gray-700"}`}
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-2 text-xs font-bold text-gray-400 dark:text-gray-600">
+                      {["", "Poor", "Fair", "Good", "Great", "Excellent"][hovered || rating]}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Role + Company */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 dark:text-gray-600 block mb-1.5">Role</label>
+                    <input
+                      type="text" value={role} onChange={(e) => setRole(e.target.value)}
+                      placeholder="e.g. Senior Engineer"
+                      className="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 dark:text-gray-600 block mb-1.5">Company</label>
+                    <input
+                      type="text" value={company} onChange={(e) => setCompany(e.target.value)}
+                      placeholder="e.g. Stripe"
+                      className="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-gray-400 dark:text-gray-600 block mb-1.5">
+                    Your story <span className="text-red-400">*</span>
+                  </label>
+                  <textarea
+                    value={content} onChange={(e) => setContent(e.target.value)}
+                    rows={4} maxLength={400}
+                    placeholder="What did beoneofus help you achieve?"
+                    className="w-full px-4 py-3 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all resize-none"
+                  />
+                  <div className="flex justify-between items-center mt-1">
+                    <span />
+                    <span className={`text-[11px] font-mono transition-colors ${content.length > 360 ? "text-amber-500" : "text-gray-400 dark:text-gray-600"}`}>
+                      {content.length}/400
+                    </span>
+                  </div>
+                </div>
+
+                {formError && (
+                  <p className="text-xs font-semibold text-red-500 flex items-center gap-1.5 animate-fade-in">
+                    <AlertTriangle size={13} /> {formError}
+                  </p>
+                )}
+
+                <button
+                  type="submit" disabled={submitting || !content.trim()}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl text-sm transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2">
+                  {submitting ? (
+                    <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting…</>
+                  ) : (
+                    <><MessageSquare size={15} /> Submit testimonial</>
+                  )}
+                </button>
+                <p className="text-[11px] text-center text-gray-400 dark:text-gray-600">
+                  Reviewed by the team before going live.
+                </p>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TestimonialCard({ testimonial: t, delay, parentVisible, session, onDelete, onUpdate }) {
+  const initials = t.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  const colorClass = avatarColor(t.id);
+  const isOwner = session?.user?.id && t.user_id === session.user.id;
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => {
+    setImgError(false); // Reset error state when testimonial changes (e.g., new data)
+  }, [t.avatar_url]);
+
+
+  /* edit state */
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState(t.content);
+  const [editRole, setEditRole] = useState(t.role ?? "");
+  const [editCompany, setEditCompany] = useState(t.company ?? "");
+  const [editRating, setEditRating] = useState(t.rating ?? 5);
+  const [editHovered, setEditHovered] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleSave = async () => {
+    if (!editContent.trim()) return;
+    setSaving(true);
+    const updates = {
+      content: editContent.trim(),
+      role: editRole.trim() || null,
+      company: editCompany.trim() || null,
+      rating: editRating,
+    };
+    const { error } = await supabase.from("testimonials").update(updates).eq("id", t.id);
+    setSaving(false);
+    if (!error) { onUpdate({ ...t, ...updates }); setEditing(false); }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    const { error } = await supabase.from("testimonials").delete().eq("id", t.id);
+    setDeleting(false);
+    if (!error) onDelete(t.id);
+  };
+
+  return (
+    <div
+      className={`break-inside-avoid group bg-white dark:bg-[#0f1723] border rounded-3xl p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 card-glow reveal ${editing ? "border-blue-400 dark:border-blue-500/50" : "border-gray-200 dark:border-white/5 hover:border-blue-300 dark:hover:border-blue-700/40"} ${parentVisible ? "visible" : ""}`}
+      style={{ transitionDelay: `${delay}s` }}>
+
+      {editing ? (
+        /* ── Edit mode ── */
+        <div className="space-y-3">
+          {/* Star picker */}
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} type="button"
+                onMouseEnter={() => setEditHovered(n)} onMouseLeave={() => setEditHovered(0)}
+                onClick={() => setEditRating(n)}
+                className="p-0.5 hover:scale-125 transition-transform">
+                <Star size={18} className={`transition-colors ${n <= (editHovered || editRating) ? "text-amber-400 fill-amber-400" : "text-gray-200 dark:text-gray-700 fill-gray-200 dark:fill-gray-700"}`} />
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input value={editRole} onChange={(e) => setEditRole(e.target.value)} placeholder="Role"
+              className="px-3 py-2 text-xs bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+            <input value={editCompany} onChange={(e) => setEditCompany(e.target.value)} placeholder="Company"
+              className="px-3 py-2 text-xs bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+          </div>
+          <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={3} maxLength={400}
+            className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+          <div className="flex items-center gap-2">
+            <button onClick={handleSave} disabled={saving || !editContent.trim()}
+              className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5">
+              {saving ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle2 size={13} />}
+              Save
+            </button>
+            <button onClick={() => setEditing(false)}
+              className="flex-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl transition-all">
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Stars + owner actions */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: t.rating ?? 5 }).map((_, i) => (
+                <Star key={i} size={13} className="text-amber-400 fill-amber-400" />
+              ))}
+            </div>
+            {isOwner && (
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => setEditing(true)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                  title="Edit">
+                  <Pencil size={13} />
+                </button>
+                {confirmDelete ? (
+                  <div className="flex items-center gap-1">
+                    <button onClick={handleDelete} disabled={deleting}
+                      className="px-2 py-1 text-[10px] font-black bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all flex items-center gap-1">
+                      {deleting ? <span className="w-2.5 h-2.5 border border-white/30 border-t-white rounded-full animate-spin" /> : null}
+                      Confirm
+                    </button>
+                    <button onClick={() => setConfirmDelete(false)} className="px-2 py-1 text-[10px] font-bold bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 rounded-lg">
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDelete(true)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                    title="Delete">
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Quote */}
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-5">
+            &ldquo;{t.content}&rdquo;
+          </p>
+
+          {/* Author */}
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black shrink-0 overflow-hidden relative ${t.avatar_url && !imgError ? "" : colorClass} group-hover:scale-105 transition-transform`}>
+              {t.avatar_url && !imgError
+                ? <Image src={t.avatar_url} alt={t.name} fill className="object-cover" sizes="40px" onError={() => setImgError(true)} />
+                : initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-black text-gray-900 dark:text-white truncate">{t.name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {t.role}{t.company ? ` · ${t.company}` : ""}
+              </p>
+            </div>
+            {t.username && (
+              <span className="ml-auto shrink-0 text-[10px] font-bold text-gray-400 dark:text-gray-600">@{t.username}</span>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

@@ -12,6 +12,7 @@ import {
   Play, Shield, ChevronRight, Award, Cpu, Pencil, Trash2,
 } from "lucide-react";
 import FloatingAiAssistant from "./components/FloatingAiAssistant";
+import { getAvatarSrc } from "../lib/avatar";
 
 /* ─── Animation helpers ─────────────────────────────────────── */
 function useIntersect(options = {}) {
@@ -211,6 +212,7 @@ function authLink(session, dest) {
   return `/auth?next=${encodeURIComponent(dest)}`;
 }
 
+
 /* ─── Component ─────────────────────────────────────────────── */
 export default function LandingPage() {
   const [session, setSession] = useState(null);
@@ -222,6 +224,7 @@ export default function LandingPage() {
   const [liveStats, setLiveStats] = useState(FALLBACK_STATS);
   const [testimonials, setTestimonials] = useState(FALLBACK_TESTIMONIALS);
   const [heroVisible, setHeroVisible] = useState(false);
+  const [navAvatarError, setNavAvatarError] = useState(false);
   const [typeText, setTypeText] = useState("");
   const words = ["developers.", "builders.", "engineers.", "founders.", "hackers."];
   const wordIndex = useRef(0);
@@ -419,8 +422,8 @@ export default function LandingPage() {
                   <Link href="/dash"
                     className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 pl-1.5 pr-1.5 sm:pl-2 sm:pr-3 py-1 sm:py-1.5 rounded-full transition-all shrink-0">
                     <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shadow-sm shrink-0">
-                      {(profile?.avatar_url || session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture)
-                        ? <img src={profile?.avatar_url || session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      {getAvatarSrc(profile, session) && !navAvatarError
+                        ? <img src={getAvatarSrc(profile, session)} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
                         : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
                     </div>
                     <span className="hidden sm:block text-sm font-bold text-gray-700 dark:text-gray-300">Dash</span>
@@ -454,13 +457,17 @@ export default function LandingPage() {
               {session && (
                 <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-white/5 rounded-xl mb-3">
                   <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">
-                    {(profile?.avatar_url || session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture)
-                      ? <img src={profile?.avatar_url || session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    {getAvatarSrc(profile, session) && !navAvatarError
+                      ? <img src={getAvatarSrc(profile, session)} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
                       : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">@{profile?.username}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Active member</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      @{profile?.username || session?.user?.email?.split("@")[0] || "member"}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                      {profile?.role || "member"}
+                    </p>
                   </div>
                 </div>
               )}

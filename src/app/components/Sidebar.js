@@ -13,6 +13,7 @@ import { supabase } from '../supabaseClient';
 import { useRouter, usePathname } from 'next/navigation';
 import VerifiedBadge from './VerifiedBadge';
 import PremiumBadge from './PremiumBadge';
+import { getAvatarSrc } from '../../lib/avatar';
 import { useLanguage } from '../../lib/i18n';
 
 const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index, isNew }) => {
@@ -61,6 +62,7 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction,
 export default function Sidebar({ onClose }) {
   const { t } = useLanguage();
   const [profile, setProfile] = useState(null);
+  const [authSession, setAuthSession] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0); // State for real notification count
   const [unreadGroups, setUnreadGroups] = useState(0);
@@ -182,15 +184,16 @@ export default function Sidebar({ onClose }) {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
+          setAuthSession(session);
           const uid = session.user.id;
-  
+
           // Fetch Profile
           const { data: profileData } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', uid)
             .single();
-          
+
           if (profileData) setProfile(profileData);
   
           await fetchCounts(uid);
@@ -506,8 +509,8 @@ export default function Sidebar({ onClose }) {
             >
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1.5px] shadow-md shadow-blue-500/20 shrink-0">
                 <div className="relative w-full h-full rounded-[9px] bg-white dark:bg-gray-900 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 uppercase overflow-hidden">
-                  {profile?.avatar_url ? (
-                    <Image src={profile.avatar_url} alt="Avatar" fill sizes="40px" className="object-cover" />
+                  {getAvatarSrc(profile, authSession) ? (
+                    <Image src={getAvatarSrc(profile, authSession)} alt="Avatar" fill sizes="40px" className="object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     profile ? profile.username?.substring(0, 2) : '??'
                   )}

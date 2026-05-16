@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import VerifiedBadge from '../../components/VerifiedBadge';
 import PremiumBadge from '../../components/PremiumBadge';
+import { getAvatarSrc } from '../../../lib/avatar';
 
 const SECTIONS = [
   {
@@ -170,6 +171,7 @@ function getDailyFeatured(count = 3) {
 export default function HomeDashContent() {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
+  const [authSession, setAuthSession] = useState(null);
   const [stats, setStats] = useState({ connections: 0, messages: 0, notifications: 0, groups: 0 });
   const [loading, setLoading] = useState(true);
   const [dailyFeatured] = useState(() => getDailyFeatured(3));
@@ -185,6 +187,7 @@ export default function HomeDashContent() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) { setLoading(false); return; }
+        setAuthSession(session);
         const uid = session.user.id;
 
         const [profileRes, connRes, msgRes, notifRes, groupNotifRes] = await Promise.all([
@@ -245,9 +248,9 @@ export default function HomeDashContent() {
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4">
           {/* Avatar */}
-          {profile?.avatar_url && (
+          {getAvatarSrc(profile, authSession) && (
             <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border-2 border-white/20 shrink-0 shadow-lg">
-              <Image src={profile.avatar_url} alt="avatar" fill sizes="64px" className="object-cover" />
+              <Image src={getAvatarSrc(profile, authSession)} alt="avatar" fill sizes="64px" className="object-cover" referrerPolicy="no-referrer" />
             </div>
           )}
 

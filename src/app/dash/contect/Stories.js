@@ -7,7 +7,7 @@ import { supabase } from "../../supabaseClient";
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STORY_DURATION = 5000;  // ms per photo/text slide
-const VIDEO_DURATION  = 30000; // ms max for video slide (onEnded fires first)
+const VIDEO_DURATION  = 60000; // ms max for video (onEnded fires first)
 
 const BG_COLORS = [
   "#7c3aed", "#db2777", "#ea580c", "#16a34a",
@@ -199,6 +199,7 @@ export function StoryViewer({ groups, startGroupIdx, currentUserId, onClose, onD
             className="absolute inset-0 w-full h-full object-cover"
             autoPlay
             playsInline
+            muted
             onEnded={goToNext}
           />
         )}
@@ -301,10 +302,19 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
   const [bgColor, setBgColor]     = useState(BG_COLORS[0]);
   const [textContent, setTextContent] = useState("");
   const [uploading, setUploading]     = useState(false);
-  const [videoFile, setVideoFile]     = useState(null);
-  const [videoPreview, setVideoPreview] = useState(null);
-  const fileRef                       = useRef(null);
-  const videoRef                      = useRef(null);
+  const [videoFile, setVideoFile]         = useState(null);
+  const [videoPreview, setVideoPreview]   = useState(null);
+  const fileRef                           = useRef(null);
+  const videoRef                          = useRef(null);
+
+  const handleVideoChange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > 50 * 1024 * 1024) { alert("Video must be under 50 MB"); return; }
+    setVideoFile(f);
+    setVideoPreview(URL.createObjectURL(f));
+    setMode("video");
+  };
 
   const handleFileChange = (e) => {
     const f = e.target.files?.[0];
@@ -312,18 +322,6 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
     setFile(f);
     setPreview(URL.createObjectURL(f));
     setMode("image");
-  };
-
-  const handleVideoChange = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (f.size > 50 * 1024 * 1024) {
-      alert("Video must be under 50 MB");
-      return;
-    }
-    setVideoFile(f);
-    setVideoPreview(URL.createObjectURL(f));
-    setMode("video");
   };
 
   const handleShare = async () => {
@@ -457,12 +455,7 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
         {mode === "video" && videoPreview && (
           <div className="p-5 space-y-4">
             <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ aspectRatio: "9/16" }}>
-              <video
-                src={videoPreview}
-                className="w-full h-full object-cover"
-                controls
-                playsInline
-              />
+              <video src={videoPreview} className="w-full h-full object-cover" controls playsInline />
             </div>
             <input
               type="text"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../supabaseClient';
 import Image from 'next/image';
@@ -9,7 +9,8 @@ import {
   Crown, GraduationCap, Handshake, Newspaper, HeartHandshake,
   ShoppingBag, UserPlus, Briefcase, Compass, Home,
   ChevronRight, CalendarDays, TrendingUp, Zap, Star,
-  LayoutDashboard,
+  LayoutDashboard, Sparkles, RefreshCw, BarChart2,
+  CheckCircle2, Circle, ArrowRight,
 } from 'lucide-react';
 import VerifiedBadge from '../../components/VerifiedBadge';
 import PremiumBadge from '../../components/PremiumBadge';
@@ -168,6 +169,31 @@ function getDailyFeatured(count = 3) {
   return arr.slice(0, count);
 }
 
+/* ── Profile completeness calculator ────────────────────── */
+function calcCompleteness(profile) {
+  if (!profile) return { score: 0, missing: [] };
+  const checks = [
+    { field: 'username',    label: 'Username',       done: !!profile.username },
+    { field: 'full_name',   label: 'Full name',      done: !!profile.full_name },
+    { field: 'avatar_url',  label: 'Profile photo',  done: !!profile.avatar_url },
+    { field: 'status',      label: 'Bio / status',   done: !!profile.status },
+    { field: 'location',    label: 'Location',        done: !!profile.location },
+    { field: 'work_status', label: 'Work status',     done: !!profile.work_status },
+    { field: 'github',      label: 'GitHub link',     done: !!profile.github },
+    { field: 'skills',      label: 'Skills list',     done: Array.isArray(profile.skills) && profile.skills.length > 0 },
+  ];
+  const done    = checks.filter(c => c.done).length;
+  const missing = checks.filter(c => !c.done).map(c => c.label);
+  return { score: Math.round((done / checks.length) * 100), missing };
+}
+
+/* ── Skill suggestion chip colours ──────────────────────── */
+const PRIORITY_STYLE = {
+  high:   'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/40',
+  medium: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/40',
+  low:    'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/40',
+};
+
 export default function HomeDashContent() {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
@@ -179,19 +205,26 @@ export default function HomeDashContent() {
     new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   );
 
+  // Career widgets state
+  const [skillSuggestions, setSkillSuggestions] = useState([]);
+  const [skillsLoading, setSkillsLoading]       = useState(false);
+  const [skillsError, setSkillsError]           = useState(null);
+  const [session, setSession]                   = useState(null);
+
   const greetingHour = new Date().getHours();
   const greeting = greetingHour < 12 ? 'Good morning' : greetingHour < 17 ? 'Good afternoon' : 'Good evening';
 
   useEffect(() => {
     const init = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { setLoading(false); return; }
-        setAuthSession(session);
-        const uid = session.user.id;
+        const { data: { session: s } } = await supabase.auth.getSession();
+        if (!s) { setLoading(false); return; }
+        setAuthSession(s);
+        setSession(s);
+        const uid = s.user.id;
 
         const [profileRes, connRes, msgRes, notifRes, groupNotifRes] = await Promise.all([
-          supabase.from('profiles').select('username, avatar_url, status, is_verified, is_premium, is_admin').eq('id', uid).single(),
+          supabase.from('profiles').select('username, avatar_url, status, is_verified, is_premium, is_admin, full_name, location, work_status, github, skills, role, field').eq('id', uid).single(),
           supabase.from('connections').select('id', { count: 'exact', head: true }).or(`sender_id.eq.${uid},receiver_id.eq.${uid}`).eq('status', 'accepted'),
           supabase.from('messages').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('is_read', false),
           supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('unread', true),
@@ -213,6 +246,35 @@ export default function HomeDashContent() {
     };
     init();
   }, []);
+
+  const fetchSkillSuggestions = useCallback(async (force = false) => {
+    if (!session) return;
+    setSkillsLoading(true);
+    setSkillsError(null);
+    try {
+      if (force) {
+        await fetch('/api/ai/skill-suggestions', {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+      }
+      const res  = await fetch('/api/ai/skill-suggestions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+      if (data.suggestions) setSkillSuggestions(data.suggestions);
+      else setSkillsError(data.error || 'Failed to load suggestions');
+    } catch {
+      setSkillsError('Network error');
+    } finally {
+      setSkillsLoading(false);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (session) fetchSkillSuggestions();
+  }, [session, fetchSkillSuggestions]);
 
   const go = (id) => router.push('/dash/' + id);
 
@@ -396,6 +458,112 @@ export default function HomeDashContent() {
               </button>
             );
           })}
+        </div>
+      </section>
+
+      {/* ── CAREER WIDGETS ── */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Profile Completeness */}
+        {(() => {
+          const { score, missing } = calcCompleteness(profile);
+          const barColor = score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500';
+          return (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <BarChart2 size={14} className="text-white" />
+                  </div>
+                  <p className="text-sm font-black text-gray-900 dark:text-gray-100">Profile Strength</p>
+                </div>
+                <span className={`text-xs font-black px-2 py-0.5 rounded-full ${score >= 80 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : score >= 50 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                  {score}%
+                </span>
+              </div>
+              <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-3">
+                <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${score}%` }} />
+              </div>
+              {missing.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Missing</p>
+                  {missing.slice(0, 3).map(m => (
+                    <div key={m} className="flex items-center gap-2">
+                      <Circle size={10} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{m}</span>
+                    </div>
+                  ))}
+                  {missing.length > 3 && (
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">+{missing.length - 3} more</p>
+                  )}
+                  <button
+                    onClick={() => go('profile')}
+                    className="mt-2 flex items-center gap-1.5 text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Complete profile <ArrowRight size={11} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 size={14} />
+                  <span className="text-xs font-bold">Profile is complete — great work!</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* AI Skill Suggestions */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-violet-600 rounded-lg flex items-center justify-center">
+                <Sparkles size={14} className="text-white" />
+              </div>
+              <p className="text-sm font-black text-gray-900 dark:text-gray-100">AI Skill Suggestions</p>
+            </div>
+            <button
+              onClick={() => fetchSkillSuggestions(true)}
+              disabled={skillsLoading}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all disabled:opacity-50"
+              title="Refresh suggestions"
+            >
+              <RefreshCw size={13} className={`text-gray-400 ${skillsLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          {skillsLoading && (
+            <div className="space-y-2">
+              {[1,2,3].map(i => (
+                <div key={i} className="h-8 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {!skillsLoading && skillsError && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">{skillsError}</p>
+          )}
+
+          {!skillsLoading && !skillsError && skillSuggestions.length === 0 && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">No suggestions yet</p>
+          )}
+
+          {!skillsLoading && skillSuggestions.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {skillSuggestions.slice(0, 6).map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => go('learn')}
+                  title={s.reason}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all hover:-translate-y-0.5 hover:shadow-sm active:scale-95 ${PRIORITY_STYLE[s.priority] || PRIORITY_STYLE.medium}`}
+                >
+                  <Sparkles size={9} />
+                  {s.skill}
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2.5">Tap any skill to find courses</p>
         </div>
       </section>
 

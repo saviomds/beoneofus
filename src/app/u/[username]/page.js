@@ -130,6 +130,17 @@ export default function PublicProfilePage() {
           );
         }
       }
+
+      // Record profile view (fire-and-forget)
+      fetch('/api/analytics/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          viewed_id: profileData.id,
+          viewer_id: session?.user?.id || null,
+        }),
+      }).catch(() => {});
+
       setLoading(false);
     };
 

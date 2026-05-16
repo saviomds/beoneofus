@@ -9,7 +9,7 @@ import {
   Menu, X, Bell, ChevronDown, UserPlus, Handshake,
   AlertTriangle, Briefcase, GraduationCap, BookOpen, Star,
   Sparkles, Lock, CheckCircle2, MessageSquare, TrendingUp,
-  Play, Shield, ChevronRight, Award, Cpu, Pencil, Trash2,
+  Play, Shield, ChevronRight, Award, Pencil, Trash2,
 } from "lucide-react";
 import FloatingAiAssistant from "./components/FloatingAiAssistant";
 import { getAvatarSrc } from "../lib/avatar";
@@ -51,8 +51,8 @@ const FEATURES = [
   {
     icon: <Bot size={22} />,
     label: "AI Assistant",
-    title: "Your 24/7 Career & Code Partner",
-    desc: "Get instant code reviews, interview prep, system design help, and career guidance from beoneofus AI — powered by GPT-4o and Groq.",
+    title: "Your 24/7 Career & Skills Partner",
+    desc: "Get career guidance, skill coaching, interview prep, and personalised learning plans from beoneofus AI — available to every professional, in every field.",
     color: "from-violet-500/10 to-violet-600/5",
     border: "border-violet-200 dark:border-violet-800/40",
     icon_bg: "bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400",
@@ -62,21 +62,21 @@ const FEATURES = [
   },
   {
     icon: <Briefcase size={22} />,
-    label: "Jobs Board",
-    title: "Find Your Next Role",
-    desc: "Browse curated dev jobs from verified companies. Apply in one click with your beoneofus profile.",
+    label: "Jobs & Services",
+    title: "Find Your Next Role or Client",
+    desc: "Browse job listings across industries and post freelance services. One-click apply with your beoneofus profile — no CV upload needed.",
     color: "from-blue-500/10 to-blue-600/5",
     border: "border-blue-200 dark:border-blue-800/40",
     icon_bg: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
-    tag: "300+ Openings",
+    tag: "All Industries",
     tag_color: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700/40",
     size: "sm",
   },
   {
     icon: <GraduationCap size={22} />,
     label: "Mentorship",
-    title: "Learn From Real Engineers",
-    desc: "Book 1-on-1 sessions with senior engineers and founders. Premium members get unlimited bookings.",
+    title: "Learn From People Who've Done It",
+    desc: "Book 1-on-1 sessions with experienced professionals in your field — whether you're in tech, design, business, marketing, or anything else.",
     color: "from-emerald-500/10 to-emerald-600/5",
     border: "border-emerald-200 dark:border-emerald-800/40",
     icon_bg: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
@@ -88,7 +88,7 @@ const FEATURES = [
     icon: <BookOpen size={22} />,
     label: "Courses",
     title: "AI-Generated Learning Paths",
-    desc: "Take AI-built courses tailored to your skill level. Each lesson generated fresh with hands-on exams.",
+    desc: "Take AI-built courses tailored to your level and field. Every lesson is generated fresh, with real assessments — not recycled content.",
     color: "from-amber-500/10 to-amber-600/5",
     border: "border-amber-200 dark:border-amber-800/40",
     icon_bg: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
@@ -100,7 +100,7 @@ const FEATURES = [
     icon: <Handshake size={22} />,
     label: "Connections",
     title: "Build Your Network the Right Way",
-    desc: "Mutual-consent DMs, developer profiles with GitHub links, skill endorsements, and verified identities.",
+    desc: "Mutual-consent connections, verified profiles, skill endorsements, and safe private messaging — no spam, no cold outreach abuse.",
     color: "from-indigo-500/10 to-indigo-600/5",
     border: "border-indigo-200 dark:border-indigo-800/40",
     icon_bg: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400",
@@ -112,7 +112,7 @@ const FEATURES = [
     icon: <Award size={22} />,
     label: "Coaching",
     title: "Structured Coaching Sessions",
-    desc: "Request coaching on any topic — from React architecture to salary negotiation. Scheduled, tracked, and actionable.",
+    desc: "Request coaching on any professional topic — career pivots, salary negotiation, leadership, business strategy, or skill gaps. Scheduled, tracked, actionable.",
     color: "from-rose-500/10 to-rose-600/5",
     border: "border-rose-200 dark:border-rose-800/40",
     icon_bg: "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400",
@@ -123,21 +123,23 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: "01", icon: <UserPlus size={20} />, title: "Build Your Profile", desc: "Add your stack, link GitHub, get verified. Your profile IS your resume.", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-600" },
-  { n: "02", icon: <Handshake size={20} />, title: "Connect & Collaborate", desc: "Send connection requests. Once accepted, a secure DM channel opens.", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-600" },
-  { n: "03", icon: <Briefcase size={20} />, title: "Apply & Get Hired", desc: "Browse dev jobs tailored to your stack. One-click apply with your profile.", color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-600" },
-  { n: "04", icon: <Bot size={20} />, title: "Grow With AI", desc: "Ask the AI for code reviews, career advice, or a quick interview drill.", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500" },
+  { n: "01", icon: <UserPlus size={20} />, title: "Build Your Profile", desc: "Add your skills, field, and experience. Get verified. Your profile is your global professional identity.", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-600" },
+  { n: "02", icon: <Handshake size={20} />, title: "Connect & Collaborate", desc: "Send connection requests to people in your field. Once accepted, a secure private channel opens.", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-600" },
+  { n: "03", icon: <Briefcase size={20} />, title: "Find Work or Clients", desc: "Browse jobs and freelance opportunities across all industries. Post your own services and get hired globally.", color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-600" },
+  { n: "04", icon: <Bot size={20} />, title: "Grow With AI", desc: "Get personalised skill suggestions, career coaching, and learning paths — tailored to your profession and goals.", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500" },
 ];
 
 const COMMUNITIES = [
-  { name: "Systems & Rust", members: "12.4k", icon: <Cpu size={20} />, desc: "Low-level programming, memory safety, and perf optimization.", color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400" },
-  { name: "Frontend Architecture", members: "24.1k", icon: <Code2 size={20} />, desc: "React, Next.js, component patterns, and modern CSS.", color: "bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400" },
-  { name: "Indie Hackers", members: "8.9k", icon: <Zap size={20} />, desc: "Solo founders building SaaS, sharing MRR, growth tactics.", color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
-  { name: "AI & Machine Learning", members: "18.2k", icon: <Globe size={20} />, desc: "LLMs, prompt engineering, and neural networks.", color: "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400" },
+  { name: "Founders & Startups", members: "14.2k", icon: <Zap size={20} />, desc: "Entrepreneurs, co-founders, and bootstrappers sharing growth, funding, and lessons learned.", color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
+  { name: "Design & Creativity", members: "19.7k", icon: <Sparkles size={20} />, desc: "UI/UX designers, brand strategists, illustrators, and visual creators from every industry.", color: "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400" },
+  { name: "Marketing & Growth", members: "11.3k", icon: <TrendingUp size={20} />, desc: "Performance marketers, content creators, SEO specialists, and growth hackers.", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" },
+  { name: "Tech & Engineering", members: "31.5k", icon: <Code2 size={20} />, desc: "Software engineers, data scientists, DevOps, and all things technology.", color: "bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400" },
+  { name: "Finance & Business", members: "8.6k", icon: <Briefcase size={20} />, desc: "Finance professionals, analysts, consultants, and business strategists.", color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
+  { name: "Education & Research", members: "6.4k", icon: <GraduationCap size={20} />, desc: "Academics, educators, researchers, and lifelong learners sharing knowledge globally.", color: "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400" },
 ];
 
 const FALLBACK_STATS = [
-  { label: "Developers", value: 48200, suffix: "+" },
+  { label: "Professionals", value: 48200, suffix: "+" },
   { label: "Jobs Posted", value: 3100, suffix: "+" },
   { label: "Mentors", value: 420, suffix: "+" },
   { label: "Courses", value: 280, suffix: "+" },
@@ -147,10 +149,10 @@ const FALLBACK_TESTIMONIALS = [
   {
     id: "1",
     name: "Sarah Chen",
-    username: "sarah_dev",
-    role: "Senior Frontend Engineer",
+    username: "sarah_chen",
+    role: "Senior Product Designer",
     company: "Stripe",
-    content: "beoneofus helped me land my dream role at Stripe. The AI mock interviews were spot on and the mentor I connected with gave me exactly the feedback I needed.",
+    content: "As a designer, I never felt at home on LinkedIn. beoneofus actually gets it — real skill endorsements, portfolio-first profiles, and a network that respects your craft.",
     rating: 5,
     avatar_url: null,
   },
@@ -158,9 +160,9 @@ const FALLBACK_TESTIMONIALS = [
     id: "2",
     name: "Marcus Osei",
     username: "m_osei",
-    role: "Full-Stack Engineer",
-    company: "Notion",
-    content: "I went from freelancing to a $150k role in 4 months. The job board actually has real listings, not the same recycled postings you see everywhere else.",
+    role: "Growth Marketer",
+    company: "Remote",
+    content: "I found my last two clients through the freelance marketplace here. The order system is clean, payments are tracked, and there's no race to the bottom on price.",
     rating: 5,
     avatar_url: null,
   },
@@ -168,9 +170,9 @@ const FALLBACK_TESTIMONIALS = [
     id: "3",
     name: "Priya Nair",
     username: "priya_builds",
-    role: "Software Engineer",
-    company: "Figma",
-    content: "The AI courses are wild — each lesson is generated fresh and the exams actually test what you learned. It feels like having a personal tutor available 24/7.",
+    role: "Finance Analyst",
+    company: "Nubank",
+    content: "The AI career coach suggested skills I hadn't considered — financial modelling with Python and data storytelling. Three months later I got a promotion.",
     rating: 5,
     avatar_url: null,
   },
@@ -178,29 +180,49 @@ const FALLBACK_TESTIMONIALS = [
     id: "4",
     name: "James Whitfield",
     username: "jwhitfield",
-    role: "Tech Lead",
-    company: "Linear",
-    content: "Best developer community I've been part of. No spam, no cold DMs. Everyone here is serious about their craft and the mutual-consent system actually works.",
+    role: "Founder & CEO",
+    company: "BuildFast",
+    content: "Found my co-founder and first designer through beoneofus. The mutual-consent system means everyone here actually wants to connect — no spam, no cold pitch bots.",
     rating: 5,
     avatar_url: null,
   },
   {
     id: "5",
     name: "Aisha Mwangi",
-    username: "aisha_code",
-    role: "Backend Engineer",
-    company: "Vercel",
-    content: "Connected with a senior engineer who reviewed my system design. One session and I completely rethought my architecture. Worth every penny of premium.",
+    username: "aisha_mwangi",
+    role: "UX Researcher",
+    company: "Google",
+    content: "The mentorship feature connected me with a senior researcher who guided me through my Google interview process. Completely changed the outcome.",
     rating: 5,
     avatar_url: null,
   },
   {
     id: "6",
     name: "Diego Reyes",
-    username: "dreyes_dev",
-    role: "Indie Hacker",
-    company: "Bootstrapped",
-    content: "Found two co-founders and a contractor through beoneofus. The project collaboration tools are exactly what the indie hacker community needed.",
+    username: "dreyes",
+    role: "Content Strategist",
+    company: "Freelance",
+    content: "I was worried this platform was only for engineers. It's not — there are writers, marketers, designers, and educators here. It's genuinely global and inclusive.",
+    rating: 5,
+    avatar_url: null,
+  },
+  {
+    id: "7",
+    name: "Fatima Al-Rashid",
+    username: "fatima_ar",
+    role: "Software Engineer",
+    company: "Careem",
+    content: "The AI courses are unlike anything else — each lesson is generated for my exact level. I completed a system design course in a week and passed my next interview.",
+    rating: 5,
+    avatar_url: null,
+  },
+  {
+    id: "8",
+    name: "Luca Ferretti",
+    username: "luca_f",
+    role: "Business Development",
+    company: "Seedstars",
+    content: "Partnerships section is underrated. I found three strategic partners for our Africa expansion through beoneofus. No other platform offers this kind of curated connection.",
     rating: 5,
     avatar_url: null,
   },
@@ -226,7 +248,7 @@ export default function LandingPage() {
   const [heroVisible, setHeroVisible] = useState(false);
   const [navAvatarError, setNavAvatarError] = useState(false);
   const [typeText, setTypeText] = useState("");
-  const words = ["developers.", "builders.", "engineers.", "founders.", "hackers."];
+  const words = ["professionals.", "creators.", "founders.", "designers.", "marketers.", "educators.", "engineers.", "builders."];
   const wordIndex = useRef(0);
   const charIndex = useRef(0);
   const deleting = useRef(false);
@@ -272,7 +294,7 @@ export default function LandingPage() {
       ]);
 
       setLiveStats([
-        { label: "Developers", value: devCount ?? 48200, suffix: "+" },
+        { label: "Professionals", value: devCount ?? 48200, suffix: "+" },
         { label: "Jobs Posted", value: jobCount ?? 3100, suffix: "+" },
         { label: "Mentors", value: mentorCount ?? 420, suffix: "+" },
         { label: "Courses", value: courseCount ?? 280, suffix: "+" },
@@ -523,15 +545,15 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* AI response */}
+            {/* AI coaching */}
             <div className="animate-float2 absolute top-[35%] right-[5%] xl:right-[9%] animate-badge-pop" style={{ animationDelay: "1.5s" }}>
-              <div className="flex items-center gap-2.5 bg-white/90 dark:bg-[#0f1723]/90 border border-violet-200 dark:border-violet-700/40 rounded-2xl shadow-xl px-3.5 py-2.5 backdrop-blur-sm max-w-[200px]">
+              <div className="flex items-center gap-2.5 bg-white/90 dark:bg-[#0f1723]/90 border border-violet-200 dark:border-violet-700/40 rounded-2xl shadow-xl px-3.5 py-2.5 backdrop-blur-sm max-w-[210px]">
                 <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-violet-600 shrink-0">
                   <Bot size={14} />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-900 dark:text-white">AI Review</p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">No vulnerabilities found ✓</p>
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">AI Skill Suggestion</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">6 new skills for your field ✓</p>
                 </div>
               </div>
             </div>
@@ -543,8 +565,8 @@ export default function LandingPage() {
                   <Briefcase size={14} />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-900 dark:text-white">98% match</p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Senior React role</p>
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">New opportunity</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Matched to your profile</p>
                 </div>
               </div>
             </div>
@@ -570,7 +592,7 @@ export default function LandingPage() {
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/40 text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-widest mb-8"
               style={{ animationDelay: "0.2s" }}>
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              The Developer Network
+              The Global Professional Network
             </div>
 
             {/* Headline */}
@@ -582,7 +604,7 @@ export default function LandingPage() {
 
             {/* Sub */}
             <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto font-medium leading-relaxed mb-8">
-              Jobs. Mentorship. AI coaching. Courses. Connections — everything a developer needs, in one place.
+              Jobs. Mentorship. AI coaching. Courses. Connections — for every professional, in every field, across every country.
             </p>
 
             {/* CTAs */}
@@ -600,7 +622,7 @@ export default function LandingPage() {
 
             {/* Trust bar */}
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-gray-500 dark:text-gray-500">
-              {["Free to join", "Verified developers", "No spam ever", "AI-powered"].map((t) => (
+              {["Free to join", "All professions welcome", "No spam ever", "AI-powered", "Global community"].map((t) => (
                 <span key={t} className="flex items-center gap-1.5">
                   <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />{t}
                 </span>
@@ -699,22 +721,22 @@ function WhatIsSection() {
       <div className={`text-center mb-16 reveal ${visible ? "visible" : ""}`}>
         <p className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-3">What is beoneofus?</p>
         <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter text-gray-900 dark:text-white leading-tight mb-6">
-          Everything you need.<br />
-          <span className="text-gray-400 dark:text-gray-600">Nothing you don't.</span>
+          One platform.<br />
+          <span className="text-gray-400 dark:text-gray-600">Every profession.</span>
         </h2>
         <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto font-medium">
-          beoneofus is where developers grow careers — not just follow each other. Real jobs, real mentors, real AI tools.
+          beoneofus is where professionals from every field grow careers, find opportunities, and connect with people who help them level up — not just follow them.
         </p>
       </div>
 
       <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 reveal ${visible ? "visible" : ""} reveal-delay-2`}>
         {[
-          { icon: <TrendingUp size={20} />, title: "Career Growth", desc: "Job board, mentorship, and coaching all in one place.", c: "text-blue-600 bg-blue-50 dark:bg-blue-900/20" },
-          { icon: <Users size={20} />, title: "Real Network", desc: "Mutual-consent connections. No spam, no cold outreach abuse.", c: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" },
-          { icon: <Bot size={20} />, title: "AI-First Tools", desc: "Code reviews, lesson generation, and career advice built-in.", c: "text-violet-600 bg-violet-50 dark:bg-violet-900/20" },
-          { icon: <Shield size={20} />, title: "Verified & Safe", desc: "Verified identities, RLS-protected data, secure messaging.", c: "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20" },
-          { icon: <BookOpen size={20} />, title: "Learn Every Day", desc: "AI-generated courses with exams, tailored to your level.", c: "text-amber-600 bg-amber-50 dark:bg-amber-900/20" },
-          { icon: <Sparkles size={20} />, title: "Premium Perks", desc: "Unlimited mentorship, priority coaching, and more.", c: "text-rose-600 bg-rose-50 dark:bg-rose-900/20" },
+          { icon: <TrendingUp size={20} />, title: "Career Growth", desc: "Jobs, mentorship, and coaching for every profession — tech, design, business, marketing, and more.", c: "text-blue-600 bg-blue-50 dark:bg-blue-900/20" },
+          { icon: <Users size={20} />, title: "Real Network", desc: "Mutual-consent connections with professionals who actually match your goals. No spam, no noise.", c: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" },
+          { icon: <Bot size={20} />, title: "AI-First Tools", desc: "Personalised skill suggestions, AI-generated courses, and career advice built for your specific field.", c: "text-violet-600 bg-violet-50 dark:bg-violet-900/20" },
+          { icon: <Shield size={20} />, title: "Verified & Safe", desc: "Verified identities, secure messaging, and privacy-first design. Your data stays yours.", c: "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20" },
+          { icon: <BookOpen size={20} />, title: "Learn Every Day", desc: "AI-generated courses with exams tailored to your level, field, and career goals.", c: "text-amber-600 bg-amber-50 dark:bg-amber-900/20" },
+          { icon: <Globe size={20} />, title: "Truly Global", desc: "Members from 100+ countries. Your next mentor, co-founder, or client could be anywhere.", c: "text-rose-600 bg-rose-50 dark:bg-rose-900/20" },
         ].map((item, i) => (
           <div key={i} className="group flex items-start gap-4 p-5 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-2xl hover:border-blue-300 dark:hover:border-blue-700/50 hover:shadow-lg transition-all duration-300 card-glow">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.c} group-hover:scale-110 transition-transform`}>{item.icon}</div>
@@ -739,7 +761,7 @@ function FeatureBento({ features }) {
           <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-4">
             Six ways to level up.
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 font-medium max-w-xl mx-auto">All tools are live, connected, and built for developers who are serious about their careers.</p>
+          <p className="text-gray-600 dark:text-gray-400 font-medium max-w-xl mx-auto">All tools are live, connected, and built for professionals in every field who are serious about their careers.</p>
         </div>
 
         {/* Bento grid */}
@@ -792,7 +814,7 @@ function HowItWorksSection({ steps }) {
         <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-4">
           Up and running in minutes.
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 font-medium">Four steps from zero to an active developer on the network.</p>
+        <p className="text-gray-600 dark:text-gray-400 font-medium">Four steps from zero to an active professional on the global network — no matter your field.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
@@ -829,14 +851,14 @@ function CommunitySection({ communities, session }) {
           <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-4">
             Your people are here.
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 font-medium">Specialized spaces for every kind of developer. Join the conversation.</p>
+          <p className="text-gray-600 dark:text-gray-400 font-medium">Dedicated spaces for every profession and industry. Find your community and join the conversation.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {communities.map((c, i) => (
             <div
               key={c.name}
-              className={`group flex items-start gap-5 bg-white dark:bg-[#0f1723] border border-gray-200 dark:border-white/5 rounded-3xl p-6 hover:border-blue-300 dark:hover:border-blue-700/40 hover:shadow-xl transition-all duration-300 cursor-pointer card-glow reveal ${visible ? "visible" : ""} reveal-delay-${i + 1}`}>
+              className={`group flex items-start gap-5 bg-white dark:bg-[#0f1723] border border-gray-200 dark:border-white/5 rounded-3xl p-6 hover:border-blue-300 dark:hover:border-blue-700/40 hover:shadow-xl transition-all duration-300 cursor-pointer card-glow reveal ${visible ? "visible" : ""} reveal-delay-${Math.min(i + 1, 5)}`}>
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${c.color} group-hover:scale-110 transition-transform`}>
                 {c.icon}
               </div>
@@ -886,7 +908,7 @@ function PremiumSection({ session }) {
               Unlock your full<br />potential.
             </h2>
             <p className="text-blue-100 font-medium max-w-md leading-relaxed">
-              Unlimited mentorship bookings, priority AI responses, exclusive job listings, premium coaching, and a verified badge.
+              Unlimited mentorship bookings, priority AI responses, exclusive opportunities across all industries, premium coaching, and a verified badge.
             </p>
 
             <div className="grid grid-cols-2 gap-2.5 mt-6">
@@ -934,7 +956,7 @@ function FinalCTA({ session }) {
           Ready to be<br />one of us?
         </h2>
         <p className="text-gray-600 dark:text-gray-400 text-lg font-medium mb-10 max-w-xl mx-auto">
-          Join 48,000+ developers who are already building careers, not just profiles.
+          Join 48,000+ professionals from every field who are already building careers, not just profiles — regardless of industry or country.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link href={authLink(session, "/dash")}
@@ -1060,10 +1082,10 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
         <div ref={sectionRef} className={`text-center mb-12 reveal ${visible ? "visible" : ""}`}>
           <p className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-3">Testimonials</p>
           <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-4">
-            Developers love it here.
+            Professionals love it here.
           </h2>
           <p className="text-gray-600 dark:text-gray-400 font-medium max-w-xl mx-auto">
-            Real stories from real developers who found jobs, mentors, and community on beoneofus.
+            Real stories from designers, engineers, marketers, founders, and more who found opportunities and community on beoneofus.
           </p>
           {liveCount > 0 && (
             <div className="inline-flex items-center gap-1.5 mt-4 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40 rounded-full text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-fade-in">
@@ -1113,14 +1135,14 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
               </div>
               <div>
                 <h3 className="text-base font-black text-gray-900 dark:text-white">Share your story</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Help other developers find their community</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Help other professionals find their community</p>
               </div>
             </div>
 
             {!session ? (
               <div className="text-center py-8">
                 <Lock size={28} className="mx-auto text-gray-300 dark:text-gray-700 mb-3" />
-                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">Sign in to share your experience</p>
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">Sign in to share your story with the community</p>
                 <Link href="/auth"
                   className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:scale-105">
                   Sign in <ArrowRight size={14} />

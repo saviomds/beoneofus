@@ -4,7 +4,7 @@ import {
   Home, Users, MessageSquare, Bookmark, FileText,
   Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
   GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
-  ShoppingBag, User, BookOpen, Sparkles, Zap, Compass,
+  ShoppingBag, User, BookOpen, Sparkles, Zap, Compass, BarChart2, Briefcase,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -396,6 +396,7 @@ export default function Sidebar({ onClose }) {
       label: t('nav.groups.opportunities'),
       items: [
         { id: 'marketplace',  icon: ShoppingBag,    label: t('nav.items.marketplace')  },
+        { id: 'services',     icon: Briefcase,      label: 'Services',          isNew: true },
         { id: 'coaching',     icon: GraduationCap,  label: t('nav.items.coaching')     },
         { id: 'mentorship',   icon: HeartHandshake, label: t('nav.items.mentorship')   },
         { id: 'partnerships', icon: Handshake,      label: t('nav.items.partnerships') },
@@ -413,7 +414,8 @@ export default function Sidebar({ onClose }) {
     {
       label: t('nav.groups.tools'),
       items: [
-        { id: 'ai', icon: Sparkles, label: t('nav.items.ai'), isNew: true },
+        { id: 'ai',        icon: Sparkles,  label: t('nav.items.ai'),        isNew: true },
+        { id: 'analytics', icon: BarChart2, label: 'Analytics',               isNew: true },
       ],
     },
     {

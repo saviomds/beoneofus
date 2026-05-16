@@ -111,7 +111,7 @@ function RoomList({ rooms, onSelect, loading }) {
 
 // ── Q&A Phase ─────────────────────────────────────────────────
 
-function QAPhase({ room, answers, onAnswerSubmit, submitting }) {
+function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [draft, setDraft] = useState('');
   const [feedback, setFeedback] = useState(null); // { score, ai_feedback, strengths, improvements }
@@ -131,15 +131,41 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting }) {
   const question = questions[currentIdx];
   const existingAnswer = answers.find(a => a.question_index === currentIdx);
 
+  // Restore saved draft from localStorage when switching questions
+  useEffect(() => {
+    if (existingAnswer) { setDraft(''); return; }
+    const saved = localStorage.getItem(`iv_draft_${room.id}_${currentIdx}`);
+    setDraft(saved || '');
+  }, [currentIdx, room.id, existingAnswer]);
+
+  // Auto-save draft to localStorage as user types
+  useEffect(() => {
+    if (draft) localStorage.setItem(`iv_draft_${room.id}_${currentIdx}`, draft);
+  }, [draft, currentIdx, room.id]);
+
   const handleSubmit = async () => {
     if (!draft.trim()) return;
     const result = await onAnswerSubmit(currentIdx, question.text, draft.trim());
     if (result) {
+      localStorage.removeItem(`iv_draft_${room.id}_${currentIdx}`);
       setFeedback(result);
       setShowingFeedback(true);
       setDraft('');
     }
   };
+
+  // Auto-submit current draft when timer expires, then hand off to parent
+  useEffect(() => {
+    if (!timeUp) return;
+    const auto = async () => {
+      if (draft.trim() && question && !existingAnswer) {
+        await onAnswerSubmit(currentIdx, question.text, draft.trim());
+        localStorage.removeItem(`iv_draft_${room.id}_${currentIdx}`);
+      }
+      onTimeUp?.();
+    };
+    auto();
+  }, [timeUp]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNext = () => {
     setShowingFeedback(false);
@@ -291,7 +317,7 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting }) {
 
 // ── Coding Phase ──────────────────────────────────────────────
 
-function CodingPhase({ room, userId, onComplete }) {
+function CodingPhase({ room, userId, onComplete, timeUp }) {
   const [challenge, setChallenge] = useState(room.coding_challenge || null);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(!room.coding_challenge);
@@ -321,8 +347,21 @@ function CodingPhase({ room, userId, onComplete }) {
 
   useEffect(() => {
     if (!challenge) fetchChallenge();
-    else setCode(challenge.starterCode || '');
-  }, [challenge, fetchChallenge]);
+    else {
+      const saved = localStorage.getItem(`iv_code_${room.id}`);
+      setCode(saved || challenge.starterCode || '');
+    }
+  }, [challenge, fetchChallenge, room.id]);
+
+  // Auto-save code to localStorage on every change
+  useEffect(() => {
+    if (code) localStorage.setItem(`iv_code_${room.id}`, code);
+  }, [code, room.id]);
+
+  // Auto-submit when timer expires
+  useEffect(() => {
+    if (timeUp && !result && !submitting) handleSubmit();
+  }, [timeUp]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async () => {
     if (!code.trim()) return;
@@ -341,6 +380,7 @@ function CodingPhase({ room, userId, onComplete }) {
       });
       const data = await res.json();
       if (data.success) {
+        localStorage.removeItem(`iv_code_${room.id}`);
         setResult(data);
         onComplete(data);
       }
@@ -541,6 +581,9 @@ function RoomDetail({ room: initialRoom, userId, onBack }) {
   const [answers, setAnswers] = useState([]);
   const [codeResult, setCodeResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [leaveConfirm, setLeaveConfirm] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(null); // seconds remaining, null = no timer
+  const [timeUp, setTimeUp] = useState(false);
 
   useEffect(() => {
     const fetchAnswers = async () => {
@@ -590,21 +633,97 @@ function RoomDetail({ room: initialRoom, userId, onBack }) {
   };
 
   const handleCodeComplete = (result) => {
+    localStorage.removeItem(`iv_timer_${initialRoom.id}`);
     setCodeResult(result);
     setRoom(prev => ({ ...prev, status: 'completed', overall_score: result.overallScore }));
   };
+
+  // Force-complete the interview from the Q&A side (called when timer expires mid-Q&A)
+  const handleForceComplete = useCallback(async () => {
+    const { data: currentAnswers } = await supabase
+      .from('interview_answers')
+      .select('ai_score')
+      .eq('room_id', initialRoom.id);
+    const scores = (currentAnswers || []).map(a => a.ai_score || 0);
+    const overallScore = scores.length
+      ? Math.round(scores.reduce((s, n) => s + n, 0) / scores.length)
+      : 0;
+    await supabase
+      .from('interview_rooms')
+      .update({ status: 'completed', overall_score: overallScore })
+      .eq('id', initialRoom.id);
+    localStorage.removeItem(`iv_timer_${initialRoom.id}`);
+    setRoom(prev => ({ ...prev, status: 'completed', overall_score: overallScore }));
+  }, [initialRoom.id]);
 
   const allAnswered = answers.length >= (room.questions?.length || 0);
   const phase = room.status === 'completed' ? 'results'
     : (room.status === 'coding' || room.status === 'answers_complete') && allAnswered ? 'coding'
     : 'qa';
 
+  // Countdown timer
+  useEffect(() => {
+    if (phase === 'results') return;
+    const endTime = Number(localStorage.getItem(`iv_timer_${initialRoom.id}`));
+    if (!endTime) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining === 0) setTimeUp(true);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [phase, initialRoom.id]);
+
+  // Warn on browser close/refresh while interview is in progress
+  useEffect(() => {
+    if (phase === 'results') return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [phase]);
+
+  const handleBack = () => {
+    if (phase !== 'results') { setLeaveConfirm(true); return; }
+    onBack();
+  };
+
   return (
     <div className="space-y-5">
+      {/* Leave confirmation modal */}
+      {leaveConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-700 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-3">
+              <AlertTriangle size={22} className="text-amber-500 shrink-0" />
+              <h3 className="font-black text-gray-900 dark:text-gray-100">Leave Interview?</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
+              Your progress is saved and you can come back to finish. But the interview won't be submitted until you complete all sections.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setLeaveConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                onClick={onBack}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-colors"
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start gap-3">
         <button
-          onClick={onBack}
+          onClick={handleBack}
           className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors shrink-0 mt-0.5"
         >
           <ArrowLeft size={16} />
@@ -616,6 +735,19 @@ function RoomDetail({ room: initialRoom, userId, onBack }) {
           <h2 className="font-black text-gray-900 dark:text-gray-100 text-xl tracking-tight leading-tight">{room.job_title}</h2>
           {room.company && <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{room.company}</p>}
         </div>
+        {/* Countdown timer */}
+        {timeLeft !== null && phase !== 'results' && (
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-black text-sm tabular-nums shrink-0 ${
+            timeLeft > 600
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+              : timeLeft > 180
+              ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
+              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 animate-pulse'
+          }`}>
+            <Clock size={13} />
+            {fmtTime(timeLeft)}
+          </div>
+        )}
       </div>
 
       {/* Phase indicator */}
@@ -640,6 +772,8 @@ function RoomDetail({ room: initialRoom, userId, onBack }) {
           answers={answers}
           onAnswerSubmit={handleAnswerSubmit}
           submitting={submitting}
+          timeUp={timeUp}
+          onTimeUp={handleForceComplete}
         />
       )}
 
@@ -654,7 +788,7 @@ function RoomDetail({ room: initialRoom, userId, onBack }) {
               </p>
             </div>
           </div>
-          <CodingPhase room={room} userId={userId} onComplete={handleCodeComplete} />
+          <CodingPhase room={room} userId={userId} onComplete={handleCodeComplete} timeUp={timeUp} />
         </>
       )}
 
@@ -667,11 +801,97 @@ function RoomDetail({ room: initialRoom, userId, onBack }) {
 
 // ── Main Component ────────────────────────────────────────────
 
+const INTERVIEW_DURATION_MS = 60 * 60 * 1000; // 60 minutes total
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+
+const INTERVIEW_RULES = [
+  { icon: MessageSquare, text: 'Answer each question in your own words. Be specific and thorough — vague answers score lower.' },
+  { icon: XCircle,       text: 'Submitted answers cannot be edited. Think before you submit.' },
+  { icon: ChevronRight,  text: 'The coding challenge unlocks only after all Q&A questions are answered.' },
+  { icon: Code2,         text: 'You have ~20–30 minutes for the coding challenge. Write clean, working code.' },
+  { icon: Zap,           text: 'Each answer and your code are evaluated by AI immediately.' },
+  { icon: Clock,         text: 'You have 60 minutes total. When the timer reaches zero your interview is automatically submitted with whatever you have completed.' },
+  { icon: AlertTriangle, text: 'Do not close or refresh the tab mid-interview. Your drafts are auto-saved, but the interview won\'t be submitted until all sections are complete.' },
+];
+
+function InterviewRulesScreen({ room, onBegin, onBack }) {
+  const [agreed, setAgreed] = useState(false);
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="flex items-start gap-3">
+        <button
+          onClick={onBack}
+          className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors shrink-0 mt-0.5"
+        >
+          <ArrowLeft size={16} />
+        </button>
+        <div>
+          <h2 className="font-black text-gray-900 dark:text-gray-100 text-xl tracking-tight">Before You Begin</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-0.5">{room.job_title}{room.company ? ` · ${room.company}` : ''}</p>
+        </div>
+      </div>
+
+      <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-2xl p-5 space-y-4">
+        <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Interview Rules</p>
+        <ul className="space-y-3.5">
+          {INTERVIEW_RULES.map(({ icon: Icon, text }, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <Icon size={15} className="text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
+              <span className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{text}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+        <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+          {room.questions?.length || 0} questions · AI-evaluated · Coding challenge included
+        </span>
+        <span className="flex items-center gap-1.5 text-sm font-black text-amber-600 dark:text-amber-400 shrink-0">
+          <Clock size={14} /> 60:00
+        </span>
+      </div>
+
+      <label className="flex items-start gap-3 cursor-pointer group">
+        <input
+          type="checkbox"
+          checked={agreed}
+          onChange={e => setAgreed(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 accent-blue-600 cursor-pointer shrink-0"
+        />
+        <span className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">
+          I have read and understood the rules above.
+        </span>
+      </label>
+
+      <button
+        onClick={() => {
+          const key = `iv_timer_${room.id}`;
+          if (!localStorage.getItem(key)) {
+            localStorage.setItem(key, String(Date.now() + INTERVIEW_DURATION_MS));
+          }
+          onBegin();
+        }}
+        disabled={!agreed}
+        className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 text-sm active:scale-95 shadow-lg shadow-blue-500/20"
+      >
+        <ChevronRight size={16} /> Begin Interview
+      </button>
+    </div>
+  );
+}
+
 export default function InterviewContent() {
   const [userId, setUserId] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState(null);
+  const [rulesRoom, setRulesRoom] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchRooms = useCallback(async (uid) => {
@@ -727,8 +947,24 @@ export default function InterviewContent() {
               <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
             </button>
           </div>
-          <RoomList rooms={rooms} onSelect={setSelectedRoom} loading={loading} />
+          <RoomList
+            rooms={rooms}
+            onSelect={(room) => {
+              if (room.status === 'completed') {
+                setSelectedRoom(room);
+              } else {
+                setRulesRoom(room);
+              }
+            }}
+            loading={loading}
+          />
         </>
+      ) : rulesRoom ? (
+        <InterviewRulesScreen
+          room={rulesRoom}
+          onBack={() => setRulesRoom(null)}
+          onBegin={() => { setSelectedRoom(rulesRoom); setRulesRoom(null); }}
+        />
       ) : (
         <RoomDetail
           room={selectedRoom}

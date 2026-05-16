@@ -474,6 +474,8 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [applications, setApplications] = useState([]);
   const [appsLoading, setAppsLoading] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
+  // Map of "applicant_id_job_id" → interview_room for accepted applications
+  const [interviewRoomMap, setInterviewRoomMap] = useState({});
 
   // Founder Apps
   const [founderApps, setFounderApps] = useState([]);
@@ -573,6 +575,19 @@ const AdminPanelTool = ({ currentUserId }) => {
       if (!res.ok) throw new Error(json.error || "Failed");
       showToast("Interview room created & invite sent.");
       setShowInterviewModal(false);
+      // Update interview room map so card reflects the new room immediately
+      if (json.roomId && interviewTarget) {
+        setInterviewRoomMap(prev => ({
+          ...prev,
+          [`${interviewTarget.applicantId}_${interviewTarget.jobId}`]: {
+            id: json.roomId,
+            status: 'active',
+            overall_score: null,
+            applicant_id: interviewTarget.applicantId,
+            job_id: interviewTarget.jobId,
+          },
+        }));
+      }
       // Refresh rooms list if on interviews tab
       setInterviewRooms([]);
     } catch (err) { showToast(err.message, "error"); }
@@ -792,6 +807,24 @@ const AdminPanelTool = ({ currentUserId }) => {
     };
     fetch();
   }, [adminTab, isAdmin, applications.length]);
+
+  // Always refresh interview room map when Applications tab is opened (not cached)
+  useEffect(() => {
+    if (adminTab !== "applications" || !isAdmin || !currentUserId) return;
+    supabase.from("interview_rooms")
+      .select("id, status, overall_score, applicant_id, job_id")
+      .eq("admin_id", currentUserId)
+      .then(({ data: rooms }) => {
+        if (!rooms) return;
+        const map = {};
+        rooms.forEach(r => {
+          // index by applicant+job (primary key) AND by applicant alone as fallback
+          map[`${r.applicant_id}_${r.job_id}`] = r;
+          if (!map[`${r.applicant_id}_only`]) map[`${r.applicant_id}_only`] = r;
+        });
+        setInterviewRoomMap(map);
+      });
+  }, [adminTab, isAdmin, currentUserId]);
 
   // ── Founder Apps ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1616,7 +1649,7 @@ const AdminPanelTool = ({ currentUserId }) => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-gray-900 dark:text-white font-black">Job Applications <span className="text-gray-500 dark:text-gray-600 font-normal text-sm">({applications.length})</span></h3>
-              <button onClick={() => setApplications([])} className="text-xs text-blue-500 dark:text-blue-400 font-bold hover:text-blue-600 dark:hover:text-blue-300">Refresh</button>
+              <button onClick={() => { setApplications([]); setInterviewRoomMap({}); }} className="text-xs text-blue-500 dark:text-blue-400 font-bold hover:text-blue-600 dark:hover:text-blue-300">Refresh</button>
             </div>
             {appsLoading
               ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={22} /></div>
@@ -1649,14 +1682,32 @@ const AdminPanelTool = ({ currentUserId }) => {
                           className="flex-1 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-bold hover:bg-emerald-500 transition-all">Accept</button>
                       </div>
                     )}
-                    {app.status === "accepted" && (
-                      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => openInterviewModal(app)}
-                          className="w-full flex items-center justify-center gap-2 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-bold transition-all">
-                          <Video size={11} /> Assign Interview Room
-                        </button>
-                      </div>
-                    )}
+                    {app.status === "accepted" && (() => {
+                      const room = interviewRoomMap[`${app.user_id}_${app.job_id}`] || interviewRoomMap[`${app.user_id}_only`];
+                      const statusMap = { active: { label: "In Progress", cls: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800" }, answers_complete: { label: "Q&A Done", cls: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800" }, coding: { label: "Coding", cls: "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800" }, completed: { label: "Completed", cls: "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" } };
+                      const pill = room ? statusMap[room.status] : null;
+                      return (
+                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2" onClick={e => e.stopPropagation()}>
+                          {room && (
+                            <div className="flex items-center justify-between">
+                              <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${pill?.cls}`}>{pill?.label}</span>
+                              {room.status === "completed" && room.overall_score != null && (
+                                <span className="text-[10px] font-black text-gray-500 dark:text-gray-400">Score: {room.overall_score}%</span>
+                              )}
+                            </div>
+                          )}
+                          {(!room || room.status === "completed") && (
+                            <button onClick={() => openInterviewModal(app)}
+                              className={`w-full flex items-center justify-center gap-2 py-1.5 rounded-xl text-[10px] font-bold transition-all ${room ? "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300" : "bg-blue-600 hover:bg-blue-500 text-white"}`}>
+                              <Video size={11} /> {room ? "Re-assign Interview Room" : "Assign Interview Room"}
+                            </button>
+                          )}
+                          {room && room.status !== "completed" && (
+                            <p className="text-center text-[10px] text-gray-400 dark:text-gray-600">Interview in progress — wait for completion to re-assign</p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 ))}
           </div>
@@ -1947,12 +1998,31 @@ const AdminPanelTool = ({ currentUserId }) => {
                   <button onClick={() => setActionPrompt({ type: "job", appId: selectedApp.id, newStatus: "accepted", applicantId: selectedApp.user_id, title: selectedApp.jobs?.title })}
                     className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-500 transition-all">Accept</button>
                 </>
-              ) : selectedApp.status === "accepted" ? (
-                <button onClick={() => { setSelectedApp(null); openInterviewModal(selectedApp); }}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all">
-                  <Video size={13} /> Assign Interview Room
-                </button>
-              ) : (
+              ) : selectedApp.status === "accepted" ? (() => {
+                const room = interviewRoomMap[`${selectedApp.user_id}_${selectedApp.job_id}`] || interviewRoomMap[`${selectedApp.user_id}_only`];
+                return (
+                  <div className="flex-1 space-y-2">
+                    {room && (
+                      <div className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold ${
+                        room.status === "completed" ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                        : room.status === "coding" ? "bg-purple-50 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300"
+                        : "bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300"
+                      }`}>
+                        <span>Interview: {room.status === "active" ? "In Progress" : room.status === "answers_complete" ? "Q&A Done" : room.status === "coding" ? "Coding Challenge" : "Completed"}</span>
+                        {room.status === "completed" && room.overall_score != null && <span>{room.overall_score}%</span>}
+                      </div>
+                    )}
+                    {(!room || room.status === "completed") ? (
+                      <button onClick={() => { setSelectedApp(null); openInterviewModal(selectedApp); }}
+                        className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${room ? "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300" : "bg-blue-600 hover:bg-blue-500 text-white"}`}>
+                        <Video size={13} /> {room ? "Re-assign Interview Room" : "Assign Interview Room"}
+                      </button>
+                    ) : (
+                      <p className="text-center text-[10px] text-gray-400 dark:text-gray-600 py-1">Interview in progress — wait for completion</p>
+                    )}
+                  </div>
+                );
+              })() : (
                 <div className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-center text-gray-500 text-xs font-bold uppercase">
                   {selectedApp.status}
                 </div>

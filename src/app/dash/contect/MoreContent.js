@@ -874,7 +874,7 @@ const AdminPanelTool = ({ currentUserId }) => {
 
   // ── Interviews ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (adminTab !== "interviews" || !isAdmin) return;
+    if (adminTab !== "interviews" || !isAdmin || interviewRooms.length > 0) return;
     const fetchRooms = async () => {
       setInterviewsLoading(true);
       const { data } = await supabase
@@ -885,7 +885,7 @@ const AdminPanelTool = ({ currentUserId }) => {
       setInterviewsLoading(false);
     };
     fetchRooms();
-  }, [adminTab, isAdmin]);
+  }, [adminTab, isAdmin, interviewRooms.length]);
 
   const fetchRoomAnswers = async (roomId) => {
     if (roomAnswers[roomId]) {

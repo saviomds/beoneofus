@@ -9,6 +9,8 @@ const ALLOWED_TYPES = [
   'premium_declined',
   'connection_accepted',
   'role_changed',
+  'partnership_accepted',
+  'partnership_declined',
 ];
 
 export async function POST(request) {

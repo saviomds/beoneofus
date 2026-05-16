@@ -181,6 +181,61 @@ const templates = {
     };
   },
 
+  /* ── Partnership accepted ─────────────────────────────────────── */
+  partnership_accepted({ name, companyName }) {
+    const n = escapeHtml(name);
+    const c = escapeHtml(companyName);
+    return {
+      subject: `Your partnership proposal has been accepted!`,
+      html: baseShell(
+        header('linear-gradient(90deg,#10b981,#34d399)', 'Partnership Accepted! 🤝', 'Welcome to the beoneofus partner network')
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            Great news — your partnership proposal for <strong>${c}</strong> has been
+            <strong style="color:#10b981;">accepted</strong> by the beoneofus team!
+            We'll reach out to your contact email to coordinate next steps.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:20px 24px;text-align:center;">
+              <p style="margin:0;font-size:32px;">🤝</p>
+              <p style="margin:6px 0 0;font-size:14px;font-weight:700;color:#15803d;">Official Partner</p>
+              <p style="margin:4px 0 0;font-size:12px;color:#166534;font-weight:600;">${c}</p>
+            </td></tr>
+          </table>
+          ${ctaButton('View Your Dashboard', SITE_URL + '/dash', '#10b981')}
+        </td></tr></table>`
+      ),
+    };
+  },
+
+  /* ── Partnership declined ──────────────────────────────────────── */
+  partnership_declined({ name, companyName }) {
+    const n = escapeHtml(name);
+    const c = escapeHtml(companyName);
+    return {
+      subject: `Update on your partnership proposal`,
+      html: baseShell(
+        header('linear-gradient(90deg,#6b7280,#9ca3af)', 'Partnership Update', `Regarding your proposal for ${c}`)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            Thank you for submitting a partnership proposal for <strong>${c}</strong>.
+            After careful review, we're unable to move forward with this proposal at this time.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:14px 18px;">
+              <p style="margin:0;font-size:13px;color:#374151;line-height:1.6;">
+                You're welcome to refine and resubmit your proposal in the future. If you have questions, reach out through the platform.
+              </p>
+            </td></tr>
+          </table>
+          ${ctaButton('Submit Another Proposal', SITE_URL + '/dash', '#3b82f6')}
+        </td></tr></table>`
+      ),
+    };
+  },
+
   /* ── Role changed ──────────────────────────────────────────────── */
   role_changed({ name, role }) {
     const n  = escapeHtml(name);

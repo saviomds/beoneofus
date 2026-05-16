@@ -574,36 +574,7 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
             </div>
           )}
 
-          {/* Video URL input panel */}
-          {!showPreview && showVideoUrlInput && (
-            <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
-              <Film size={15} className="text-gray-400 flex-shrink-0" />
-              <input
-                type="url"
-                value={videoUrlInput}
-                onChange={(e) => setVideoUrlInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addVideoUrl(); } }}
-                placeholder="Paste YouTube, Vimeo, or direct video URL..."
-                className="flex-1 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none min-w-0"
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={addVideoUrl}
-                disabled={!videoUrlInput.trim()}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 disabled:text-gray-300 dark:disabled:text-gray-600 transition-colors flex-shrink-0"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => { setShowVideoUrlInput(false); setVideoUrlInput(''); }}
-                className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
+          {/* Video URL input panel — hidden (video upload not available) */}
 
           {!showPreview && renderMediaPreview()}
 
@@ -614,11 +585,7 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
                   <ImageIcon size={11} /> {imageCount} photo{imageCount > 1 ? 's' : ''}
                 </span>
               )}
-              {videoCount > 0 && (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400 dark:text-gray-500">
-                  <Film size={11} /> {videoCount} video{videoCount > 1 ? 's' : ''}
-                </span>
-              )}
+              {/* video count hidden */}
               {mediaItems.length < MAX_MEDIA && (
                 <button
                   type="button"
@@ -654,15 +621,7 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
                 {imageCount > 0 && <span className="text-[10px] font-black">{imageCount}</span>}
               </button>
 
-              <button
-                type="button"
-                onClick={() => setShowVideoUrlInput(v => !v)}
-                className={`relative transition-colors p-2 rounded-md flex items-center gap-1 ${showVideoUrlInput || videoCount > 0 ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'hover:text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                title="Add video URL (YouTube, Vimeo, or direct link)"
-              >
-                <Film size={20} />
-                {videoCount > 0 && <span className="text-[10px] font-black">{videoCount}</span>}
-              </button>
+              {/* Video button hidden — video upload not available */}
 
               {mediaItems.length > 0 && (
                 <span className="text-[10px] font-bold text-gray-400 ml-1">

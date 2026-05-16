@@ -398,20 +398,13 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
 
         {/* Pick mode */}
         {mode === "pick" && (
-          <div className="p-5 grid grid-cols-3 gap-3">
+          <div className="p-5 grid grid-cols-2 gap-3">
             <button
               onClick={() => fileRef.current?.click()}
               className="flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-dashed border-violet-200 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/5 text-violet-600 dark:text-violet-400 hover:border-violet-400 transition-all"
             >
               <Camera size={24} />
               <span className="text-xs font-bold">Photo</span>
-            </button>
-            <button
-              onClick={() => videoRef.current?.click()}
-              className="flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-dashed border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/5 text-blue-600 dark:text-blue-400 hover:border-blue-400 transition-all"
-            >
-              <Video size={24} />
-              <span className="text-xs font-bold">Video</span>
             </button>
             <button
               onClick={() => setMode("text")}
@@ -421,7 +414,6 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
               <span className="text-xs font-bold">Text</span>
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-            <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} />
           </div>
         )}
 

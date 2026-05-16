@@ -129,6 +129,27 @@ export default function NotificationsContent() {
       content: 'accepted your connection request',
     });
 
+    // Email the requester
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data: senderProfile } = await supabase
+        .from('profiles').select('email, username').eq('id', notif.actor_id).single();
+      const { data: myProfile } = await supabase
+        .from('profiles').select('username').eq('id', currentUserId).single();
+      if (session && senderProfile?.email) {
+        fetch('/api/notifications/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({
+            type: 'connection_accepted',
+            email: senderProfile.email,
+            name: senderProfile.username || 'there',
+            extra: { acceptorName: myProfile?.username || 'Someone' },
+          }),
+        }).catch(() => {});
+      }
+    })();
+
     // Mark ALL connection_request notifications from this actor as read
     // (handles duplicates that occur when someone taps Connect more than once)
     await supabase.from('notifications')

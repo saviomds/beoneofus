@@ -237,7 +237,7 @@ export default function ConnectionsContent() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
 
                     <div className="absolute bottom-3 left-4 z-10">
-                      <div className="w-14 h-14 rounded-full border-[3px] border-white dark:border-gray-900 bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-lg font-black text-gray-400 uppercase shadow-lg ring-2 ring-white/30 dark:ring-gray-900/30">
+                      <div className="relative w-14 h-14 rounded-full border-[3px] border-white dark:border-gray-900 bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-lg font-black text-gray-400 uppercase shadow-lg ring-2 ring-white/30 dark:ring-gray-900/30">
                         {user.avatar_url
                           ? <Image src={user.avatar_url} alt="avatar" fill sizes="56px" className="object-cover rounded-full" />
                           : (user.username?.substring(0, 2) || '??')}

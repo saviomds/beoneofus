@@ -1,3 +1,5 @@
+import withSerwist from "@serwist/next";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async headers() {
@@ -7,8 +9,9 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self'",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.groq.com https://api.resend.com https://api.paystack.co https://open.er-api.com",
-      "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.tiktok.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.groq.com https://api.resend.com https://api.paystack.co https://open.er-api.com https://api.github.com https://ghchart.rshah.org",
+      "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.tiktok.com https://player.vimeo.com",
+      "worker-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -32,32 +35,19 @@ const nextConfig = {
 
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'jwjrogchwfzofpaczaah.supabase.co',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.googleusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'avatars.githubusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'randomuser.me',
-      },
-      {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
+      { protocol: 'https', hostname: 'jwjrogchwfzofpaczaah.supabase.co' },
+      { protocol: 'https', hostname: '*.googleusercontent.com' },
+      { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
+      { protocol: 'https', hostname: 'randomuser.me' },
+      { protocol: 'https', hostname: 'picsum.photos' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
 };
 
-export default nextConfig;
+export default withSerwist({
+  swSrc: "src/sw.ts",
+  swDest: "public/sw.js",
+  disable: process.env.NODE_ENV === "development",
+  reloadOnOnline: true,
+})(nextConfig);

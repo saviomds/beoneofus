@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Groq from 'groq-sdk';
+import { sendNotificationEmail } from '../../../../lib/sendNotificationEmail';
 
 export async function POST(req) {
   try {
@@ -110,6 +111,14 @@ Write 2-3 sentences assessing legitimacy (account age, profile completeness, any
         unread: true,
       });
 
+      // Email the user
+      await sendNotificationEmail({
+        type: 'premium_accepted',
+        email: sub.profiles?.email,
+        name: sub.profiles?.username || 'there',
+        extra: { plan: sub.plan, expiresAt, note: note || '' },
+      });
+
       return NextResponse.json({ success: true, status: 'active' });
     }
 
@@ -133,6 +142,14 @@ Write 2-3 sentences assessing legitimacy (account age, profile completeness, any
           ? `Your premium request was declined. Reason: "${note}". Contact support if you believe this is an error.`
           : 'Your premium request was declined. Please contact support for assistance.',
         unread: true,
+      });
+
+      // Email the user
+      await sendNotificationEmail({
+        type: 'premium_declined',
+        email: sub.profiles?.email,
+        name: sub.profiles?.username || 'there',
+        extra: { note: note || '' },
       });
 
       return NextResponse.json({ success: true, status: 'declined' });

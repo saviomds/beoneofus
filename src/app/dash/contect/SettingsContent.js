@@ -8,7 +8,7 @@ import {
   ChevronRight, BarChart3, Zap, Lock, Globe, RefreshCw, Eye,
   UserPlus, ShieldCheck, Award, Smartphone, Copy, KeyRound,
   LogOut, Fingerprint, Clock, CheckCircle2, XCircle,
-  Camera, User, Link2, AtSign,
+  Camera, User, Link2, AtSign, Mail, Send, ChevronDown,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../supabaseClient";
@@ -101,73 +101,86 @@ function Toast({ message, type }) {
 
 // ─── Recent Users Table ───────────────────────────────────────────────────────
 
-function RecentUsersTable({ users, loading }) {
+const AVATAR_COLORS = [
+  "bg-blue-600","bg-violet-600","bg-emerald-600","bg-rose-600",
+  "bg-amber-500","bg-cyan-600","bg-pink-600","bg-indigo-600",
+];
+function avatarColor(username = "") {
+  const i = (username.charCodeAt(0) || 0) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[i];
+}
+
+function RoleBadge({ role }) {
+  const cfg = {
+    founder: { bg: "bg-amber-500",  label: "Founder", icon: Crown },
+    admin:   { bg: "bg-violet-600", label: "Admin",   icon: Shield },
+    member:  { bg: "bg-blue-600",   label: "Member",  icon: Users },
+  };
+  const { bg, label, icon: Icon } = cfg[role] || cfg.member;
   return (
-    <div className="overflow-x-auto">
-      {loading ? (
-        <div className="flex items-center justify-center py-12 text-gray-500">
-          <Loader2 size={22} className="animate-spin mr-2" /> Loading users…
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-white ${bg}`}>
+      <Icon size={10} /> {label}
+    </span>
+  );
+}
+
+function StatusBadge({ is_verified, verification_status }) {
+  if (verification_status === "pending")
+    return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500 text-white"><Clock size={10} /> Pending</span>;
+  if (is_verified)
+    return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 text-white"><BadgeCheck size={10} /> Verified</span>;
+  return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gray-500 text-white"><Users size={10} /> Standard</span>;
+}
+
+function RecentUsersTable({ users, loading }) {
+  if (loading) return (
+    <div className="flex items-center justify-center py-12 gap-2 text-gray-500 dark:text-gray-400">
+      <Loader2 size={20} className="animate-spin" /> Loading users…
+    </div>
+  );
+  if (users.length === 0) return (
+    <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-sm">No users found.</div>
+  );
+  return (
+    <div className="space-y-2">
+      {users.map((u) => (
+        <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors">
+          {/* Avatar */}
+          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${avatarColor(u.username)} flex items-center justify-center text-sm font-black text-white shrink-0 overflow-hidden`}>
+            {u.avatar_url
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
+              : (u.username || "?")[0].toUpperCase()}
+          </div>
+
+          {/* Name + email — takes remaining space, truncates */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900 dark:text-white truncate flex items-center gap-1">
+              @{u.username || "—"}
+              {u.is_verified && <BadgeCheck size={12} className="text-blue-500 shrink-0" />}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email || "—"}</p>
+          </div>
+
+          {/* Badges — hidden on very small screens, shown from sm up */}
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <RoleBadge role={u.role} />
+            <StatusBadge is_verified={u.is_verified} verification_status={u.verification_status} />
+          </div>
+
+          {/* Mobile: single compact badge */}
+          <div className="flex sm:hidden shrink-0">
+            <RoleBadge role={u.role} />
+          </div>
+
+          {/* Joined date — desktop only */}
+          <p className="text-xs text-gray-400 dark:text-gray-500 shrink-0 hidden lg:block w-20 text-right">
+            {u.created_at
+              ? new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })
+              : "—"}
+          </p>
         </div>
-      ) : users.length === 0 ? (
-        <div className="text-center py-12 text-gray-600 text-sm">No users found.</div>
-      ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-800">
-              {["User", "Role", "Status", "Joined", ""].map((h) => (
-                <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-widest pb-3 pr-4">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-800/60">
-            {users.map((u) => (
-              <tr key={u.id} className="group hover:bg-gray-100 dark:hover:bg-gray-800/30 transition-colors">
-                <td className="py-3 pr-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 shrink-0">
-                      {(u.username || "?")[0]?.toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100 text-xs flex items-center gap-1">
-                        {u.username || "—"}
-                        {u.is_verified && <BadgeCheck size={12} className="text-blue-400 fill-blue-400" />}
-                      </p>
-                      <p className="text-[10px] text-gray-500">{u.email || ""}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="py-3 pr-4">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide
-                    ${u.role === "founder"
-                      ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                      : "bg-gray-700/50 text-gray-400 border border-gray-700"}`}>
-                    {u.role === "founder" ? <Crown size={9} /> : <Users size={9} />}
-                    {u.role || "member"}
-                  </span>
-                </td>
-                <td className="py-3 pr-4">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold
-                    ${u.verification_status === "pending"
-                      ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                      : u.is_verified
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                        : "bg-gray-700/40 text-gray-500 border border-gray-700"}`}>
-                    {u.verification_status === "pending" ? "Pending" : u.is_verified ? "Verified" : "Standard"}
-                  </span>
-                </td>
-                <td className="py-3 pr-4 text-[11px] text-gray-500">
-                  {u.created_at ? new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
-                </td>
-                <td className="py-3 text-right">
-                  <button className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1">
-                    <Eye size={11} /> View
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      ))}
     </div>
   );
 }
@@ -206,6 +219,29 @@ export default function SettingsContent() {
   const [showSessionsModal, setShowSessionsModal] = useState(false);
   const [sessionInfo, setSessionInfo]             = useState(null);
   const [revokingOthers, setRevokingOthers]       = useState(false);
+
+  // Email change
+  const [userEmail, setUserEmail] = useState("");
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [emailNew, setEmailNew] = useState("");
+  const [emailCode, setEmailCode] = useState("");
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailChanging, setEmailChanging] = useState(false);
+
+  // Create user modal (admin)
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [createUserForm, setCreateUserForm] = useState({ email: "", username: "", role: "member", password: "", sendInvite: true });
+  const [createUserLoading, setCreateUserLoading] = useState(false);
+  const [createUserError, setCreateUserError] = useState("");
+  const [showCreatePw, setShowCreatePw] = useState(false);
+
+  // Broadcast email (admin)
+  const [broadcastForm, setBroadcastForm]   = useState({ audience: "all", subject: "", message: "" });
+  const [broadcastCount, setBroadcastCount] = useState(null);
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastResult, setBroadcastResult]   = useState(null); // { sent, failed, total }
+  const [broadcastConfirm, setBroadcastConfirm] = useState(false);
 
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -248,6 +284,7 @@ export default function SettingsContent() {
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+      setUserEmail(session.user.email || "");
       const [profileRes] = await Promise.all([
         supabase.from("profiles").select("username, status, website, github, work_status, avatar_url, is_verified, verification_status, role").eq("id", session.user.id).single(),
       ]);
@@ -315,7 +352,7 @@ export default function SettingsContent() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, username, email, role, is_verified, verification_status")
+        .select("id, username, email, role, is_verified, verification_status, created_at, avatar_url")
         .limit(10);
       if (error) throw error;
       setRecentUsers(data || []);
@@ -423,6 +460,18 @@ export default function SettingsContent() {
   };
 
   // ── Handle profile verification status ──────────────────────────────────────
+  const sendNotif = async (type, userId) => {
+    const target = recentUsers.find(u => u.id === userId);
+    if (!target?.email) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ type, email: target.email, name: target.username || 'there' }),
+    }).catch(() => {});
+  };
+
   const handleApproveVerification = async (userId) => {
     try {
       const { error } = await supabase
@@ -430,6 +479,7 @@ export default function SettingsContent() {
         .update({ is_verified: true, verification_status: "approved" })
         .eq("id", userId);
       if (error) throw error;
+      sendNotif('verification_approved', userId);
       showToast("User verified successfully!");
       fetchRecentUsers();
       fetchAdminStats();
@@ -445,11 +495,169 @@ export default function SettingsContent() {
         .update({ verification_status: "rejected" })
         .eq("id", userId);
       if (error) throw error;
+      sendNotif('verification_rejected', userId);
       showToast("Verification request rejected.", "error");
       fetchRecentUsers();
       fetchAdminStats();
     } catch (error) {
       showToast(error.message, "error");
+    }
+  };
+
+  // ── Broadcast helpers ──────────────────────────────────────────────────────
+  const fetchBroadcastCount = useCallback(async (audience) => {
+    setBroadcastCount(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    try {
+      const res = await fetch(`/api/admin/broadcast?audience=${audience}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      setBroadcastCount(json.count ?? 0);
+    } catch { setBroadcastCount(0); }
+  }, []);
+
+  useEffect(() => {
+    if (isAdmin) fetchBroadcastCount(broadcastForm.audience);
+  }, [isAdmin, broadcastForm.audience, fetchBroadcastCount]);
+
+  const handleBroadcast = async () => {
+    const { audience, subject, message } = broadcastForm;
+    if (!subject.trim() || !message.trim()) {
+      showToast("Subject and message are required.", "error");
+      return;
+    }
+    setBroadcastSending(true);
+    setBroadcastConfirm(false);
+    setBroadcastResult(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ audience, subject: subject.trim(), message: message.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Broadcast failed');
+      setBroadcastResult(json);
+      showToast(`Broadcast sent to ${json.sent} recipient${json.sent !== 1 ? 's' : ''}!`);
+      setBroadcastForm(f => ({ ...f, subject: '', message: '' }));
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setBroadcastSending(false);
+    }
+  };
+
+  // ── Email change handlers ───────────────────────────────────────────────────
+  const handleSendEmailCode = async () => {
+    if (!emailNew || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNew)) {
+      showToast("Enter a valid email address.", "error");
+      return;
+    }
+    if (emailNew.toLowerCase() === userEmail.toLowerCase()) {
+      showToast("New email must differ from your current email.", "error");
+      return;
+    }
+    setEmailSending(true);
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailNew }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send code.");
+      setEmailCodeSent(true);
+      showToast("Verification code sent to new email!");
+    } catch (e) {
+      showToast(e.message, "error");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const handleChangeEmail = async () => {
+    if (!emailCode || emailCode.length !== 6) {
+      showToast("Enter the 6-digit code.", "error");
+      return;
+    }
+    setEmailChanging(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated.");
+      const res = await fetch("/api/auth/change-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ email: emailNew, code: emailCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update email.");
+      setUserEmail(emailNew);
+      setShowEmailForm(false);
+      setEmailNew("");
+      setEmailCode("");
+      setEmailCodeSent(false);
+      showToast("Email updated successfully!");
+    } catch (e) {
+      showToast(e.message, "error");
+    } finally {
+      setEmailChanging(false);
+    }
+  };
+
+  const resetEmailForm = () => {
+    setShowEmailForm(false);
+    setEmailNew("");
+    setEmailCode("");
+    setEmailCodeSent(false);
+  };
+
+  // ── Admin: create user ──────────────────────────────────────────────────────
+  const generatePassword = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+    const arr = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(arr).map(x => chars[x % chars.length]).join("");
+  };
+
+  const handleCreateUser = async () => {
+    const { email, username, role, password, sendInvite } = createUserForm;
+    if (!email || !username || !password) {
+      setCreateUserError("Email, username and password are required.");
+      return;
+    }
+    if (password.length < 8) {
+      setCreateUserError("Password must be at least 8 characters.");
+      return;
+    }
+    setCreateUserLoading(true);
+    setCreateUserError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated.");
+      const res = await fetch("/api/admin/create-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ email, username, role, password, sendInvite }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create user.");
+      setShowCreateUserModal(false);
+      setCreateUserForm({ email: "", username: "", role: "member", password: "", sendInvite: true });
+      showToast(`User @${username} created successfully!`);
+      fetchRecentUsers();
+      fetchAdminStats();
+    } catch (e) {
+      setCreateUserError(e.message);
+    } finally {
+      setCreateUserLoading(false);
     }
   };
 
@@ -839,6 +1047,75 @@ export default function SettingsContent() {
                   <Card>
                     <SectionHeader icon={Lock} title="Security" subtitle="Manage your account security settings." accent="emerald" />
                     <div className="space-y-3">
+
+                      {/* Change Email */}
+                      <div className="flex flex-col gap-2">
+                        <RowItem title="Email Address" desc={userEmail ? `Current: ${userEmail}` : "Manage your sign-in email."}>
+                          <button
+                            onClick={() => showEmailForm ? resetEmailForm() : setShowEmailForm(true)}
+                            className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-all"
+                          >
+                            <AtSign size={15} /> {showEmailForm ? "Cancel" : "Change "}
+                          </button>
+                        </RowItem>
+
+                        {showEmailForm && (
+                          <div className="bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/60 rounded-xl p-4 space-y-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">New Email Address</label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="email"
+                                  value={emailNew}
+                                  onChange={(e) => setEmailNew(e.target.value)}
+                                  placeholder="new@email.com"
+                                  disabled={emailCodeSent || emailSending}
+                                  className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-60"
+                                />
+                                <button
+                                  onClick={handleSendEmailCode}
+                                  disabled={emailSending || emailCodeSent}
+                                  className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-all disabled:opacity-50"
+                                >
+                                  {emailSending
+                                    ? <Loader2 size={13} className="animate-spin" />
+                                    : emailCodeSent
+                                      ? <CheckCircle2 size={13} />
+                                      : null}
+                                  {emailCodeSent ? "Code Sent" : emailSending ? "Sending…" : "Send Code"}
+                                </button>
+                              </div>
+                            </div>
+
+                            {emailCodeSent && (
+                              <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Verification Code</label>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                    value={emailCode}
+                                    onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, ""))}
+                                    placeholder="000000"
+                                    className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm font-mono tracking-widest text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                                  />
+                                  <button
+                                    onClick={handleChangeEmail}
+                                    disabled={emailChanging || emailCode.length !== 6}
+                                    className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+                                  >
+                                    {emailChanging ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                                    {emailChanging ? "Updating…" : "Verify & Update"}
+                                  </button>
+                                </div>
+                                <p className="text-[10px] text-gray-500 mt-1.5">Enter the 6-digit code sent to <strong>{emailNew}</strong></p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
                       <RowItem title="Two-Factor Authentication" desc="Require a one-time code from your authenticator app on sign-in.">
                         <div className="flex items-center gap-2 shrink-0">
                           {mfaLoading ? (
@@ -926,128 +1203,464 @@ export default function SettingsContent() {
         {activeTab === "admin" && isAdmin && (
           <div className="space-y-6">
 
-            {/* ── Stats grid ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard icon={Users}     label="Total Users"   value={stats.total}    sub="All time registrations" accent="blue" />
-              <StatCard icon={Crown}     label="Founders"      value={stats.founders} sub="Founder-role accounts"  accent="amber" />
-              <StatCard icon={UserCheck} label="Members"       value={stats.members}  sub="Standard member accounts" accent="purple" />
-              <StatCard icon={Award}     label="Verified"      value={stats.verified} sub="Badge-verified nodes"   accent="emerald" />
+            {/* ── Top action bar ── */}
+            <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
+              <div>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">Admin Dashboard</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage users, verifications, and platform health.</p>
+              </div>
+              <button
+                onClick={() => { setCreateUserError(""); setShowCreateUserModal(true); }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-md active:scale-95"
+              >
+                <UserPlus size={15} /> Add User
+              </button>
             </div>
 
-            {/* ── Secondary stats + refresh ── */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Card className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Pending Verifications</p>
-                  <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
-                    <Zap size={13} />
+            {/* ── Stats grid ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { icon: Users,     label: "Total Users",   value: stats.total,    sub: "All registrations",     bg: "bg-blue-600",   text: "text-white" },
+                { icon: Crown,     label: "Founders",      value: stats.founders, sub: "Founder accounts",      bg: "bg-amber-500",  text: "text-white" },
+                { icon: UserCheck, label: "Members",       value: stats.members,  sub: "Standard accounts",     bg: "bg-violet-600", text: "text-white" },
+                { icon: Award,     label: "Verified",      value: stats.verified, sub: "Badge-verified nodes",  bg: "bg-emerald-600",text: "text-white" },
+              ].map(({ icon: Icon, label, value, sub, bg, text }) => (
+                <div key={label} className={`${bg} rounded-2xl p-5 shadow-md`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <p className="text-xs font-bold text-white/70 uppercase tracking-widest">{label}</p>
+                    <Icon size={16} className="text-white/70" />
                   </div>
+                  <p className="text-3xl font-black text-white tabular-nums">
+                    {value === null ? <Loader2 size={22} className="animate-spin inline" /> : value}
+                  </p>
+                  <p className="text-xs text-white/60 mt-1 font-medium">{sub}</p>
                 </div>
-                <p className="text-3xl font-black text-amber-300 tabular-nums">
-                  {stats.pending === null ? <Loader2 size={20} className="animate-spin inline" /> : stats.pending}
-                </p>
-                <p className="text-[11px] text-gray-600 mt-1">Awaiting admin review</p>
-              </Card>
+              ))}
+            </div>
 
-              <Card className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Verification Rate</p>
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                    <TrendingUp size={13} />
+            {/* ── Secondary stats ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Pending Reviews</p>
+                  <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+                    <Zap size={13} className="text-amber-600 dark:text-amber-400" />
                   </div>
                 </div>
-                <p className="text-3xl font-black text-blue-300 tabular-nums">
+                <p className="text-3xl font-black text-gray-900 dark:text-white tabular-nums">
+                  {stats.pending === null ? <Loader2 size={20} className="animate-spin inline text-gray-400" /> : stats.pending}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Awaiting admin review</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Verification Rate</p>
+                  <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <TrendingUp size={13} className="text-blue-600 dark:text-blue-400" />
+                  </div>
+                </div>
+                <p className="text-3xl font-black text-gray-900 dark:text-white tabular-nums">
                   {stats.total && stats.verified !== null
                     ? `${Math.round((stats.verified / stats.total) * 100)}%`
-                    : <Loader2 size={20} className="animate-spin inline" />}
+                    : <Loader2 size={20} className="animate-spin inline text-gray-400" />}
                 </p>
-                <p className="text-[11px] text-gray-600 mt-1">Of total users verified</p>
-              </Card>
-
-              <div className="flex items-stretch">
-                <button
-                  onClick={() => { fetchAdminStats(); fetchRecentUsers(); showToast("Data refreshed!"); }}
-                  className="flex flex-col items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-white/80 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-800/80 hover:border-gray-300 dark:hover:border-gray-700 text-gray-600 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 transition-all text-xs font-bold"
-                >
-                  <RefreshCw size={16} />
-                  Refresh
-                </button>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Of total users verified</p>
               </div>
+
+              <button
+                onClick={() => { fetchAdminStats(); fetchRecentUsers(); showToast("Data refreshed!"); }}
+                className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 rounded-2xl p-5 flex flex-col items-center justify-center gap-2 transition-all group"
+              >
+                <RefreshCw size={20} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
+                <span className="text-sm font-bold text-gray-600 dark:text-gray-300 group-hover:text-blue-500 transition-colors">Refresh Data</span>
+              </button>
             </div>
 
             {/* ── Quick actions ── */}
-            <Card>
-              <SectionHeader icon={Zap} title="Quick Actions" subtitle="Common admin tasks at a glance." accent="amber" />
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
+              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-4">Quick Actions</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: "Invite User",       icon: UserPlus,   accent: "bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/15" },
-                  { label: "Approve Pending",   icon: ShieldCheck, accent: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15" },
-                  { label: "View Activity",     icon: Activity,   accent: "bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/15" },
-                  { label: "Platform Health",   icon: BarChart3,  accent: "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/15" },
-                ].map(({ label, icon: Icon, accent }) => (
-                  <button key={label} className={`flex flex-col items-center gap-3 p-4 rounded-xl border text-xs font-bold transition-all ${accent}`}>
-                    <Icon size={18} />
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </Card>
-
-            {/* ── Recent users table ── */}
-            <Card>
-              <div className="flex items-center justify-between mb-6">
-                <SectionHeader icon={Users} title="Recent Users" subtitle="Last 10 registered accounts." accent="blue" />
                 <button
-                  onClick={fetchRecentUsers}
-                  className="shrink-0 flex items-center gap-1.5 text-[11px] font-bold text-gray-600 hover:text-gray-400 transition-colors -mt-6"
+                  onClick={() => { setCreateUserError(""); setShowCreateUserModal(true); }}
+                  className="flex flex-col items-center gap-2.5 p-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm active:scale-95"
                 >
-                  <RefreshCw size={11} /> Refresh
+                  <UserPlus size={20} /> Create User
+                </button>
+                <button
+                  onClick={() => {
+                    const pending = recentUsers.filter(u => u.verification_status === "pending");
+                    if (pending.length) { pending.forEach(u => handleApproveVerification(u.id)); }
+                    else showToast("No pending requests.", "error");
+                  }}
+                  className="flex flex-col items-center gap-2.5 p-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm active:scale-95"
+                >
+                  <ShieldCheck size={20} /> Approve Pending
+                </button>
+                <button
+                  onClick={() => { fetchAdminStats(); fetchRecentUsers(); showToast("Data refreshed!"); }}
+                  className="flex flex-col items-center gap-2.5 p-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all shadow-sm active:scale-95"
+                >
+                  <Activity size={20} /> Refresh Stats
+                </button>
+                <button
+                  onClick={() => document.getElementById('broadcast-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className="flex flex-col items-center gap-2.5 p-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-sm active:scale-95"
+                >
+                  <Send size={20} /> Broadcast
                 </button>
               </div>
+            </div>
+
+            {/* ── Broadcast Email ── */}
+            <div id="broadcast-panel" className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
+                  <Send size={16} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Broadcast Email</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Send a message to a specific group of users</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* Audience selector */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Audience</label>
+                  <div className="relative">
+                    <select
+                      value={broadcastForm.audience}
+                      onChange={e => setBroadcastForm(f => ({ ...f, audience: e.target.value }))}
+                      className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 pr-10 text-sm font-semibold text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                    >
+                      <option value="all">All Users</option>
+                      <option value="verified">Verified Users only</option>
+                      <option value="premium">Premium Members only</option>
+                      <option value="member">Members only</option>
+                      <option value="admin">Admins &amp; Founders only</option>
+                    </select>
+                    <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+                  </div>
+                  {/* Recipient count badge */}
+                  <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    {broadcastCount === null
+                      ? <span className="inline-flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Counting…</span>
+                      : <span><span className="font-bold text-gray-900 dark:text-white">{broadcastCount.toLocaleString()}</span> recipient{broadcastCount !== 1 ? 's' : ''} will receive this email</span>}
+                  </p>
+                </div>
+
+                {/* Subject */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Subject</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. New feature available!"
+                    value={broadcastForm.subject}
+                    onChange={e => setBroadcastForm(f => ({ ...f, subject: e.target.value }))}
+                    maxLength={120}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                  />
+                </div>
+
+                {/* Message */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Message</label>
+                  <textarea
+                    placeholder={"Write your announcement here…\n\nYou can use line breaks for paragraphs."}
+                    value={broadcastForm.message}
+                    onChange={e => setBroadcastForm(f => ({ ...f, message: e.target.value }))}
+                    rows={6}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all resize-none"
+                  />
+                  <p className="mt-1 text-right text-xs text-gray-400">{broadcastForm.message.length} chars</p>
+                </div>
+
+                {/* Result banner */}
+                {broadcastResult && (
+                  <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                      Sent to <strong>{broadcastResult.sent}</strong> of <strong>{broadcastResult.total}</strong> recipients
+                      {broadcastResult.failed > 0 && ` · ${broadcastResult.failed} failed`}
+                    </p>
+                  </div>
+                )}
+
+                {/* Send / Confirm */}
+                {broadcastConfirm ? (
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-700 rounded-xl">
+                    <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex-1">
+                      Send <strong>"{broadcastForm.subject || 'this email'}"</strong> to <strong>{broadcastCount?.toLocaleString() ?? '…'}</strong> users?
+                    </p>
+                    <button
+                      onClick={handleBroadcast}
+                      disabled={broadcastSending}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all disabled:opacity-60 shrink-0"
+                    >
+                      {broadcastSending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                      {broadcastSending ? 'Sending…' : 'Confirm Send'}
+                    </button>
+                    <button
+                      onClick={() => setBroadcastConfirm(false)}
+                      className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (!broadcastForm.subject.trim() || !broadcastForm.message.trim()) {
+                        showToast("Fill in subject and message first.", "error"); return;
+                      }
+                      setBroadcastConfirm(true);
+                      setBroadcastResult(null);
+                    }}
+                    disabled={broadcastSending || !broadcastForm.subject.trim() || !broadcastForm.message.trim()}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold transition-all active:scale-[0.98]"
+                  >
+                    <Send size={15} /> Send Broadcast Email
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ── Recent users table ── */}
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Recent Users</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Last 10 registered accounts</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setCreateUserError(""); setShowCreateUserModal(true); }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm"
+                  >
+                    <UserPlus size={13} /> Add User
+                  </button>
+                  <button
+                    onClick={fetchRecentUsers}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-all"
+                  >
+                    <RefreshCw size={13} /> Refresh
+                  </button>
+                </div>
+              </div>
               <RecentUsersTable users={recentUsers} loading={usersLoading} />
-            </Card>
+            </div>
 
             {/* ── Pending verifications ── */}
             {stats.pending > 0 && (
-              <Card>
-                <SectionHeader icon={Shield} title="Pending Verification Requests" subtitle="Users awaiting badge approval." accent="amber" />
-                <div className="space-y-2 ">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center shrink-0">
+                    <Shield size={18} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">Pending Verifications</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Users awaiting badge approval</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
                   {recentUsers.filter(u => u.verification_status === "pending").map((u) => (
-                    <div key={u.id} className="flex items-center justify-between p-3 bg-amber-500/5 border border-amber-500/15 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-xs font-black">
-                          {(u.username || "?")[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-gray-200">{u.username}</p>
-                          <p className="text-[10px] text-gray-500">{u.role || "member"}</p>
-                        </div>
+                    <div key={u.id} className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
+                      <div className={`w-9 h-9 rounded-xl ${avatarColor(u.username)} flex items-center justify-center text-sm font-black text-white shrink-0 overflow-hidden`}>
+                        {u.avatar_url
+                          // eslint-disable-next-line @next/next/no-img-element
+                          ? <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
+                          : (u.username || "?")[0].toUpperCase()}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">@{u.username}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email || u.role || "member"}</p>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
                         <button
                           onClick={() => handleApproveVerification(u.id)}
-                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all"
                         >
                           Approve
                         </button>
                         <button
                           onClick={() => handleRejectVerification(u.id)}
-                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all"
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition-all"
                         >
                           Reject
                         </button>
                       </div>
                     </div>
                   ))}
-                  {recentUsers.filter(u => u.verification_status === "pending").length === 0 && (
-                    <p className="text-center text-xs text-gray-600 py-6">No pending requests in the last 10 users.</p>
-                  )}
                 </div>
-              </Card>
+              </div>
             )}
           </div>
         )}
       </div>
+
+      {/* ── Create User Modal (admin) ── */}
+      {showCreateUserModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-500/50 dark:bg-black/70 backdrop-blur-sm" onClick={() => setShowCreateUserModal(false)} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-7 animate-in fade-in zoom-in duration-200">
+            <button onClick={() => setShowCreateUserModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              <X size={18} />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                <UserPlus size={20} className="text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-gray-900 dark:text-white">Create User</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Account is pre-verified and can sign in immediately</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* Email */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Email</label>
+                <div className="relative">
+                  <Mail size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="email"
+                    value={createUserForm.email}
+                    onChange={e => setCreateUserForm(f => ({ ...f, email: e.target.value }))}
+                    placeholder="user@example.com"
+                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Username */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Username</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold select-none">@</span>
+                  <input
+                    type="text"
+                    value={createUserForm.username}
+                    onChange={e => setCreateUserForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") }))}
+                    placeholder="handle"
+                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-8 pr-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Role */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Role</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: "member", label: "Member", icon: User, desc: "Standard access", color: "blue" },
+                    { value: "admin",  label: "Admin",  icon: Crown, desc: "Full admin access", color: "amber" },
+                  ].map(({ value, label, icon: Icon, desc, color }) => {
+                    const active = createUserForm.role === value;
+                    const colors = {
+                      blue:  { ring: "border-blue-500 bg-blue-50 dark:bg-blue-900/20", icon: "text-blue-500", dot: "bg-blue-500" },
+                      amber: { ring: "border-amber-500 bg-amber-50 dark:bg-amber-900/20", icon: "text-amber-500", dot: "bg-amber-500" },
+                    };
+                    const c = colors[color];
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setCreateUserForm(f => ({ ...f, role: value }))}
+                        className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${active ? c.ring : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}
+                      >
+                        <Icon size={16} className={active ? c.icon : "text-gray-400"} />
+                        <div className="min-w-0">
+                          <p className={`text-xs font-bold ${active ? "" : "text-gray-600 dark:text-gray-400"}`}>{label}</p>
+                          <p className="text-[10px] text-gray-400 truncate">{desc}</p>
+                        </div>
+                        {active && <div className={`ml-auto w-2 h-2 rounded-full shrink-0 ${c.dot}`} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Temporary Password</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <KeyRound size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type={showCreatePw ? "text" : "password"}
+                      value={createUserForm.password}
+                      onChange={e => setCreateUserForm(f => ({ ...f, password: e.target.value }))}
+                      placeholder="Min. 8 characters"
+                      className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-10 py-2.5 text-sm font-mono text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCreatePw(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    >
+                      <Eye size={14} />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCreateUserForm(f => ({ ...f, password: generatePassword() }))}
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+                  >
+                    <RefreshCw size={12} /> Generate
+                  </button>
+                </div>
+              </div>
+
+              {/* Send invite toggle */}
+              <div
+                onClick={() => setCreateUserForm(f => ({ ...f, sendInvite: !f.sendInvite }))}
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/60 rounded-xl cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Mail size={14} className="text-gray-400 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-gray-800 dark:text-gray-200">Send invitation email</p>
+                    <p className="text-[10px] text-gray-500">Include credentials in an email to the user</p>
+                  </div>
+                </div>
+                <div className={`w-9 h-5 rounded-full transition-all shrink-0 relative ${createUserForm.sendInvite ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-700"}`}>
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${createUserForm.sendInvite ? "left-4" : "left-0.5"}`} />
+                </div>
+              </div>
+
+              {/* Error */}
+              {createUserError && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl text-xs text-red-600 dark:text-red-400">
+                  <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                  {createUserError}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setShowCreateUserModal(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateUser}
+                  disabled={createUserLoading}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white transition-all shadow-sm shadow-blue-500/20"
+                >
+                  {createUserLoading ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
+                  {createUserLoading ? "Creating…" : "Create User"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Delete confirmation modal ── */}
       {showDeleteModal && (

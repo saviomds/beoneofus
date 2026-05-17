@@ -76,6 +76,7 @@ export default function PremiumContent() {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading]           = useState(true);
   const [paying, setPaying]             = useState(false);
+  const [paystackReady, setPaystackReady] = useState(false);
   const [plan, setPlan]                 = useState("monthly");
   const [toast, setToast]               = useState({ msg: "", ok: true });
 
@@ -86,11 +87,18 @@ export default function PremiumContent() {
 
   /* Load Paystack script once */
   useEffect(() => {
-    if (document.getElementById("paystack-script")) return;
+    if (window.PaystackPop) { setPaystackReady(true); return; }
+    const existing = document.getElementById("paystack-script");
+    if (existing) {
+      const onload = () => setPaystackReady(true);
+      existing.addEventListener("load", onload);
+      return () => existing.removeEventListener("load", onload);
+    }
     const s = document.createElement("script");
     s.id  = "paystack-script";
     s.src = "https://js.paystack.co/v1/inline.js";
     s.async = true;
+    s.onload = () => setPaystackReady(true);
     document.head.appendChild(s);
   }, []);
 
@@ -145,11 +153,6 @@ export default function PremiumContent() {
   /* ── Paystack payment ─────────────────────────────────────────────────── */
   const handlePay = async () => {
     if (!profile || !user || paying) return;
-
-    if (typeof window === "undefined" || !window.PaystackPop) {
-      showToast("Payment service loading… Try again in a moment.", false);
-      return;
-    }
 
     setPaying(true);
     try {
@@ -379,13 +382,13 @@ export default function PremiumContent() {
 
             <button
               onClick={handlePay}
-              disabled={paying}
+              disabled={paying || !paystackReady}
               className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 active:scale-[0.98] text-white font-black py-3.5 rounded-xl transition-all shadow-lg shadow-amber-500/25 text-sm"
             >
-              {paying
+              {(paying || !paystackReady)
                 ? <Loader2 size={16} className="animate-spin" />
                 : <CreditCard size={16} />}
-              {paying ? "Opening payment…" : `Pay ${PRICE}${PERIOD} via Paystack`}
+              {paying ? "Opening payment…" : !paystackReady ? "Loading payment…" : `Pay ${PRICE}${PERIOD} via Paystack`}
             </button>
 
             <p className="text-center text-[10px] text-gray-400 dark:text-gray-500 mt-3 flex items-center justify-center gap-1">

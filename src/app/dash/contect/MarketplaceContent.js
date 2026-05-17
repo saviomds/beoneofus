@@ -175,7 +175,7 @@ function CredentialCard({ cred, onShare, onListTrade, showActions = true }) {
 }
 
 /* ── Listing Detail Modal ─────────────────────────── */
-function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLibrary, onClose, onAddToLibrary }) {
+function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLibrary, onClose, onAddToLibrary, paystackReady }) {
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState('');
 
@@ -202,11 +202,6 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
     }
 
     /* Paid flow via Paystack */
-    if (typeof window === 'undefined' || !window.PaystackPop) {
-      setPayError('Payment service loading — try again in a moment.');
-      return;
-    }
-
     setPaying(true);
     try {
       const initRes = await fetch('/api/paystack/marketplace/initiate', {
@@ -376,14 +371,16 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
           ) : (
             <button
               onClick={handleGet}
-              disabled={paying}
+              disabled={paying || (!isFree && !isPremiumFree && !paystackReady)}
               className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all active:scale-95 disabled:opacity-60"
             >
               {paying
                 ? <><Loader2 size={16} className="animate-spin" /> Processing...</>
                 : isFree || isPremiumFree
                   ? <><BookOpen size={16} /> Get Free</>
-                  : <><CreditCard size={16} /> Pay ${effectivePrice} via Paystack</>
+                  : !paystackReady
+                    ? <><Loader2 size={16} className="animate-spin" /> Loading payment…</>
+                    : <><CreditCard size={16} /> Pay ${effectivePrice} via Paystack</>
               }
             </button>
           )}
@@ -1335,6 +1332,7 @@ export default function MarketplaceContent() {
   const [userEmail, setUserEmail] = useState('');
   const [libraryIds, setLibraryIds] = useState(new Set());
   const [toast, setToast] = useState(null);
+  const [paystackReady, setPaystackReady] = useState(false);
 
   /* Modal state */
   const [selectedListing, setSelectedListing] = useState(null);
@@ -1343,11 +1341,18 @@ export default function MarketplaceContent() {
 
   /* Load Paystack script once */
   useEffect(() => {
-    if (document.getElementById('paystack-mkt-script')) return;
+    if (window.PaystackPop) { setPaystackReady(true); return; }
+    const existing = document.getElementById('paystack-mkt-script');
+    if (existing) {
+      const onload = () => setPaystackReady(true);
+      existing.addEventListener('load', onload);
+      return () => existing.removeEventListener('load', onload);
+    }
     const s = document.createElement('script');
     s.id = 'paystack-mkt-script';
     s.src = 'https://js.paystack.co/v1/inline.js';
     s.async = true;
+    s.onload = () => setPaystackReady(true);
     document.head.appendChild(s);
   }, []);
 
@@ -1432,6 +1437,7 @@ export default function MarketplaceContent() {
           inLibrary={libraryIds.has(selectedListing.id)}
           onClose={() => setSelectedListing(null)}
           onAddToLibrary={(listing) => { handleAddToLibrary(listing); setSelectedListing(null); }}
+          paystackReady={paystackReady}
         />
       )}
 

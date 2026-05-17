@@ -124,6 +124,7 @@ export default function AuthForm() {
   const [signInStep, setSignInStep] = useState('email'); // 'email' | 'otp'
   const [otpCode, setOtpCode] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [signUpCooldown, setSignUpCooldown] = useState(0);
 
   // -------------------------------------------------------------------------
   // Auth state bootstrap
@@ -297,6 +298,13 @@ export default function AuthForm() {
     const id = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
     return () => clearTimeout(id);
   }, [resendCooldown]);
+
+  // Countdown timer for sign-up rate limit
+  useEffect(() => {
+    if (signUpCooldown <= 0) return;
+    const id = setTimeout(() => setSignUpCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [signUpCooldown]);
 
   // Returns wait seconds if err is a Supabase email rate-limit, otherwise null.
   const parseRateLimit = useCallback((err) => {
@@ -479,7 +487,13 @@ export default function AuthForm() {
         }
       }
     } catch (err) {
-      setError(err.message);
+      const waitSecs = parseRateLimit(err);
+      if (waitSecs) {
+        setSignUpCooldown(waitSecs);
+        setError(`rate_limit`);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -908,14 +922,23 @@ export default function AuthForm() {
         {error && (
           <div className="text-red-600 dark:text-red-400 text-sm flex items-start gap-2 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/50">
             <AlertTriangle size={18} className="shrink-0 mt-0.5 text-red-500" />
-            <span className="leading-relaxed">{error}</span>
+            {error === 'rate_limit' ? (
+              <span className="leading-relaxed">
+                Too many attempts.{' '}
+                {signUpCooldown > 0
+                  ? <>Try again in <strong className="tabular-nums">{signUpCooldown}s</strong>.</>
+                  : 'You can try again now.'}
+              </span>
+            ) : (
+              <span className="leading-relaxed">{error}</span>
+            )}
           </div>
         )}
 
         {/* Submit */}
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || (view === 'sign-up' && signUpCooldown > 0)}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold transition-all disabled:opacity-70 mt-2 flex items-center justify-center gap-2 shadow-sm"
         >
           {loading ? (
@@ -923,6 +946,8 @@ export default function AuthForm() {
               <Loader2 size={18} className="animate-spin" />
               Please wait…
             </>
+          ) : view === 'sign-up' && signUpCooldown > 0 ? (
+            `Try again in ${signUpCooldown}s`
           ) : view === 'sign-up' ? (
             'Create account'
           ) : view === 'forgot-password' ? (

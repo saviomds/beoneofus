@@ -76,7 +76,7 @@ export default function PremiumContent() {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading]           = useState(true);
   const [paying, setPaying]             = useState(false);
-  const [paystackReady, setPaystackReady] = useState(false);
+  const [verifying, setVerifying]       = useState(false);
   const [plan, setPlan]                 = useState("monthly");
   const [toast, setToast]               = useState({ msg: "", ok: true });
 
@@ -85,46 +85,68 @@ export default function PremiumContent() {
     setTimeout(() => setToast({ msg: "", ok: true }), 4000);
   }, []);
 
-  /* Load Paystack script once */
-  useEffect(() => {
-    if (window.PaystackPop) { setPaystackReady(true); return; }
-    const existing = document.getElementById("paystack-script");
-    if (existing) {
-      const onload = () => setPaystackReady(true);
-      existing.addEventListener("load", onload);
-      return () => existing.removeEventListener("load", onload);
-    }
-    const s = document.createElement("script");
-    s.id  = "paystack-script";
-    s.src = "https://js.paystack.co/v1/inline.js";
-    s.async = true;
-    s.onload = () => setPaystackReady(true);
-    document.head.appendChild(s);
-  }, []);
-
   /* Fetch profile + latest subscription */
   const fetchData = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { setLoading(false); return; }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-    setUser(session.user);
+      setUser(session.user);
 
-    const [profileRes, subRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", session.user.id).single(),
-      supabase.from("premium_subscriptions")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+      const [profileRes, subRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", session.user.id).single(),
+        supabase.from("premium_subscriptions")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
-    if (profileRes.data) setProfile(profileRes.data);
-    if (subRes.data)     setSubscription(subRes.data);
-    setLoading(false);
+      if (profileRes.data) setProfile(profileRes.data);
+      if (subRes.data)     setSubscription(subRes.data);
+    } catch {
+      // show page in degraded state rather than spinning forever
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  /* Auto-verify when Paystack redirects back with ?reference= */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("reference") || params.get("trxref");
+    if (!ref) return;
+
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete("reference");
+    clean.searchParams.delete("trxref");
+    window.history.replaceState({}, "", clean.toString());
+
+    setVerifying(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/paystack/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reference: ref }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast("Payment confirmed! Awaiting admin review — you'll be notified.");
+          await fetchData();
+        } else {
+          showToast(data.error || "Verification failed. Contact support.", false);
+        }
+      } catch {
+        showToast("Verification failed. Contact support.", false);
+      } finally {
+        setVerifying(false);
+      }
+    })();
+  }, [fetchData, showToast]);
 
   /* Real-time subscription updates */
   useEffect(() => {
@@ -150,65 +172,24 @@ export default function PremiumContent() {
     return () => supabase.removeChannel(channel);
   }, [user, showToast]);
 
-  /* ── Paystack payment ─────────────────────────────────────────────────── */
+  /* ── Paystack redirect payment ────────────────────────────────────────── */
   const handlePay = async () => {
     if (!profile || !user || paying) return;
-
     setPaying(true);
     try {
-      /* 1. Create reference on server */
       const initRes = await fetch("/api/paystack/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plan,
-          userId: user.id,
-          email: user.email,
+          userId:      user.id,
+          email:       user.email,
+          callbackUrl: `${window.location.origin}/dash?tool=premium`,
         }),
       });
-
       const initData = await initRes.json();
       if (!initRes.ok) throw new Error(initData.error || "Failed to start payment");
-
-      /* 2. Open Paystack popup — callback must be synchronous (v1 validates this) */
-      const handler = window.PaystackPop.setup({
-        key:      process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-        email:    user.email,
-        amount:   initData.amount,
-        currency: initData.currency,
-        ref:      initData.reference,
-        label:    `beoneofus Premium — ${plan}`,
-        callback: (response) => {
-          /* async verify wrapped in IIFE so callback stays synchronous */
-          (async () => {
-            try {
-              const verifyRes = await fetch("/api/paystack/verify", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ reference: response.reference }),
-              });
-              const verifyData = await verifyRes.json();
-              if (verifyRes.ok) {
-                setSubscription(prev => ({ ...prev, status: "pending_review" }));
-                showToast("Payment confirmed! Awaiting admin review — you'll be notified.");
-                await fetchData();
-              } else {
-                showToast(verifyData.error || "Verification failed. Contact support.", false);
-              }
-            } catch {
-              showToast("Verification failed. Contact support.", false);
-            } finally {
-              setPaying(false);
-            }
-          })();
-        },
-        onClose: () => {
-          setPaying(false);
-          showToast("Payment window closed.", false);
-        },
-      });
-
-      handler.openIframe();
+      window.location.href = initData.authorization_url;
     } catch (err) {
       showToast(err.message || "Payment failed. Try again.", false);
       setPaying(false);
@@ -216,9 +197,10 @@ export default function PremiumContent() {
   };
 
   /* ── Derived state ─────────────────────────────────────────────────────── */
-  if (loading) return (
-    <div className="flex items-center justify-center h-48">
+  if (loading || verifying) return (
+    <div className="flex flex-col items-center justify-center h-48 gap-3">
       <Loader2 size={22} className="animate-spin text-amber-500" />
+      {verifying && <p className="text-sm text-gray-500 dark:text-gray-400">Verifying payment…</p>}
     </div>
   );
 
@@ -382,13 +364,11 @@ export default function PremiumContent() {
 
             <button
               onClick={handlePay}
-              disabled={paying || !paystackReady}
+              disabled={paying}
               className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 active:scale-[0.98] text-white font-black py-3.5 rounded-xl transition-all shadow-lg shadow-amber-500/25 text-sm"
             >
-              {(paying || !paystackReady)
-                ? <Loader2 size={16} className="animate-spin" />
-                : <CreditCard size={16} />}
-              {paying ? "Opening payment…" : !paystackReady ? "Loading payment…" : `Pay ${PRICE}${PERIOD} via Paystack`}
+              {paying ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
+              {paying ? "Redirecting to payment…" : `Pay ${PRICE}${PERIOD} via Paystack`}
             </button>
 
             <p className="text-center text-[10px] text-gray-400 dark:text-gray-500 mt-3 flex items-center justify-center gap-1">

@@ -35,7 +35,7 @@ export async function POST(req) {
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
-    const { plan, userId, email } = await req.json();
+    const { plan, userId, email, callbackUrl } = await req.json();
 
     if (!plan || !userId || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -75,13 +75,28 @@ export async function POST(req) {
 
     if (error) throw error;
 
+    /* Initialize transaction on Paystack to get hosted checkout URL */
+    const psRes = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        amount:       kesAmount,
+        currency:     'KES',
+        reference,
+        callback_url: callbackUrl,
+      }),
+    });
+    const psData = await psRes.json();
+    if (!psData.status) throw new Error(psData.message || 'Paystack init failed');
+
     return NextResponse.json({
       reference,
-      amount:         kesAmount,
-      currency:       'KES',
-      email,
-      subscriptionId: sub.id,
-      publicKey:      process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+      authorization_url: psData.data.authorization_url,
+      subscriptionId:    sub.id,
     });
   } catch (err) {
     console.error('Paystack initiate error:', err);

@@ -619,6 +619,7 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [showTaskDeleteConfirm, setShowTaskDeleteConfirm] = useState(null);
   const [showUserDeleteConfirm, setShowUserDeleteConfirm] = useState(null);
   const [showAdminToggleConfirm, setShowAdminToggleConfirm] = useState(null);
+  const [showPremiumToggleConfirm, setShowPremiumToggleConfirm] = useState(null);
   const [taskForm, setTaskForm] = useState({ assignee_id: "", title: "", description: "", priority: "Medium", linked_to: "" });
   const [taskFilter, setTaskFilter] = useState("All");
   const [teamMembers, setTeamMembers] = useState([]);
@@ -1136,7 +1137,7 @@ const AdminPanelTool = ({ currentUserId }) => {
   };
 
   const handleTogglePremium = async (userId, isPrem, username) => {
-    if (!confirm(`${isPrem ? "Revoke" : "Grant"} premium for @${username}?`)) return;
+    setActionProcessing(true);
     try {
       const { error } = await supabase.from("profiles")
         .update({ is_premium: !isPrem, premium_requested: false })
@@ -1145,6 +1146,7 @@ const AdminPanelTool = ({ currentUserId }) => {
       setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_premium: !isPrem, premium_requested: false } : u));
       showToast(`Premium ${isPrem ? "revoked" : "granted"} for @${username}.`);
     } catch (err) { showToast(err.message, "error"); }
+    finally { setActionProcessing(false); }
   };
 
   const handleDeleteUser = async (userId, username) => {
@@ -1547,7 +1549,7 @@ const AdminPanelTool = ({ currentUserId }) => {
                             <XCircle size={14} />
                           </button>
                         )}
-                        <button onClick={() => handleTogglePremium(user.id, user.is_premium, user.username)} title="Toggle Premium"
+                        <button onClick={() => setShowPremiumToggleConfirm({ id: user.id, is_premium: user.is_premium, username: user.username })} title="Toggle Premium"
                           className={`p-2 rounded-xl transition-all border text-xs ${user.is_premium ? "bg-amber-50 dark:bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-200 dark:border-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20" : "bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:text-amber-500 dark:hover:text-amber-400"}`}>
                           <Crown size={14} />
                         </button>
@@ -2333,6 +2335,36 @@ const AdminPanelTool = ({ currentUserId }) => {
                 {showAdminToggleConfirm.is_admin ? "Revoke Privileges" : "Grant Privileges"}
               </button>
               <button onClick={() => setShowAdminToggleConfirm(null)}
+                className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold rounded-xl text-sm hover:bg-gray-200 transition-all">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Toggle Confirmation (Pop card) */}
+      {showPremiumToggleConfirm && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm" onClick={() => !actionProcessing && setShowPremiumToggleConfirm(null)} />
+          <div className="relative w-full max-w-sm bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-8 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className={`w-14 h-14 ${showPremiumToggleConfirm.is_premium ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 border-red-100 dark:border-red-900/50" : "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500 border-amber-100 dark:border-amber-900/50"} rounded-2xl flex items-center justify-center mx-auto mb-4 border`}>
+              <Crown size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">{showPremiumToggleConfirm.is_premium ? "Revoke Premium?" : "Grant Premium?"}</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-xs mb-8 leading-relaxed">
+              {showPremiumToggleConfirm.is_premium
+                ? `Remove premium access from @${showPremiumToggleConfirm.username}?`
+                : `Grant @${showPremiumToggleConfirm.username} premium access?`}
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => { handleTogglePremium(showPremiumToggleConfirm.id, showPremiumToggleConfirm.is_premium, showPremiumToggleConfirm.username); setShowPremiumToggleConfirm(null); }}
+                disabled={actionProcessing}
+                className={`w-full py-3 ${showPremiumToggleConfirm.is_premium ? "bg-red-600 hover:bg-red-500 shadow-red-600/20" : "bg-amber-500 hover:bg-amber-400 shadow-amber-500/20"} text-white font-bold rounded-xl text-sm transition-all shadow-lg active:scale-95 disabled:opacity-60`}>
+                {showPremiumToggleConfirm.is_premium ? "Revoke Premium" : "Grant Premium"}
+              </button>
+              <button onClick={() => setShowPremiumToggleConfirm(null)}
                 className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold rounded-xl text-sm hover:bg-gray-200 transition-all">
                 Cancel
               </button>

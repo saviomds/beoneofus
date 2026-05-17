@@ -657,20 +657,27 @@ export default function ServicesContent() {
   };
 
   const handlePayOrder = async (order) => {
-    if (!paystackReady || payingOrderId) return;
+    if (payingOrderId === order.id) return;
+    if (!paystackReady) { showToast('Payment not ready yet — try again in a moment'); return; }
+
+    const email = userEmail || session?.user?.email || '';
+    if (!email) { showToast('Could not read your email — please refresh and try again'); return; }
+
     setPayingOrderId(order.id);
     try {
       const initRes = await fetch('/api/paystack/services/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order.id, userId, email: userEmail, priceUsd: order.amount_usd }),
+        body: JSON.stringify({ orderId: order.id, userId, email, priceUsd: order.amount_usd }),
       });
       const initData = await initRes.json();
       if (!initRes.ok) throw new Error(initData.error || 'Failed to start payment');
 
+      if (!initData.publicKey) throw new Error('Paystack key missing — contact support');
+
       const handler = window.PaystackPop.setup({
-        key:      process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-        email:    userEmail,
+        key:      initData.publicKey,
+        email,
         amount:   initData.amount,
         currency: initData.currency,
         ref:      initData.reference,

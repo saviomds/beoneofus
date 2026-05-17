@@ -6,7 +6,8 @@ import {
   Plus, Search, Loader2, Clock, DollarSign,
   X, ChevronDown, Tag, Send, CheckCircle2, Pencil, Trash2,
   Store, Sparkles, MessageCircle, ShoppingCart,
-  CalendarDays, BadgeCheck, ArrowRight,
+  CalendarDays, BadgeCheck, ArrowRight, CreditCard,
+  Banknote, Smartphone, Handshake, ChevronRight, ChevronDown as ChevronDownIcon,
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
@@ -78,11 +79,13 @@ function Avatar({ src, name, px = 32 }) {
 
 /* ── Service Detail Modal ──────────────────────────────────── */
 function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, onDelete, onOrderSuccess }) {
-  const [panel, setPanel]           = useState('order');
-  const [requirements, setRequirements] = useState('');
-  const [note, setNote]             = useState('');
-  const [saving, setSaving]         = useState(false);
-  const [done, setDone]             = useState('');
+  const [panel, setPanel]               = useState('order');
+  const [requirements, setRequirements]   = useState('');
+  const [destination, setDestination]     = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('paystack');
+  const [note, setNote]                   = useState('');
+  const [saving, setSaving]               = useState(false);
+  const [done, setDone]                   = useState('');
 
   const seller     = service.profiles;
   const sellerName = seller?.username || 'Anonymous';
@@ -99,7 +102,9 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
         seller_id:    service.seller_id,
         amount_usd:   service.price_usd,
         requirements: requirements.trim(),
-        status:       'pending',
+        destination:     destination.trim() || null,
+        payment_method:  paymentMethod,
+        status:          'pending',
       });
       setDone('order');
       onOrderSuccess?.();
@@ -239,10 +244,37 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
                     placeholder="Describe what you need — include links, assets, or context the seller should know…"
                   />
                 </div>
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl px-4 py-3">
-                  <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
-                    Payment is processed via Paystack after the seller confirms your order.
-                  </p>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">Delivery Destination <span className="font-normal text-gray-400">(optional)</span></label>
+                  <input
+                    className={inputCls}
+                    value={destination}
+                    onChange={e => setDestination(e.target.value)}
+                    placeholder="e.g. your GitHub repo URL, Google Drive link, email, or platform account…"
+                    maxLength={300}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">Payment Method</label>
+                  <div className="space-y-2">
+                    {PAYMENT_METHODS.map(m => {
+                      const Icon = m.icon;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setPaymentMethod(m.id)}
+                          className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${paymentMethod === m.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}
+                        >
+                          <Icon size={15} className={`mt-0.5 shrink-0 ${paymentMethod === m.id ? 'text-blue-500' : 'text-gray-400'}`} />
+                          <div>
+                            <p className={`text-xs font-bold ${paymentMethod === m.id ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>{m.label}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{m.desc}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <button
                   onClick={handleOrder}
@@ -477,6 +509,13 @@ function ServiceCard({ service, isOwn, onClick, onEdit, onDelete }) {
   );
 }
 
+const PAYMENT_METHODS = [
+  { id: 'paystack',     label: 'Paystack',                    icon: CreditCard,  desc: 'Pay online via card or mobile money — secure & instant' },
+  { id: 'bank',         label: 'Bank Transfer',               icon: Banknote,    desc: 'Transfer to seller\'s bank account, seller confirms receipt' },
+  { id: 'mobile_money', label: 'Mobile Money',                icon: Smartphone,  desc: 'M-Pesa, Airtel Money or similar — confirm details with seller' },
+  { id: 'agreed',       label: 'Agreed Outside Platform',     icon: Handshake,   desc: 'Both parties agree on a custom payment arrangement' },
+];
+
 /* ── Status colours ────────────────────────────────────────── */
 const STATUS_COLOR = {
   pending:   'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
@@ -491,13 +530,17 @@ const STATUS_COLOR = {
 export default function ServicesContent() {
   const [services, setServices]     = useState([]);
   const [myServices, setMyServices] = useState([]);
-  const [myOrders, setMyOrders]     = useState([]);
+  const [myOrders, setMyOrders]         = useState([]);
+  const [incomingOrders, setIncomingOrders] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [tab, setTab]               = useState('browse');
   const [category, setCategory]     = useState('All');
   const [search, setSearch]         = useState('');
   const [userId, setUserId]         = useState(null);
   const [session, setSession]       = useState(null);
+  const [userEmail, setUserEmail]   = useState('');
+  const [paystackReady, setPaystackReady] = useState(false);
+  const [payingOrderId, setPayingOrderId] = useState(null);
 
   const [showCreate, setShowCreate]     = useState(false);
   const [editTarget, setEditTarget]     = useState(null);
@@ -541,19 +584,47 @@ export default function ServicesContent() {
     setMyOrders(data || []);
   }, []);
 
+  const loadIncoming = useCallback(async (uid) => {
+    if (!uid) return;
+    const { data } = await supabase
+      .from('service_orders')
+      .select('*, services(title, price_usd), profiles!service_orders_buyer_id_fkey(username, avatar_url)')
+      .eq('seller_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(40);
+    setIncomingOrders(data || []);
+  }, []);
+
   useEffect(() => {
     const init = async () => {
       const { data: { session: s } } = await supabase.auth.getSession();
       setSession(s);
       if (s) {
         setUserId(s.user.id);
-        await Promise.all([loadMine(s.user.id), loadOrders(s.user.id)]);
+        setUserEmail(s.user.email || '');
+        await Promise.all([loadMine(s.user.id), loadOrders(s.user.id), loadIncoming(s.user.id)]);
       }
       await loadBrowse();
       setLoading(false);
     };
     init();
-  }, [loadBrowse, loadMine, loadOrders]);
+  }, [loadBrowse, loadMine, loadOrders, loadIncoming]);
+
+  useEffect(() => {
+    if (window.PaystackPop) { setPaystackReady(true); return; }
+    const existing = document.getElementById('paystack-svc-script');
+    if (existing) {
+      const onload = () => setPaystackReady(true);
+      existing.addEventListener('load', onload);
+      return () => existing.removeEventListener('load', onload);
+    }
+    const s = document.createElement('script');
+    s.id  = 'paystack-svc-script';
+    s.src = 'https://js.paystack.co/v1/inline.js';
+    s.async = true;
+    s.onload = () => setPaystackReady(true);
+    document.head.appendChild(s);
+  }, []);
 
   useEffect(() => { loadBrowse(); }, [loadBrowse]);
 
@@ -583,6 +654,105 @@ export default function ServicesContent() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePayOrder = async (order) => {
+    if (!paystackReady || payingOrderId) return;
+    setPayingOrderId(order.id);
+    try {
+      const initRes = await fetch('/api/paystack/services/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.id, userId, email: userEmail, priceUsd: order.amount_usd }),
+      });
+      const initData = await initRes.json();
+      if (!initRes.ok) throw new Error(initData.error || 'Failed to start payment');
+
+      const handler = window.PaystackPop.setup({
+        key:      process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+        email:    userEmail,
+        amount:   initData.amount,
+        currency: initData.currency,
+        ref:      initData.reference,
+        callback: (response) => {
+          (async () => {
+            try {
+              const verifyRes = await fetch('/api/paystack/services/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reference: response.reference, orderId: order.id, userId }),
+              });
+              const verifyData = await verifyRes.json();
+              if (!verifyRes.ok) throw new Error(verifyData.error || 'Verification failed');
+              await supabase.from('notifications').insert({
+                receiver_id: order.seller_id,
+                actor_id:    userId,
+                type:        'order_update',
+                message:     'has paid for their order — you can now begin work.',
+              }).maybeSingle();
+              await loadOrders(userId);
+              showToast('Payment confirmed!');
+            } catch (e) {
+              showToast('Payment verify failed: ' + e.message);
+            } finally {
+              setPayingOrderId(null);
+            }
+          })();
+        },
+        onClose: () => setPayingOrderId(null),
+      });
+      handler.openIframe();
+    } catch (e) {
+      showToast('Payment error: ' + e.message);
+      setPayingOrderId(null);
+    }
+  };
+
+  const handleConfirmManualPayment = async (orderId, sellerId) => {
+    await supabase.from('service_orders').update({ payment_reference: 'manual_confirmed' }).eq('id', orderId);
+    await supabase.from('notifications').insert({
+      receiver_id: sellerId,
+      actor_id:    userId,
+      type:        'order_update',
+      message:     'has confirmed their manual payment — please verify and begin work.',
+    }).maybeSingle();
+    await loadOrders(userId);
+    showToast('Payment confirmation sent to seller');
+  };
+
+  const handleOrderAction = async (orderId, action, buyerId) => {
+    const map = { accept: 'active', decline: 'cancelled', deliver: 'delivered' };
+    const toastMap = { accept: 'Order accepted', decline: 'Order declined', deliver: 'Marked as delivered' };
+    const msgMap = {
+      accept:  'accepted your service order — work has started!',
+      decline: 'declined your service order.',
+      deliver: 'has delivered your order — please review and confirm.',
+    };
+    await supabase.from('service_orders').update({ status: map[action] }).eq('id', orderId);
+    await supabase.from('notifications').insert({
+      receiver_id: buyerId,
+      actor_id:    userId,
+      type:        'order_update',
+      message:     msgMap[action],
+    }).maybeSingle();
+    await loadIncoming(userId);
+    showToast(toastMap[action]);
+  };
+
+  const handleBuyerAction = async (orderId, action, sellerId) => {
+    const newStatus = action === 'complete' ? 'complete' : 'disputed';
+    const msg = action === 'complete'
+      ? 'marked your delivery as complete — great work!'
+      : 'raised a dispute on their order. Please follow up.';
+    await supabase.from('service_orders').update({ status: newStatus }).eq('id', orderId);
+    await supabase.from('notifications').insert({
+      receiver_id: sellerId,
+      actor_id:    userId,
+      type:        'order_update',
+      message:     msg,
+    }).maybeSingle();
+    await loadOrders(userId);
+    showToast(action === 'complete' ? 'Order completed!' : 'Dispute raised');
   };
 
   const handleDelete = async (id) => {
@@ -622,7 +792,11 @@ export default function ServicesContent() {
       <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
         {[
           { id: 'browse', label: 'Browse' },
-          ...(session ? [{ id: 'mine', label: 'My Services' }, { id: 'orders', label: 'My Orders' }] : []),
+          ...(session ? [
+            { id: 'mine', label: 'My Services' },
+            { id: 'orders', label: 'My Orders' },
+            { id: 'incoming', label: `Incoming${incomingOrders.filter(o => o.status === 'pending').length ? ` (${incomingOrders.filter(o => o.status === 'pending').length})` : ''}` },
+          ] : []),
         ].map(t => (
           <button
             key={t.id}
@@ -723,19 +897,165 @@ export default function ServicesContent() {
         ) : (
           <div className="space-y-3">
             {myOrders.map(o => (
-              <div key={o.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{o.services?.title || 'Service'}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    Seller: @{o.profiles?.username || 'unknown'} · ${o.amount_usd}
-                  </p>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
-                    {new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
+              <div key={o.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{o.services?.title || 'Service'}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      Seller: @{o.profiles?.username || 'unknown'} · ${o.amount_usd}
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                      {new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] || STATUS_COLOR.pending}`}>
+                    {o.status}
+                  </span>
                 </div>
-                <span className={`shrink-0 text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] || STATUS_COLOR.pending}`}>
-                  {o.status}
-                </span>
+                {o.status === 'active' && !o.payment_reference && (
+                  <div className="space-y-2">
+                    <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 mb-0.5">Payment Required</p>
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        {o.payment_method === 'paystack'
+                          ? 'Complete your Paystack payment to start the work.'
+                          : o.payment_method === 'bank'
+                          ? 'Transfer to the seller\'s bank account, then confirm below.'
+                          : o.payment_method === 'mobile_money'
+                          ? 'Send via Mobile Money to the seller, then confirm below.'
+                          : 'Pay via your agreed method, then confirm below.'}
+                      </p>
+                    </div>
+                    {o.payment_method === 'paystack' ? (
+                      <button
+                        onClick={() => handlePayOrder(o)}
+                        disabled={!paystackReady || payingOrderId === o.id}
+                        className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-black py-2.5 rounded-xl transition-all active:scale-95"
+                      >
+                        {payingOrderId === o.id ? <Loader2 size={13} className="animate-spin" /> : <CreditCard size={13} />}
+                        {payingOrderId === o.id ? 'Opening payment…' : `Pay $${o.amount_usd} via Paystack`}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleConfirmManualPayment(o.id, o.seller_id)}
+                        className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-2.5 rounded-xl transition-all active:scale-95"
+                      >
+                        <CheckCircle2 size={13} /> I Have Paid
+                      </button>
+                    )}
+                  </div>
+                )}
+                {o.status === 'active' && o.payment_reference && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2.5">
+                    <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Payment confirmed — work is in progress.</p>
+                  </div>
+                )}
+                {o.status === 'delivered' && (
+                  <div className="space-y-2">
+                    <div className="bg-violet-50 dark:bg-violet-900/20 rounded-xl px-3 py-2.5">
+                      <p className="text-xs text-violet-700 dark:text-violet-300 font-medium">The seller has delivered — review and confirm below.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleBuyerAction(o.id, 'complete', o.seller_id)}
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-2 rounded-xl transition-all active:scale-95"
+                      >
+                        <CheckCircle2 size={13} /> Accept Delivery
+                      </button>
+                      <button
+                        onClick={() => handleBuyerAction(o.id, 'dispute', o.seller_id)}
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 text-xs font-black py-2 rounded-xl transition-all active:scale-95"
+                      >
+                        <X size={13} /> Dispute
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Incoming Orders (seller view) */}
+      {tab === 'incoming' && (
+        incomingOrders.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No incoming orders yet</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Clients who order your services will appear here</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {incomingOrders.map(o => (
+              <div key={o.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{o.services?.title || 'Service'}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      Client: @{o.profiles?.username || 'unknown'} · ${o.amount_usd}
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                      {new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${STATUS_COLOR[o.status] || STATUS_COLOR.pending}`}>
+                    {o.status}
+                  </span>
+                </div>
+                {o.requirements && (
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Client requirements</p>
+                    <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{o.requirements}</p>
+                  </div>
+                )}
+                {o.destination && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2.5 flex items-start gap-2">
+                    <ArrowRight size={13} className="text-blue-400 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-400 mb-0.5">Delivery destination</p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 break-all">{o.destination}</p>
+                    </div>
+                  </div>
+                )}
+                {o.status === 'pending' && (
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => handleOrderAction(o.id, 'accept', o.buyer_id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-2 rounded-xl transition-all active:scale-95"
+                    >
+                      <CheckCircle2 size={13} /> Accept
+                    </button>
+                    <button
+                      onClick={() => handleOrderAction(o.id, 'decline', o.buyer_id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 text-xs font-black py-2 rounded-xl transition-all active:scale-95"
+                    >
+                      <X size={13} /> Decline
+                    </button>
+                  </div>
+                )}
+                {o.payment_method && o.status !== 'complete' && o.status !== 'cancelled' && (
+                  <div className="flex items-center gap-1.5 px-1">
+                    {(() => {
+                      const pm = PAYMENT_METHODS.find(m => m.id === o.payment_method);
+                      const Icon = pm?.icon || CreditCard;
+                      return <><Icon size={11} className="text-gray-400" /><p className="text-[10px] text-gray-400">{pm?.label || o.payment_method}</p></>;
+                    })()}
+                    {o.payment_reference && <span className="ml-1 text-[10px] font-black text-emerald-500">PAID</span>}
+                  </div>
+                )}
+                {o.status === 'active' && !o.payment_reference && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2">
+                    <p className="text-xs text-amber-700 dark:text-amber-400">Waiting for client payment before you begin work.</p>
+                  </div>
+                )}
+                {o.status === 'active' && o.payment_reference && (
+                  <button
+                    onClick={() => handleOrderAction(o.id, 'deliver', o.buyer_id)}
+                    className="w-full flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-black py-2 rounded-xl transition-all active:scale-95"
+                  >
+                    <Send size={13} /> Mark as Delivered
+                  </button>
+                )}
               </div>
             ))}
           </div>

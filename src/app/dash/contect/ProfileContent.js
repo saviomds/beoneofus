@@ -48,6 +48,8 @@ export default function ProfileContent({ viewUserId }) {
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ username: "", status: "", location: "", github: "", website: "", work_status: "", full_name: "" });
+  const [skillsInput, setSkillsInput] = useState("");
+  const [editSkills, setEditSkills] = useState([]);
   const [toast, setToast] = useState({ message: "", type: "success" });
   const [visibility, setVisibility] = useState({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true });
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -196,6 +198,7 @@ export default function ProfileContent({ viewUserId }) {
             work_status: profileData.work_status || "",
             full_name: profileData.full_name || ""
           });
+          setEditSkills(Array.isArray(profileData.skills) ? profileData.skills : []);
           if (profileData.profile_visibility) {
             setVisibility({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, ...profileData.profile_visibility });
           }
@@ -312,6 +315,7 @@ export default function ProfileContent({ viewUserId }) {
           github: formData.github.trim(),
           website: formData.website.trim(),
           work_status: formData.work_status,
+          skills: editSkills,
           avatar_url: avatarUrl,
           banner_url: bannerUrl
         })
@@ -331,6 +335,7 @@ export default function ProfileContent({ viewUserId }) {
         github: formData.github.trim(),
         website: formData.website.trim(),
         work_status: formData.work_status,
+        skills: editSkills,
         avatar_url: avatarUrl,
         banner_url: bannerUrl
       });
@@ -390,8 +395,11 @@ export default function ProfileContent({ viewUserId }) {
       location: profile?.location || "",
       github: profile?.github || "",
       website: profile?.website || "",
-      work_status: profile?.work_status || ""
+      work_status: profile?.work_status || "",
+      full_name: profile?.full_name || ""
     });
+    setEditSkills(Array.isArray(profile?.skills) ? profile.skills : []);
+    setSkillsInput("");
     setImageFile(null);
     setImagePreview(null);
     setBannerFile(null);
@@ -957,14 +965,62 @@ export default function ProfileContent({ viewUserId }) {
                     <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Website URL</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><Link size={14} /></span>
-                      <input 
-                        type="text" 
-                        value={formData.website} 
+                      <input
+                        type="text"
+                        value={formData.website}
                         onChange={(e) => setFormData({...formData, website: e.target.value})}
                         placeholder="https://yourdomain.com"
                         className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                       />
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Skills</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><Code2 size={14} /></span>
+                        <input
+                          type="text"
+                          value={skillsInput}
+                          onChange={(e) => setSkillsInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if ((e.key === "Enter" || e.key === ",") && skillsInput.trim()) {
+                              e.preventDefault();
+                              const s = skillsInput.trim().replace(/,$/, "");
+                              if (s && !editSkills.includes(s) && editSkills.length < 20) {
+                                setEditSkills(prev => [...prev, s]);
+                              }
+                              setSkillsInput("");
+                            }
+                          }}
+                          placeholder="e.g. React, Python — press Enter to add"
+                          className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const s = skillsInput.trim().replace(/,$/, "");
+                          if (s && !editSkills.includes(s) && editSkills.length < 20) {
+                            setEditSkills(prev => [...prev, s]);
+                          }
+                          setSkillsInput("");
+                        }}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shrink-0"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                    {editSkills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {editSkills.map((skill, i) => (
+                          <span key={i} className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 rounded-lg text-[11px] font-bold">
+                            {skill}
+                            <button type="button" onClick={() => setEditSkills(prev => prev.filter((_, idx) => idx !== i))} className="hover:text-red-500 transition-colors"><X size={10} /></button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1014,6 +1070,20 @@ export default function ProfileContent({ viewUserId }) {
                     <Globe size={16} className="text-gray-400 dark:text-gray-500" /> {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                   </a>
                 )}
+              </div>
+              {Array.isArray(profile?.skills) && profile.skills.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Skills</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.skills.map((skill, i) => (
+                      <span key={i} className="px-2.5 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 rounded-lg text-[11px] font-bold">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-3 mt-4 text-sm text-gray-600 dark:text-gray-400 font-medium">
                 <div className="relative">
                   <span 
                     onClick={handleViewFollowers}

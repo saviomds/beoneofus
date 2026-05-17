@@ -295,6 +295,7 @@ function PageSettingsModal({
                     </button>
                   ))}
                 </div>
+                
               </div>
               {/* Danger zone */}
               <div className="pt-4 border-t border-gray-100 dark:border-gray-800">

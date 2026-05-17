@@ -11,12 +11,14 @@ const groq = process.env.GROQ_API_KEY
   ? new Groq({ apiKey: process.env.GROQ_API_KEY })
   : null;
 
+let openaiSkipUntil = 0;
+
 async function callAI(systemPrompt, userPrompt) {
   const messages = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userPrompt },
   ];
-  if (openai) {
+  if (openai && Date.now() > openaiSkipUntil) {
     try {
       const res = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -26,17 +28,33 @@ async function callAI(systemPrompt, userPrompt) {
       });
       return res.choices[0].message.content;
     } catch (err) {
-      console.warn('OpenAI failed, falling back to Groq:', err.message);
+      if (err.status === 429) {
+        openaiSkipUntil = Date.now() + 5 * 60 * 1000;
+        console.warn('OpenAI quota exceeded — switching to Groq for 5 min.');
+      } else {
+        console.warn('OpenAI failed, falling back to Groq:', err.message);
+      }
     }
   }
   if (groq) {
-    const res = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages,
-      temperature: 0.4,
-      max_tokens: 2048,
-    });
-    return res.choices[0].message.content;
+    for (const model of ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']) {
+      try {
+        const res = await groq.chat.completions.create({
+          model,
+          messages,
+          temperature: 0.4,
+          max_tokens: 2048,
+        });
+        return res.choices[0].message.content;
+      } catch (err) {
+        const isQuota = err.status === 429 || err.status === 413;
+        if (isQuota && model !== 'llama-3.1-8b-instant') {
+          console.warn(`Groq ${model} quota hit — trying llama-3.1-8b-instant.`);
+          continue;
+        }
+        throw err;
+      }
+    }
   }
   throw new Error('No AI provider configured. Add OPENAI_API_KEY or GROQ_API_KEY.');
 }

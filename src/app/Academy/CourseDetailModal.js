@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   BookOpen, Pencil, X, Star, PlayCircle, Clock, Code2, Trash2,
   CheckCircle2, Award, ExternalLink, Sparkles, Loader2, Eye, EyeOff,
-  Lock, Crown,
+  Lock, Crown, AlertCircle, CheckCircle,
 } from "lucide-react";
 import { LEVEL_COLORS } from "./constants";
 import { supabase } from "../supabaseClient";
@@ -30,6 +30,19 @@ export default function CourseDetailModal({
   const [showPreview, setShowPreview] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState("javascript");
   const contentRef = useRef(null);
+
+  // ─── Auto-generate state ──────────────────────────────────────────────────
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
+  const [autoGenProgress, setAutoGenProgress] = useState({ current: 0, total: 0, message: "" });
+
+  // ─── Toast notification ───────────────────────────────────────────────────
+  const [toast, setToast] = useState(null); // { message, type: 'error'|'success' }
+  const toastTimer = useRef(null);
+  const showToast = useCallback((message, type = "error") => {
+    clearTimeout(toastTimer.current);
+    setToast({ message, type });
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
+  }, []);
 
   const fetchLessonsAndProgress = async (isMounted = true) => {
     setIsLoadingLessons(true);
@@ -101,12 +114,80 @@ export default function CourseDetailModal({
       if (data.html) {
         setLessonForm((prev) => ({ ...prev, content: data.html }));
       } else {
-        alert("AI generation failed: " + (data.error || "Unknown error"));
+        showToast("AI generation failed: " + (data.error || "Unknown error"));
       }
     } catch (err) {
-      alert("Failed to generate content: " + err.message);
+      showToast("Failed to generate content: " + err.message);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // ─── Auto-generate all missing lessons ───────────────────────────────────
+  const handleAutoGenerate = async () => {
+    const needed = (course.lessons || 0) - lessons.length;
+    if (needed <= 0) return;
+    setIsAutoGenerating(true);
+    setAutoGenProgress({ current: 0, total: needed, message: "Asking AI to plan lessons…" });
+    try {
+      // One call: get all lesson titles + content as a batch (max 8 per call)
+      const remaining = needed;
+      let generated = [];
+      const batchSize = Math.min(remaining, 8);
+
+      setAutoGenProgress({ current: 0, total: remaining, message: `Generating ${batchSize} lessons…` });
+
+      const res = await fetch("/api/generate-lesson", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "batch",
+          courseTitle: course.title,
+          category: course.category,
+          level: course.level,
+          count: batchSize,
+          topics: course.topics || [],
+          existingTitles: lessons.map(l => l.title),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.lessons) {
+        const waitMsg = data.retryAfter ? ` Try again in ${data.retryAfter}s.` : "";
+        throw new Error((data.error || "Batch generation failed.") + waitMsg);
+      }
+      generated = data.lessons.slice(0, batchSize);
+
+      // Insert each generated lesson into Supabase
+      let saved = 0;
+      for (const lesson of generated) {
+        if (!lesson.title || !lesson.content) continue;
+        const { error } = await supabase.from("lessons").insert({
+          course_id: course.id,
+          title: lesson.title,
+          content: lesson.content,
+        });
+        if (!error) {
+          saved++;
+          setAutoGenProgress({ current: saved, total: batchSize, message: `Saved "${lesson.title}"` });
+        }
+      }
+
+      // If the course.lessons count is higher than one batch can cover, update the course's lesson count to what we actually made
+      if (remaining > 8) {
+        await supabase.from("courses").update({ lessons: lessons.length + saved }).eq("id", course.id);
+      }
+
+      await fetchLessonsAndProgress(true);
+      setAutoGenProgress({ current: saved, total: saved, message: `Done — ${saved} lesson${saved !== 1 ? "s" : ""} added!` });
+      showToast(`${saved} lesson${saved !== 1 ? "s" : ""} generated successfully!`, "success");
+      setTimeout(() => {
+        setIsAutoGenerating(false);
+        setAutoGenProgress({ current: 0, total: 0, message: "" });
+      }, 2500);
+    } catch (err) {
+      setAutoGenProgress({ current: 0, total: 0, message: "" });
+      setIsAutoGenerating(false);
+      showToast("Auto-generate failed: " + err.message);
     }
   };
 
@@ -131,7 +212,7 @@ export default function CourseDetailModal({
 
   // ─── Save / delete lesson ─────────────────────────────────────────────────
   const handleSaveLesson = async () => {
-    if (!lessonForm.title) return alert("Lesson title is required!");
+    if (!lessonForm.title) { showToast("Lesson title is required!"); return; }
     setIsSavingLesson(true);
     try {
       if (lessonForm.id) {
@@ -149,7 +230,7 @@ export default function CourseDetailModal({
       fetchLessonsAndProgress(true);
       setIsLessonModalOpen(false);
     } catch (err) {
-      alert("Error saving lesson: " + err.message);
+      showToast("Error saving lesson: " + err.message);
     } finally {
       setIsSavingLesson(false);
     }
@@ -164,7 +245,7 @@ export default function CourseDetailModal({
       if (error) throw error;
       fetchLessonsAndProgress(true);
     } catch (err) {
-      alert("Error deleting lesson: " + err.message);
+      showToast("Error deleting lesson: " + err.message);
     }
   };
 
@@ -175,6 +256,30 @@ export default function CourseDetailModal({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      {/* Toast pop card */}
+      {toast && (
+        <div
+          className={`fixed top-5 left-1/2 -translate-x-1/2 z-[500] flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl border max-w-sm w-full animate-in fade-in slide-in-from-top-3 duration-200 ${
+            toast.type === "success"
+              ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200"
+              : "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircle size={18} className="shrink-0 mt-0.5 text-emerald-500" />
+          ) : (
+            <AlertCircle size={18} className="shrink-0 mt-0.5 text-red-500" />
+          )}
+          <p className="text-sm font-semibold flex-1 leading-snug">{toast.message}</p>
+          <button
+            onClick={() => setToast(null)}
+            className="shrink-0 text-current opacity-50 hover:opacity-100 transition-opacity"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
       <div
         className="absolute inset-0 bg-gray-900/40 dark:bg-black/60 backdrop-blur-sm"
         onClick={onClose}
@@ -287,17 +392,58 @@ export default function CourseDetailModal({
           )}
 
           {/* Lessons list */}
-          <div className="flex items-center justify-between mt-4 mb-3">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Lessons Included</h3>
+          <div className="flex items-center justify-between mt-4 mb-3 gap-2 flex-wrap">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              Lessons Included
+              <span className="ml-2 text-sm font-normal text-gray-400">
+                {lessons.length}/{course.lessons || "?"}
+              </span>
+            </h3>
             {isAdmin && (
-              <button
-                onClick={openAddLesson}
-                className="text-xs font-bold bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                + Add Lesson
-              </button>
+              <div className="flex items-center gap-2">
+                {!isAutoGenerating && lessons.length < (course.lessons || 0) && (
+                  <button
+                    onClick={handleAutoGenerate}
+                    className="flex items-center gap-1.5 text-xs font-bold bg-violet-50 hover:bg-violet-100 dark:bg-violet-900/20 dark:hover:bg-violet-900/40 border border-violet-200 dark:border-violet-800/50 text-violet-600 dark:text-violet-400 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Sparkles size={12} /> Auto-Generate {(course.lessons || 0) - lessons.length} Lessons
+                  </button>
+                )}
+                <button
+                  onClick={openAddLesson}
+                  disabled={isAutoGenerating}
+                  className="text-xs font-bold bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+                >
+                  + Add Lesson
+                </button>
+              </div>
             )}
           </div>
+
+          {/* Auto-generate progress */}
+          {isAutoGenerating && (
+            <div className="mb-4 p-4 bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-800/40 rounded-xl">
+              <div className="flex items-center gap-2 mb-2">
+                <Loader2 size={14} className="animate-spin text-violet-600 dark:text-violet-400 shrink-0" />
+                <span className="text-xs font-bold text-violet-700 dark:text-violet-300">
+                  {autoGenProgress.message || "Generating…"}
+                </span>
+              </div>
+              {autoGenProgress.total > 0 && (
+                <>
+                  <div className="h-1.5 bg-violet-200 dark:bg-violet-800/40 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-violet-500 dark:bg-violet-400 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.round((autoGenProgress.current / autoGenProgress.total) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-violet-500 dark:text-violet-400 mt-1 text-right">
+                    {autoGenProgress.current} / {autoGenProgress.total}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Premium gate for Advanced courses */}
           {course.level === "Advanced" && !isPremium && !isAdmin ? (

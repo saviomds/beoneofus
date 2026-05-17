@@ -99,73 +99,202 @@ function statusColor(status) {
 }
 
 function SystemLogsView() {
-  const getCurrentTimestamp = () => new Date().toISOString();
-  const getTimestampOffset = (ms) => new Date(getCurrentTimestamp() - ms).toISOString();
-  
-  const [logs] = useState([
-    { id: 1, endpoint: "/api/chats", method: "POST", status: 200, latency: "142ms", region: "iad1", timestamp: new Date().toISOString() },
-    { id: 2, endpoint: "/api/premium/verify", method: "POST", status: 200, latency: "421ms", region: "iad1", timestamp: new Date(new Date().getTime() - 30000).toISOString() },
-    { id: 3, endpoint: "/api/auth/session", method: "GET", status: 200, latency: "45ms", region: "iad1", timestamp: new Date(new Date().getTime() - 120000).toISOString() },
-    { id: 4, endpoint: "/api/storage/upload", method: "PUT", status: 201, latency: "890ms", region: "iad1", timestamp: new Date(new Date().getTime() - 300000).toISOString() },
-    { id: 5, endpoint: "/api/jobs/apply", method: "POST", status: 401, latency: "12ms", region: "iad1", timestamp: new Date(new Date().getTime() - 600000).toISOString() },
-  ]);
+  const [stats, setStats] = useState({ totalUsers: 0, completedInterviews: 0, passRate: 0, avgScore: 0, totalApplications: 0, newUsersToday: 0 });
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const terminalRef = useRef(null);
+
+  const typeLabel = (type) => {
+    const map = {
+      interview_completed: "Interview completed",
+      handshake: "Connection approved",
+      blocked: "Verification denied",
+      message: "New message",
+      like: "Post liked",
+      comment: "Post commented",
+      follow: "New follower",
+    };
+    return map[type] || type;
+  };
+
+  const typeColor = (type) => {
+    if (type === "interview_completed") return "text-emerald-400";
+    if (type === "handshake") return "text-blue-400";
+    if (type === "blocked") return "text-red-400";
+    return "text-gray-400";
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+
+      const [
+        { count: totalUsers },
+        { data: interviews },
+        { count: totalApplications },
+        { count: newUsersToday },
+        { data: recentNotifs },
+      ] = await Promise.all([
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("interview_rooms").select("overall_score, status, job_title, profiles!interview_rooms_applicant_id_fkey(username), created_at").eq("status", "completed"),
+        supabase.from("job_applications").select("id", { count: "exact", head: true }),
+        supabase.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", today.toISOString()),
+        supabase.from("notifications").select("type, content, created_at, profiles!notifications_actor_id_fkey(username)").order("created_at", { ascending: false }).limit(30),
+      ]);
+
+      const completed = interviews || [];
+      const scored = completed.filter(r => r.overall_score != null);
+      const passed = scored.filter(r => r.overall_score >= 70);
+      const avgScore = scored.length ? Math.round(scored.reduce((s, r) => s + r.overall_score, 0) / scored.length) : 0;
+
+      setStats({
+        totalUsers: totalUsers || 0,
+        completedInterviews: completed.length,
+        passRate: scored.length ? Math.round((passed.length / scored.length) * 100) : 0,
+        avgScore,
+        totalApplications: totalApplications || 0,
+        newUsersToday: newUsersToday || 0,
+      });
+
+      const interviewEvents = completed.map(r => ({
+        id: `iv_${r.created_at}`,
+        type: "interview_completed",
+        label: `Interview completed`,
+        detail: `@${r.profiles?.username || "user"} — ${r.job_title} · ${r.overall_score != null ? (r.overall_score >= 70 ? `PASSED ${r.overall_score}%` : `FAILED ${r.overall_score}%`) : "no score"}`,
+        ts: r.created_at,
+        pass: r.overall_score != null ? r.overall_score >= 70 : null,
+      }));
+
+      const notifEvents = (recentNotifs || []).map(n => ({
+        id: `notif_${n.created_at}_${Math.random()}`,
+        type: n.type,
+        label: typeLabel(n.type),
+        detail: n.content?.slice(0, 80) || "",
+        ts: n.created_at,
+        pass: null,
+      }));
+
+      const combined = [...interviewEvents, ...notifEvents]
+        .sort((a, b) => new Date(b.ts) - new Date(a.ts))
+        .slice(0, 40);
+
+      setEvents(combined);
+      setLoading(false);
+    };
+
+    load();
+
+    const channel = supabase
+      .channel("system-logs-live")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
+        const n = payload.new;
+        setEvents(prev => [{
+          id: `notif_${n.created_at}_${Math.random()}`,
+          type: n.type,
+          label: typeLabel(n.type),
+          detail: n.content?.slice(0, 80) || "",
+          ts: n.created_at,
+          pass: null,
+        }, ...prev].slice(0, 40));
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "interview_rooms" }, (payload) => {
+        const r = payload.new;
+        if (r.status !== "completed") return;
+        setStats(prev => {
+          const newCompleted = prev.completedInterviews + 1;
+          return { ...prev, completedInterviews: newCompleted };
+        });
+        setEvents(prev => [{
+          id: `iv_${r.id}`,
+          type: "interview_completed",
+          label: "Interview completed",
+          detail: `${r.job_title} · ${r.overall_score != null ? (r.overall_score >= 70 ? `PASSED ${r.overall_score}%` : `FAILED ${r.overall_score}%`) : "no score"}`,
+          ts: new Date().toISOString(),
+          pass: r.overall_score != null ? r.overall_score >= 70 : null,
+        }, ...prev].slice(0, 40));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  useEffect(() => {
+    if (terminalRef.current) terminalRef.current.scrollTop = 0;
+  }, [events]);
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <StatCard icon={Activity} label="Avg. Latency" value="156ms" color="blue" sub="Across all endpoints" />
-        <StatCard icon={Globe} label="API Traffic" value="24.5k" color="violet" sub="Last 24 hours" />
-        <StatCard icon={AlertCircle} label="Error Rate" value="0.42%" color="rose" sub="HTTP 5xx responses" />
+      {/* Live stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <StatCard icon={Users} label="Total Users" value={stats.totalUsers.toLocaleString()} color="blue" sub={`+${stats.newUsersToday} today`} />
+        <StatCard icon={Video} label="Interviews Done" value={stats.completedInterviews} color="violet" sub={`${stats.avgScore}% avg score`} />
+        <StatCard icon={CheckCircle2} label="Pass Rate" value={`${stats.passRate}%`} color={stats.passRate >= 60 ? "emerald" : "rose"} sub="Score ≥ 70%" />
+        <StatCard icon={Briefcase} label="Applications" value={stats.totalApplications.toLocaleString()} color="amber" sub="All time" />
+        <StatCard icon={TrendingUp} label="Avg Interview Score" value={stats.avgScore ? `${stats.avgScore}%` : "—"} color="blue" sub="Completed interviews" />
+        <StatCard icon={Activity} label="Passed Interviews" value={stats.completedInterviews && stats.passRate ? Math.round(stats.completedInterviews * stats.passRate / 100) : 0} color="emerald" sub={`of ${stats.completedInterviews} total`} />
       </div>
 
+      {/* Live event feed */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
         <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Network Request Stream</p>
-          <RefreshCw size={12} className="text-gray-400 animate-spin-slow" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Live Activity Feed</p>
+          <span className="flex items-center gap-1.5 text-[9px] font-black text-emerald-500 uppercase tracking-widest">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+          </span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-[11px] font-medium">
-            <thead className="text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
-              <tr>
-                <th className="px-4 py-3">Endpoint</th>
-                <th className="px-4 py-3">Method</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Latency</th>
-                <th className="px-4 py-3 text-right">Timestamp</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
-              {logs.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                  <td className="px-4 py-3 font-mono text-blue-600 dark:text-blue-400">{log.endpoint}</td>
-                  <td className="px-4 py-3">
-                    <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-bold">{log.method}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`font-black ${log.status >= 400 ? "text-red-500" : "text-emerald-500"}`}>
-                      {log.status}
+        {loading
+          ? <div className="py-10 flex justify-center"><Loader2 size={18} className="animate-spin text-blue-500" /></div>
+          : events.length === 0
+            ? <p className="text-xs text-gray-500 text-center py-10">No activity yet.</p>
+            : (
+              <div className="divide-y divide-gray-100 dark:divide-gray-800/60 max-h-72 overflow-y-auto">
+                {events.map((ev) => (
+                  <div key={ev.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${ev.type === "interview_completed" ? (ev.pass === true ? "bg-emerald-500" : ev.pass === false ? "bg-red-500" : "bg-gray-400") : "bg-blue-400"}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${ev.type === "interview_completed" ? (ev.pass === true ? "text-emerald-600 dark:text-emerald-400" : ev.pass === false ? "text-red-600 dark:text-red-400" : "text-gray-500") : "text-blue-600 dark:text-blue-400"}`}>{ev.label}</span>
+                        {ev.type === "interview_completed" && ev.pass !== null && (
+                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${ev.pass ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400"}`}>
+                            {ev.pass ? "PASSED" : "FAILED"}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-500 truncate mt-0.5">{ev.detail}</p>
+                    </div>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-600 font-mono shrink-0">
+                      {new Date(ev.ts).toLocaleTimeString([], { hour12: false })}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-gray-500">{log.latency}</td>
-                  <td className="px-4 py-3 text-right text-gray-400 font-mono">
-                    {new Date(log.timestamp).toLocaleTimeString([], { hour12: false })}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                ))}
+              </div>
+            )
+        }
       </div>
 
-      <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800 font-mono text-[11px] text-emerald-400/80 leading-relaxed shadow-lg overflow-hidden relative group">
-        <div className="absolute top-3 right-3 text-gray-700 group-hover:text-emerald-500 transition-colors">
-          <Terminal size={14} />
-        </div>
-        <p className="text-gray-500 mb-2"># System initialized. Watching Postgres streams...</p>
-        <p>[OK] Connected to region iad1 (US East)</p>
-        <p>[INFO] Edge runtime heartbeat detected (latency: 12ms)</p>
-        <p>[INFO] Real-time subscription: public.profiles active</p>
-        <p className="animate-pulse">_</p>
+      {/* Terminal — live realtime log */}
+      <div ref={terminalRef} className="bg-gray-950 rounded-2xl p-5 border border-gray-800 font-mono text-[11px] leading-relaxed shadow-lg overflow-y-auto max-h-56 relative">
+        <div className="absolute top-3 right-3"><Terminal size={13} className="text-gray-700" /></div>
+        <p className="text-gray-600 mb-3"># Realtime Postgres stream — {new Date().toLocaleDateString()}</p>
+        {loading && <p className="text-gray-500">[CONNECTING] Fetching platform data...</p>}
+        {!loading && (
+          <>
+            <p className="text-emerald-400">[OK] Connected · {stats.totalUsers} users · {stats.completedInterviews} interviews</p>
+            <p className="text-blue-400">[INFO] Pass rate: {stats.passRate}% · Avg score: {stats.avgScore}%</p>
+            {events.filter(e => e.type === "interview_completed").slice(0, 5).map((ev, i) => (
+              <p key={i} className={ev.pass ? "text-emerald-400/80" : "text-red-400/80"}>
+                [{new Date(ev.ts).toLocaleTimeString([], { hour12: false })}] {ev.detail}
+              </p>
+            ))}
+            {events.filter(e => e.type !== "interview_completed").slice(0, 5).map((ev, i) => (
+              <p key={i} className="text-gray-500">
+                [{new Date(ev.ts).toLocaleTimeString([], { hour12: false })}] {ev.label} — {ev.detail}
+              </p>
+            ))}
+          </>
+        )}
+        <p className="text-emerald-400/60 animate-pulse mt-1">_</p>
       </div>
     </div>
   );
@@ -873,19 +1002,31 @@ const AdminPanelTool = ({ currentUserId }) => {
   }, [adminTab, isAdmin]);
 
   // ── Interviews ───────────────────────────────────────────────────────────────
+  const fetchRooms = async () => {
+    setInterviewsLoading(true);
+    const { data } = await supabase
+      .from("interview_rooms")
+      .select("id, job_title, company, status, overall_score, created_at, applicant_id, questions, coding_challenge, profiles!interview_rooms_applicant_id_fkey(username, avatar_url)")
+      .order("created_at", { ascending: false });
+    if (data) setInterviewRooms(data);
+    setInterviewsLoading(false);
+  };
+
   useEffect(() => {
-    if (adminTab !== "interviews" || !isAdmin || interviewRooms.length > 0) return;
-    const fetchRooms = async () => {
-      setInterviewsLoading(true);
-      const { data } = await supabase
-        .from("interview_rooms")
-        .select("id, job_title, company, status, overall_score, created_at, applicant_id, questions, coding_challenge, profiles!interview_rooms_applicant_id_fkey(username, avatar_url)")
-        .order("created_at", { ascending: false });
-      if (data) setInterviewRooms(data);
-      setInterviewsLoading(false);
-    };
+    if (adminTab !== "interviews" || !isAdmin) return;
     fetchRooms();
-  }, [adminTab, isAdmin, interviewRooms.length]);
+    const channel = supabase
+      .channel("admin-interview-rooms")
+      .on("postgres_changes", { event: "*", schema: "public", table: "interview_rooms" }, (payload) => {
+        if (payload.eventType === "UPDATE") {
+          setInterviewRooms(prev => prev.map(r => r.id === payload.new.id ? { ...r, ...payload.new } : r));
+        } else if (payload.eventType === "INSERT") {
+          fetchRooms();
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [adminTab, isAdmin]);
 
   const fetchRoomAnswers = async (roomId) => {
     if (roomAnswers[roomId]) {
@@ -1842,13 +1983,17 @@ const AdminPanelTool = ({ currentUserId }) => {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-0.5 rounded-xl shadow-sm">
-                  {["all", "active", "answers_complete", "coding", "completed"].map(s => (
+                  {["all", "active", "answers_complete", "coding", "completed", "passed", "failed"].map(s => (
                     <button key={s} onClick={() => setInterviewStatusFilter(s)}
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all whitespace-nowrap ${interviewStatusFilter === s ? "bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400"}`}>
                       {s === "all" ? "All" : s === "answers_complete" ? "Answered" : s.charAt(0).toUpperCase() + s.slice(1)}
                     </button>
                   ))}
                 </div>
+                <button onClick={fetchRooms} disabled={interviewsLoading}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50">
+                  <RefreshCw size={13} className={interviewsLoading ? "animate-spin" : ""} /> Refresh
+                </button>
                 <button onClick={() => setShowFreeInterviewModal(true)}
                   className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
                   <Plus size={13} /> New Interview
@@ -1859,7 +2004,12 @@ const AdminPanelTool = ({ currentUserId }) => {
             {interviewsLoading
               ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={22} /></div>
               : (() => {
-                  const filtered = interviewRooms.filter(r => interviewStatusFilter === "all" || r.status === interviewStatusFilter);
+                  const filtered = interviewRooms.filter(r => {
+                    if (interviewStatusFilter === "all") return true;
+                    if (interviewStatusFilter === "passed") return r.status === "completed" && r.overall_score != null && r.overall_score >= 70;
+                    if (interviewStatusFilter === "failed") return r.status === "completed" && (r.overall_score == null || r.overall_score < 70);
+                    return r.status === interviewStatusFilter;
+                  });
                   if (!filtered.length) return <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-sm">No interview rooms found.</div>;
                   return filtered.map(room => {
                     const isExpanded = expandedRoomId === room.id;
@@ -1882,6 +2032,11 @@ const AdminPanelTool = ({ currentUserId }) => {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
+                              {room.status === "completed" && room.overall_score != null && (
+                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border ${room.overall_score >= 70 ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20" : "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20"}`}>
+                                  {room.overall_score >= 70 ? "PASSED" : "FAILED"}
+                                </span>
+                              )}
                               {room.overall_score != null && (
                                 <span className={`text-xs font-black px-2 py-1 rounded-lg ${room.overall_score >= 85 ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : room.overall_score >= 70 ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400" : room.overall_score >= 55 ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"}`}>
                                   {room.overall_score}%

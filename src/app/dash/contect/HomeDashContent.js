@@ -173,14 +173,16 @@ function getDailyFeatured(count = 3) {
 function calcCompleteness(profile) {
   if (!profile) return { score: 0, missing: [] };
   const checks = [
-    { field: 'username',    label: 'Username',       done: !!profile.username },
-    { field: 'full_name',   label: 'Full name',      done: !!profile.full_name },
-    { field: 'avatar_url',  label: 'Profile photo',  done: !!profile.avatar_url },
-    { field: 'status',      label: 'Bio / status',   done: !!profile.status },
-    { field: 'location',    label: 'Location',        done: !!profile.location },
-    { field: 'work_status', label: 'Work status',     done: !!profile.work_status },
-    { field: 'github',      label: 'GitHub link',     done: !!profile.github },
-    { field: 'skills',      label: 'Skills list',     done: Array.isArray(profile.skills) && profile.skills.length > 0 },
+    { field: 'username',    label: 'Username',        done: !!profile.username },
+    { field: 'full_name',   label: 'Full name',       done: !!profile.full_name },
+    { field: 'avatar_url',  label: 'Profile photo',   done: !!profile.avatar_url },
+    { field: 'banner_url',  label: 'Cover banner',    done: !!profile.banner_url },
+    { field: 'status',      label: 'Bio / headline',  done: !!profile.status },
+    { field: 'location',    label: 'Location',         done: !!profile.location },
+    { field: 'work_status', label: 'Work status',      done: !!profile.work_status },
+    { field: 'github',      label: 'GitHub link',      done: !!profile.github },
+    { field: 'website',     label: 'Website / portfolio', done: !!profile.website },
+    { field: 'skills',      label: 'Skills list',      done: Array.isArray(profile.skills) && profile.skills.length > 0 },
   ];
   const done    = checks.filter(c => c.done).length;
   const missing = checks.filter(c => !c.done).map(c => c.label);
@@ -224,7 +226,7 @@ export default function HomeDashContent() {
         const uid = s.user.id;
 
         const [profileRes, connRes, msgRes, notifRes, groupNotifRes] = await Promise.all([
-          supabase.from('profiles').select('username, avatar_url, status, is_verified, is_premium, is_admin, full_name, location, work_status, github, skills, role, field').eq('id', uid).single(),
+          supabase.from('profiles').select('username, avatar_url, banner_url, status, is_verified, is_premium, is_admin, full_name, location, work_status, github, website, skills, role, field').eq('id', uid).single(),
           supabase.from('connections').select('id', { count: 'exact', head: true }).or(`sender_id.eq.${uid},receiver_id.eq.${uid}`).eq('status', 'accepted'),
           supabase.from('messages').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('is_read', false),
           supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('unread', true),

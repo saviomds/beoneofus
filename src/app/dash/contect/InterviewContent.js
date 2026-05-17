@@ -932,7 +932,19 @@ export default function InterviewContent() {
 
   return (
     <div className="max-w-2xl mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {!selectedRoom ? (
+      {selectedRoom ? (
+        <RoomDetail
+          room={selectedRoom}
+          userId={userId}
+          onBack={() => { setSelectedRoom(null); handleRefresh(); }}
+        />
+      ) : rulesRoom ? (
+        <InterviewRulesScreen
+          room={rulesRoom}
+          onBack={() => setRulesRoom(null)}
+          onBegin={() => { setSelectedRoom(rulesRoom); setRulesRoom(null); }}
+        />
+      ) : (
         <>
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -959,18 +971,6 @@ export default function InterviewContent() {
             loading={loading}
           />
         </>
-      ) : rulesRoom ? (
-        <InterviewRulesScreen
-          room={rulesRoom}
-          onBack={() => setRulesRoom(null)}
-          onBegin={() => { setSelectedRoom(rulesRoom); setRulesRoom(null); }}
-        />
-      ) : (
-        <RoomDetail
-          room={selectedRoom}
-          userId={userId}
-          onBack={() => { setSelectedRoom(null); handleRefresh(); }}
-        />
       )}
     </div>
   );

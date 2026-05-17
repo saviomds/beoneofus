@@ -77,6 +77,44 @@ function Avatar({ src, name, px = 32 }) {
   );
 }
 
+/* ── Renegotiate Panel ─────────────────────────────────────── */
+function RenegotiatePanel({ order, onSubmit, onClose }) {
+  const [price, setPrice] = useState(order.proposed_price_usd || order.amount_usd || '');
+  const [note, setNote]   = useState(order.renegotiation_note || '');
+  return (
+    <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 rounded-xl p-4 space-y-3">
+      <p className="text-xs font-black text-violet-700 dark:text-violet-300 uppercase tracking-wider">Propose New Terms</p>
+      <div>
+        <label className="block text-[10px] font-bold text-gray-500 mb-1">New Price (USD) <span className="font-normal text-gray-400">— leave unchanged to keep current</span></label>
+        <input
+          type="number" min="1" step="0.01"
+          className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+          value={price}
+          onChange={e => setPrice(e.target.value)}
+        />
+      </div>
+      <div>
+        <label className="block text-[10px] font-bold text-gray-500 mb-1">Message / Reason</label>
+        <textarea
+          className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-violet-500 resize-none"
+          rows={3} maxLength={400}
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          placeholder="Explain the change — scope increase, timeline update, etc."
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => onSubmit({ newPrice: price, note })}
+          disabled={!note.trim()}
+          className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-black py-2 rounded-xl transition-all active:scale-95"
+        >Send Proposal</button>
+        <button onClick={onClose} className="px-4 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-black py-2 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Service Detail Modal ──────────────────────────────────── */
 function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, onDelete, onOrderSuccess }) {
   const [panel, setPanel]               = useState('order');
@@ -539,8 +577,10 @@ export default function ServicesContent() {
   const [userId, setUserId]         = useState(null);
   const [session, setSession]       = useState(null);
   const [userEmail, setUserEmail]   = useState('');
+  const [isAdmin, setIsAdmin]       = useState(false);
   const [paystackReady, setPaystackReady] = useState(false);
   const [payingOrderId, setPayingOrderId] = useState(null);
+  const [renegotiateTarget, setRenegotiateTarget] = useState(null);
 
   const [showCreate, setShowCreate]     = useState(false);
   const [editTarget, setEditTarget]     = useState(null);
@@ -602,6 +642,8 @@ export default function ServicesContent() {
       if (s) {
         setUserId(s.user.id);
         setUserEmail(s.user.email || '');
+        const { data: prof } = await supabase.from('profiles').select('is_admin').eq('id', s.user.id).single();
+        setIsAdmin(prof?.is_admin === true);
         await Promise.all([loadMine(s.user.id), loadOrders(s.user.id), loadIncoming(s.user.id)]);
       }
       await loadBrowse();
@@ -760,6 +802,71 @@ export default function ServicesContent() {
     }).maybeSingle();
     await loadOrders(userId);
     showToast(action === 'complete' ? 'Order completed!' : 'Dispute raised');
+  };
+
+  const handleCancelOrder = async (orderId, otherPartyId, side) => {
+    if (!confirm('Cancel this order?')) return;
+    await supabase.from('service_orders').update({ status: 'cancelled' }).eq('id', orderId);
+    await supabase.from('notifications').insert({
+      receiver_id: otherPartyId,
+      actor_id:    userId,
+      type:        'order_update',
+      message:     side === 'buyer' ? 'cancelled their order.' : 'cancelled the order.',
+    }).maybeSingle();
+    await Promise.all([loadOrders(userId), loadIncoming(userId)]);
+    showToast('Order cancelled');
+  };
+
+  const handleDeleteOrder = async (orderId) => {
+    if (!confirm('Permanently delete this order record?')) return;
+    await supabase.from('service_orders').delete().eq('id', orderId);
+    await Promise.all([loadOrders(userId), loadIncoming(userId)]);
+    showToast('Order deleted');
+  };
+
+  const handleProposeRenegotiation = async ({ orderId, newPrice, note, otherPartyId }) => {
+    await supabase.from('service_orders').update({
+      proposed_price_usd:  parseFloat(newPrice) || null,
+      renegotiation_note:  note.trim() || null,
+      renegotiation_from:  userId,
+    }).eq('id', orderId);
+    await supabase.from('notifications').insert({
+      receiver_id: otherPartyId,
+      actor_id:    userId,
+      type:        'order_update',
+      message:     `proposed new terms on your order${newPrice ? ` — new price: $${newPrice}` : ''}.`,
+    }).maybeSingle();
+    await Promise.all([loadOrders(userId), loadIncoming(userId)]);
+    setRenegotiateTarget(null);
+    showToast('Renegotiation proposal sent');
+  };
+
+  const handleRenegotiationResponse = async (order, accept) => {
+    if (accept) {
+      const updates = { renegotiation_note: null, renegotiation_from: null };
+      if (order.proposed_price_usd) updates.amount_usd = order.proposed_price_usd;
+      updates.proposed_price_usd = null;
+      await supabase.from('service_orders').update(updates).eq('id', order.id);
+      await supabase.from('notifications').insert({
+        receiver_id: order.renegotiation_from,
+        actor_id:    userId,
+        type:        'order_update',
+        message:     'accepted your renegotiation proposal.',
+      }).maybeSingle();
+      showToast('Terms accepted');
+    } else {
+      await supabase.from('service_orders').update({
+        proposed_price_usd: null, renegotiation_note: null, renegotiation_from: null,
+      }).eq('id', order.id);
+      await supabase.from('notifications').insert({
+        receiver_id: order.renegotiation_from,
+        actor_id:    userId,
+        type:        'order_update',
+        message:     'declined your renegotiation proposal.',
+      }).maybeSingle();
+      showToast('Proposal declined');
+    }
+    await Promise.all([loadOrders(userId), loadIncoming(userId)]);
   };
 
   const handleDelete = async (id) => {
@@ -978,6 +1085,58 @@ export default function ServicesContent() {
                     </div>
                   </div>
                 )}
+
+                {/* Renegotiation proposal received (from seller) */}
+                {o.renegotiation_from && o.renegotiation_from !== userId && (
+                  <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 rounded-xl p-3 space-y-2">
+                    <p className="text-xs font-black text-violet-700 dark:text-violet-300">Seller proposed new terms</p>
+                    {o.proposed_price_usd && <p className="text-xs text-gray-700 dark:text-gray-300">New price: <span className="font-bold">${o.proposed_price_usd}</span></p>}
+                    {o.renegotiation_note && <p className="text-xs text-gray-600 dark:text-gray-400 italic">"{o.renegotiation_note}"</p>}
+                    <div className="flex gap-2">
+                      <button onClick={() => handleRenegotiationResponse(o, true)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">Accept</button>
+                      <button onClick={() => handleRenegotiationResponse(o, false)} className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-500 text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">Decline</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Renegotiate panel (buyer initiated) */}
+                {renegotiateTarget === o.id && (
+                  <RenegotiatePanel
+                    order={o}
+                    onSubmit={({ newPrice, note }) => handleProposeRenegotiation({ orderId: o.id, newPrice, note, otherPartyId: o.seller_id })}
+                    onClose={() => setRenegotiateTarget(null)}
+                  />
+                )}
+
+                {/* Action row — cancel / delete / renegotiate */}
+                {(o.status === 'pending' || o.status === 'active') && !o.payment_reference && (
+                  <div className="flex gap-2 pt-1 border-t border-gray-100 dark:border-gray-800">
+                    <button
+                      onClick={() => handleCancelOrder(o.id, o.seller_id, 'buyer')}
+                      className="flex items-center gap-1 text-[10px] font-black text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                    >
+                      <X size={11} /> Cancel Order
+                    </button>
+                    {renegotiateTarget !== o.id && (
+                      <button
+                        onClick={() => setRenegotiateTarget(o.id)}
+                        className="flex items-center gap-1 text-[10px] font-black text-violet-500 hover:text-violet-600 px-2 py-1 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all"
+                      >
+                        <Handshake size={11} /> Renegotiate
+                      </button>
+                    )}
+                  </div>
+                )}
+                {(o.status === 'cancelled' || o.status === 'complete' || isAdmin) && (
+                  <div className="flex justify-end pt-1 border-t border-gray-100 dark:border-gray-800">
+                    <button
+                      onClick={() => handleDeleteOrder(o.id)}
+                      className="flex items-center gap-1 text-[10px] font-black text-gray-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                    >
+                      <Trash2 size={11} /> {isAdmin ? 'Admin Delete' : 'Remove'}
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1062,6 +1221,58 @@ export default function ServicesContent() {
                   >
                     <Send size={13} /> Mark as Delivered
                   </button>
+                )}
+
+                {/* Renegotiation proposal received (from buyer) */}
+                {o.renegotiation_from && o.renegotiation_from !== userId && (
+                  <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 rounded-xl p-3 space-y-2">
+                    <p className="text-xs font-black text-violet-700 dark:text-violet-300">Client proposed new terms</p>
+                    {o.proposed_price_usd && <p className="text-xs text-gray-700 dark:text-gray-300">New price: <span className="font-bold">${o.proposed_price_usd}</span></p>}
+                    {o.renegotiation_note && <p className="text-xs text-gray-600 dark:text-gray-400 italic">"{o.renegotiation_note}"</p>}
+                    <div className="flex gap-2">
+                      <button onClick={() => handleRenegotiationResponse(o, true)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">Accept</button>
+                      <button onClick={() => handleRenegotiationResponse(o, false)} className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-500 text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">Decline</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Renegotiate panel (seller initiated) */}
+                {renegotiateTarget === o.id && (
+                  <RenegotiatePanel
+                    order={o}
+                    onSubmit={({ newPrice, note }) => handleProposeRenegotiation({ orderId: o.id, newPrice, note, otherPartyId: o.buyer_id })}
+                    onClose={() => setRenegotiateTarget(null)}
+                  />
+                )}
+
+                {/* Action row */}
+                {(o.status === 'pending' || (o.status === 'active' && !o.payment_reference)) && (
+                  <div className="flex gap-2 pt-1 border-t border-gray-100 dark:border-gray-800">
+                    <button
+                      onClick={() => handleCancelOrder(o.id, o.buyer_id, 'seller')}
+                      className="flex items-center gap-1 text-[10px] font-black text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                    >
+                      <X size={11} /> Cancel Order
+                    </button>
+                    {renegotiateTarget !== o.id && (
+                      <button
+                        onClick={() => setRenegotiateTarget(o.id)}
+                        className="flex items-center gap-1 text-[10px] font-black text-violet-500 hover:text-violet-600 px-2 py-1 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all"
+                      >
+                        <Handshake size={11} /> Renegotiate
+                      </button>
+                    )}
+                  </div>
+                )}
+                {(o.status === 'cancelled' || o.status === 'complete' || isAdmin) && (
+                  <div className="flex justify-end pt-1 border-t border-gray-100 dark:border-gray-800">
+                    <button
+                      onClick={() => handleDeleteOrder(o.id)}
+                      className="flex items-center gap-1 text-[10px] font-black text-gray-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                    >
+                      <Trash2 size={11} /> {isAdmin ? 'Admin Delete' : 'Remove'}
+                    </button>
+                  </div>
                 )}
               </div>
             ))}

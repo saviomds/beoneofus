@@ -14,7 +14,7 @@ export async function POST(req) {
 
   try {
     const supabase = createClient(
-      process.env.SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
     const { reference } = await req.json();
@@ -31,8 +31,11 @@ export async function POST(req) {
     const paystackData = await paystackRes.json();
 
     if (!paystackData.status || paystackData.data?.status !== 'success') {
+      // Log the upstream detail server-side; never echo it to the client
+      // to avoid leaking Paystack-internal messages or transaction metadata.
+      console.error('[paystack/verify] Payment not confirmed:', paystackData.message);
       return NextResponse.json(
-        { error: 'Payment not verified', detail: paystackData.message },
+        { error: 'Payment could not be verified. Please try again or contact support.' },
         { status: 400 }
       );
     }

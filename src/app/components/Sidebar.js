@@ -5,6 +5,7 @@ import {
   Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
   GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
   ShoppingBag, User, BookOpen, Sparkles, Zap, Compass, BarChart2, Briefcase,
+  Map, Trophy,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -406,6 +407,7 @@ export default function Sidebar({ onClose }) {
       label: t('nav.groups.content'),
       items: [
         { id: 'learn',     icon: Compass,   label: t('nav.items.learn'),     isNew: true },
+        { id: 'pathways',  icon: Map,       label: 'Pathways',               isNew: true },
         { id: 'blog',      icon: Newspaper, label: t('nav.items.blog')       },
         { id: 'bookmarks', icon: Bookmark,  label: t('nav.items.bookmarks')  },
         { id: 'docs',      icon: BookOpen,  label: t('nav.items.docs')       },
@@ -414,8 +416,9 @@ export default function Sidebar({ onClose }) {
     {
       label: t('nav.groups.tools'),
       items: [
-        { id: 'ai',        icon: Sparkles,  label: t('nav.items.ai'),        isNew: true },
-        { id: 'analytics', icon: BarChart2, label: 'Analytics',               isNew: true },
+        { id: 'ai',          icon: Sparkles,  label: t('nav.items.ai'),        isNew: true },
+        { id: 'analytics',   icon: BarChart2, label: 'Analytics',             isNew: true },
+        { id: 'leaderboard', icon: Trophy,    label: 'Leaderboard',           isNew: true },
       ],
     },
     {

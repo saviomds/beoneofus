@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,7 +9,7 @@ import {
   Terminal, Briefcase, Share2, CheckCircle2, Clock,
   ArrowLeft, Loader2, Copy, Check, MessageSquare,
   Heart, Code, ExternalLink, BadgeCheck, Zap, Star,
-  Eye, EyeOff, Wifi
+  Eye, EyeOff, Wifi, FolderGit2, Tag, Link2
 } from "lucide-react";
 import GitHubStats from "../../components/GitHubStats";
 import { supabase } from "../../supabaseClient";
@@ -62,12 +62,18 @@ export default function PublicProfilePage() {
   const [stats, setStats] = useState({ connections: 0, coursesCompleted: 0, certificates: 0, posts: 0 });
   const [certificates, setCertificates] = useState([]);
   const [recentPosts, setRecentPosts] = useState([]);
+  const [portfolioProjects, setPortfolioProjects] = useState([]);
+  const [endorsements, setEndorsements] = useState({});
+  const [endorsing, setEndorsing] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("none");
   const [connectionProcessing, setConnectionProcessing] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
       if (session) setCurrentUserId(session.user.id);
 
       const { data: profileData, error } = await supabase
@@ -79,7 +85,7 @@ export default function PublicProfilePage() {
       if (error || !profileData) { setNotFound(true); setLoading(false); return; }
       setProfile(profileData);
 
-      const [connCountRes, coursesRes, certsRes, postsRes, recentPostsRes] = await Promise.all([
+      const [connCountRes, coursesRes, certsRes, postsRes, recentPostsRes, projectsRes, endorsementsRes] = await Promise.all([
         fetch(`/api/connections/count?user_id=${profileData.id}`)
           .then(r => r.ok ? r.json() : { count: 0 })
           .catch(() => ({ count: 0 })),
@@ -95,6 +101,15 @@ export default function PublicProfilePage() {
           .select("id, title, content, code_snippet, image_url, created_at, likes(user_id), comments(id)")
           .eq("user_id", profileData.id)
           .order("created_at", { ascending: false }).limit(4),
+        supabase.from("projects")
+          .select("id, title, description, tags, status, github_url, live_url, created_at")
+          .eq("user_id", profileData.id)
+          .eq("is_public", true)
+          .order("created_at", { ascending: false })
+          .limit(6),
+        supabase.from("skill_endorsements")
+          .select("skill, endorser_id")
+          .eq("endorsee_id", profileData.id),
       ]);
 
       setStats({
@@ -103,6 +118,16 @@ export default function PublicProfilePage() {
         certificates: certsRes.data?.length ?? 0,
         posts: postsRes.count ?? 0,
       });
+
+      if (projectsRes.data) setPortfolioProjects(projectsRes.data);
+      if (endorsementsRes.data) {
+        const map = {};
+        endorsementsRes.data.forEach(e => {
+          if (!map[e.skill]) map[e.skill] = [];
+          map[e.skill].push(e.endorser_id);
+        });
+        setEndorsements(map);
+      }
 
       if (certsRes.data && !certsRes.error) {
         setCertificates(certsRes.data);
@@ -141,10 +166,11 @@ export default function PublicProfilePage() {
         }),
       }).catch(() => {});
 
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     };
 
     if (username) init();
+    return () => { cancelled = true; };
   }, [username]);
 
   const handleConnect = async () => {
@@ -164,6 +190,32 @@ export default function PublicProfilePage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Stable reference — only rebuilds when the identity of the viewer or profile changes.
+  const handleEndorse = useCallback(async (skill) => {
+    if (!currentUserId || !profile || currentUserId === profile.id) return;
+    setEndorsing(skill);
+    try {
+      const alreadyEndorsed = endorsements[skill]?.includes(currentUserId);
+      if (alreadyEndorsed) {
+        await supabase.from("skill_endorsements")
+          .delete()
+          .eq("endorsee_id", profile.id)
+          .eq("endorser_id", currentUserId)
+          .eq("skill", skill);
+        setEndorsements(prev => ({ ...prev, [skill]: prev[skill].filter(id => id !== currentUserId) }));
+      } else {
+        await supabase.from("skill_endorsements")
+          .insert({ endorsee_id: profile.id, endorser_id: currentUserId, skill });
+        setEndorsements(prev => ({ ...prev, [skill]: [...(prev[skill] || []), currentUserId] }));
+      }
+    } catch (err) {
+      console.error('[profile] endorse error:', err.message);
+    } finally {
+      setEndorsing(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId, profile?.id, endorsements]);
 
   /* ── loading ─────────────────────────────────────────── */
   if (loading) return (
@@ -401,10 +453,47 @@ export default function PublicProfilePage() {
             ))}
           </div>
 
+          {/* ══ SKILLS CLOUD ══ */}
+          {profile.skills?.length > 0 && (
+            <div className="mb-8">
+              <h2 className="font-black text-xs uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Skills</h2>
+              <div className="flex flex-wrap gap-2">
+                {profile.skills.map(skill => {
+                  const count = endorsements[skill]?.length || 0;
+                  const endorsed = endorsements[skill]?.includes(currentUserId);
+                  return (
+                    <button
+                      key={skill}
+                      onClick={() => handleEndorse(skill)}
+                      disabled={!currentUserId || isOwnProfile || endorsing === skill}
+                      title={currentUserId && !isOwnProfile ? (endorsed ? "Remove endorsement" : "Endorse this skill") : undefined}
+                      className={`group flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border transition-all ${
+                        endorsed
+                          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400"
+                          : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-blue-200 dark:hover:border-blue-800/50 hover:text-blue-600 dark:hover:text-blue-400"
+                      } ${!currentUserId || isOwnProfile ? "cursor-default" : "cursor-pointer"}`}
+                    >
+                      {endorsing === skill ? <Loader2 size={10} className="animate-spin" /> : null}
+                      {skill}
+                      {count > 0 && (
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${endorsed ? "bg-blue-100 dark:bg-blue-800/50 text-blue-600 dark:text-blue-300" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {currentUserId && !isOwnProfile && (
+                <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-2">Click a skill to endorse it</p>
+              )}
+            </div>
+          )}
+
           {/* ══ MAIN CONTENT GRID ══ */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 pb-16">
 
-            {/* ── LEFT: Certificates (wider) ── */}
+            {/* ── LEFT: Certificates + Portfolio ── */}
             {vis(profile, "certificates") && (
               <div className="lg:col-span-3 space-y-6">
                 <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
@@ -469,6 +558,54 @@ export default function PublicProfilePage() {
                     </div>
                   )}
                 </div>
+
+                {/* Portfolio Projects */}
+                {portfolioProjects.length > 0 && (
+                  <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/30 flex items-center justify-center">
+                          <FolderGit2 size={15} className="text-violet-500" />
+                        </div>
+                        <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Portfolio</h2>
+                      </div>
+                      <span className="text-xs font-black text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full">{portfolioProjects.length}</span>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {portfolioProjects.map(proj => (
+                        <div key={proj.id} className="group rounded-xl border border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700/50 transition-all bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 p-4 hover:shadow-md">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200 leading-snug line-clamp-1">{proj.title}</p>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {proj.github_url && (
+                                <a href={proj.github_url} target="_blank" rel="noreferrer" className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                                  <GitBranch size={12} />
+                                </a>
+                              )}
+                              {proj.live_url && (
+                                <a href={proj.live_url} target="_blank" rel="noreferrer" className="p-1 text-gray-400 hover:text-blue-500 transition-colors">
+                                  <ExternalLink size={12} />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                          {proj.description && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 mb-2">{proj.description}</p>
+                          )}
+                          {proj.tags?.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {proj.tags.slice(0, 3).map(tag => (
+                                <span key={tag} className="text-[9px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 rounded-md border border-violet-100 dark:border-violet-800/30">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

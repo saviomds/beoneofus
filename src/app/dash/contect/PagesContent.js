@@ -72,13 +72,21 @@ export default function PagesContent() {
 
   useEffect(() => {
     if (!activePage) return;
-    
+    let cancelled = false;
+
     const fetchPosts = async () => {
       setLoadingPosts(true);
       setPagePosts([]);
-      const { data, error } = await supabase.from('page_posts').select('*, profiles(username, avatar_url, is_verified)').eq('page_id', activePage.id).order('created_at', { ascending: false });
-      if (!error && data) setPagePosts(data);
-      setLoadingPosts(false);
+      const { data, error } = await supabase
+        .from('page_posts')
+        .select('*, profiles(username, avatar_url, is_verified)')
+        .eq('page_id', activePage.id)
+        .order('created_at', { ascending: false });
+      if (!cancelled && !error && data) {
+        const unique = data.filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i);
+        setPagePosts(unique);
+      }
+      if (!cancelled) setLoadingPosts(false);
     };
     fetchPosts();
 
@@ -88,14 +96,14 @@ export default function PagesContent() {
         const fetchNewPost = async () => {
            const { data } = await supabase.from('page_posts').select('*, profiles(username, avatar_url, is_verified)').eq('id', payload.new.id).single();
            if (data) {
-             setPagePosts(prev => [data, ...prev]);
+             setPagePosts(prev => prev.some(p => p.id === data.id) ? prev : [data, ...prev]);
            }
         };
         fetchNewPost();
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [activePage]);
 
   const handlePageImageChange = (e) => {

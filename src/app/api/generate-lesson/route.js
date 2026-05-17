@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '../../../lib/rateLimit';
+import { stripDangerousHtml } from '../../../lib/sanitize';
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 
@@ -149,7 +150,7 @@ Lessons must flow logically from beginner to advanced. Use the <<<LESSON>>> deli
         const titleRaw = block.slice(0, contentIdx);
         const title = titleRaw.replace(/^TITLE:\s*/i, '').trim();
         const content = block.slice(contentIdx + 13, endIdx === -1 ? undefined : endIdx).trim();
-        if (title && content) lessons.push({ title, content });
+        if (title && content) lessons.push({ title, content: stripDangerousHtml(content) });
       }
 
       if (lessons.length === 0) {
@@ -192,8 +193,8 @@ Lesson title: "${lessonTitle}"
 
 Write a comprehensive lesson with clear explanations and practical code examples.`;
 
-    const html = await callAI(LESSON_SYSTEM, prompt);
-    return NextResponse.json({ html });
+    const rawHtml = await callAI(LESSON_SYSTEM, prompt);
+    return NextResponse.json({ html: stripDangerousHtml(rawHtml) });
   } catch (err) {
     console.error('generate-lesson error:', err);
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });

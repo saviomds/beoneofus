@@ -10,7 +10,7 @@ import {
   ShoppingBag, UserPlus, Briefcase, Compass, Home,
   ChevronRight, CalendarDays, TrendingUp, Zap, Star,
   LayoutDashboard, Sparkles, RefreshCw, BarChart2,
-  CheckCircle2, Circle, ArrowRight,
+  CheckCircle2, Circle, ArrowRight, Flame, Map, Trophy,
 } from 'lucide-react';
 import VerifiedBadge from '../../components/VerifiedBadge';
 import PremiumBadge from '../../components/PremiumBadge';
@@ -212,6 +212,8 @@ export default function HomeDashContent() {
   const [skillsLoading, setSkillsLoading]       = useState(false);
   const [skillsError, setSkillsError]           = useState(null);
   const [session, setSession]                   = useState(null);
+  const [streak, setStreak]                     = useState(0);
+  const [pathwayCount, setPathwayCount]         = useState(0);
 
   const greetingHour = new Date().getHours();
   const greeting = greetingHour < 12 ? 'Good morning' : greetingHour < 17 ? 'Good afternoon' : 'Good evening';
@@ -240,6 +242,34 @@ export default function HomeDashContent() {
           notifications: (notifRes.count || 0) - (groupNotifRes.count || 0),
           groups: groupNotifRes.count || 0,
         });
+
+        // Streak computation from user_activity
+        const { data: activityRows } = await supabase
+          .from('user_activity')
+          .select('created_at')
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false })
+          .limit(120);
+
+        if (activityRows?.length) {
+          const days = new Set(activityRows.map(r => r.created_at?.slice(0, 10)));
+          let s = 0;
+          const today = new Date();
+          for (let i = 0; i < 120; i++) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            if (days.has(d.toISOString().slice(0, 10))) s++;
+            else if (i > 0) break;
+          }
+          setStreak(s);
+        }
+
+        // Pathway enrollment count
+        const { count: pc } = await supabase
+          .from('user_pathways')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', uid);
+        setPathwayCount(pc || 0);
       } catch (e) {
         console.error('HomeDash init error:', e);
       } finally {
@@ -566,6 +596,70 @@ export default function HomeDashContent() {
             </div>
           )}
           <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2.5">Tap any skill to find courses</p>
+        </div>
+
+        {/* Streak widget */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center">
+              <Flame size={14} className="text-white" />
+            </div>
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100">Activity Streak</p>
+          </div>
+          <div className="flex items-end gap-3 mb-3">
+            <p className="text-5xl font-black text-orange-500 leading-none">{streak}</p>
+            <div className="mb-1">
+              <p className="text-sm font-black text-gray-700 dark:text-gray-300">day{streak !== 1 ? "s" : ""}</p>
+              <p className="text-xs text-gray-400">consecutive</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+            {streak === 0
+              ? "Start your streak — log in and take action every day."
+              : streak >= 7
+              ? `${streak} days strong! You're on fire. Keep going.`
+              : "You're building momentum. Come back tomorrow!"}
+          </p>
+        </div>
+
+        {/* Pathways quick-access */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Map size={14} className="text-white" />
+            </div>
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100">Career Pathways</p>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4">
+            {pathwayCount > 0
+              ? `You're enrolled in ${pathwayCount} pathway${pathwayCount !== 1 ? "s" : ""}. Keep progressing toward your goal.`
+              : "Structured roadmaps to reach your target role — step by step with AI gap analysis."}
+          </p>
+          <button
+            onClick={() => go('pathways')}
+            className="flex items-center gap-1.5 text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            {pathwayCount > 0 ? "Continue pathways" : "Browse pathways"} <ArrowRight size={11} />
+          </button>
+        </div>
+
+        {/* Leaderboard quick-access */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center">
+              <Trophy size={14} className="text-white" />
+            </div>
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100">Leaderboard</p>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4">
+            See the top pathway completers and certificate earners in the community.
+          </p>
+          <button
+            onClick={() => go('leaderboard')}
+            className="flex items-center gap-1.5 text-[11px] font-black text-amber-600 dark:text-amber-400 hover:underline"
+          >
+            View rankings <ArrowRight size={11} />
+          </button>
         </div>
       </section>
 

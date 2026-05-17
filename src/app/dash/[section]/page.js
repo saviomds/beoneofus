@@ -48,6 +48,8 @@ const contentMap = {
   analytics:     dynamic(() => import('../contect/AnalyticsContent'),     { loading: () => <TabSkeleton /> }),
   services:      dynamic(() => import('../contect/ServicesContent'),      { loading: () => <TabSkeleton /> }),
   interview:     dynamic(() => import('../contect/InterviewContent'),     { loading: () => <TabSkeleton /> }),
+  pathways:      dynamic(() => import('../contect/PathwaysContent'),      { loading: () => <TabSkeleton /> }),
+  leaderboard:   dynamic(() => import('../contect/LeaderboardContent'),   { loading: () => <TabSkeleton /> }),
 };
 
 export default function DashSection() {

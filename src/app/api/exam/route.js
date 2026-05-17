@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '../../../lib/rateLimit';
+import { stripDangerousHtml } from '../../../lib/sanitize';
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
@@ -162,7 +163,14 @@ Make questions test real understanding of the subject, increasing in difficulty.
         return NextResponse.json({ error: 'AI did not return 5 questions. Please try again.' }, { status: 500 });
       }
 
-      return NextResponse.json({ questions });
+      // Sanitize any HTML in question text/options before sending to client.
+      const safeQuestions = questions.map(q => ({
+        ...q,
+        question: stripDangerousHtml(String(q.question ?? '')),
+        options:  Array.isArray(q.options) ? q.options.map(o => stripDangerousHtml(String(o))) : q.options,
+      }));
+
+      return NextResponse.json({ questions: safeQuestions });
     }
 
     // ── Grade exam + issue certificate ───────────────────────────────────────

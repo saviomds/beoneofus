@@ -11,12 +11,13 @@ import {
   BarChart3, Crown, Users, Award, TrendingUp, RefreshCw, Eye,
   BadgeCheck, Filter, ArrowUpRight, Terminal, Layers, Bell,
   CheckCircle2, Clock, XCircle, ChevronDown, MoreHorizontal,
-  Shield, Video
+  Shield, Video, Handshake,
 } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
 import FounderContent from "./FounderContent";
+import SponsorsAdminContent from "./SponsorsAdminContent";
 import VerifiedBadge from "../../components/VerifiedBadge";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -1265,6 +1266,7 @@ const AdminPanelTool = ({ currentUserId }) => {
     { id: "founder_apps", label: "Founder Apps", icon: Crown       },
     { id: "tasks",        label: "Tasks",        icon: ClipboardList },
     { id: "interviews",   label: "Interviews",   icon: Video         },
+    { id: "sponsors",     label: "Sponsors",     icon: Handshake     },
     { id: "system_logs",  label: "System Logs",  icon: Terminal      },
   ];
 
@@ -2103,6 +2105,11 @@ const AdminPanelTool = ({ currentUserId }) => {
                 })()
             }
           </div>
+        )}
+
+        {/* ── SPONSORS ── */}
+        {adminTab === "sponsors" && (
+          <SponsorsAdminContent showToast={showToast} />
         )}
 
         {/* ── SYSTEM LOGS ── */}

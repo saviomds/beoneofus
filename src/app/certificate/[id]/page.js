@@ -18,6 +18,8 @@ export default function CertificatePage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sponsors, setSponsors] = useState([]);
+  const [sponsorsReady, setSponsorsReady] = useState(false);
 
   useEffect(() => {
     const fetchCert = async () => {
@@ -83,11 +85,33 @@ export default function CertificatePage() {
 
       setCert({ ...data, ...examData });
       setLoading(false);
+
+      // Load active sponsors and track impressions (fire-and-forget; mark ready regardless of outcome)
+      try {
+        const sRes = await fetch("/api/sponsors");
+        const sData = await sRes.json();
+        const activeSponsors = (sData.sponsors || []).filter(s => ["silver", "gold"].includes(s.tier));
+        setSponsors(activeSponsors);
+
+        if (activeSponsors.length > 0 && certId) {
+          await Promise.all(
+            activeSponsors.map(s =>
+              supabase.from("sponsor_impressions").insert({ sponsor_id: s.id, certificate_id: certId })
+            )
+          );
+        }
+      } catch (_) {
+      } finally {
+        setSponsorsReady(true);
+      }
     };
     if (certId) fetchCert();
   }, [certId]);
 
-  const handleDownloadPDF = () => window.print();
+  const handleDownloadPDF = () => {
+    if (loading || !sponsorsReady) return;
+    window.print();
+  };
 
   const shareToLinkedIn = () => {
     const url = encodeURIComponent(window.location.href);
@@ -183,9 +207,10 @@ export default function CertificatePage() {
               </button>
               <button
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-1.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 sm:px-4 py-2 rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                disabled={!sponsorsReady}
+                className="flex items-center gap-1.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 sm:px-4 py-2 rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download size={15} />
+                {sponsorsReady ? <Download size={15} /> : <Loader2 size={15} className="animate-spin" />}
                 <span className="hidden sm:inline">Download PDF</span>
                 <span className="sm:hidden">PDF</span>
               </button>
@@ -313,6 +338,29 @@ export default function CertificatePage() {
                   <CheckCircle2 size={11} className="shrink-0" />
                   Verified by beoneofus.work · {shortId}
                 </div>
+
+                {/* Sponsor section */}
+                {sponsors.length > 0 && (
+                  <div className="mt-6 pt-5 border-t border-gray-100">
+                    <p className="text-[8px] sm:text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] text-center mb-3">
+                      Proudly supported by
+                    </p>
+                    <div className="flex items-center justify-center gap-6 flex-wrap">
+                      {sponsors.map(s => (
+                        <div key={s.id} className="flex flex-col items-center gap-1">
+                          {s.logo_url ? (
+                            <img src={s.logo_url} alt={s.company_name} className="h-6 sm:h-8 object-contain" />
+                          ) : (
+                            <span className="text-[10px] sm:text-xs font-black text-gray-400">{s.company_name}</span>
+                          )}
+                          {s.tier === "gold" && s.tagline && (
+                            <p className="text-[8px] text-gray-400 max-w-[120px] text-center leading-tight">{s.tagline}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Gold bottom stripe */}
@@ -324,9 +372,11 @@ export default function CertificatePage() {
           <div className="no-print mt-6 flex flex-col sm:flex-row gap-3 w-full max-w-3xl">
             <button
               onClick={handleDownloadPDF}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-white font-black text-sm rounded-2xl transition-all shadow-lg shadow-amber-500/20"
+              disabled={!sponsorsReady}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-white font-black text-sm rounded-2xl transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download size={16} /> Download as PDF
+              {sponsorsReady ? <Download size={16} /> : <Loader2 size={16} className="animate-spin" />}
+              {sponsorsReady ? "Download as PDF" : "Preparing…"}
             </button>
             <button
               onClick={copyLink}

@@ -8,6 +8,8 @@ import {
   Search, BarChart3, ClipboardList, RefreshCw, Shield, UserCheck, UserX,
   ChevronDown, AlertTriangle, Filter, Image as ImageIcon,
   ScrollText, FileText, Send, DollarSign, PenLine, XCircle, Eye,
+  Printer, History, Trash2, Ban, ExternalLink, AlertOctagon,
+  ChevronRight, Mail, CalendarDays, Star, BookOpen,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -107,12 +109,21 @@ export default function FounderDashboard() {
   const [editingContract, setEditingContract] = useState<any>(null);
   const [contractProcessing, setContractProcessing] = useState(false);
   const [contractFilter, setContractFilter] = useState('all');
+  const [previewingContract, setPreviewingContract] = useState<any>(null);
+  const [contractTemplates, setContractTemplates] = useState<any[]>([]);
+  const [showTemplateList, setShowTemplateList] = useState(false);
+  const [showRevisionsFor, setShowRevisionsFor] = useState<string | null>(null);
   const [contractForm, setContractForm] = useState({
     user_id: '', title: '', contract_type: 'Project', work_description: '',
     deliverables: '', payment_amount: '', payment_currency: 'USD',
     payment_terms: '', payment_schedule: '', start_date: '', end_date: '',
     notes: '', status: 'sent',
   });
+
+  // Users tab extras
+  const [userFilter, setUserFilter] = useState('all');
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [userActionLoading, setUserActionLoading] = useState<string | null>(null);
 
   // Toast
   const [toast, setToast] = useState({ msg: '', type: 'success' });
@@ -240,7 +251,7 @@ export default function FounderDashboard() {
     setUsersLoading(true);
     const { data } = await supabase
       .from('profiles')
-      .select('id, username, avatar_url, status, is_verified, is_admin, role, created_at')
+      .select('id, username, email, avatar_url, status, is_verified, is_admin, is_premium, role, created_at')
       .order('created_at', { ascending: false })
       .limit(200);
     setUsers(data || []);
@@ -358,12 +369,184 @@ export default function FounderDashboard() {
   const closeContractModal = () => {
     setShowContractModal(false);
     setEditingContract(null);
+    setShowTemplateList(false);
     setContractForm({
       user_id: '', title: '', contract_type: 'Project', work_description: '',
       deliverables: '', payment_amount: '', payment_currency: 'USD',
       payment_terms: '', payment_schedule: '', start_date: '', end_date: '',
       notes: '', status: 'sent',
     });
+  };
+
+  // ── Contract template helpers (localStorage) ──────────────────────────────
+  const TEMPLATES_KEY = 'bou_contract_templates';
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try { setContractTemplates(JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]')); } catch {}
+    }
+  }, []);
+
+  const saveAsTemplate = () => {
+    const tpl = {
+      id: Date.now(), name: contractForm.title || 'Untitled Template',
+      contract_type: contractForm.contract_type,
+      work_description: contractForm.work_description,
+      deliverables: contractForm.deliverables,
+      payment_currency: contractForm.payment_currency,
+      payment_terms: contractForm.payment_terms,
+      payment_schedule: contractForm.payment_schedule,
+      notes: contractForm.notes,
+      savedAt: new Date().toISOString(),
+    };
+    const updated = [tpl, ...contractTemplates].slice(0, 10);
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updated));
+    setContractTemplates(updated);
+    showToast('Saved as template!');
+  };
+
+  const applyTemplate = (t: any) => {
+    setContractForm(prev => ({
+      ...prev,
+      contract_type: t.contract_type,
+      work_description: t.work_description || '',
+      deliverables: t.deliverables || '',
+      payment_currency: t.payment_currency || 'USD',
+      payment_terms: t.payment_terms || '',
+      payment_schedule: t.payment_schedule || '',
+      notes: t.notes || '',
+    }));
+    setShowTemplateList(false);
+    showToast('Template applied!');
+  };
+
+  const deleteTemplate = (id: number) => {
+    const updated = contractTemplates.filter(t => t.id !== id);
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updated));
+    setContractTemplates(updated);
+  };
+
+  // ── Contract revision helpers (localStorage) ──────────────────────────────
+  const saveRevision = (contractId: string, snapshot: any) => {
+    try {
+      const key = `bou_rev_${contractId}`;
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      const updated = [{ ts: new Date().toISOString(), data: snapshot }, ...existing].slice(0, 8);
+      localStorage.setItem(key, JSON.stringify(updated));
+    } catch {}
+  };
+
+  const getRevisions = (contractId: string) => {
+    try { return JSON.parse(localStorage.getItem(`bou_rev_${contractId}`) || '[]'); } catch { return []; }
+  };
+
+  // ── Print contract ────────────────────────────────────────────────────────
+  const printContract = (c: any) => {
+    const win = window.open('', '_blank', 'width=820,height=700');
+    if (!win) return;
+    const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+    const html = `<!DOCTYPE html><html><head><title>${c.title}</title><style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:Georgia,serif;max-width:720px;margin:48px auto;color:#111;padding:0 24px}
+      .header{text-align:center;margin-bottom:36px;padding-bottom:24px;border-bottom:3px solid #111}
+      .brand{font-family:Arial,sans-serif;font-size:13px;font-weight:900;letter-spacing:4px;color:#2563eb;text-transform:uppercase}
+      .doc-type{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#888;margin-top:4px}
+      h1{font-size:26px;margin:20px 0 8px;font-family:Arial,sans-serif;font-weight:900}
+      .meta{display:flex;flex-wrap:wrap;gap:24px;font-size:12px;color:#555;margin-bottom:24px}
+      .meta span strong{color:#111}
+      .section{margin:24px 0}
+      .section-label{font-size:9px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid #eee}
+      .section p{font-size:14px;line-height:1.8;white-space:pre-wrap;color:#333}
+      .sigs{display:flex;gap:48px;margin-top:72px;padding-top:32px;border-top:2px dashed #ccc}
+      .sig{flex:1}
+      .sig-label{font-size:9px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:#888;margin-bottom:12px}
+      .sig-name{font-family:cursive;font-size:32px;color:#2563eb;margin:8px 0}
+      .sig-name.signed{color:#16a34a}
+      .sig-date{font-size:11px;color:#888;margin-top:4px}
+      .verified{font-size:11px;color:#16a34a;font-weight:bold;margin-top:6px}
+      .pending{font-size:12px;color:#ccc;font-style:italic;margin:16px 0}
+      .footer{margin-top:60px;text-align:center;font-size:10px;color:#ccc;letter-spacing:2px;text-transform:uppercase}
+      .print-btn{display:block;margin:32px auto 0;padding:10px 28px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer}
+      @media print{.print-btn{display:none}}
+    </style></head><body>
+      <div class="header">
+        <div class="brand">beoneofus</div>
+        <div class="doc-type">Official Work Contract</div>
+      </div>
+      <h1>${c.title}</h1>
+      <div class="meta">
+        <span><strong>Type:</strong> ${c.contract_type || '—'}</span>
+        <span><strong>Status:</strong> ${c.status?.toUpperCase()}</span>
+        <span><strong>Issued:</strong> ${fmt(c.created_at)}</span>
+        ${c.start_date ? `<span><strong>Start:</strong> ${fmt(c.start_date)}</span>` : ''}
+        ${c.end_date ? `<span><strong>End:</strong> ${fmt(c.end_date)}</span>` : ''}
+        ${c.payment_amount ? `<span><strong>Value:</strong> ${c.payment_currency || 'USD'} ${Number(c.payment_amount).toLocaleString()}</span>` : ''}
+      </div>
+      ${c.work_description ? `<div class="section"><div class="section-label">Scope of Work</div><p>${c.work_description}</p></div>` : ''}
+      ${c.deliverables ? `<div class="section"><div class="section-label">Deliverables</div><p>${c.deliverables}</p></div>` : ''}
+      ${c.payment_terms ? `<div class="section"><div class="section-label">Payment Terms</div><p>${c.payment_terms}</p></div>` : ''}
+      ${c.payment_schedule ? `<div class="section"><div class="section-label">Payment Schedule</div><p>${c.payment_schedule}</p></div>` : ''}
+      <div class="sigs">
+        <div class="sig">
+          <div class="sig-label">Platform Signature</div>
+          <div class="sig-name">${c.admin_signature || 'beoneofus'}</div>
+          <div class="verified">✓ Verified & Signed</div>
+        </div>
+        <div class="sig">
+          <div class="sig-label">User Signature</div>
+          ${c.user_signature
+            ? `<div class="sig-name signed">${c.user_signature}</div><div class="sig-date">${fmt(c.signed_at)}</div><div class="verified">✓ Signed</div>`
+            : '<div class="pending">Awaiting signature…</div>'}
+        </div>
+      </div>
+      <div class="footer">beoneofus · Confidential · ${new Date().getFullYear()}</div>
+      <button class="print-btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+    </body></html>`;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 600);
+  };
+
+  // ── User management helpers ───────────────────────────────────────────────
+  const isSuspicious = (u: any) => {
+    const days = (Date.now() - new Date(u.created_at).getTime()) / 86400000;
+    return days > 3 && !u.is_verified && !u.avatar_url;
+  };
+
+  const handleSuspendUser = async (userId: string, suspend: boolean) => {
+    setUserActionLoading(userId);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ status: suspend ? 'suspended' : 'active' })
+      .eq('id', userId);
+    if (!error) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: suspend ? 'suspended' : 'active' } : u));
+      showToast(suspend ? 'User suspended.' : 'User reinstated.');
+    } else {
+      showToast(error.message, 'error');
+    }
+    setUserActionLoading(null);
+  };
+
+  const handleDeleteUser = async (userId: string, username: string) => {
+    if (!window.confirm(`Permanently delete @${username}? This cannot be undone.`)) return;
+    setUserActionLoading(userId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/delete-user', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ userId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      showToast(`@${username} deleted permanently.`);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+    setUserActionLoading(null);
   };
 
   const handleCreateContract = async (e: React.FormEvent) => {
@@ -388,6 +571,8 @@ export default function FounderDashboard() {
       };
 
       if (editingContract) {
+        // Save revision snapshot before overwriting
+        saveRevision(editingContract.id, editingContract);
         // UPDATE
         const { data, error } = await supabase
           .from('contracts')
@@ -462,10 +647,17 @@ export default function FounderDashboard() {
     return true;
   });
 
-  const filteredUsers = users.filter(u =>
-    u.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.status?.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  const filteredUsers = users.filter(u => {
+    const matchSearch = u.username?.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.status?.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.email?.toLowerCase().includes(userSearch.toLowerCase());
+    if (!matchSearch) return false;
+    if (userFilter === 'verified')   return u.is_verified;
+    if (userFilter === 'unverified') return !u.is_verified;
+    if (userFilter === 'suspicious') return isSuspicious(u);
+    if (userFilter === 'banned')     return u.status === 'suspended';
+    return true;
+  });
 
   // ── Loading / no access ───────────────────────────────────────────────────
   if (loading) {
@@ -693,51 +885,180 @@ export default function FounderDashboard() {
                 <Users size={20} className="text-blue-500" /> Platform Users
                 <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({filteredUsers.length})</span>
               </h2>
-              <div className="flex items-center gap-2">
-                <button onClick={fetchUsers} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-all">
-                  <RefreshCw size={12} /> Refresh
-                </button>
+              <button onClick={fetchUsers} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-all">
+                <RefreshCw size={12} /> Refresh
+              </button>
+            </div>
+
+            {/* Search + filters */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input value={userSearch} onChange={e => setUserSearch(e.target.value)}
+                  placeholder="Search by name, email, or status…"
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 pl-9 pr-4 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all" />
+              </div>
+              <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl shrink-0">
+                {[
+                  { id: 'all',         label: 'All' },
+                  { id: 'verified',    label: '✓ Verified' },
+                  { id: 'unverified',  label: 'Unverified' },
+                  { id: 'suspicious',  label: '⚠ Suspicious' },
+                  { id: 'banned',      label: 'Banned' },
+                ].map(f => (
+                  <button key={f.id} onClick={() => setUserFilter(f.id)}
+                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${userFilter === f.id ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
+                    {f.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
-              <input
-                value={userSearch}
-                onChange={e => setUserSearch(e.target.value)}
-                placeholder="Search users by name or status…"
-                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 pl-9 pr-4 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all"
-              />
-            </div>
+            {/* Suspicious banner */}
+            {userFilter === 'suspicious' && filteredUsers.length > 0 && (
+              <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/20 rounded-xl text-xs text-amber-700 dark:text-amber-300 font-bold">
+                <AlertOctagon size={14} className="shrink-0" />
+                {filteredUsers.length} user{filteredUsers.length > 1 ? 's' : ''} flagged — unverified accounts with no avatar older than 3 days.
+              </div>
+            )}
 
             {usersLoading ? (
               <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={24} /></div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="py-12 text-center text-gray-400 dark:text-gray-600 text-sm">No users match this filter.</div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {filteredUsers.map(user => (
-                  <div key={user.id} className="flex items-center gap-3 p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-gray-300 dark:hover:border-gray-700 transition-all">
-                    <div className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 uppercase">
-                      {user.avatar_url
-                        ? <Image src={user.avatar_url} alt="avatar" fill sizes="40px" className="object-cover" />
-                        : user.username?.substring(0, 2)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">@{user.username}</p>
-                        {user.is_admin && <Badge color="amber2">Admin</Badge>}
-                        {user.role && user.role !== 'member' && <Badge color="violet">{user.role}</Badge>}
-                        {user.is_verified && <Badge color="blue">✓</Badge>}
+              <div className="space-y-2">
+                {filteredUsers.map(user => {
+                  const suspicious = isSuspicious(user);
+                  const suspended  = user.status === 'suspended';
+                  const isExpanded = expandedUserId === user.id;
+                  const isActioning = userActionLoading === user.id;
+                  const daysSince = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000);
+
+                  return (
+                    <div key={user.id} className={`bg-white dark:bg-gray-900 border rounded-2xl transition-all ${
+                      suspended    ? 'border-red-200 dark:border-red-500/20' :
+                      suspicious   ? 'border-amber-200 dark:border-amber-500/20' :
+                      'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                    }`}>
+                      {/* Card header row */}
+                      <div className="flex items-center gap-3 p-4">
+                        <div className="relative w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 uppercase">
+                          {user.avatar_url
+                            ? <Image src={user.avatar_url} alt="avatar" fill sizes="44px" className="object-cover" />
+                            : user.username?.substring(0, 2)}
+                          {suspended && (
+                            <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+                              <Ban size={14} className="text-red-500" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">@{user.username}</p>
+                            {user.is_admin && <Badge color="amber2">Admin</Badge>}
+                            {user.role && user.role !== 'member' && <Badge color="violet">{user.role}</Badge>}
+                            {user.is_verified && <Badge color="blue">✓ Verified</Badge>}
+                            {user.is_premium && <Badge color="amber">Premium</Badge>}
+                            {suspended && <Badge color="red">Suspended</Badge>}
+                            {suspicious && !suspended && <Badge color="amber">⚠ Suspicious</Badge>}
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                            {user.email && <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate flex items-center gap-1"><Mail size={9} />{user.email}</p>}
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1"><CalendarDays size={9} />{daysSince}d ago</p>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button onClick={() => window.open(`/u/${user.username}`, '_blank')}
+                            className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-500 rounded-lg border border-gray-200 dark:border-gray-700 transition-all" title="View profile">
+                            <ExternalLink size={13} />
+                          </button>
+                          <button onClick={() => { setActiveTab('contracts'); setTimeout(() => setShowContractModal(true), 50); setContractForm(prev => ({ ...prev, user_id: user.id })); }}
+                            className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-gray-400 hover:text-emerald-500 rounded-lg border border-gray-200 dark:border-gray-700 transition-all" title="Create contract">
+                            <ScrollText size={13} />
+                          </button>
+                          <button onClick={() => { setActiveTab('tasks'); setTaskForm(prev => ({ ...prev, assignee_id: user.id })); setShowTaskModal(true); }}
+                            className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-gray-400 hover:text-violet-500 rounded-lg border border-gray-200 dark:border-gray-700 transition-all" title="Assign task">
+                            <ClipboardList size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleSuspendUser(user.id, !suspended)}
+                            disabled={isActioning || user.id === currentUserId}
+                            className={`p-1.5 rounded-lg border transition-all disabled:opacity-40 ${suspended ? 'bg-green-50 dark:bg-green-900/20 text-green-500 hover:bg-green-100 border-green-200 dark:border-green-500/20' : 'bg-gray-50 dark:bg-gray-800 text-gray-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-500 border-gray-200 dark:border-gray-700'}`}
+                            title={suspended ? 'Reinstate user' : 'Suspend user'}>
+                            {isActioning ? <Loader2 size={13} className="animate-spin" /> : <Ban size={13} />}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(user.id, user.username)}
+                            disabled={isActioning || user.id === currentUserId}
+                            className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-red-200 transition-all disabled:opacity-40"
+                            title="Delete user permanently">
+                            <Trash2 size={13} />
+                          </button>
+                          <button onClick={() => setExpandedUserId(isExpanded ? null : user.id)}
+                            className={`p-1.5 rounded-lg border transition-all ${isExpanded ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500 border-blue-200 dark:border-blue-500/20' : 'bg-gray-50 dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700'}`}>
+                            <ChevronRight size={13} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-0.5 truncate">{user.status || 'Active'}</p>
+
+                      {/* Expanded detail panel */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 pt-0 border-t border-gray-100 dark:border-gray-800">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Role</p>
+                              <p className="text-sm font-bold text-gray-800 dark:text-gray-200 capitalize">{user.role || 'member'}</p>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Verified</p>
+                              <p className={`text-sm font-bold ${user.is_verified ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                                {user.is_verified ? '✓ Yes' : '✗ No'}
+                              </p>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Premium</p>
+                              <p className={`text-sm font-bold ${user.is_premium ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
+                                {user.is_premium ? '★ Yes' : 'No'}
+                              </p>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                              <p className="text-sm font-bold text-gray-800 dark:text-gray-200 capitalize">{user.status || 'active'}</p>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Joined</p>
+                              <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{new Date(user.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Avatar</p>
+                              <p className={`text-sm font-bold ${user.avatar_url ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-400'}`}>
+                                {user.avatar_url ? '✓ Set' : '✗ Missing'}
+                              </p>
+                            </div>
+                          </div>
+                          {user.email && (
+                            <div className="mt-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
+                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Email</p>
+                              <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{user.email}</p>
+                            </div>
+                          )}
+                          {suspicious && (
+                            <div className="mt-3 flex items-start gap-2 px-3 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/20 rounded-xl">
+                              <AlertOctagon size={13} className="text-amber-500 shrink-0 mt-0.5" />
+                              <p className="text-[11px] text-amber-700 dark:text-amber-300 font-bold leading-relaxed">
+                                Flagged as suspicious — account is older than 3 days with no avatar and no email verification.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <button
-                      onClick={() => { setActiveTab('tasks'); setTaskForm(prev => ({ ...prev, assignee_id: user.id })); setShowTaskModal(true); }}
-                      className="shrink-0 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-[11px] font-bold border border-gray-200 dark:border-gray-700 transition-all"
-                    >
-                      Assign Task
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -832,6 +1153,24 @@ export default function FounderDashboard() {
                             {/* Actions */}
                             <div className="flex items-center gap-2 shrink-0 flex-wrap">
                               <button
+                                onClick={() => setPreviewingContract(c)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-xl text-[11px] font-bold border border-blue-200 dark:border-blue-500/20 transition-all"
+                              >
+                                <Eye size={11} /> Preview
+                              </button>
+                              <button
+                                onClick={() => printContract(c)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-[11px] font-bold border border-gray-200 dark:border-gray-700 transition-all"
+                              >
+                                <Printer size={11} /> Print
+                              </button>
+                              <button
+                                onClick={() => setShowRevisionsFor(showRevisionsFor === c.id ? null : c.id)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-[11px] font-bold border border-gray-200 dark:border-gray-700 transition-all"
+                              >
+                                <History size={11} /> History
+                              </button>
+                              <button
                                 onClick={() => openEditContract(c)}
                                 className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-[11px] font-bold border border-gray-200 dark:border-gray-700 transition-all"
                               >
@@ -876,6 +1215,32 @@ export default function FounderDashboard() {
                           )}
                         </div>
                       </div>
+
+                      {/* Revision history panel */}
+                      {showRevisionsFor === c.id && (() => {
+                        const revs = getRevisions(c.id);
+                        return (
+                          <div className="border-t border-dashed border-gray-200 dark:border-gray-700 px-5 py-4">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5"><History size={10} /> Edit History (last {revs.length} saves)</p>
+                            {revs.length === 0 ? (
+                              <p className="text-[12px] text-gray-400 italic">No edits recorded yet. History is saved from the next edit onwards.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {revs.map((rev: any, i: number) => (
+                                  <div key={i} className="flex items-start gap-3 text-[11px]">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 mt-1.5 shrink-0" />
+                                    <div className="min-w-0">
+                                      <span className="text-gray-500 dark:text-gray-400">{new Date(rev.ts).toLocaleString()} — </span>
+                                      <span className="text-gray-700 dark:text-gray-300 font-medium">{rev.data.title}</span>
+                                      {rev.data.status && <span className="ml-1 text-gray-400">({rev.data.status})</span>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -989,6 +1354,76 @@ export default function FounderDashboard() {
         )}
       </div>
 
+      {/* ── Contract Preview Modal ────────────────────────────────────────────── */}
+      {previewingContract && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPreviewingContract(null)} />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl overflow-y-auto animate-in zoom-in-95 duration-200" style={{ maxHeight: '90vh' }}>
+            <div className="sticky top-0 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between rounded-t-3xl z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-xl flex items-center justify-center"><ScrollText size={16} /></div>
+                <div>
+                  <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Preview — as seen by user</p>
+                  <p className="text-sm font-black text-gray-900 dark:text-white">{previewingContract.title}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => printContract(previewingContract)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-xs font-bold transition-all">
+                  <Printer size={13} /> Print
+                </button>
+                <button onClick={() => setPreviewingContract(null)} className="w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-5">
+              {/* Status + meta */}
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                  previewingContract.status === 'signed' || previewingContract.status === 'completed' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' :
+                  previewingContract.status === 'sent' || previewingContract.status === 'viewed' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20' :
+                  'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                }`}>{previewingContract.status}</span>
+                {previewingContract.contract_type && <span className="text-[10px] font-bold bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">{previewingContract.contract_type}</span>}
+              </div>
+              {/* Period + payment */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Period</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{previewingContract.start_date ? new Date(previewingContract.start_date).toLocaleDateString() : '—'}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">to {previewingContract.end_date ? new Date(previewingContract.end_date).toLocaleDateString() : '—'}</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Value</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{previewingContract.payment_amount ? `${previewingContract.payment_currency} ${Number(previewingContract.payment_amount).toLocaleString()}` : '—'}</p>
+                </div>
+              </div>
+              {previewingContract.work_description && <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Scope of Work</p><div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800"><p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{previewingContract.work_description}</p></div></div>}
+              {previewingContract.deliverables && <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Deliverables</p><div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800"><p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{previewingContract.deliverables}</p></div></div>}
+              {previewingContract.payment_terms && <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Payment Terms</p><div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800"><p className="text-sm text-gray-700 dark:text-gray-300">{previewingContract.payment_terms}</p></div></div>}
+              {/* Signature block */}
+              <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-5">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Signatures</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4">
+                    <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-2">Platform</p>
+                    <p className="font-black text-2xl text-blue-600 dark:text-blue-400" style={{ fontFamily: 'cursive' }}>{previewingContract.admin_signature || 'beoneofus'}</p>
+                    <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold mt-2">✓ Verified & Signed</p>
+                  </div>
+                  <div className={`border rounded-2xl p-4 ${previewingContract.user_signature ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-500/20' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'}`}>
+                    <p className={`text-[9px] font-black uppercase tracking-widest mb-2 ${previewingContract.user_signature ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>User Signature</p>
+                    {previewingContract.user_signature
+                      ? <><p className="font-black text-2xl text-emerald-600 dark:text-emerald-400" style={{ fontFamily: 'cursive' }}>{previewingContract.user_signature}</p><p className="text-[9px] text-gray-400 mt-1">{previewingContract.signed_at ? new Date(previewingContract.signed_at).toLocaleDateString() : ''}</p></>
+                      : <p className="text-xs text-gray-400 italic mt-2">Awaiting signature…</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Create Contract Modal ─────────────────────────────────────────────── */}
       {showContractModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -1003,6 +1438,42 @@ export default function FounderDashboard() {
               </button>
             </div>
             <form onSubmit={handleCreateContract} className="p-6 space-y-4">
+
+              {/* Template bar */}
+              {!editingContract && (
+                <div className="relative">
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setShowTemplateList(!showTemplateList)}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-900/40 border border-violet-200 dark:border-violet-500/20 rounded-xl text-[11px] font-bold transition-all">
+                      <BookOpen size={12} /> Load Template {contractTemplates.length > 0 && `(${contractTemplates.length})`}
+                    </button>
+                    {(contractForm.work_description || contractForm.title) && (
+                      <button type="button" onClick={saveAsTemplate}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-xl text-[11px] font-bold transition-all">
+                        Save as Template
+                      </button>
+                    )}
+                  </div>
+                  {showTemplateList && (
+                    <div className="absolute top-full left-0 mt-1 z-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl w-80 overflow-hidden">
+                      {contractTemplates.length === 0 ? (
+                        <p className="p-4 text-xs text-gray-400 text-center">No templates saved yet. Fill the form and click "Save as Template".</p>
+                      ) : contractTemplates.map((t: any) => (
+                        <div key={t.id} className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => applyTemplate(t)}>
+                            <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{t.name}</p>
+                            <p className="text-[10px] text-gray-400">{t.contract_type} · {new Date(t.savedAt).toLocaleDateString()}</p>
+                          </div>
+                          <button type="button" onClick={() => deleteTemplate(t.id)} className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 transition-colors shrink-0">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Assign to user */}
               <div>
                 <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Assign To *</label>

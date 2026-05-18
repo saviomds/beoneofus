@@ -9,7 +9,7 @@ import {
   ChevronDown, AlertTriangle, Filter, Image as ImageIcon,
   ScrollText, FileText, Send, DollarSign, PenLine, XCircle, Eye,
   Printer, History, Trash2, Ban, ExternalLink, AlertOctagon,
-  ChevronRight, Mail, CalendarDays, Star, BookOpen,
+  ChevronRight, Mail, CalendarDays, Star, BookOpen, Lock, Unlock,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -44,7 +44,7 @@ function priorityColor(p: string) {
 function statusColor(s: string) {
   if (!s) return 'gray';
   if (s === 'accepted' || s === 'completed') return 'emerald';
-  if (s === 'declined' || s === 'rejected') return 'red';
+  if (s === 'declined' || s === 'rejected' || s === 'removed') return 'red';
   if (s === 'pending') return 'amber';
   if (s === 'in_progress') return 'blue';
   return 'gray';
@@ -62,12 +62,14 @@ function getRelativeTime(dateStr: string) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'overview',     label: 'Overview',     icon: BarChart3 },
-  { id: 'applications', label: 'Applications', icon: Crown },
-  { id: 'users',        label: 'Users',        icon: Users },
-  { id: 'tasks',        label: 'Tasks',        icon: ClipboardList },
-  { id: 'contracts',    label: 'Contracts',    icon: ScrollText },
+  { id: 'overview',     label: 'Overview',     icon: BarChart3,    protected: false },
+  { id: 'applications', label: 'Applications', icon: Crown,        protected: true  },
+  { id: 'users',        label: 'Users',        icon: Users,        protected: true  },
+  { id: 'tasks',        label: 'Tasks',        icon: ClipboardList, protected: false },
+  { id: 'contracts',    label: 'Contracts',    icon: ScrollText,   protected: true  },
 ];
+
+const PROTECTED_TABS = new Set(['applications', 'users', 'contracts']);
 
 export default function FounderDashboard() {
   const router = useRouter();
@@ -125,12 +127,68 @@ export default function FounderDashboard() {
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [userActionLoading, setUserActionLoading] = useState<string | null>(null);
 
+  // Dashboard preview (per-user lazy-loaded data)
+  const [userDashPreviews, setUserDashPreviews] = useState<Record<string, { tasks: any[]; notifications: any[]; loading: boolean }>>({});
+
   // Toast
   const [toast, setToast] = useState({ msg: '', type: 'success' });
   const showToast = useCallback((msg: string, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: '', type: 'success' }), 3500);
   }, []);
+
+  // Password gate for protected tabs
+  const [protectedUnlocked, setProtectedUnlocked] = useState(() =>
+    typeof window !== 'undefined' && sessionStorage.getItem('fdash_unlocked') === 'true'
+  );
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordVerifying, setPasswordVerifying] = useState(false);
+
+  const handleTabClick = useCallback(async (tabId: string) => {
+    if (PROTECTED_TABS.has(tabId) && !protectedUnlocked) {
+      setPendingTab(tabId);
+      setPasswordInput('');
+      setPasswordError('');
+      setShowPasswordModal(true);
+      return;
+    }
+    setActiveTab(tabId);
+  }, [isAdmin, protectedUnlocked]);
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordVerifying(true);
+    setPasswordError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/verify-section-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ password: passwordInput }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Incorrect password');
+      sessionStorage.setItem('fdash_unlocked', 'true');
+      setProtectedUnlocked(true);
+      setShowPasswordModal(false);
+      if (pendingTab) setActiveTab(pendingTab);
+      setPendingTab(null);
+    } catch (err: any) {
+      setPasswordError(err.message);
+    } finally {
+      setPasswordVerifying(false);
+    }
+  };
+
+  const handleLock = () => {
+    sessionStorage.removeItem('fdash_unlocked');
+    setProtectedUnlocked(false);
+    if (PROTECTED_TABS.has(activeTab)) setActiveTab('overview');
+    showToast('Protected sections locked.');
+  };
 
   // ── Auth & access check ────────────────────────────────────────────────────
   useEffect(() => {
@@ -162,9 +220,22 @@ export default function FounderDashboard() {
           .select('status')
           .eq('user_id', uid)
           .eq('status', 'accepted')
+          .eq('intended_role', 'cofounder')
           .limit(1)
           .single();
-        if (!appData) { router.push('/dash/feed'); return; }
+        if (!appData) {
+          // Check if they're an accepted member and redirect them to the right dashboard
+          const { data: memberApp } = await supabase
+            .from('founder_applications')
+            .select('status')
+            .eq('user_id', uid)
+            .eq('status', 'accepted')
+            .eq('intended_role', 'member')
+            .limit(1)
+            .single();
+          router.push(memberApp ? '/member-dashboard' : '/dash/feed');
+          return;
+        }
       }
 
       setHasAccess(true);
@@ -215,24 +286,29 @@ export default function FounderDashboard() {
       if (error) throw error;
 
       // Notify applicant
+      const roleLabel = appTitle === 'cofounder' ? 'co-founder' : 'co-member';
       await supabase.from('notifications').insert({
         receiver_id: applicantId,
         actor_id: currentUserId,
         type: 'message',
-        content: `Your co-founder application was ${status}. ${status === 'accepted' ? 'Welcome to the founding team!' : 'Thank you for your interest.'}`,
+        content: `Your ${roleLabel} application was ${status}. ${status === 'accepted' ? 'Welcome to the team!' : 'Thank you for your interest.'}`,
       });
 
-      // If accepted, update profile role
+      // If accepted, update profile role based on intended_role
       if (status === 'accepted') {
-        await supabase.from('profiles').update({ role: 'founder' }).eq('id', applicantId);
+        const profileRole = appTitle === 'cofounder' ? 'founder' : 'member';
+        await supabase.from('profiles').update({ role: profileRole }).eq('id', applicantId);
       }
 
-      // Send email notification
+      // Send email notification with correct dashboard link
+      const dashboardLink = status === 'accepted'
+        ? (appTitle === 'cofounder' ? '/founder-dashboard' : '/member-dashboard')
+        : undefined;
       try {
         await fetch('/api/notify-applicant', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ applicationId: appId, applicantId, status, role: appTitle }),
+          body: JSON.stringify({ applicationId: appId, applicantId, status, role: appTitle, dashboardLink }),
         });
       } catch { /* non-blocking */ }
 
@@ -262,6 +338,23 @@ export default function FounderDashboard() {
   useEffect(() => {
     if (hasAccess && activeTab === 'users') fetchUsers();
   }, [hasAccess, activeTab, fetchUsers]);
+
+  const fetchUserDashPreview = useCallback(async (userId: string) => {
+    setUserDashPreviews(prev => ({ ...prev, [userId]: { tasks: [], notifications: [], loading: true } }));
+    const [{ data: tasks }, { data: notifications }] = await Promise.all([
+      supabase.from('tasks')
+        .select('id, title, status, priority, due_date, created_at')
+        .eq('assignee_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(6),
+      supabase.from('notifications')
+        .select('id, content, type, created_at')
+        .eq('receiver_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(4),
+    ]);
+    setUserDashPreviews(prev => ({ ...prev, [userId]: { tasks: tasks || [], notifications: notifications || [], loading: false } }));
+  }, []);
 
   // ── Tasks ─────────────────────────────────────────────────────────────────
   const fetchTasks = useCallback(async () => {
@@ -549,6 +642,65 @@ export default function FounderDashboard() {
     setUserActionLoading(null);
   };
 
+  // Revoke a specific accepted application (applications tab)
+  const handleRevokeApplication = async (appId: string, applicantId: string, intendedRole: string) => {
+    const roleLabel = intendedRole === 'cofounder' ? 'co-founder' : 'co-member';
+    if (!window.confirm(`Revoke this ${roleLabel}'s access? They will lose dashboard access but can re-apply.`)) return;
+    setAppActionLoading(true);
+    try {
+      const { error } = await supabase.from('founder_applications').update({ status: 'removed' }).eq('id', appId);
+      if (error) throw error;
+
+      // Only clear profile role if they have no other accepted applications
+      const { data: otherAccepted } = await supabase
+        .from('founder_applications')
+        .select('id')
+        .eq('user_id', applicantId)
+        .eq('status', 'accepted')
+        .neq('id', appId);
+      if (!otherAccepted?.length) {
+        await supabase.from('profiles').update({ role: null }).eq('id', applicantId);
+      }
+
+      await supabase.from('notifications').insert({
+        receiver_id: applicantId,
+        actor_id: currentUserId,
+        type: 'message',
+        content: `Your ${roleLabel} access has been revoked. You're welcome to re-apply when ready.`,
+      });
+
+      setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'removed' } : a));
+      if (selectedApp?.id === appId) setSelectedApp((prev: any) => ({ ...prev, status: 'removed' }));
+      showToast(`${roleLabel} access revoked.`);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setAppActionLoading(false);
+    }
+  };
+
+  // Revoke all access for a user (users tab)
+  const handleRevokeAccess = async (userId: string, username: string, currentRole: string) => {
+    const roleLabel = currentRole === 'founder' ? 'co-founder' : 'co-member';
+    if (!window.confirm(`Revoke ${roleLabel} access for @${username}? They will lose dashboard access but can re-apply.`)) return;
+    setUserActionLoading(userId);
+    try {
+      await supabase.from('founder_applications').update({ status: 'removed' }).eq('user_id', userId).eq('status', 'accepted');
+      await supabase.from('profiles').update({ role: null }).eq('id', userId);
+      await supabase.from('notifications').insert({
+        receiver_id: userId,
+        actor_id: currentUserId,
+        type: 'message',
+        content: `Your ${roleLabel} access has been revoked. You're welcome to re-apply when ready.`,
+      });
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: null } : u));
+      showToast(`${roleLabel} access revoked for @${username}.`);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+    setUserActionLoading(null);
+  };
+
   const handleCreateContract = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contractForm.user_id || !contractForm.title || !contractForm.work_description) return;
@@ -674,6 +826,55 @@ export default function FounderDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black p-4 sm:p-8 animate-in fade-in duration-500">
+      {/* Password Gate Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl w-full max-w-sm p-7 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-50 dark:bg-amber-500/10 rounded-xl flex items-center justify-center">
+                  <Lock size={18} className="text-amber-500" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-gray-900 dark:text-white">Protected Section</h2>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium capitalize">{pendingTab} · admin access only</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPasswordModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Admin Password</label>
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={e => setPasswordInput(e.target.value)}
+                  placeholder="Enter section password"
+                  autoFocus
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 transition-all"
+                />
+                {passwordError && (
+                  <p className="mt-2 text-[11px] text-red-500 font-bold flex items-center gap-1">
+                    <AlertTriangle size={11} /> {passwordError}
+                  </p>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={!passwordInput || passwordVerifying}
+                className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-white rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-sm"
+              >
+                {passwordVerifying ? <Loader2 size={14} className="animate-spin" /> : <Unlock size={14} />}
+                {passwordVerifying ? 'Verifying…' : 'Unlock'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       {toast.msg && (
         <div className={`fixed bottom-6 right-6 z-[500] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-sm ${toast.type === 'error' ? 'bg-white dark:bg-gray-900 border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400' : 'bg-white dark:bg-gray-900 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400'}`}>
@@ -721,16 +922,32 @@ export default function FounderDashboard() {
         </header>
 
         {/* Tab Bar */}
-        <div className="flex gap-1 p-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-x-auto">
-          {TABS.map(tab => (
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 p-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-x-auto flex-1">
+            {TABS.map(tab => {
+              const isLocked = tab.protected && !protectedUnlocked;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabClick(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex-1 justify-center ${activeTab === tab.id ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  <tab.icon size={14} /> {tab.label}
+                  {isLocked && <Lock size={10} className="opacity-50" />}
+                </button>
+              );
+            })}
+          </div>
+          {/* Lock/unlock button — shown to anyone who has unlocked */}
+          {protectedUnlocked && (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex-1 justify-center ${activeTab === tab.id ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}`}
+              onClick={handleLock}
+              className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-400 hover:text-orange-500 hover:border-orange-200 transition-all shadow-sm shrink-0"
+              title="Lock protected sections"
             >
-              <tab.icon size={14} /> {tab.label}
+              <Unlock size={15} />
             </button>
-          ))}
+          )}
         </div>
 
         {/* ── OVERVIEW ─────────────────────────────────────────────────────────── */}
@@ -795,7 +1012,7 @@ export default function FounderDashboard() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                <Crown size={20} className="text-amber-500" /> Co-Founder Applications
+                <Crown size={20} className="text-amber-500" /> Applications
                 <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({applications.length})</span>
               </h2>
               <button onClick={fetchApplications} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-all">
@@ -827,7 +1044,7 @@ export default function FounderDashboard() {
                             <Badge color={statusColor(app.status)}>{app.status}</Badge>
                           </div>
                           <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                            {app.role === 'cofounder' ? 'Co-Founder Application' : 'Member Application'} · {getRelativeTime(app.created_at)}
+                            {app.intended_role === 'cofounder' ? 'Co-Founder Application' : 'Co-Member Application'} · {getRelativeTime(app.created_at)}
                           </p>
                         </div>
                       </div>
@@ -841,14 +1058,14 @@ export default function FounderDashboard() {
                         {app.status === 'pending' && (
                           <>
                             <button
-                              onClick={() => handleApplicationAction(app.id, 'declined', app.user_id, app.role)}
+                              onClick={() => handleApplicationAction(app.id, 'declined', app.user_id, app.intended_role)}
                               disabled={appActionLoading}
                               className="px-3 py-1.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl text-xs font-bold border border-red-200 dark:border-red-500/20 transition-all disabled:opacity-50"
                             >
                               Decline
                             </button>
                             <button
-                              onClick={() => handleApplicationAction(app.id, 'accepted', app.user_id, app.role)}
+                              onClick={() => handleApplicationAction(app.id, 'accepted', app.user_id, app.intended_role)}
                               disabled={appActionLoading}
                               className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50 flex items-center gap-1"
                             >
@@ -856,6 +1073,16 @@ export default function FounderDashboard() {
                               Accept
                             </button>
                           </>
+                        )}
+                        {app.status === 'accepted' && (
+                          <button
+                            onClick={() => handleRevokeApplication(app.id, app.user_id, app.intended_role)}
+                            disabled={appActionLoading}
+                            className="px-3 py-1.5 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-500/20 rounded-xl text-xs font-bold border border-orange-200 dark:border-orange-500/20 transition-all disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {appActionLoading ? <Loader2 size={12} className="animate-spin" /> : <UserX size={12} />}
+                            Revoke Access
+                          </button>
                         )}
                       </div>
                     </div>
@@ -984,6 +1211,15 @@ export default function FounderDashboard() {
                             className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-gray-400 hover:text-violet-500 rounded-lg border border-gray-200 dark:border-gray-700 transition-all" title="Assign task">
                             <ClipboardList size={13} />
                           </button>
+                          {(user.role === 'founder' || user.role === 'member') && (
+                            <button
+                              onClick={() => handleRevokeAccess(user.id, user.username, user.role)}
+                              disabled={isActioning || user.id === currentUserId}
+                              className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-gray-400 hover:text-orange-500 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-orange-200 transition-all disabled:opacity-40"
+                              title="Revoke team access">
+                              {isActioning ? <Loader2 size={13} className="animate-spin" /> : <UserX size={13} />}
+                            </button>
+                          )}
                           <button
                             onClick={() => handleSuspendUser(user.id, !suspended)}
                             disabled={isActioning || user.id === currentUserId}
@@ -1054,6 +1290,103 @@ export default function FounderDashboard() {
                               </p>
                             </div>
                           )}
+
+                          {/* Dashboard preview — only for team members */}
+                          {(user.role === 'founder' || user.role === 'member') && (() => {
+                            const dashUrl = user.role === 'founder' ? '/founder-dashboard' : '/member-dashboard';
+                            const roleLabel = user.role === 'founder' ? 'Co-Founder' : 'Co-Member';
+                            const preview = userDashPreviews[user.id];
+                            return (
+                              <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                                    <BarChart3 size={11} /> {roleLabel} Dashboard
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    {!preview && (
+                                      <button
+                                        onClick={() => fetchUserDashPreview(user.id)}
+                                        className="px-2.5 py-1 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-[10px] font-bold border border-blue-200 dark:border-blue-500/20 transition-all"
+                                      >
+                                        Load Preview
+                                      </button>
+                                    )}
+                                    {preview && !preview.loading && (
+                                      <button
+                                        onClick={() => fetchUserDashPreview(user.id)}
+                                        className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                                        title="Refresh"
+                                      >
+                                        <RefreshCw size={11} />
+                                      </button>
+                                    )}
+                                    <a
+                                      href={dashUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-2.5 py-1 bg-violet-50 dark:bg-violet-500/10 hover:bg-violet-100 dark:hover:bg-violet-500/20 text-violet-600 dark:text-violet-400 rounded-lg text-[10px] font-bold border border-violet-200 dark:border-violet-500/20 transition-all flex items-center gap-1"
+                                    >
+                                      Open Dashboard <ExternalLink size={9} />
+                                    </a>
+                                  </div>
+                                </div>
+
+                                {preview?.loading && (
+                                  <div className="py-4 flex justify-center">
+                                    <Loader2 size={16} className="animate-spin text-blue-500" />
+                                  </div>
+                                )}
+
+                                {preview && !preview.loading && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* Tasks */}
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
+                                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                        <ClipboardList size={9} /> Tasks ({preview.tasks.length})
+                                      </p>
+                                      {preview.tasks.length === 0 ? (
+                                        <p className="text-[11px] text-gray-400 dark:text-gray-500">No tasks assigned.</p>
+                                      ) : (
+                                        <div className="space-y-1.5">
+                                          {preview.tasks.map(t => (
+                                            <div key={t.id} className="flex items-start gap-2">
+                                              <span className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${
+                                                t.status === 'completed' ? 'bg-emerald-400' :
+                                                t.status === 'in_progress' ? 'bg-blue-400' : 'bg-gray-300 dark:bg-gray-600'
+                                              }`} />
+                                              <div className="min-w-0">
+                                                <p className={`text-[11px] font-bold truncate ${t.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}`}>{t.title}</p>
+                                                <p className="text-[9px] text-gray-400 capitalize">{t.status?.replace('_', ' ')} · {t.priority}</p>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Notifications */}
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
+                                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                        <Activity size={9} /> Recent Activity ({preview.notifications.length})
+                                      </p>
+                                      {preview.notifications.length === 0 ? (
+                                        <p className="text-[11px] text-gray-400 dark:text-gray-500">No recent activity.</p>
+                                      ) : (
+                                        <div className="space-y-1.5">
+                                          {preview.notifications.map(n => (
+                                            <div key={n.id} className="flex items-start gap-2">
+                                              <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
+                                              <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2">{n.content}</p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>

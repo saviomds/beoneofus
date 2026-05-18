@@ -116,6 +116,44 @@ export default function MemberDashboard() {
         return;
       }
 
+      // Admins can access any dashboard for preview purposes
+      const { data: profileCheck } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!active) return;
+
+      if (!profileCheck?.is_admin) {
+        // Verify this user has an accepted co-member application
+        const { data: memberApp } = await supabase
+          .from('founder_applications')
+          .select('status')
+          .eq('user_id', session.user.id)
+          .eq('status', 'accepted')
+          .eq('intended_role', 'member')
+          .limit(1)
+          .single();
+
+        if (!active) return;
+        if (!memberApp) {
+          // Check if they're a co-founder and redirect them accordingly
+          const { data: founderApp } = await supabase
+            .from('founder_applications')
+            .select('status')
+            .eq('user_id', session.user.id)
+            .eq('status', 'accepted')
+            .eq('intended_role', 'cofounder')
+            .limit(1)
+            .single();
+          sessionStorage.removeItem('member_auth');
+          sessionStorage.removeItem('member_session_user');
+          router.push(founderApp ? '/founder-dashboard' : '/dash/feed');
+          return;
+        }
+      }
+
       setIsAuthenticated(true);
       sessionStorage.setItem('member_auth', 'true');
       setSessionUser(session.user);

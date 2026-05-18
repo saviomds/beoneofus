@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import {
   Briefcase, ChevronRight, CheckCircle2, XCircle, Loader2, Code2,
   MessageSquare, Star, AlertTriangle, ArrowLeft, Trophy, Clock,
-  TrendingUp, Zap, BarChart2, ChevronDown, ChevronUp, RefreshCw,
+  TrendingUp, Zap, BarChart2, ChevronDown, ChevronUp, RefreshCw, Trash2,
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
@@ -55,7 +55,7 @@ function StatusPill({ status }) {
 
 // ── Room List ─────────────────────────────────────────────────
 
-function RoomList({ rooms, onSelect, loading }) {
+function RoomList({ rooms, onSelect, onDelete, deletingId, loading }) {
   if (loading) {
     return (
       <div className="space-y-4">
@@ -79,31 +79,47 @@ function RoomList({ rooms, onSelect, loading }) {
   return (
     <div className="space-y-4">
       {rooms.map(room => (
-        <button
+        <div
           key={room.id}
-          onClick={() => onSelect(room)}
-          className="w-full text-left bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-lg transition-all group"
+          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-lg transition-all group"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <StatusPill status={room.status} />
-                {room.overall_score != null && <ScoreBadge score={room.overall_score} />}
+          <button
+            onClick={() => onSelect(room)}
+            className="w-full text-left p-5"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <StatusPill status={room.status} />
+                  {room.overall_score != null && <ScoreBadge score={room.overall_score} />}
+                </div>
+                <h3 className="font-black text-gray-900 dark:text-gray-100 text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate mt-2">
+                  {room.job_title}
+                </h3>
+                {room.company && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{room.company}</p>
+                )}
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
+                  {room.questions?.length || 0} question{room.questions?.length !== 1 ? 's' : ''} ·{' '}
+                  {new Date(room.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
               </div>
-              <h3 className="font-black text-gray-900 dark:text-gray-100 text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate mt-2">
-                {room.job_title}
-              </h3>
-              {room.company && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{room.company}</p>
-              )}
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
-                {room.questions?.length || 0} question{room.questions?.length !== 1 ? 's' : ''} ·{' '}
-                {new Date(room.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </p>
+              <ChevronRight size={18} className="text-gray-400 group-hover:text-blue-500 transition-colors mt-1 shrink-0" />
             </div>
-            <ChevronRight size={18} className="text-gray-400 group-hover:text-blue-500 transition-colors mt-1 shrink-0" />
+          </button>
+          <div className="px-5 pb-4 flex justify-end border-t border-gray-100 dark:border-gray-800 pt-3">
+            <button
+              onClick={() => onDelete(room.id)}
+              disabled={deletingId === room.id}
+              className="flex items-center gap-1.5 text-xs font-bold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 transition-colors"
+            >
+              {deletingId === room.id
+                ? <Loader2 size={13} className="animate-spin" />
+                : <Trash2 size={13} />}
+              Delete
+            </button>
           </div>
-        </button>
+        </div>
       ))}
     </div>
   );
@@ -888,18 +904,23 @@ function InterviewRulesScreen({ room, onBegin, onBack }) {
 
 export default function InterviewContent() {
   const [userId, setUserId] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [rulesRoom, setRulesRoom] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
-  const fetchRooms = useCallback(async (uid) => {
-    const { data } = await supabase
+  const fetchRooms = useCallback(async (uid, admin) => {
+    const query = supabase
       .from('interview_rooms')
       .select('*')
-      .eq('applicant_id', uid)
       .order('created_at', { ascending: false });
+    if (!admin) query.eq('applicant_id', uid);
+    const { data } = await query;
     setRooms(data || []);
   }, []);
 
@@ -907,8 +928,16 @@ export default function InterviewContent() {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setLoading(false); return; }
-      setUserId(session.user.id);
-      await fetchRooms(session.user.id);
+      const uid = session.user.id;
+      setUserId(uid);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', uid)
+        .single();
+      const admin = profile?.is_admin ?? false;
+      setIsAdmin(admin);
+      await fetchRooms(uid, admin);
       setLoading(false);
     };
     init();
@@ -917,8 +946,28 @@ export default function InterviewContent() {
   const handleRefresh = async () => {
     if (!userId) return;
     setRefreshing(true);
-    await fetchRooms(userId);
+    await fetchRooms(userId, isAdmin);
     setRefreshing(false);
+  };
+
+  const handleDeleteRoom = async (roomId) => {
+    setDeletingId(roomId);
+    await supabase.from('interview_answers').delete().eq('room_id', roomId);
+    await supabase.from('interview_rooms').delete().eq('id', roomId);
+    setRooms(prev => prev.filter(r => r.id !== roomId));
+    setDeletingId(null);
+  };
+
+  const handleDeleteAll = async () => {
+    setDeletingAll(true);
+    const ids = rooms.map(r => r.id);
+    if (ids.length) {
+      await supabase.from('interview_answers').delete().in('room_id', ids);
+      await supabase.from('interview_rooms').delete().in('id', ids);
+    }
+    setRooms([]);
+    setDeletingAll(false);
+    setConfirmDeleteAll(false);
   };
 
   if (!userId && !loading) {
@@ -946,18 +995,63 @@ export default function InterviewContent() {
         />
       ) : (
         <>
+          {/* Delete All confirm modal */}
+          {confirmDeleteAll && (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-700 animate-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-3 mb-3">
+                  <AlertTriangle size={22} className="text-red-500 shrink-0" />
+                  <h3 className="font-black text-gray-900 dark:text-gray-100">Delete All Interviews?</h3>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
+                  This will permanently delete all {rooms.length} interview room{rooms.length !== 1 ? 's' : ''} and their answers. This cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setConfirmDeleteAll(false)}
+                    disabled={deletingAll}
+                    className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAll}
+                    disabled={deletingAll}
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                  >
+                    {deletingAll ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                    {deletingAll ? 'Deleting…' : 'Delete All'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Interviews</h1>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5 font-medium">Your active and completed interview rooms.</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5 font-medium">
+                {isAdmin ? 'All interview rooms (admin view).' : 'Your active and completed interview rooms.'}
+              </p>
             </div>
-            <button
-              onClick={handleRefresh}
-              className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-              title="Refresh"
-            >
-              <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
-            </button>
+            <div className="flex items-center gap-2">
+              {rooms.length > 0 && (
+                <button
+                  onClick={() => setConfirmDeleteAll(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 text-xs font-bold border border-red-200 dark:border-red-800 transition-colors"
+                  title="Delete all interviews"
+                >
+                  <Trash2 size={13} /> Delete All
+                </button>
+              )}
+              <button
+                onClick={handleRefresh}
+                className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+                title="Refresh"
+              >
+                <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+              </button>
+            </div>
           </div>
           <RoomList
             rooms={rooms}
@@ -968,6 +1062,8 @@ export default function InterviewContent() {
                 setRulesRoom(room);
               }
             }}
+            onDelete={handleDeleteRoom}
+            deletingId={deletingId}
             loading={loading}
           />
         </>

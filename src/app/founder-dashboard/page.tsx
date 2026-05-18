@@ -6,7 +6,8 @@ import {
   Users, Briefcase, Activity, ArrowRight, Target, Loader2, CheckCircle2,
   Check, Clock, Calendar, Zap, Terminal, ShieldCheck, X, Plus, Crown,
   Search, BarChart3, ClipboardList, RefreshCw, Shield, UserCheck, UserX,
-  ChevronDown, AlertTriangle, Filter, Image as ImageIcon
+  ChevronDown, AlertTriangle, Filter, Image as ImageIcon,
+  ScrollText, FileText, Send, DollarSign, PenLine, XCircle, Eye,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -63,6 +64,7 @@ const TABS = [
   { id: 'applications', label: 'Applications', icon: Crown },
   { id: 'users',        label: 'Users',        icon: Users },
   { id: 'tasks',        label: 'Tasks',        icon: ClipboardList },
+  { id: 'contracts',    label: 'Contracts',    icon: ScrollText },
 ];
 
 export default function FounderDashboard() {
@@ -97,6 +99,20 @@ export default function FounderDashboard() {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [taskProcessing, setTaskProcessing] = useState(false);
   const [taskForm, setTaskForm] = useState({ assignee_id: '', title: '', description: '', priority: 'Medium', due_date: '' });
+
+  // Contracts tab
+  const [contractsList, setContractsList] = useState<any[]>([]);
+  const [contractsLoading, setContractsLoading] = useState(false);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [editingContract, setEditingContract] = useState<any>(null);
+  const [contractProcessing, setContractProcessing] = useState(false);
+  const [contractFilter, setContractFilter] = useState('all');
+  const [contractForm, setContractForm] = useState({
+    user_id: '', title: '', contract_type: 'Project', work_description: '',
+    deliverables: '', payment_amount: '', payment_currency: 'USD',
+    payment_terms: '', payment_schedule: '', start_date: '', end_date: '',
+    notes: '', status: 'sent',
+  });
 
   // Toast
   const [toast, setToast] = useState({ msg: '', type: 'success' });
@@ -301,6 +317,144 @@ export default function FounderDashboard() {
     if (!error) setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
   };
 
+  // ── Contracts ─────────────────────────────────────────────────────────────
+  const fetchContracts = useCallback(async () => {
+    setContractsLoading(true);
+    const { data } = await supabase
+      .from('contracts')
+      .select('*, user:profiles!contracts_user_id_fkey(id, username, avatar_url)')
+      .order('created_at', { ascending: false });
+    setContractsList(data || []);
+    setContractsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (hasAccess && activeTab === 'contracts') {
+      fetchContracts();
+      if (allUsers.length === 0) fetchUsers();
+    }
+  }, [hasAccess, activeTab, fetchContracts, fetchUsers, allUsers.length]);
+
+  const openEditContract = (c: any) => {
+    setEditingContract(c);
+    setContractForm({
+      user_id: c.user_id || '',
+      title: c.title || '',
+      contract_type: c.contract_type || 'Project',
+      work_description: c.work_description || '',
+      deliverables: c.deliverables || '',
+      payment_amount: c.payment_amount ? String(c.payment_amount) : '',
+      payment_currency: c.payment_currency || 'USD',
+      payment_terms: c.payment_terms || '',
+      payment_schedule: c.payment_schedule || '',
+      start_date: c.start_date || '',
+      end_date: c.end_date || '',
+      notes: c.notes || '',
+      status: c.status || 'sent',
+    });
+    setShowContractModal(true);
+  };
+
+  const closeContractModal = () => {
+    setShowContractModal(false);
+    setEditingContract(null);
+    setContractForm({
+      user_id: '', title: '', contract_type: 'Project', work_description: '',
+      deliverables: '', payment_amount: '', payment_currency: 'USD',
+      payment_terms: '', payment_schedule: '', start_date: '', end_date: '',
+      notes: '', status: 'sent',
+    });
+  };
+
+  const handleCreateContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contractForm.user_id || !contractForm.title || !contractForm.work_description) return;
+    setContractProcessing(true);
+    try {
+      const payload = {
+        user_id: contractForm.user_id,
+        title: contractForm.title,
+        contract_type: contractForm.contract_type,
+        work_description: contractForm.work_description,
+        deliverables: contractForm.deliverables || null,
+        payment_amount: contractForm.payment_amount ? parseFloat(contractForm.payment_amount) : null,
+        payment_currency: contractForm.payment_currency,
+        payment_terms: contractForm.payment_terms || null,
+        payment_schedule: contractForm.payment_schedule || null,
+        start_date: contractForm.start_date || null,
+        end_date: contractForm.end_date || null,
+        notes: contractForm.notes || null,
+        status: contractForm.status,
+      };
+
+      if (editingContract) {
+        // UPDATE
+        const { data, error } = await supabase
+          .from('contracts')
+          .update(payload)
+          .eq('id', editingContract.id)
+          .select('*, user:profiles!contracts_user_id_fkey(id, username, avatar_url)')
+          .single();
+        if (error) throw error;
+        setContractsList(prev => prev.map(c => c.id === editingContract.id ? data : c));
+        showToast('Contract updated!');
+      } else {
+        // INSERT
+        const { data, error } = await supabase
+          .from('contracts')
+          .insert({ ...payload, created_by: currentUserId, admin_signature: 'beoneofus' })
+          .select('*, user:profiles!contracts_user_id_fkey(id, username, avatar_url)')
+          .single();
+        if (error) throw error;
+        if (contractForm.status === 'sent') {
+          await supabase.from('notifications').insert({
+            receiver_id: contractForm.user_id,
+            actor_id: currentUserId,
+            type: 'message',
+            content: `sent you a contract to review and sign: "${contractForm.title}"`,
+          });
+        }
+        setContractsList(prev => [data, ...prev]);
+        showToast('Contract created & sent!');
+      }
+
+      closeContractModal();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setContractProcessing(false);
+    }
+  };
+
+  const handleContractStatusUpdate = async (contractId: string, newStatus: string) => {
+    const { error } = await supabase.from('contracts').update({ status: newStatus }).eq('id', contractId);
+    if (!error) {
+      setContractsList(prev => prev.map(c => c.id === contractId ? { ...c, status: newStatus } : c));
+      showToast(`Contract marked as ${newStatus}.`);
+
+      if (newStatus === 'sent') {
+        const contract = contractsList.find(c => c.id === contractId);
+        if (contract?.user_id) {
+          await supabase.from('notifications').insert({
+            receiver_id: contract.user_id,
+            actor_id: currentUserId,
+            type: 'message',
+            content: `sent you a contract to review and sign: "${contract.title}"`,
+          });
+        }
+      }
+    } else {
+      showToast('Failed to update status.', 'error');
+    }
+  };
+
+  const filteredContracts = contractsList.filter(c => {
+    if (contractFilter === 'pending') return ['sent', 'viewed'].includes(c.status);
+    if (contractFilter === 'signed') return ['signed', 'completed'].includes(c.status);
+    if (contractFilter === 'draft') return c.status === 'draft';
+    return true;
+  });
+
   const filteredTasks = tasks.filter(t => {
     if (taskFilter === 'pending') return t.status === 'pending' || t.status === 'in_progress';
     if (taskFilter === 'completed') return t.status === 'completed';
@@ -418,11 +572,12 @@ export default function FounderDashboard() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { label: 'Review Applications', desc: 'Accept or decline co-founder requests', icon: Crown, tab: 'applications', color: 'amber' },
                 { label: 'Manage Team Tasks',   desc: 'Assign and track all team objectives',  icon: ClipboardList, tab: 'tasks', color: 'violet' },
                 { label: 'Browse Users',         desc: 'View all platform members and their roles', icon: Users, tab: 'users', color: 'blue' },
+                { label: 'Contracts',            desc: 'Create and send work contracts to users',   icon: ScrollText, tab: 'contracts', color: 'emerald' },
               ].map(({ label, desc, icon: Icon, tab, color }) => (
                 <button key={label} onClick={() => setActiveTab(tab)}
                   className="flex items-start gap-4 p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-blue-500/40 hover:shadow-md transition-all text-left group">
@@ -588,6 +743,147 @@ export default function FounderDashboard() {
           </div>
         )}
 
+        {/* ── CONTRACTS ────────────────────────────────────────────────────────── */}
+        {activeTab === 'contracts' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <ScrollText size={20} className="text-emerald-500" /> Contracts
+                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({filteredContracts.length})</span>
+              </h2>
+              <div className="flex items-center gap-2">
+                <button onClick={fetchContracts} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-all">
+                  <RefreshCw size={12} /> Refresh
+                </button>
+                <button
+                  onClick={() => setShowContractModal(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                >
+                  <Plus size={14} /> New Contract
+                </button>
+              </div>
+            </div>
+
+            {/* Filter tabs */}
+            <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl w-fit">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'draft', label: 'Draft' },
+                { id: 'pending', label: 'Pending' },
+                { id: 'signed', label: 'Signed' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setContractFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${contractFilter === f.id ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {contractsLoading ? (
+              <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-emerald-500" size={24} /></div>
+            ) : filteredContracts.length === 0 ? (
+              <div className="py-16 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+                <ScrollText size={40} className="mx-auto mb-4 opacity-20" />
+                <p className="font-bold">No contracts found</p>
+                <button onClick={() => setShowContractModal(true)} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all">
+                  Create First Contract
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredContracts.map(c => {
+                  const statusColors: Record<string, string> = {
+                    draft:     'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700',
+                    sent:      'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
+                    viewed:    'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+                    signed:    'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+                    completed: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+                    expired:   'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
+                    cancelled: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
+                  };
+                  return (
+                    <div key={c.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 hover:border-gray-300 dark:hover:border-gray-700 transition-all">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0">
+                          <ScrollText size={16} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div>
+                              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{c.title}</h3>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${statusColors[c.status] || statusColors.draft}`}>
+                                  {c.status}
+                                </span>
+                                {c.contract_type && <Badge color="gray">{c.contract_type}</Badge>}
+                                {c.user?.username && (
+                                  <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">→ @{c.user.username}</span>
+                                )}
+                                {c.payment_amount && (
+                                  <span className="text-[11px] text-gray-500 dark:text-gray-400 font-bold">
+                                    ${Number(c.payment_amount).toLocaleString()} {c.payment_currency}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                              <button
+                                onClick={() => openEditContract(c)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-[11px] font-bold border border-gray-200 dark:border-gray-700 transition-all"
+                              >
+                                <PenLine size={11} /> Edit
+                              </button>
+                              {c.status === 'draft' && (
+                                <button
+                                  onClick={() => handleContractStatusUpdate(c.id, 'sent')}
+                                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-xl text-[11px] font-bold border border-blue-200 dark:border-blue-500/20 transition-all"
+                                >
+                                  <Send size={11} /> Send to User
+                                </button>
+                              )}
+                              {['signed', 'viewed'].includes(c.status) && (
+                                <button
+                                  onClick={() => handleContractStatusUpdate(c.id, 'completed')}
+                                  className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-xl text-[11px] font-bold border border-emerald-200 dark:border-emerald-500/20 transition-all"
+                                >
+                                  <CheckCircle2 size={11} /> Mark Complete
+                                </button>
+                              )}
+                              {!['cancelled', 'expired', 'completed'].includes(c.status) && (
+                                <button
+                                  onClick={() => handleContractStatusUpdate(c.id, 'cancelled')}
+                                  className="flex items-center gap-1 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl text-[11px] font-bold border border-red-200 dark:border-red-500/20 transition-all"
+                                >
+                                  <XCircle size={11} /> Cancel
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {c.work_description && (
+                            <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-2 line-clamp-2 leading-relaxed">{c.work_description}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 flex-wrap">
+                            <span className="text-[10px] text-gray-400 dark:text-gray-600">Created {new Date(c.created_at).toLocaleDateString()}</span>
+                            {c.end_date && <span className="text-[10px] text-gray-400 dark:text-gray-600">Due {new Date(c.end_date).toLocaleDateString()}</span>}
+                            {c.signed_at && <span className="text-[10px] text-emerald-500 font-bold">✓ Signed {new Date(c.signed_at).toLocaleDateString()}</span>}
+                          </div>
+                          {c.user_signature && (
+                            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">Signed as: {c.user_signature}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── TASKS ─────────────────────────────────────────────────────────────── */}
         {activeTab === 'tasks' && (
           <div className="space-y-4">
@@ -692,6 +988,132 @@ export default function FounderDashboard() {
           </div>
         )}
       </div>
+
+      {/* ── Create Contract Modal ─────────────────────────────────────────────── */}
+      {showContractModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeContractModal} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl overflow-y-auto animate-in zoom-in-95 duration-200" style={{ maxHeight: '90vh' }}>
+            <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between rounded-t-[2rem] z-10">
+              <h2 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <ScrollText size={17} className="text-emerald-500" /> {editingContract ? 'Edit Contract' : 'New Work Contract'}
+              </h2>
+              <button onClick={closeContractModal} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-500 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateContract} className="p-6 space-y-4">
+              {/* Assign to user */}
+              <div>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Assign To *</label>
+                <select required value={contractForm.user_id} onChange={e => setContractForm({ ...contractForm, user_id: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all text-gray-900 dark:text-gray-100">
+                  <option value="">Select a user…</option>
+                  {allUsers.map(u => <option key={u.id} value={u.id}>@{u.username}</option>)}
+                </select>
+              </div>
+
+              {/* Title + Type */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Contract Title *</label>
+                  <input required type="text" value={contractForm.title} onChange={e => setContractForm({ ...contractForm, title: e.target.value })}
+                    placeholder="e.g. Frontend Dev Contract"
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-all text-gray-900 dark:text-gray-100" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Type</label>
+                  <select value={contractForm.contract_type} onChange={e => setContractForm({ ...contractForm, contract_type: e.target.value })}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-all text-gray-900 dark:text-gray-100">
+                    {['Project', 'Freelance', 'Employment', 'Service', 'Consulting', 'Internship'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Work description */}
+              <div>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Scope of Work *</label>
+                <textarea required rows={4} value={contractForm.work_description} onChange={e => setContractForm({ ...contractForm, work_description: e.target.value })}
+                  placeholder="Describe the work to be done in detail…"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-all resize-none text-gray-900 dark:text-gray-100" />
+              </div>
+
+              {/* Deliverables */}
+              <div>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Deliverables</label>
+                <textarea rows={3} value={contractForm.deliverables} onChange={e => setContractForm({ ...contractForm, deliverables: e.target.value })}
+                  placeholder="List the expected deliverables…"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-all resize-none text-gray-900 dark:text-gray-100" />
+              </div>
+
+              {/* Payment */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Total Amount</label>
+                  <div className="relative">
+                    <DollarSign size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input type="number" min="0" step="0.01" value={contractForm.payment_amount} onChange={e => setContractForm({ ...contractForm, payment_amount: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-8 pr-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-all text-gray-900 dark:text-gray-100" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Currency</label>
+                  <select value={contractForm.payment_currency} onChange={e => setContractForm({ ...contractForm, payment_currency: e.target.value })}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-all text-gray-900 dark:text-gray-100">
+                    {['USD', 'EUR', 'GBP', 'KES', 'NGN', 'ZAR'].map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Payment terms */}
+              <div>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Payment Terms</label>
+                <input type="text" value={contractForm.payment_terms} onChange={e => setContractForm({ ...contractForm, payment_terms: e.target.value })}
+                  placeholder="e.g. 50% upfront, 50% on completion"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-all text-gray-900 dark:text-gray-100" />
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Start Date</label>
+                  <input type="date" value={contractForm.start_date} onChange={e => setContractForm({ ...contractForm, start_date: e.target.value })}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-all text-gray-500 dark:text-gray-400 [color-scheme:dark]" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">End Date</label>
+                  <input type="date" value={contractForm.end_date} onChange={e => setContractForm({ ...contractForm, end_date: e.target.value })}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-all text-gray-500 dark:text-gray-400 [color-scheme:dark]" />
+                </div>
+              </div>
+
+              {/* Status on create */}
+              <div>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">On Create</label>
+                <div className="flex gap-2">
+                  {[{ v: 'draft', label: 'Save as Draft' }, { v: 'sent', label: 'Send Immediately' }].map(opt => (
+                    <button type="button" key={opt.v} onClick={() => setContractForm({ ...contractForm, status: opt.v })}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all ${contractForm.status === opt.v ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-emerald-500'}`}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button type="submit" disabled={contractProcessing || !contractForm.user_id || !contractForm.title || !contractForm.work_description}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
+                {contractProcessing ? <Loader2 size={16} className="animate-spin" /> : <ScrollText size={16} />}
+                {contractProcessing
+                  ? (editingContract ? 'Saving…' : 'Creating…')
+                  : editingContract
+                    ? 'Save Changes'
+                    : contractForm.status === 'draft' ? 'Save Contract' : 'Create & Send Contract'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── Assign Task Modal ──────────────────────────────────────────────────── */}
       {showTaskModal && (

@@ -5,7 +5,7 @@ import {
   Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
   GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
   ShoppingBag, User, BookOpen, Sparkles, Zap, Compass, BarChart2, Briefcase,
-  Map, Trophy,
+  Map, Trophy, ScrollText,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -398,6 +398,7 @@ export default function Sidebar({ onClose }) {
       items: [
         { id: 'marketplace',  icon: ShoppingBag,    label: t('nav.items.marketplace')  },
         { id: 'services',     icon: Briefcase,      label: 'Services',          isNew: true },
+        { id: 'contracts',    icon: ScrollText,     label: 'Contracts',         isNew: true },
         { id: 'coaching',     icon: GraduationCap,  label: t('nav.items.coaching')     },
         { id: 'mentorship',   icon: HeartHandshake, label: t('nav.items.mentorship')   },
         { id: 'partnerships', icon: Handshake,      label: t('nav.items.partnerships') },

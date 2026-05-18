@@ -731,6 +731,9 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [interviewStatusFilter, setInterviewStatusFilter] = useState("all");
   const [expandedRoomId, setExpandedRoomId] = useState(null);
   const [roomAnswers, setRoomAnswers] = useState({});
+  const [deletingRoomId, setDeletingRoomId] = useState(null);
+  const [confirmDeleteAllRooms, setConfirmDeleteAllRooms] = useState(false);
+  const [deletingAllRooms, setDeletingAllRooms] = useState(false);
 
   // Invite
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -1042,6 +1045,25 @@ const AdminPanelTool = ({ currentUserId }) => {
       .order("question_index");
     setRoomAnswers(prev => ({ ...prev, [roomId]: data || [] }));
     setExpandedRoomId(roomId);
+  };
+
+  const handleDeleteRoom = async (roomId) => {
+    setDeletingRoomId(roomId);
+    await supabase.from("interview_answers").delete().eq("room_id", roomId);
+    await supabase.from("interview_rooms").delete().eq("id", roomId);
+    setInterviewRooms(prev => prev.filter(r => r.id !== roomId));
+    setDeletingRoomId(null);
+  };
+
+  const handleDeleteAllRooms = async (ids) => {
+    setDeletingAllRooms(true);
+    if (ids.length) {
+      await supabase.from("interview_answers").delete().in("room_id", ids);
+      await supabase.from("interview_rooms").delete().in("id", ids);
+    }
+    setInterviewRooms([]);
+    setDeletingAllRooms(false);
+    setConfirmDeleteAllRooms(false);
   };
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -1980,6 +2002,40 @@ const AdminPanelTool = ({ currentUserId }) => {
         {/* ── INTERVIEWS ── */}
         {adminTab === "interviews" && (
           <div className="space-y-4">
+            {/* Delete All confirm modal */}
+            {confirmDeleteAllRooms && (() => {
+              const filtered = interviewRooms.filter(r => {
+                if (interviewStatusFilter === "all") return true;
+                if (interviewStatusFilter === "passed") return r.status === "completed" && r.overall_score != null && r.overall_score >= 70;
+                if (interviewStatusFilter === "failed") return r.status === "completed" && (r.overall_score == null || r.overall_score < 70);
+                return r.status === interviewStatusFilter;
+              });
+              return (
+                <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-700 animate-in zoom-in-95 duration-200">
+                    <div className="flex items-center gap-3 mb-3">
+                      <AlertTriangle size={22} className="text-red-500 shrink-0" />
+                      <h3 className="font-black text-gray-900 dark:text-gray-100">Delete {filtered.length} Interview{filtered.length !== 1 ? "s" : ""}?</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
+                      This will permanently delete the selected interview rooms and all their answers. This cannot be undone.
+                    </p>
+                    <div className="flex gap-3">
+                      <button onClick={() => setConfirmDeleteAllRooms(false)} disabled={deletingAllRooms}
+                        className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">
+                        Cancel
+                      </button>
+                      <button onClick={() => handleDeleteAllRooms(filtered.map(r => r.id))} disabled={deletingAllRooms}
+                        className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                        {deletingAllRooms ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        {deletingAllRooms ? "Deleting…" : "Delete All"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <h3 className="text-gray-900 dark:text-white font-black text-xl">Interview Rooms</h3>
@@ -1994,6 +2050,12 @@ const AdminPanelTool = ({ currentUserId }) => {
                     </button>
                   ))}
                 </div>
+                {interviewRooms.length > 0 && (
+                  <button onClick={() => setConfirmDeleteAllRooms(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold transition-all shadow-sm">
+                    <Trash2 size={13} /> Delete All
+                  </button>
+                )}
                 <button onClick={fetchRooms} disabled={interviewsLoading}
                   className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50">
                   <RefreshCw size={13} className={interviewsLoading ? "animate-spin" : ""} /> Refresh

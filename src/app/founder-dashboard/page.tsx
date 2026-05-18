@@ -701,6 +701,58 @@ export default function FounderDashboard() {
     setUserActionLoading(null);
   };
 
+  // Promote a co-member to co-founder access (admin only, no re-apply needed)
+  const handlePromoteToFounder = async (
+    userId: string,
+    username: string,
+    source: 'app' | 'user',
+    appId?: string,
+  ) => {
+    if (!window.confirm(`Grant co-founder dashboard access to @${username}? They won't need to re-apply.`)) return;
+    if (source === 'user') setUserActionLoading(userId); else setAppActionLoading(true);
+    try {
+      // Upsert a cofounder application marked accepted
+      const { data: existing } = await supabase
+        .from('founder_applications')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('intended_role', 'cofounder')
+        .limit(1)
+        .single();
+
+      if (existing) {
+        await supabase.from('founder_applications').update({ status: 'accepted' }).eq('id', existing.id);
+      } else {
+        await supabase.from('founder_applications').insert({
+          user_id: userId,
+          intended_role: 'cofounder',
+          status: 'accepted',
+          name: username,
+          skills: 'Promoted by admin',
+          experience: 'Promoted by admin',
+          reason: { note: 'Directly promoted to co-founder by admin.' },
+        });
+      }
+
+      await supabase.from('profiles').update({ role: 'founder' }).eq('id', userId);
+
+      await supabase.from('notifications').insert({
+        receiver_id: userId,
+        actor_id: currentUserId,
+        type: 'message',
+        content: `You've been granted co-founder access! You can now use the Founder Workspace.`,
+      });
+
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: 'founder' } : u));
+      if (appId) setApplications(prev => prev.map(a => a.id === appId ? { ...a, promoted: true } : a));
+      showToast(`@${username} promoted to co-founder.`);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      if (source === 'user') setUserActionLoading(null); else setAppActionLoading(false);
+    }
+  };
+
   const handleCreateContract = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contractForm.user_id || !contractForm.title || !contractForm.work_description) return;
@@ -988,7 +1040,7 @@ export default function FounderDashboard() {
                 { label: 'Browse Users',         desc: 'View all platform members and their roles', icon: Users, tab: 'users', color: 'blue' },
                 { label: 'Contracts',            desc: 'Create and send work contracts to users',   icon: ScrollText, tab: 'contracts', color: 'emerald' },
               ].map(({ label, desc, icon: Icon, tab, color }) => (
-                <button key={label} onClick={() => setActiveTab(tab)}
+                <button key={label} onClick={() => handleTabClick(tab)}
                   className="flex items-start gap-4 p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-blue-500/40 hover:shadow-md transition-all text-left group">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                     color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500' :
@@ -1075,14 +1127,26 @@ export default function FounderDashboard() {
                           </>
                         )}
                         {app.status === 'accepted' && (
-                          <button
-                            onClick={() => handleRevokeApplication(app.id, app.user_id, app.intended_role)}
-                            disabled={appActionLoading}
-                            className="px-3 py-1.5 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-500/20 rounded-xl text-xs font-bold border border-orange-200 dark:border-orange-500/20 transition-all disabled:opacity-50 flex items-center gap-1"
-                          >
-                            {appActionLoading ? <Loader2 size={12} className="animate-spin" /> : <UserX size={12} />}
-                            Revoke Access
-                          </button>
+                          <>
+                            {app.intended_role === 'member' && !app.promoted && (
+                              <button
+                                onClick={() => handlePromoteToFounder(app.user_id, app.profiles?.username || 'user', 'app', app.id)}
+                                disabled={appActionLoading}
+                                className="px-3 py-1.5 bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-500/20 rounded-xl text-xs font-bold border border-violet-200 dark:border-violet-500/20 transition-all disabled:opacity-50 flex items-center gap-1"
+                              >
+                                {appActionLoading ? <Loader2 size={12} className="animate-spin" /> : <Crown size={12} />}
+                                Make Co-Founder
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleRevokeApplication(app.id, app.user_id, app.intended_role)}
+                              disabled={appActionLoading}
+                              className="px-3 py-1.5 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-500/20 rounded-xl text-xs font-bold border border-orange-200 dark:border-orange-500/20 transition-all disabled:opacity-50 flex items-center gap-1"
+                            >
+                              {appActionLoading ? <Loader2 size={12} className="animate-spin" /> : <UserX size={12} />}
+                              Revoke Access
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -1211,6 +1275,15 @@ export default function FounderDashboard() {
                             className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-gray-400 hover:text-violet-500 rounded-lg border border-gray-200 dark:border-gray-700 transition-all" title="Assign task">
                             <ClipboardList size={13} />
                           </button>
+                          {user.role === 'member' && (
+                            <button
+                              onClick={() => handlePromoteToFounder(user.id, user.username, 'user')}
+                              disabled={isActioning || user.id === currentUserId}
+                              className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-gray-400 hover:text-violet-500 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-violet-200 transition-all disabled:opacity-40"
+                              title="Promote to co-founder">
+                              {isActioning ? <Loader2 size={13} className="animate-spin" /> : <Crown size={13} />}
+                            </button>
+                          )}
                           {(user.role === 'founder' || user.role === 'member') && (
                             <button
                               onClick={() => handleRevokeAccess(user.id, user.username, user.role)}

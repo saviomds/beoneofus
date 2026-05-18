@@ -43,88 +43,125 @@ function MentorCard({ mentor, isPremium, onBook, isMe, onEdit }) {
   const rating = mentor.rating ? Number(mentor.rating).toFixed(1) : "5.0";
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800/50 transition-all flex flex-col gap-3">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-            {profile?.avatar_url ? (
-              <Image src={profile.avatar_url} alt="" fill sizes="48px" className="object-cover" />
-            ) : (
-              <span className="text-white font-black text-lg">{initials}</span>
-            )}
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1 flex-wrap">
-              <p className="text-sm font-black text-gray-900 dark:text-white truncate">@{profile?.username}</p>
-              {profile?.is_verified && (
-                <BadgeCheck size={14} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />
-              )}
-              {profile?.is_premium && (
-                <Crown size={12} className="text-amber-500 shrink-0" fill="currentColor" strokeWidth={1} />
-              )}
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{mentor.headline || "Mentor"}</p>
-          </div>
+    <div className="group relative bg-white dark:bg-gray-900/80 border border-gray-100 dark:border-white/[0.06] rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 dark:hover:shadow-indigo-500/5 hover:-translate-y-1 transition-all duration-300 flex flex-col">
+
+      {/* Gradient header band */}
+      <div className="relative h-24 bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 shrink-0">
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "16px 16px" }}
+        />
+        <div className="absolute -bottom-6 -right-6 w-28 h-28 bg-white/10 rounded-full blur-2xl" />
+
+        {/* Rating pill */}
+        <div className="absolute top-3.5 right-3.5 flex items-center gap-1 bg-black/20 backdrop-blur-sm border border-white/20 rounded-lg px-2.5 py-1">
+          <Star size={11} className="text-amber-300" fill="currentColor" strokeWidth={0} />
+          <span className="text-[11px] font-black text-white">{rating}</span>
         </div>
-        <div className="flex items-center gap-1 shrink-0 ml-2">
-          <Star size={12} className="text-amber-400" fill="currentColor" strokeWidth={0} />
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{rating}</span>
-        </div>
+
+        {/* "You" label */}
+        {isMe && (
+          <div className="absolute top-3.5 left-3.5 text-[9px] font-black text-white/90 bg-white/20 border border-white/25 px-2 py-1 rounded-lg uppercase tracking-[1.5px]">
+            Your card
+          </div>
+        )}
       </div>
 
-      {/* Bio */}
-      {mentor.bio && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">{mentor.bio}</p>
-      )}
-
-      {/* Skills */}
-      {mentor.skills?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {mentor.skills.slice(0, 5).map(skill => (
-            <SkillTag key={skill} skill={skill} />
-          ))}
-          {mentor.skills.length > 5 && (
-            <span className="text-[10px] font-bold px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-lg">
-              +{mentor.skills.length - 5}
-            </span>
+      {/* Avatar — overlaps the header */}
+      <div className="px-5 -mt-8 mb-1 flex items-end gap-3">
+        <div className="relative w-16 h-16 rounded-2xl overflow-hidden shrink-0 bg-gradient-to-br from-indigo-400 to-violet-500 border-[3px] border-white dark:border-gray-900 shadow-lg flex items-center justify-center">
+          {profile?.avatar_url ? (
+            <Image src={profile.avatar_url} alt="" fill sizes="64px" className="object-cover" />
+          ) : (
+            <span className="text-white font-black text-2xl leading-none">{initials}</span>
           )}
         </div>
-      )}
-
-      {/* Meta */}
-      <div className="flex items-center gap-4 text-[10px] font-bold text-gray-400">
-        <span className="flex items-center gap-1">
-          <BookOpen size={10} /> {mentor.session_count || 0} sessions
-        </span>
-        <span className="flex items-center gap-1">
-          <Clock size={10} /> {mentor.availability || "Flexible"}
-        </span>
+        <div className="flex items-center gap-1.5 mb-2 pb-0.5">
+          {profile?.is_verified && (
+            <BadgeCheck size={17} className="text-blue-500" fill="currentColor" stroke="white" />
+          )}
+          {profile?.is_premium && (
+            <Crown size={15} className="text-amber-500" fill="currentColor" strokeWidth={1} />
+          )}
+        </div>
       </div>
 
-      {/* CTA */}
-      {isMe ? (
-        <button
-          onClick={onEdit}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl transition-all"
-        >
-          <Edit2 size={12} /> Edit Your Profile
-        </button>
-      ) : isPremium ? (
-        <button
-          onClick={() => onBook(mentor)}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
-        >
-          <Sparkles size={12} /> Book Mentorship Session
-        </button>
-      ) : (
-        <Link
-          href="/dash/premium"
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-xl transition-all border border-amber-200 dark:border-amber-500/20"
-        >
-          <Crown size={12} /> Premium to Book
-        </Link>
-      )}
+      {/* Body */}
+      <div className="px-5 pb-6 flex flex-col gap-4 flex-1">
+
+        {/* Name & headline */}
+        <div>
+          <p className="text-base font-black text-gray-900 dark:text-white leading-tight">
+            @{profile?.username}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+            {mentor.headline || "Available for mentorship"}
+          </p>
+        </div>
+
+        {/* Bio */}
+        {mentor.bio && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-3 border-l-2 border-indigo-200 dark:border-indigo-500/30 pl-3">
+            {mentor.bio}
+          </p>
+        )}
+
+        {/* Skills */}
+        {mentor.skills?.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {mentor.skills.slice(0, 5).map(skill => (
+              <SkillTag key={skill} skill={skill} />
+            ))}
+            {mentor.skills.length > 5 && (
+              <span className="text-[10px] font-bold px-2.5 py-1 bg-gray-100 dark:bg-white/[0.05] text-gray-500 dark:text-gray-400 rounded-lg border border-gray-200 dark:border-white/[0.06]">
+                +{mentor.skills.length - 5} more
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Meta row */}
+        <div className="flex items-center gap-4 pt-1 border-t border-gray-100 dark:border-white/[0.05]">
+          <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+            <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
+              <BookOpen size={11} className="text-indigo-500" />
+            </div>
+            {mentor.session_count || 0} sessions
+          </div>
+          <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+            <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
+              <Clock size={11} className="text-indigo-500" />
+            </div>
+            {mentor.availability || "Flexible"}
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="mt-auto pt-1">
+          {isMe ? (
+            <button
+              onClick={onEdit}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.08] text-gray-700 dark:text-gray-300 text-sm font-bold rounded-2xl transition-all"
+            >
+              <Edit2 size={13} /> Edit Profile
+            </button>
+          ) : isPremium ? (
+            <button
+              onClick={() => onBook(mentor)}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-500/25 active:scale-[0.98]"
+            >
+              <Sparkles size={13} /> Book a Session
+            </button>
+          ) : (
+            <Link
+              href="/dash/premium"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-bold rounded-2xl transition-all border border-amber-200 dark:border-amber-500/25"
+            >
+              <Crown size={13} /> Unlock with Premium
+            </Link>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -512,7 +549,7 @@ export default function MentorshipContent() {
 
       {/* Mentors grid */}
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {filtered.map(mentor => (
             <div key={mentor.id} className="relative">
               {booking === mentor.user_id && (

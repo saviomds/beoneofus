@@ -28,13 +28,15 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 function Toast({ message, type }) {
   if (!message) return null;
   return (
-    <div className={`fixed bottom-6 right-6 z-[500] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border
-      animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-sm
+    <div className={`fixed bottom-6 right-6 z-[500] flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border backdrop-blur-xl
+      animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-xs
       ${type === "error"
-        ? "bg-white dark:bg-[#0f0a0a] border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400"
-        : "bg-white dark:bg-[#0a0f0a] border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400"}`}>
-      {type === "error" ? <AlertTriangle size={15} className="shrink-0" /> : <Check size={15} className="shrink-0" />}
-      <span className="text-xs font-bold tracking-tight">{message}</span>
+        ? "bg-white/95 dark:bg-gray-900/95 border-red-200/60 dark:border-red-500/20 text-red-600 dark:text-red-400 shadow-red-500/10"
+        : "bg-white/95 dark:bg-gray-900/95 border-emerald-200/60 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 shadow-emerald-500/10"}`}>
+      <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${type === "error" ? "bg-red-50 dark:bg-red-500/10" : "bg-emerald-50 dark:bg-emerald-500/10"}`}>
+        {type === "error" ? <AlertTriangle size={12} /> : <Check size={12} />}
+      </div>
+      <span className="text-xs font-semibold tracking-tight">{message}</span>
     </div>
   );
 }
@@ -50,27 +52,27 @@ function useToast() {
 
 function StatCard({ icon: Icon, label, value, sub, color = "blue", loading }) {
   const palette = {
-    blue:   { border: "border-blue-200 dark:border-blue-500/20",   bg: "bg-blue-50 dark:bg-blue-500/5",   icon: "text-blue-500 dark:text-blue-400",   val: "text-blue-600 dark:text-blue-300" },
-    amber:  { border: "border-amber-200 dark:border-amber-500/20",  bg: "bg-amber-50 dark:bg-amber-500/5",  icon: "text-amber-500 dark:text-amber-400",  val: "text-amber-600 dark:text-amber-300" },
-    violet: { border: "border-violet-200 dark:border-violet-500/20", bg: "bg-violet-50 dark:bg-violet-500/5", icon: "text-violet-500 dark:text-violet-400", val: "text-violet-600 dark:text-violet-300" },
-    emerald:{ border: "border-emerald-200 dark:border-emerald-500/20",bg: "bg-emerald-50 dark:bg-emerald-500/5",icon: "text-emerald-500 dark:text-emerald-400",val: "text-emerald-600 dark:text-emerald-300" },
-    rose:   { border: "border-rose-200 dark:border-rose-500/20",   bg: "bg-rose-50 dark:bg-rose-500/5",   icon: "text-rose-500 dark:text-rose-400",   val: "text-rose-600 dark:text-rose-300" },
+    blue:   { border: "border-blue-100 dark:border-blue-500/10",   bg: "bg-white dark:bg-gray-900/70",   icon: "text-blue-500",    iconBg: "bg-blue-50 dark:bg-blue-500/10",    val: "text-blue-600 dark:text-blue-400",    glowBg: "bg-blue-400" },
+    amber:  { border: "border-amber-100 dark:border-amber-500/10",  bg: "bg-white dark:bg-gray-900/70",  icon: "text-amber-500",   iconBg: "bg-amber-50 dark:bg-amber-500/10",   val: "text-amber-600 dark:text-amber-400",   glowBg: "bg-amber-400" },
+    violet: { border: "border-violet-100 dark:border-violet-500/10", bg: "bg-white dark:bg-gray-900/70", icon: "text-violet-500",  iconBg: "bg-violet-50 dark:bg-violet-500/10",  val: "text-violet-600 dark:text-violet-400",  glowBg: "bg-violet-400" },
+    emerald:{ border: "border-emerald-100 dark:border-emerald-500/10",bg: "bg-white dark:bg-gray-900/70",icon: "text-emerald-500", iconBg: "bg-emerald-50 dark:bg-emerald-500/10", val: "text-emerald-600 dark:text-emerald-400", glowBg: "bg-emerald-400" },
+    rose:   { border: "border-rose-100 dark:border-rose-500/10",   bg: "bg-white dark:bg-gray-900/70",   icon: "text-rose-500",    iconBg: "bg-rose-50 dark:bg-rose-500/10",    val: "text-rose-600 dark:text-rose-400",    glowBg: "bg-rose-400" },
   };
   const c = palette[color];
   const display = typeof value === "number" ? value.toLocaleString() : (value ?? "—");
   const len = String(display).length;
   const sizeClass = len > 9 ? "text-base" : len > 6 ? "text-xl" : len > 4 ? "text-2xl" : "text-3xl";
   return (
-    <div className={`relative overflow-hidden rounded-2xl border ${c.border} ${c.bg} p-4`}>
-      <div className="flex items-start justify-between mb-2">
-        <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.12em] leading-tight pr-1">{label}</p>
-        <div className={`${c.icon} opacity-60 shrink-0`}><Icon size={14} /></div>
+    <div className={`relative overflow-hidden rounded-2xl border ${c.border} ${c.bg} p-4 shadow-sm hover:shadow-md transition-all duration-200 group cursor-default`}>
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.15em] leading-tight pr-1">{label}</p>
+        <div className={`${c.iconBg} ${c.icon} w-7 h-7 rounded-lg flex items-center justify-center shrink-0`}><Icon size={13} /></div>
       </div>
       <p className={`${sizeClass} font-black tabular-nums leading-tight ${c.val} break-all`}>
         {loading ? <Loader2 size={18} className="animate-spin" /> : display}
       </p>
-      {sub && <p className="text-[9px] text-gray-500 dark:text-gray-600 mt-1 font-medium truncate">{sub}</p>}
-      <div className={`absolute -bottom-6 -right-6 w-20 h-20 rounded-full blur-2xl opacity-10 ${c.icon} bg-current`} />
+      {sub && <p className="text-[9px] text-gray-400 dark:text-gray-600 mt-1.5 font-semibold truncate">{sub}</p>}
+      <div className={`absolute -bottom-8 -right-8 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-15 transition-opacity duration-500 ${c.glowBg}`} />
     </div>
   );
 }
@@ -620,6 +622,9 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [showUserDeleteConfirm, setShowUserDeleteConfirm] = useState(null);
   const [showAdminToggleConfirm, setShowAdminToggleConfirm] = useState(null);
   const [showPremiumToggleConfirm, setShowPremiumToggleConfirm] = useState(null);
+  const [trialMode, setTrialMode] = useState({ active: false, expires_at: null, user_count: 0 });
+  const [trialLoading, setTrialLoading] = useState(false);
+  const [showTrialConfirm, setShowTrialConfirm] = useState(null);
   const [taskForm, setTaskForm] = useState({ assignee_id: "", title: "", description: "", priority: "Medium", linked_to: "" });
   const [taskFilter, setTaskFilter] = useState("All");
   const [teamMembers, setTeamMembers] = useState([]);
@@ -755,6 +760,11 @@ const AdminPanelTool = ({ currentUserId }) => {
         const { data: reqs } = await supabase.from("profiles")
           .select("id, username, avatar_url, status").eq("verification_status", "pending");
         setRequests(reqs || []);
+        const [{ data: trialSetting }, { count: trialCount }] = await Promise.all([
+          supabase.from("platform_settings").select("value").eq("key", "premium_trial").single(),
+          supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_trial_premium", true),
+        ]);
+        if (trialSetting?.value) setTrialMode({ ...trialSetting.value, user_count: trialCount ?? 0 });
       }
       setLoading(false);
     };
@@ -1171,6 +1181,28 @@ const AdminPanelTool = ({ currentUserId }) => {
     finally { setActionProcessing(false); }
   };
 
+  const handleTrialMode = async (action) => {
+    setTrialLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/premium-trial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ action }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed");
+      setTrialMode(json.trialMode);
+      fetchStats();
+      showToast(action === "enable" ? "Premium trial activated for all users." : "Premium trial deactivated.");
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setTrialLoading(false);
+      setShowTrialConfirm(null);
+    }
+  };
+
   const handleDeleteUser = async (userId, username) => {
     setActionProcessing(true);
     try {
@@ -1298,9 +1330,11 @@ const AdminPanelTool = ({ currentUserId }) => {
 
   if (!isAdmin) return (
     <div className="flex flex-col items-center justify-center h-full p-16 text-center">
-      <ShieldAlert size={48} className="text-red-500/30 mb-6" />
-      <p className="text-red-500 dark:text-red-400 font-black text-lg mb-2">Unauthorized</p>
-      <p className="text-gray-500 dark:text-gray-600 text-sm max-w-xs leading-relaxed">Your node lacks admin clearance to access this terminal.</p>
+      <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 flex items-center justify-center mb-5">
+        <ShieldAlert size={28} className="text-red-400" />
+      </div>
+      <p className="text-gray-900 dark:text-white font-black text-lg mb-1.5">Access Denied</p>
+      <p className="text-gray-400 dark:text-gray-600 text-sm max-w-xs leading-relaxed">Your node lacks admin clearance to access this control terminal.</p>
     </div>
   );
 
@@ -1319,24 +1353,31 @@ const AdminPanelTool = ({ currentUserId }) => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full overflow-hidden bg-gray-50 dark:bg-[#0c0c12]">
-      {/* Navigation Sidebar (redesigned) */}
-      <div className="w-full md:w-56 shrink-0 bg-white/50 dark:bg-black/20 border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800 p-3 flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-y-auto no-scrollbar">
-        <p className="hidden md:block text-[9px] font-black text-gray-400 uppercase tracking-[2px] px-3 mb-4 mt-2">Control Terminal</p>
+    <div className="flex flex-col md:flex-row h-full overflow-hidden bg-gray-50/80 dark:bg-[#08080f]">
+      {/* Navigation Sidebar */}
+      <div className="w-full md:w-60 shrink-0 bg-white dark:bg-[#0d0d1a] border-b md:border-b-0 md:border-r border-gray-100 dark:border-white/[0.04] p-3 flex flex-row md:flex-col gap-0.5 overflow-x-auto md:overflow-y-auto no-scrollbar">
+        <div className="hidden md:flex items-center gap-2.5 px-3 mb-5 mt-2">
+          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <ShieldAlert size={13} className="text-white" />
+          </div>
+          <div>
+            <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[2.5px]">Control Terminal</p>
+          </div>
+        </div>
         {TABS.map(tab => {
           const isActive = adminTab === tab.id;
-          const hasAlert = (tab.id === "requests" && requests.length > 0) || 
+          const hasAlert = (tab.id === "requests" && requests.length > 0) ||
                            (tab.id === "premium_subs" && premiumSubs.filter(s => s.status === "pending_review").length > 0);
           return (
             <button key={tab.id} onClick={() => setAdminTab(tab.id)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[11px] md:text-xs font-bold whitespace-nowrap transition-all group relative
-                ${isActive 
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" 
-                  : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-white/5"}`}>
-              <tab.icon size={15} className={isActive ? "text-white" : "text-gray-400 group-hover:text-blue-500"} />
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[11px] md:text-xs font-bold whitespace-nowrap transition-all duration-200 group relative
+                ${isActive
+                  ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/25"
+                  : "text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.04]"}`}>
+              <tab.icon size={14} className={isActive ? "text-white/90" : "text-gray-400 dark:text-gray-600 group-hover:text-blue-500 transition-colors"} />
               <span className="flex-1 text-left">{tab.label}</span>
               {hasAlert && (
-                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-white" : "bg-blue-500"} animate-pulse`} />
+                <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-white/70" : "bg-blue-500"} animate-pulse`} />
               )}
             </button>
           );
@@ -1349,14 +1390,20 @@ const AdminPanelTool = ({ currentUserId }) => {
         {/* ── OVERVIEW ── */}
         {adminTab === "overview" && (
           <div className="space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-gray-900 dark:text-white font-black text-2xl tracking-tight">Overview</h3>
-                <p className="text-gray-500 text-xs font-medium">Real-time platform metrics and system vitals.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={fetchStats} className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 transition-all border border-gray-200 dark:border-gray-700 shadow-sm active:scale-95">
-                  <RefreshCw size={14} className={statsLoading ? "animate-spin" : ""} /> Sync Data
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-600 to-violet-700 p-6 shadow-lg shadow-blue-500/20">
+              <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "24px 24px" }} />
+              <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/5 rounded-full blur-3xl" />
+              <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400" />
+                    <p className="text-[10px] font-black text-blue-200/80 uppercase tracking-[2.5px]">Live Dashboard</p>
+                  </div>
+                  <h3 className="text-white font-black text-2xl tracking-tight">Platform Overview</h3>
+                  <p className="text-blue-200/60 text-xs font-medium mt-0.5">Real-time metrics & system vitals</p>
+                </div>
+                <button onClick={fetchStats} className="flex items-center gap-1.5 px-4 py-2 bg-white/15 hover:bg-white/25 rounded-xl text-xs font-bold text-white transition-all border border-white/20 backdrop-blur-sm active:scale-95 shrink-0">
+                  <RefreshCw size={13} className={statsLoading ? "animate-spin" : ""} /> Sync Data
                 </button>
               </div>
             </div>
@@ -1372,48 +1419,53 @@ const AdminPanelTool = ({ currentUserId }) => {
 
             {/* Verification rate */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Verification Coverage</p>
-                  <span className="text-emerald-500 font-black text-xs">{stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0}%</span>
+              <div className="bg-white dark:bg-gray-900/70 border border-gray-100 dark:border-white/[0.05] rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.15em]">Verification Coverage</p>
+                  <span className="text-[11px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg">{stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0}%</span>
                 </div>
-                <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-2.5">
                   <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-700"
                     style={{ width: `${stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0}%` }} />
                 </div>
-                <div className="flex justify-between mt-2">
-                  <span className="text-[10px] text-gray-500 dark:text-gray-600">{stats.verified} verified</span>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-600">{stats.total} total</span>
+                <div className="flex justify-between">
+                  <span className="text-[10px] text-gray-400 dark:text-gray-600 font-medium">{stats.verified} verified</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-600 font-medium">{stats.total} total</span>
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Awaiting Action</p>
-                  <span className="text-amber-500 font-black text-xs">{stats.pending + stats.premiumReq} items</span>
+              <div className="bg-white dark:bg-gray-900/70 border border-gray-100 dark:border-white/[0.05] rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.15em]">Awaiting Action</p>
+                  <span className="text-[11px] font-black text-amber-500 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-lg">{stats.pending + stats.premiumReq} items</span>
                 </div>
                 <div className="flex gap-4">
-                   <div className="flex-1">
-                      <p className="text-xl font-black text-gray-900 dark:text-white">{stats.pending}</p>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase">Verifications</p>
-                   </div>
-                   <div className="w-px h-8 bg-gray-100 dark:bg-gray-800" />
-                   <div className="flex-1">
-                      <p className="text-xl font-black text-gray-900 dark:text-white">{stats.premiumReq}</p>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase">Premium Req</p>
-                   </div>
+                  <div className="flex-1">
+                    <p className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">{stats.pending}</p>
+                    <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wide mt-0.5">Verifications</p>
+                  </div>
+                  <div className="w-px bg-gray-100 dark:bg-white/[0.05]" />
+                  <div className="flex-1">
+                    <p className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">{stats.premiumReq}</p>
+                    <p className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wide mt-0.5">Premium Req</p>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Live Traffic Panel */}
-            <div className="bg-white dark:bg-gray-900 border border-violet-200 dark:border-violet-500/20 rounded-3xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Live Traffic Monitor</p>
+            <div className="bg-white dark:bg-gray-900/70 border border-violet-100 dark:border-violet-500/10 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center">
+                    <Activity size={13} className="text-violet-500" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.15em]">Live Traffic Monitor</p>
+                  </div>
                 </div>
-                <span className="text-[10px] font-bold text-violet-500 bg-violet-50 dark:bg-violet-500/10 px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-500/20">
-                  Refreshes every 30s
+                <span className="text-[10px] font-bold text-violet-500 bg-violet-50 dark:bg-violet-500/10 px-2.5 py-1 rounded-lg border border-violet-100 dark:border-violet-500/15">
+                  30s refresh
                 </span>
               </div>
               <div className="flex items-end gap-4">
@@ -1449,19 +1501,120 @@ const AdminPanelTool = ({ currentUserId }) => {
             </div>
 
             {/* Quick actions */}
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Jump to Section</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="flex items-center gap-2 px-1">
+              <div className="w-1 h-4 bg-gradient-to-b from-blue-500 to-violet-500 rounded-full" />
+              <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Jump to Section</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {[
-                { label: "Requests", icon: Bell, color: "text-amber-500 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800", action: () => setAdminTab("requests") },
-                { label: "Users", icon: Users, color: "text-blue-500 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800", action: () => setAdminTab("users") },
-                { label: "Tasks", icon: ClipboardList, color: "text-violet-500 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800", action: () => setAdminTab("tasks") },
-                { label: "Founder Apps", icon: Crown, color: "text-amber-600 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800", action: () => setAdminTab("founder_apps") },
-              ].map(({ label, icon: Icon, color, action }) => (
+                { label: "Requests",     icon: Bell,        iconColor: "text-amber-500",  iconBg: "bg-amber-50 dark:bg-amber-500/10",    action: () => setAdminTab("requests") },
+                { label: "Users",        icon: Users,       iconColor: "text-blue-500",   iconBg: "bg-blue-50 dark:bg-blue-500/10",      action: () => setAdminTab("users") },
+                { label: "Tasks",        icon: ClipboardList, iconColor: "text-violet-500", iconBg: "bg-violet-50 dark:bg-violet-500/10", action: () => setAdminTab("tasks") },
+                { label: "Founder Apps", icon: Crown,       iconColor: "text-amber-600",  iconBg: "bg-amber-50 dark:bg-amber-500/10",    action: () => setAdminTab("founder_apps") },
+              ].map(({ label, icon: Icon, iconColor, iconBg, action }) => (
                 <button key={label} onClick={action}
-                  className={`flex flex-col items-center gap-2 p-5 rounded-2xl border text-xs font-bold transition-all hover:-translate-y-1 hover:shadow-md hover:border-blue-500/30 ${color}`}>
-                  <Icon size={18} /> {label}
+                  className="flex flex-col items-center gap-3 p-5 rounded-2xl bg-white dark:bg-gray-900/70 border border-gray-100 dark:border-white/[0.05] text-xs font-bold text-gray-600 dark:text-gray-400 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/5 hover:border-blue-200 dark:hover:border-blue-500/20 group">
+                  <div className={`w-9 h-9 rounded-xl ${iconBg} ${iconColor} flex items-center justify-center transition-transform group-hover:scale-110`}>
+                    <Icon size={17} />
+                  </div>
+                  {label}
                 </button>
               ))}
+            </div>
+
+            {/* ── Global Premium Trial ── */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <div className="w-1 h-4 bg-gradient-to-b from-violet-500 to-indigo-500 rounded-full" />
+                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Global Premium Trial</p>
+              </div>
+              <div className={`relative overflow-hidden rounded-2xl border p-5 transition-all ${trialMode.active ? "bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-900/20 dark:to-indigo-900/20 border-violet-200 dark:border-violet-500/30" : "bg-white dark:bg-gray-900/70 border-gray-100 dark:border-white/[0.05]"}`}>
+                {trialMode.active && (
+                  <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, #8b5cf6 1px, transparent 0)", backgroundSize: "18px 18px" }} />
+                )}
+                <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${trialMode.active ? "bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-500/30" : "bg-gray-100 dark:bg-gray-800"}`}>
+                      <Crown size={20} className={trialMode.active ? "text-white" : "text-gray-400 dark:text-gray-600"} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="text-sm font-black text-gray-900 dark:text-white">Free Premium Trial</p>
+                        {trialMode.active ? (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[9px] font-black uppercase tracking-widest rounded-full border border-violet-200 dark:border-violet-500/30">
+                            <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" /> Active
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 text-[9px] font-black uppercase tracking-widest rounded-full">Inactive</span>
+                        )}
+                      </div>
+                      {trialMode.active ? (
+                        <div className="space-y-0.5">
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+                            <p className="text-[11px] text-violet-600 dark:text-violet-400 font-bold flex items-center gap-1">
+                              <Users size={10} /> {(trialMode.user_count || 0).toLocaleString()} users on trial
+                            </p>
+                            {trialMode.expires_at && (
+                              <p className={`text-[11px] font-bold flex items-center gap-1 ${Math.max(0, Math.ceil((new Date(trialMode.expires_at) - Date.now()) / 86400000)) < 30 ? "text-red-500" : Math.max(0, Math.ceil((new Date(trialMode.expires_at) - Date.now()) / 86400000)) < 90 ? "text-amber-500" : "text-gray-500 dark:text-gray-400"}`}>
+                                <Clock size={10} /> {Math.max(0, Math.ceil((new Date(trialMode.expires_at) - Date.now()) / 86400000))} days remaining
+                              </p>
+                            )}
+                          </div>
+                          {trialMode.expires_at && (
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                              Expires {new Date(trialMode.expires_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                            </p>
+                          )}
+                          {trialMode.started_at && (
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                              Started {new Date(trialMode.started_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">Grant all users 1 year of free premium access. Paid subscribers keep their PRO badge.</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {trialMode.active && (
+                      <button
+                        onClick={async () => {
+                          const { data: { session } } = await supabase.auth.getSession();
+                          const expiryStr = trialMode.expires_at
+                            ? new Date(trialMode.expires_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                            : "1 year";
+                          await fetch("/api/admin/broadcast", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+                            body: JSON.stringify({
+                              subject: "Free Premium Trial — You're In!",
+                              message: `Great news! We've activated a 1-year free premium trial for all members of beoneofus.\n\nYou now have full access to all premium features at no cost until ${expiryStr}.\n\nHead to your dashboard to explore everything premium has to offer!`,
+                              audience: "all",
+                            }),
+                          });
+                          showToast("Announcement sent to all users!");
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all"
+                      >
+                        <Bell size={12} /> Announce
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowTrialConfirm(trialMode.active ? "disable" : "enable")}
+                      disabled={trialLoading}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 ${
+                        trialMode.active
+                          ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20"
+                          : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-500/25"
+                      }`}
+                    >
+                      {trialLoading ? <Loader2 size={13} className="animate-spin" /> : <Crown size={13} />}
+                      {trialMode.active ? "Deactivate" : "Activate Trial"}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -1469,11 +1622,14 @@ const AdminPanelTool = ({ currentUserId }) => {
         {/* ── REQUESTS ── */}
         {adminTab === "requests" && (
           <div className="space-y-3">
-            <h3 className="text-gray-900 dark:text-white font-black">Verification Requests <span className="text-gray-500 dark:text-gray-600 font-normal text-sm">({requests.length})</span></h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-gray-900 dark:text-white font-black text-xl">Verification Requests</h3>
+              {requests.length > 0 && <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black rounded-lg border border-amber-100 dark:border-amber-500/20">{requests.length} pending</span>}
+            </div>
             {requests.length === 0
-              ? <div className="py-16 text-center text-gray-500 dark:text-gray-600 text-sm">No pending verification requests.</div>
+              ? <div className="py-16 text-center text-gray-400 dark:text-gray-600 text-sm bg-white dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-white/[0.04]">No pending verification requests.</div>
               : requests.map(req => (
-                <div key={req.id} className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-gray-300 dark:hover:border-gray-700 transition-all">
+                <div key={req.id} className="flex items-center justify-between p-4 bg-white dark:bg-gray-900/70 border border-gray-100 dark:border-white/[0.05] rounded-2xl hover:border-gray-200 dark:hover:border-white/[0.08] transition-all shadow-sm">
                   <div className="flex items-center gap-3">
                     <div onClick={() => setSelectedUserId(req.id)}
                       className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase cursor-pointer hover:opacity-80">
@@ -1499,7 +1655,10 @@ const AdminPanelTool = ({ currentUserId }) => {
         {adminTab === "users" && (
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h3 className="text-gray-900 dark:text-white font-black">Manage Users <span className="text-gray-500 dark:text-gray-600 font-normal text-sm">({allUsers.length})</span></h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-gray-900 dark:text-white font-black text-xl">Manage Users</h3>
+                <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-black rounded-lg border border-blue-100 dark:border-blue-500/20">{allUsers.length}</span>
+              </div>
               <div className="flex items-center gap-2">
                 {bulkMode ? (
                   <>
@@ -1527,9 +1686,9 @@ const AdminPanelTool = ({ currentUserId }) => {
               </div>
             </div>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-600" size={14} />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600" size={14} />
               <input value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Search users…"
-                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl py-2.5 pl-9 pr-4 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all" />
+                className="w-full bg-white dark:bg-gray-900/70 border border-gray-100 dark:border-white/[0.05] rounded-xl py-2.5 pl-10 pr-4 text-xs text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-blue-300 dark:focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/10 transition-all shadow-sm" />
             </div>
             {usersLoading && allUsers.length === 0
               ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={22} /></div>
@@ -1537,7 +1696,7 @@ const AdminPanelTool = ({ currentUserId }) => {
                 <div className="space-y-2">
                   {allUsers.filter(u => u.username?.toLowerCase().includes(userSearch.toLowerCase())).map(user => (
                     <div key={user.id}
-                      className="flex items-center justify-between p-3.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:border-gray-300 dark:hover:border-gray-700 transition-all shadow-sm">
+                      className="flex items-center justify-between p-3.5 bg-white dark:bg-gray-900/70 border border-gray-100 dark:border-white/[0.05] rounded-xl hover:border-blue-200 dark:hover:border-blue-500/15 transition-all duration-150 shadow-sm">
                       <div className="flex items-center gap-3 min-w-0">
                         {bulkMode && (
                           <button onClick={(e) => { e.stopPropagation(); toggleUserSelection(user.id); }}
@@ -2428,6 +2587,40 @@ const AdminPanelTool = ({ currentUserId }) => {
               </button>
               <button onClick={() => setShowPremiumToggleConfirm(null)}
                 className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold rounded-xl text-sm hover:bg-gray-200 transition-all">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Trial Mode Confirmation */}
+      {showTrialConfirm && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm" onClick={() => !trialLoading && setShowTrialConfirm(null)} />
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5 border ${showTrialConfirm === "enable" ? "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border-violet-100 dark:border-violet-900/50" : "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 border-red-100 dark:border-red-900/50"}`}>
+              <Crown size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2 text-center">
+              {showTrialConfirm === "enable" ? "Activate Global Trial?" : "Deactivate Trial?"}
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed text-center">
+              {showTrialConfirm === "enable"
+                ? "This will grant ALL users 1 year of free premium access. Users who already have paid premium are unaffected. You can deactivate at any time."
+                : `This will remove trial premium from ${(trialMode.user_count || 0).toLocaleString()} user${trialMode.user_count !== 1 ? "s" : ""}. Paid premium subscribers keep their access.`}
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleTrialMode(showTrialConfirm)}
+                disabled={trialLoading}
+                className={`w-full py-3 text-white font-bold rounded-xl text-sm transition-all shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 ${showTrialConfirm === "enable" ? "bg-violet-600 hover:bg-violet-500 shadow-violet-600/20" : "bg-red-600 hover:bg-red-500 shadow-red-600/20"}`}
+              >
+                {trialLoading ? <Loader2 size={16} className="animate-spin" /> : <Crown size={16} />}
+                {trialLoading ? "Processing…" : showTrialConfirm === "enable" ? "Yes, Activate Trial" : "Yes, Deactivate"}
+              </button>
+              <button onClick={() => setShowTrialConfirm(null)} disabled={trialLoading}
+                className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold rounded-xl text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
                 Cancel
               </button>
             </div>
@@ -3374,32 +3567,41 @@ export default function MoreContent() {
     <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
       {/* Header */}
       <div className="mb-8">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="w-1 h-5 bg-gradient-to-b from-blue-500 to-violet-600 rounded-full" />
+          <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[2px]">Workspace</p>
+        </div>
         <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Resources</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">Tools and utilities for your workflow.</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">Developer tools & platform utilities.</p>
       </div>
 
       {/* Tool Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         {visibleTools.map(tool => (
           <button key={tool.id} onClick={() => openTool(tool)}
-            className="group flex items-center justify-between p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-blue-500/40 dark:hover:border-blue-500/30 hover:shadow-lg transition-all text-left">
-            <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0">
-                <tool.icon size={20} />
+            className="group flex items-center justify-between p-4 bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-white/[0.05] rounded-2xl hover:border-blue-500/30 dark:hover:border-blue-500/20 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-200 text-left hover:-translate-y-0.5">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-200/60 dark:border-white/[0.06] flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 group-hover:border-blue-200 dark:group-hover:border-blue-500/20 transition-all shrink-0 shadow-sm">
+                <tool.icon size={18} />
               </div>
               <div>
-                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{tool.label}</p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-500 font-medium mt-0.5">{tool.desc}</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{tool.label}</p>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium mt-0.5">{tool.desc}</p>
               </div>
             </div>
-            <ChevronRight size={15} className="text-gray-400 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5 shrink-0" />
+            <div className="w-7 h-7 rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.04] flex items-center justify-center group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 group-hover:border-blue-200 dark:group-hover:border-blue-500/20 transition-all shrink-0">
+              <ChevronRight size={13} className="text-gray-400 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5" />
+            </div>
           </button>
         ))}
       </div>
 
       {/* Founder Node Section */}
       <div className="mt-8">
-        <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[2px] mb-3 px-1">Founder Node</p>
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <div className="w-1 h-4 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full" />
+          <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[2px]">Founder Node</p>
+        </div>
 
         {/* Accepted founder or admin: show dashboard link */}
         {(isFounder || isAdmin) && (
@@ -3458,9 +3660,9 @@ export default function MoreContent() {
       </div>
 
       {/* Sign out */}
-      <div className="mt-6">
-        <button onClick={handleSignOut} className="flex items-center gap-2.5 p-3 text-red-400/50 hover:text-red-400 transition-colors text-sm font-bold">
-          <LogOut size={16} /> Sign Out
+      <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/[0.04]">
+        <button onClick={handleSignOut} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all text-sm font-bold group">
+          <LogOut size={15} className="group-hover:-translate-x-0.5 transition-transform" /> Sign Out
         </button>
       </div>
 

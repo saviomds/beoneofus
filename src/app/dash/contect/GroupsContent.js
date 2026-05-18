@@ -492,44 +492,46 @@ export default function GroupsContent() {
   const filteredGroups = groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto relative animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-3xl mx-auto relative animate-in fade-in slide-in-from-bottom-4 duration-500">
       {activeWorkspace ? (
-        <div className="w-full flex flex-col h-[calc(100vh-180px)] bg-white dark:bg-gray-900 rounded-[2.5rem] border border-gray-200 dark:border-gray-800 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300 shadow-xl">
-          {/* Header */}
-          <div className="p-4 sm:px-6 sm:py-5 border-b border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl flex items-center justify-between z-20 shrink-0 shadow-sm sticky top-0">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setActiveWorkspace(null)} className="p-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition">
-                <ChevronLeft size={20} />
+        /* ── WORKSPACE CHAT ── */
+        <div className="w-full flex flex-col h-[calc(100vh-160px)] bg-white dark:bg-[#0d0d1a] rounded-2xl border border-gray-100 dark:border-white/[0.05] overflow-hidden shadow-xl animate-in fade-in zoom-in-95 duration-300">
+          {/* Chat Header */}
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-white/[0.05] bg-white dark:bg-[#0d0d1a] flex items-center justify-between shrink-0 shadow-sm">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => setActiveWorkspace(null)}
+                className="p-2 bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06] hover:bg-gray-100 dark:hover:bg-white/[0.08] rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-all active:scale-95 shrink-0"
+              >
+                <ChevronLeft size={17} />
               </button>
-              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold uppercase">
-                <Hash size={20} />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/25">
+                <Hash size={16} />
               </div>
-              <div>
-                <h2 className="text-gray-900 dark:text-gray-100 font-bold text-lg leading-tight">{activeWorkspace.name}</h2>
-                <p className="text-[10px] font-black tracking-widest text-green-500 dark:text-green-400 uppercase">Secured Workspace</p>
+              <div className="min-w-0">
+                <h2 className="text-gray-900 dark:text-gray-100 font-black text-sm leading-tight truncate">{activeWorkspace.name}</h2>
+                <p className="text-[9px] font-black tracking-[2px] text-emerald-500 uppercase flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" /> Secure Channel
+                </p>
               </div>
             </div>
-            
-            <button 
-              onClick={() => {
-                fetchWorkspaceMembers();
-                setMembersModalOpen(true);
-              }}
-              className="flex items-center gap-2 p-2 sm:px-4 sm:py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors text-xs font-bold"
+            <button
+              onClick={() => { fetchWorkspaceMembers(); setMembersModalOpen(true); }}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06] hover:bg-gray-100 dark:hover:bg-white/[0.08] rounded-xl text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-all text-xs font-bold shrink-0"
             >
-              <Users size={16} /> <span className="hidden sm:inline">Members</span>
+              <Users size={14} /> <span className="hidden sm:inline">Members</span>
             </button>
           </div>
 
           {/* Messages */}
-          <div ref={workspaceScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
+          <div ref={workspaceScrollRef} className="flex-1 overflow-y-auto px-4 py-5 space-y-3 custom-scrollbar flex flex-col">
             {workspaceMessages.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400">
-                <div className="w-24 h-24 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-full flex items-center justify-center mb-6 text-blue-500 dark:text-blue-400 shadow-sm">
-                  <Hash size={48} className="opacity-50" />
+              <div className="flex-1 flex flex-col items-center justify-center text-center py-16">
+                <div className="w-14 h-14 bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/15 rounded-2xl flex items-center justify-center mb-4 text-blue-400 dark:text-blue-500">
+                  <Hash size={24} />
                 </div>
-                <p className="font-bold text-gray-900 dark:text-gray-100 text-xl mb-2 tracking-tight">Workspace Initialized</p>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">This is the start of an end-to-end encrypted node. Say hello to the channel.</p>
+                <p className="font-black text-gray-900 dark:text-gray-100 text-base tracking-tight mb-1">Channel initialized</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[200px] leading-relaxed">Be the first to broadcast a message to this workspace.</p>
               </div>
             ) : (
               workspaceMessages.map((msg, idx) => {
@@ -537,263 +539,255 @@ export default function GroupsContent() {
                 const hasLiked = msg.group_message_reactions?.some(r => r.user_id === currentUserId && r.emoji === '👍');
                 const prevMsg = workspaceMessages[idx - 1];
                 const sameAsPrev = prevMsg?.user_id === msg.user_id;
-                
                 return (
-                  <div key={msg.id} className={`flex gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
-                    {!isMe ? (
-                      <div 
+                  <div key={msg.id} className={`flex gap-2 group ${isMe ? "justify-end" : "justify-start"}`}>
+                    {/* Avatar (other users) */}
+                    {!isMe && (
+                      <div
                         onClick={() => setSelectedUserId(msg.user_id)}
-                        className={`relative w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0 mt-auto cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors overflow-hidden ${sameAsPrev ? "opacity-0 pointer-events-none" : ""}`}
-                        title={`View @${msg.profiles?.username}'s Profile`}
+                        className={`relative w-7 h-7 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/15 text-blue-500 flex items-center justify-center font-bold text-[10px] uppercase shrink-0 mt-auto cursor-pointer hover:opacity-80 transition-opacity overflow-hidden ${sameAsPrev ? "opacity-0 pointer-events-none" : ""}`}
+                        title={`View @${msg.profiles?.username}`}
                       >
-                        {msg.profiles?.avatar_url ? (
-                          <Image src={msg.profiles.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" />
-                        ) : (
-                          msg.profiles?.username?.substring(0, 2) || "??"
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all px-2">
-                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-gray-800 ${hasLiked ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'}`} title="Like">
-                          <ThumbsUp size={14} className={hasLiked ? "fill-current" : ""} />
-                        </button>
-                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" title="Reply">
-                          <MessageSquare size={14} />
-                        </button>
+                        {msg.profiles?.avatar_url
+                          ? <Image src={msg.profiles.avatar_url} alt="avatar" fill sizes="28px" className="object-cover" />
+                          : msg.profiles?.username?.substring(0, 2) || "??"}
                       </div>
                     )}
-                    <div className={`flex flex-col group ${isMe ? "items-end" : "items-start"} max-w-[80%]`}>
-                      {!isMe && !sameAsPrev && <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 ml-1 flex items-center gap-1">
-                        @{msg.profiles?.username}
-                        {msg.profiles?.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}
-                      </span>}
-                      <div className={`w-full p-1 rounded-2xl ${isMe ? "bg-blue-600 text-white rounded-tr-none shadow-md shadow-blue-500/20" : `bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 ${sameAsPrev ? "rounded-tl-2xl" : "rounded-tl-none"}`}`}>
-                        <div className="px-3 pt-1.5 pb-2">
-                          {msg.replied_message && (
-                            <div className="border-l-2 border-blue-500/50 dark:border-blue-400/50 pl-2 mb-2 text-xs opacity-80">
-                              <p className="font-bold text-current flex items-center gap-1">@{msg.replied_message.profiles?.username}{msg.replied_message.profiles?.is_verified && <BadgeCheck size={10} className="text-blue-500" fill="currentColor" stroke="white" />}</p>
-                              <p className="text-current/80 line-clamp-1">{msg.replied_message.text || 'Image'}</p>
-                            </div>
-                          )}
-                          {msg.image_url && (
-                            <div className="relative w-full aspect-video rounded-lg overflow-hidden my-2 cursor-pointer" onClick={() => window.open(msg.image_url, '_blank')}>
-                              <Image src={msg.image_url} alt="message attachment" fill sizes="(max-width: 768px) 100vw, 400px" className="object-cover" />
-                            </div>
-                          )}
-                          {msg.text && <p className="text-[13px] whitespace-pre-wrap break-words">{msg.text}</p>}
-                        </div>
-                      </div>
-                      
-                      {msg.group_message_reactions && msg.group_message_reactions.filter(r => r.emoji === '👍').length > 0 && (
-                        <div className={`flex flex-wrap gap-1 mt-1 relative z-10 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          <button 
-                            onClick={() => handleReaction(msg.id, '👍')}
-                            className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all shadow-sm ${hasLiked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                          >
-                            <ThumbsUp size={10} className={hasLiked ? "fill-current text-white" : "text-gray-400 dark:text-gray-500"} /> 
-                            <span>{msg.group_message_reactions.filter(r => r.emoji === '👍').length}</span>
-                          </button>
-                        </div>
+
+                    {/* Message content */}
+                    <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} max-w-[78%] sm:max-w-[70%]`}>
+                      {!isMe && !sameAsPrev && (
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold mb-1 ml-1 flex items-center gap-1">
+                          @{msg.profiles?.username}
+                          {msg.profiles?.is_verified && <BadgeCheck size={9} className="text-blue-500" fill="currentColor" stroke="white" />}
+                        </span>
                       )}
 
-                      <span className="text-[9px] text-gray-600 dark:text-gray-400 mt-1 mx-1">
+                      <div className={`rounded-2xl px-3.5 py-2.5 ${
+                        isMe
+                          ? "bg-blue-600 text-white rounded-tr-sm shadow-md shadow-blue-500/20"
+                          : `bg-gray-100 dark:bg-white/[0.06] text-gray-800 dark:text-gray-100 border border-gray-200/60 dark:border-white/[0.04] ${sameAsPrev ? "rounded-tl-2xl" : "rounded-tl-sm"}`
+                      }`}>
+                        {msg.replied_message && (
+                          <div className="border-l-2 border-current/30 pl-2 mb-2 text-xs opacity-70">
+                            <p className="font-bold flex items-center gap-1">@{msg.replied_message.profiles?.username}</p>
+                            <p className="opacity-80 line-clamp-1">{msg.replied_message.text || 'Image'}</p>
+                          </div>
+                        )}
+                        {msg.image_url && (
+                          <div className="relative w-full max-w-[240px] aspect-video rounded-lg overflow-hidden mb-2 cursor-pointer" onClick={() => window.open(msg.image_url, '_blank')}>
+                            <Image src={msg.image_url} alt="attachment" fill sizes="240px" className="object-cover" />
+                          </div>
+                        )}
+                        {msg.text && <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>}
+                      </div>
+
+                      {msg.group_message_reactions?.filter(r => r.emoji === '👍').length > 0 && (
+                        <button
+                          onClick={() => handleReaction(msg.id, '👍')}
+                          className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border mt-1 transition-all ${hasLiked ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-blue-300'}`}
+                        >
+                          <ThumbsUp size={9} className={hasLiked ? "fill-current" : ""} />
+                          {msg.group_message_reactions.filter(r => r.emoji === '👍').length}
+                        </button>
+                      )}
+                      <span className="text-[9px] text-gray-400 dark:text-gray-600 mt-1 mx-1">
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    {!isMe && (
-                      <div className="flex items-center gap-1 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all px-2">
-                        <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-gray-800 ${hasLiked ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'}`} title="Like">
-                          <ThumbsUp size={14} className={hasLiked ? "fill-current" : ""} />
-                        </button>
-                        <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all" title="Reply">
-                          <MessageSquare size={14} />
-                        </button>
-                      </div>
-                  )}
+
+                    {/* Reaction actions */}
+                    <div className={`flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0 ${isMe ? "order-first" : ""}`}>
+                      <button onClick={() => handleReaction(msg.id, '👍')} className={`p-1.5 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-white/[0.06] ${hasLiked ? 'text-blue-500' : 'text-gray-400 dark:text-gray-600 hover:text-blue-500'}`} title="Like">
+                        <ThumbsUp size={13} className={hasLiked ? "fill-current" : ""} />
+                      </button>
+                      <button onClick={() => setReplyingTo(msg)} className="p-1.5 rounded-lg text-gray-400 dark:text-gray-600 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-all" title="Reply">
+                        <MessageSquare size={13} />
+                      </button>
+                    </div>
                   </div>
-                )
+                );
               })
             )}
           </div>
 
-          {/* Input */}
-          <div className="p-3 sm:p-5 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 z-20 shrink-0 sticky bottom-0">
+          {/* Input Area */}
+          <div className="px-3 pb-3 pt-2 bg-white dark:bg-[#0d0d1a] border-t border-gray-100 dark:border-white/[0.05] shrink-0">
             {replyingTo && (
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-b-0 rounded-t-xl px-4 py-2 text-xs flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-xl px-3 py-2 mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
                 <div className="min-w-0">
-                  <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1">Replying to <span className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                    @{replyingTo.profiles?.username}
-                    {replyingTo.profiles?.is_verified && <BadgeCheck size={12} className="text-blue-500" fill="currentColor" stroke="white" />}
-                  </span></p>
-                  <p className="text-gray-500 dark:text-gray-400 truncate">{replyingTo.text || 'Image'}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                    Replying to <span className="font-black text-blue-600 dark:text-blue-400">@{replyingTo.profiles?.username}</span>
+                  </p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{replyingTo.text || 'Image'}</p>
                 </div>
-                <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><X size={16} /></button>
+                <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0 ml-2"><X size={14} /></button>
               </div>
             )}
             {chatImagePreview && (
-              <div className="bg-black/30 rounded-t-xl p-2 flex animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <div className="relative w-16 h-16 rounded-lg overflow-hidden">
-                  <Image src={chatImagePreview} alt="preview" fill sizes="64px" className="object-cover" />
-                  <button onClick={handleRemoveChatImage} className="absolute top-1 right-1 bg-white/80 text-gray-900 rounded-full p-0.5"><X size={12} /></button>
+              <div className="mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-gray-200 dark:border-white/[0.08]">
+                  <Image src={chatImagePreview} alt="preview" fill sizes="56px" className="object-cover" />
+                  <button onClick={handleRemoveChatImage} className="absolute top-0.5 right-0.5 bg-gray-900/70 text-white rounded-full p-0.5 hover:bg-red-500 transition-colors"><X size={10} /></button>
                 </div>
               </div>
             )}
-            <form onSubmit={handleSendWorkspaceMessage} className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-2xl p-1.5 pl-4 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all shadow-sm">
+            <form onSubmit={handleSendWorkspaceMessage} className="flex items-center gap-2 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.07] rounded-xl p-1 pl-3 focus-within:border-blue-300 dark:focus-within:border-blue-500/40 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all">
               <input type="file" ref={imageInputRef} onChange={handleChatFileChange} accept="image/*" className="hidden" />
-              <button 
-                type="button" 
-                onClick={() => imageInputRef.current?.click()}
-                className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-400 transition-colors"
-              >
-                <Paperclip size={18} />
+              <button type="button" onClick={() => imageInputRef.current?.click()} className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-blue-500 transition-colors rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10">
+                <Paperclip size={16} />
               </button>
-              <input 
-                type="text" 
-                value={messageInput} 
-                onChange={e => setMessageInput(e.target.value)} 
-                placeholder="Broadcast to workspace..." 
-                className="flex-1 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 py-2" 
+              <input
+                type="text"
+                value={messageInput}
+                onChange={e => setMessageInput(e.target.value)}
+                placeholder="Broadcast to workspace..."
+                className="flex-1 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600 py-2"
               />
-              <button type="submit" disabled={isProcessing} className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50">
-                <Send size={16} strokeWidth={3} />
+              <button type="submit" disabled={isProcessing} className="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-lg transition-all shadow-md shadow-blue-500/20 active:scale-95 disabled:opacity-50">
+                <Send size={15} strokeWidth={2.5} />
               </button>
             </form>
           </div>
         </div>
       ) : (
+        /* ── CHANNEL LIST ── */
         <>
-          {/* Header Section */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Channels</h1>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Manage your communities and collaborations.</p>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-1 h-5 bg-gradient-to-b from-blue-500 to-violet-600 rounded-full" />
+                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[2px]">Network</p>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Channels</h1>
+              <p className="text-gray-400 dark:text-gray-500 text-sm mt-0.5">Communities & collaboration spaces.</p>
             </div>
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <button 
+            <div className="flex items-center gap-2 sm:shrink-0">
+              <button
                 onClick={() => setDeleteAllModalOpen(true)}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 border border-gray-200 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-800/50 px-5 py-2.5 rounded-xl transition-all font-bold text-sm shadow-sm active:scale-95"
+                className="flex items-center justify-center gap-1.5 bg-white dark:bg-gray-900/60 hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 border border-gray-100 dark:border-white/[0.05] hover:border-red-200 dark:hover:border-red-500/20 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs shadow-sm active:scale-95"
               >
-                <Trash2 size={18} />
-                 Clear All
+                <Trash2 size={14} /> Clear All
               </button>
-              <button 
+              <button
                 onClick={() => setIsModalOpen(true)}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl transition-all font-bold text-sm shadow-lg shadow-blue-500/20 active:scale-95"
+                className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl transition-all font-bold text-xs shadow-lg shadow-blue-500/20 active:scale-95"
               >
-                <Plus size={18} />
-                Create Channel
+                <Plus size={14} /> New Channel
               </button>
             </div>
           </div>
 
-          {/* Search bar */}
-          <div className="relative group shadow-sm rounded-2xl mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400 transition-colors" size={20} />
-            <input 
-              type="text" 
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600 pointer-events-none" size={14} />
+            <input
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search channels..." 
-              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl py-4 pl-12 pr-12 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all hover:border-gray-300 dark:hover:border-gray-600"
+              placeholder="Search channels..."
+              className="w-full bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-white/[0.05] rounded-xl py-3 pl-10 pr-9 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-blue-300 dark:focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/10 transition-all shadow-sm"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-                <X size={18} />
+              <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                <X size={14} />
               </button>
             )}
           </div>
 
-          {/* Groups List */}
+          {/* Channel List */}
           {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex flex-col sm:flex-row items-start sm:items-center gap-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[1.5rem] p-5 shadow-sm">
-                  <div className="w-[60px] h-[60px] rounded-2xl bg-gray-200 dark:bg-gray-800 animate-pulse shrink-0"></div>
-                  <div className="flex-1 w-full space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-48"></div>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div>
+            <div className="space-y-2.5">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4 bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-white/[0.05] rounded-2xl p-4 shadow-sm">
+                  <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-32" />
+                      <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse w-12" />
                     </div>
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded animate-pulse w-24 mt-1"></div>
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-3/4" />
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-20" />
                   </div>
-                  <div className="hidden sm:flex items-center gap-3 shrink-0">
-                    <div className="w-8 h-8 rounded-xl bg-gray-200 animate-pulse"></div>
-                  </div>
+                  <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse shrink-0" />
                 </div>
               ))}
             </div>
           ) : filteredGroups.length === 0 ? (
-            <div className="py-32 flex flex-col items-center justify-center border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 rounded-[3rem] shadow-inner">
-              <div className="w-20 h-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-full flex items-center justify-center mb-6 shadow-sm">
-                <Hash size={40} className="text-gray-400 dark:text-gray-500" />
+            <div className="py-20 flex flex-col items-center justify-center bg-white dark:bg-gray-900/40 border border-gray-100 dark:border-white/[0.04] rounded-2xl">
+              <div className="w-14 h-14 bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/15 rounded-2xl flex items-center justify-center mb-4 text-blue-400 dark:text-blue-500">
+                <Hash size={24} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 tracking-tight">No channels found</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm text-center max-w-sm font-medium leading-relaxed">Create a new channel or search for an existing one to get started.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-            {filteredGroups.map((group) => {
-              const isAdmin = group.created_by === currentUserId;
-              const memberCount = group.group_members?.[0]?.count || 1;
-              return (
-              <div 
-                key={group.id} 
-                onClick={() => handleGroupClick(group)}
-              className="group relative flex flex-col sm:flex-row items-start sm:items-center gap-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[1.5rem] p-5 hover:border-blue-500/30 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-2xl text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 group-hover:scale-105 transition-all relative z-10 shrink-0">
-              <Hash size={28} />
-            </div>
-            
-            <div className="flex-1 min-w-0 z-10">
-              <div className="flex items-center gap-3 mb-1">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">{group.name}</h3>
-                <span className={`flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-md border ${
-                    group.is_private ? 'border-amber-200 dark:border-amber-800/50 text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                }`}>
-                    {group.is_private ? <Lock size={10} /> : <Globe size={10} />}
-                    {group.is_private ? 'Private' : 'Public'}
-                </span>
-                  {isAdmin && (
-                    <span className="text-[9px] uppercase font-black tracking-widest text-green-600 dark:text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded border border-green-200 dark:border-green-800/50">Admin</span>
-                  )}
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-1 transition-colors">
-                {group.description}
-              </p>
-              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 font-medium">
-                  {memberCount.toLocaleString()} active members
-              </div>
-            </div>
-
-              <div className="hidden sm:flex items-center gap-3 z-10">
-                {isAdmin && (
-                  <>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setSelectedGroup(group); setInviteModalOpen(true); }}
-                      className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all text-xs font-bold border border-gray-200 dark:border-gray-700 flex items-center gap-2 shadow-sm"
-                    >
-                      <UserPlus size={14} /> Invite
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setGroupToDelete(group); setDeleteModalOpen(true); }}
-                      className="p-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 rounded-xl transition-all border border-gray-200 dark:border-gray-700 shadow-sm"
-                      title="Delete Channel"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </>
-                )}
-              <button className="p-2 text-gray-500 dark:text-gray-400 group-hover:text-blue-400 group-hover:translate-x-1 transition-all">
-                <ChevronRight size={24} />
+              <h3 className="text-base font-black text-gray-900 dark:text-gray-100 mb-1 tracking-tight">No channels found</h3>
+              <p className="text-gray-400 dark:text-gray-500 text-sm text-center max-w-[220px] leading-relaxed">Create or search for an existing channel to get started.</p>
+              <button onClick={() => setIsModalOpen(true)} className="mt-5 flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95">
+                <Plus size={13} /> Create Channel
               </button>
             </div>
-          </div>
-          );
-        })}
-      </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredGroups.map((group) => {
+                const isAdmin = group.created_by === currentUserId;
+                const memberCount = group.group_members?.[0]?.count || 1;
+                return (
+                  <div key={group.id} className="group relative bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-white/[0.05] rounded-2xl overflow-hidden hover:border-blue-200 dark:hover:border-blue-500/20 hover:shadow-md hover:shadow-blue-500/5 transition-all duration-200">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none dark:from-blue-500/[0.03]" />
+
+                    <div className="flex items-center gap-3 p-4 relative z-10">
+                      {/* Clickable main row */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => handleGroupClick(group)}>
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/15 text-blue-500 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Hash size={18} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{group.name}</h3>
+                            <span className={`flex items-center gap-0.5 text-[9px] uppercase font-black tracking-widest px-1.5 py-0.5 rounded-lg border ${
+                              group.is_private
+                                ? 'border-amber-100 dark:border-amber-500/15 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10'
+                                : 'border-blue-100 dark:border-blue-500/15 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10'
+                            }`}>
+                              {group.is_private ? <Lock size={8} /> : <Globe size={8} />}
+                              {group.is_private ? 'Private' : 'Public'}
+                            </span>
+                            {isAdmin && <span className="text-[9px] uppercase font-black tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-lg border border-emerald-100 dark:border-emerald-500/15">Admin</span>}
+                          </div>
+                          {group.description && <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-1">{group.description}</p>}
+                          <p className="text-[10px] text-gray-400 dark:text-gray-600 font-semibold mt-0.5 flex items-center gap-1">
+                            <Users size={9} />{memberCount.toLocaleString()} members
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedGroup(group); setInviteModalOpen(true); }}
+                              className="flex items-center gap-1 px-2.5 py-2 bg-gray-50 dark:bg-white/[0.04] hover:bg-blue-50 dark:hover:bg-blue-500/10 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all text-xs font-bold border border-gray-100 dark:border-white/[0.05]"
+                            >
+                              <UserPlus size={13} /> <span className="hidden sm:inline">Invite</span>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setGroupToDelete(group); setDeleteModalOpen(true); }}
+                              className="p-2 bg-gray-50 dark:bg-white/[0.04] hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 rounded-xl transition-all border border-gray-100 dark:border-white/[0.05]"
+                              title="Delete"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </>
+                        )}
+                        <button className="p-1.5 cursor-pointer" onClick={() => handleGroupClick(group)}>
+                          <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </>
       )}

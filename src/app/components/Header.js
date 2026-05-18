@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign, CheckCircle2, AlertTriangle, Bookmark, BookmarkCheck, Clock, Building2, ExternalLink, Filter, ChevronRight, TrendingUp, ShoppingBag, GraduationCap } from 'lucide-react';
+import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, MapPin, DollarSign, CheckCircle2, AlertTriangle, Bookmark, BookmarkCheck, Clock, Building2, ExternalLink, ChevronRight, TrendingUp, ShoppingBag, GraduationCap, Package, Wrench, FileText, CalendarDays, Zap, Star, ArrowRight } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -47,9 +47,12 @@ export default function Header({ setActiveTab }) {
   const [networkData, setNetworkData] = useState({ connections: [], groups: [] });
   const [isNetworkLoading, setIsNetworkLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
-  const [networkTab, setNetworkTab] = useState('connections'); // 'connections' or 'groups'
+  const [networkTab, setNetworkTab] = useState('connections');
+  const [networkSearch, setNetworkSearch] = useState('');
+  const [networkFilter, setNetworkFilter] = useState('all');
   const { theme, setTheme, systemTheme } = useTheme();
   const [showJobsModal, setShowJobsModal] = useState(false);
+  const [showMarketplacePopup, setShowMarketplacePopup] = useState(false);
   const [jobSearchQuery, setJobSearchQuery] = useState('');
   const [applyingJob, setApplyingJob] = useState(null);
   const [jobs, setJobs] = useState([]);
@@ -76,6 +79,8 @@ export default function Header({ setActiveTab }) {
   const handleNavigate = (tab) => {
     closeQuickView();
     setShowNetworkModal(false);
+    setNetworkSearch('');
+    setNetworkFilter('all');
     router.push('/dash/' + tab);
   };
 
@@ -87,6 +92,7 @@ export default function Header({ setActiveTab }) {
       else if (type === 'network') setShowNetworkModal(true);
       else if (type === 'discuss') setShowQuickView('discuss');
       else if (type === 'discover') setShowQuickView('discover');
+      else if (type === 'marketplace') setShowMarketplacePopup(true);
     };
     
     window.addEventListener('open-header-modal', handleOpenModal);
@@ -346,6 +352,22 @@ export default function Header({ setActiveTab }) {
     return matchSearch && matchType && matchSaved;
   });
 
+  const filteredConnections = networkData.connections.filter(user => {
+    const q = networkSearch.toLowerCase();
+    const matchSearch = !q || user.username?.toLowerCase().includes(q) || user.status?.toLowerCase().includes(q);
+    const matchFilter =
+      networkFilter === 'all' ||
+      (networkFilter === 'verified' && user.is_verified) ||
+      (networkFilter === 'premium' && user.is_premium) ||
+      (networkFilter === 'hiring' && user.work_status === 'Hiring');
+    return matchSearch && matchFilter;
+  });
+
+  const filteredGroups = networkData.groups.filter(group => {
+    const q = networkSearch.toLowerCase();
+    return !q || group.name?.toLowerCase().includes(q) || group.description?.toLowerCase().includes(q);
+  });
+
   const handleApplyJob = async (e) => {
     e.preventDefault();
     if (!currentUserId) return setShowAppError(t('header.errors.must_login'));
@@ -424,35 +446,35 @@ export default function Header({ setActiveTab }) {
             <button
               id="header-btn-jobs"
               onClick={() => setShowJobsModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all whitespace-nowrap"
             >
               <Briefcase size={13} /> {t('header.jobs')}
             </button>
             <button
               id="header-btn-network"
               onClick={() => setShowNetworkModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all whitespace-nowrap"
             >
               <Users size={13} /> {t('header.network')}
             </button>
             <button
               id="header-btn-discuss"
               onClick={() => setShowQuickView('discuss')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all whitespace-nowrap"
             >
               <MessageCircle size={13} /> {t('header.discuss')}
             </button>
             <button
               id="header-btn-discover"
               onClick={() => setShowQuickView('discover')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-all whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all whitespace-nowrap"
             >
               <Compass size={13} /> {t('header.discover')}
             </button>
             <button
               id="header-btn-marketplace"
-              onClick={() => router.push('/dash/marketplace')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 transition-all whitespace-nowrap"
+              onClick={() => setShowMarketplacePopup(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all whitespace-nowrap"
             >
               <ShoppingBag size={13} /> {t('header.marketplace')}
             </button>
@@ -538,9 +560,14 @@ export default function Header({ setActiveTab }) {
                     <div className="p-2">
                       <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">{t('header.search_sections.discussions')}</div>
                   {searchResults.posts.map((post, i) => (
-                    <div key={`post-${post.id}`} onClick={() => { setSearchQuery(''); handleNavigate('feed'); }} onMouseEnter={() => setFocusedIndex(i)} className={`p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
-                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={post.title || 'Untitled Node'} query={searchQuery} /></p>
-                          <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5"><HighlightMatch text={post.content} query={searchQuery} /></p>
+                    <div key={`post-${post.id}`} onClick={() => { setSearchQuery(''); handleNavigate('feed'); }} onMouseEnter={() => setFocusedIndex(i)} className={`flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0 text-blue-500 dark:text-blue-400">
+                            <MessageCircle size={15} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={post.title || 'Untitled Node'} query={searchQuery} /></p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5"><HighlightMatch text={post.content} query={searchQuery} /></p>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -551,9 +578,14 @@ export default function Header({ setActiveTab }) {
                     <div className={`p-2 ${searchResults.posts.length > 0 ? 'border-t border-gray-100 dark:border-gray-800' : ''}`}>
                       <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">{t('header.search_sections.groups')}</div>
                   {searchResults.groups.map((group, i) => (
-                    <div key={`group-${group.id}`} onClick={() => { setSearchQuery(''); handleNavigate('groups'); }} onMouseEnter={() => setFocusedIndex(searchResults.posts.length + i)} className={`p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === searchResults.posts.length + i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
-                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={group.name} query={searchQuery} /></p>
-                          <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5"><HighlightMatch text={group.description} query={searchQuery} /></p>
+                    <div key={`group-${group.id}`} onClick={() => { setSearchQuery(''); handleNavigate('groups'); }} onMouseEnter={() => setFocusedIndex(searchResults.posts.length + i)} className={`flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === searchResults.posts.length + i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
+                          <div className="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center shrink-0 text-violet-500 dark:text-violet-400">
+                            <Hash size={15} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={group.name} query={searchQuery} /></p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5"><HighlightMatch text={group.description} query={searchQuery} /></p>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -622,101 +654,291 @@ export default function Header({ setActiveTab }) {
         />
       )}
 
+      {/* --- MARKETPLACE POPUP --- */}
+      {showMarketplacePopup && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-xl" onClick={() => setShowMarketplacePopup(false)} />
+
+          <div className="relative w-full max-w-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-white/[0.06] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+
+            {/* Gradient header */}
+            <div className="relative h-32 overflow-hidden" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}>
+              <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
+              <div className="absolute bottom-5 left-6 flex items-end gap-3">
+                <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/25 shrink-0">
+                  <ShoppingBag size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-white/65 uppercase tracking-[4px] mb-0.5">Ecosystem Commerce</p>
+                  <h2 className="text-2xl font-black text-white tracking-tight leading-none">Marketplace</h2>
+                </div>
+              </div>
+              <button onClick={() => setShowMarketplacePopup(false)} className="absolute top-4 right-4 p-2 bg-white/15 hover:bg-white/25 rounded-xl text-white transition-all">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-5">
+              {/* Stats row */}
+              <div className="flex items-stretch gap-3 mb-5">
+                {[
+                  { label: 'Categories', value: '6+',                                              accent: false },
+                  { label: 'Flash Deals', value: <Zap size={18} className="text-violet-500" />,   accent: true  },
+                  { label: 'Trending',   value: <Star size={18} className="text-blue-400" />,      accent: false },
+                ].map(({ label, value, accent }) => (
+                  <div key={label} className={`flex-1 flex flex-col items-center justify-center rounded-2xl px-4 py-3 border ${accent ? 'bg-violet-50 dark:bg-violet-500/10 border-violet-100 dark:border-violet-500/20' : 'bg-gray-50 dark:bg-white/[0.04] border-gray-100 dark:border-white/[0.06]'}`}>
+                    <div className="text-xl font-black text-gray-900 dark:text-white flex items-center">{value}</div>
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mt-0.5">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Category cards — all same h-24 */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {[
+                  { label: 'Services',  icon: Wrench,       color: 'blue',   tab: 'services'    },
+                  { label: 'Products',  icon: Package,      color: 'violet', tab: 'marketplace' },
+                  { label: 'Contracts', icon: FileText,     color: 'indigo', tab: 'contracts'   },
+                  { label: 'Events',    icon: CalendarDays, color: 'blue',   tab: 'events'      },
+                  { label: 'Courses',   icon: GraduationCap,color: 'violet', tab: 'learn'       },
+                  { label: 'Top Picks', icon: Star,         color: 'indigo', tab: 'marketplace' },
+                ].map(({ label, icon: CardIcon, color, tab }) => {
+                  const bg = {
+                    blue:   'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-500/20 hover:border-blue-300 dark:hover:border-blue-500/40 hover:shadow-blue-500/10',
+                    violet: 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-100 dark:border-violet-500/20 hover:border-violet-300 dark:hover:border-violet-500/40 hover:shadow-violet-500/10',
+                    indigo: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-500/20 hover:border-indigo-300 dark:hover:border-indigo-500/40 hover:shadow-indigo-500/10',
+                  }[color];
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => { setShowMarketplacePopup(false); router.push(`/dash/${tab}`); }}
+                      className={`h-24 flex flex-col items-center justify-center gap-2 rounded-2xl border transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-95 ${bg}`}
+                    >
+                      <CardIcon size={22} />
+                      <span className="text-[11px] font-black uppercase tracking-wider">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* CTA */}
+              <button
+                onClick={() => { setShowMarketplacePopup(false); router.push('/dash/marketplace'); }}
+                className="flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-indigo-500/20 active:scale-[0.98]"
+              >
+                Browse Full Marketplace <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
+
       {/* --- MY NETWORK MODAL --- */}
       {showNetworkModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowNetworkModal(false)} />
-          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl flex flex-col max-h-[70vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center shrink-0">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('header.network_modal.title')}</h2>
-              <button onClick={() => setShowNetworkModal(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors">
-                <X size={20} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-xl" onClick={() => { setShowNetworkModal(false); setNetworkSearch(''); setNetworkFilter('all'); }} />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-white/[0.06] rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
+            {/* ── Gradient header ── */}
+            <div className="relative h-28 overflow-hidden shrink-0" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}>
+              <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+              <div className="absolute bottom-4 left-6 flex items-end gap-3">
+                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/25 shrink-0">
+                  <Users size={18} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-white/65 uppercase tracking-[4px] mb-0.5">Your Ecosystem</p>
+                  <h2 className="text-xl font-black text-white tracking-tight leading-none">{t('header.network_modal.title')}</h2>
+                </div>
+              </div>
+              <div className="absolute bottom-4 right-14 flex gap-2">
+                <div className="bg-white/15 backdrop-blur-sm rounded-xl px-3 py-1.5 border border-white/20 text-center">
+                  <p className="text-xs font-black text-white leading-none">{networkData.connections.length}</p>
+                  <p className="text-[8px] text-white/60 font-medium uppercase tracking-wider">linked</p>
+                </div>
+                <div className="bg-white/15 backdrop-blur-sm rounded-xl px-3 py-1.5 border border-white/20 text-center">
+                  <p className="text-xs font-black text-white leading-none">{networkData.groups.length}</p>
+                  <p className="text-[8px] text-white/60 font-medium uppercase tracking-wider">channels</p>
+                </div>
+                <div className="bg-white/15 backdrop-blur-sm rounded-xl px-3 py-1.5 border border-white/20 text-center">
+                  <p className="text-xs font-black text-white leading-none">{networkData.connections.filter(u => u.is_verified).length}</p>
+                  <p className="text-[8px] text-white/60 font-medium uppercase tracking-wider">verified</p>
+                </div>
+              </div>
+              <button onClick={() => { setShowNetworkModal(false); setNetworkSearch(''); setNetworkFilter('all'); }} className="absolute top-4 right-4 p-2 bg-white/15 hover:bg-white/25 rounded-xl text-white transition-all">
+                <X size={16} />
               </button>
             </div>
-            {/* Tabs */}
-            <div className="flex gap-4 border-b border-gray-200 dark:border-gray-800 px-6 shrink-0">
-              <button 
-                onClick={() => setNetworkTab('connections')}
-                className={`py-3 text-sm font-bold flex items-center gap-2 transition-all ${networkTab === 'connections' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border-b-2 border-transparent'}`}
-              >
-                <Users size={14} /> {t('header.network_modal.connections')} ({networkData.connections.length})
-              </button>
-              <button 
-                onClick={() => setNetworkTab('groups')}
-                className={`py-3 text-sm font-bold flex items-center gap-2 transition-all ${networkTab === 'groups' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border-b-2 border-transparent'}`}
-              >
-                <Hash size={14} /> {t('header.network_modal.channels')} ({networkData.groups.length})
-              </button>
+
+            {/* ── Search + tabs + filters ── */}
+            <div className="px-5 pt-4 pb-3 shrink-0 border-b border-gray-100 dark:border-white/[0.06] space-y-3">
+              {/* Search input */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={networkSearch}
+                  onChange={e => setNetworkSearch(e.target.value)}
+                  placeholder={networkTab === 'connections' ? 'Search by name or status…' : 'Search channels…'}
+                  className="w-full pl-9 pr-9 py-2.5 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                />
+                {networkSearch && (
+                  <button onClick={() => setNetworkSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              {/* Tabs + filter chips */}
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex gap-1">
+                  {[
+                    { key: 'connections', label: 'Connections', icon: Users, count: networkData.connections.length },
+                    { key: 'groups', label: 'Channels', icon: Hash, count: networkData.groups.length },
+                  ].map(({ key, label, icon: TabIcon, count }) => (
+                    <button
+                      key={key}
+                      onClick={() => { setNetworkTab(key); setNetworkSearch(''); setNetworkFilter('all'); }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${networkTab === key ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06]'}`}
+                    >
+                      <TabIcon size={11} /> {label}
+                      <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black ${networkTab === key ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/[0.08] text-gray-500 dark:text-gray-400'}`}>{count}</span>
+                    </button>
+                  ))}
+                </div>
+                {networkTab === 'connections' && (
+                  <div className="flex gap-1 overflow-x-auto no-scrollbar">
+                    {[
+                      { key: 'all', label: 'All' },
+                      { key: 'verified', label: 'Verified' },
+                      { key: 'premium', label: 'Pro' },
+                      { key: 'hiring', label: 'Hiring' },
+                    ].map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => setNetworkFilter(key)}
+                        className={`shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${networkFilter === key ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm' : 'bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/[0.10]'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+
+            {/* ── Cards grid ── */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
               {isNetworkLoading ? (
-                <div className="space-y-3 p-4">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse shrink-0"></div>
-                      <div className="space-y-2 flex-1">
-                        <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-1/3"></div>
-                        <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-1/2"></div>
-                      </div>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="h-24 bg-gray-100 dark:bg-white/[0.04] rounded-2xl animate-pulse" />
                   ))}
                 </div>
               ) : (
                 <>
                   {networkTab === 'connections' && (
-                    networkData.connections.length > 0 ? (
-                      <div className="space-y-1 p-2">
-                        {networkData.connections.map(user => (
-                          <div key={`net-user-${user.id}`} onClick={() => { 
-                            if (setTargetChatUser) setTargetChatUser(user); 
-                            handleNavigate('messages'); 
-                          }} 
-                          className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group">
-                            <div className="relative w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">
-                              {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : (user.username?.substring(0, 2) || '??')}
+                    filteredConnections.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {filteredConnections.map(user => (
+                          <div
+                            key={`net-user-${user.id}`}
+                            onClick={() => { if (setTargetChatUser) setTargetChatUser(user); handleNavigate('messages'); }}
+                            className="h-24 flex items-center gap-3.5 px-4 py-3 bg-white dark:bg-gray-900/70 border border-gray-100 dark:border-white/[0.06] rounded-2xl hover:border-blue-200 dark:hover:border-blue-500/20 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer group transition-all duration-200"
+                          >
+                            {/* Avatar */}
+                            <div className="relative w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border-2 border-white dark:border-gray-900 shadow-sm flex items-center justify-center text-sm font-black text-gray-600 dark:text-gray-400 uppercase">
+                              {user.avatar_url
+                                ? <Image src={user.avatar_url} alt="avatar" fill sizes="44px" className="object-cover" />
+                                : (user.username?.substring(0, 2) || '??')}
+                              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white dark:border-gray-900" />
                             </div>
+                            {/* Info */}
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
-                                @{user.username}
-                                {user.is_verified && <VerifiedBadge size={14} />}
-                                {user.work_status && user.work_status !== 'None' && (
-                                  <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${user.work_status === 'Hiring' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'}`}>
-                                    {user.work_status}
-                                  </span>
+                              <div className="flex items-center gap-1 flex-wrap mb-0.5">
+                                <p className="text-[13px] font-black text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-[120px]">@{user.username}</p>
+                                {user.is_verified && <VerifiedBadge size={13} />}
+                                {user.is_premium && (
+                                  <span className="px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-[8px] font-black uppercase tracking-widest rounded-md shadow-sm">PRO</span>
                                 )}
-                              </p>
-                              <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5 uppercase tracking-widest font-black">{user.status || 'Active'}</p>
+                              </div>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold truncate leading-tight">{user.status || 'Active Member'}</p>
+                              {user.work_status && user.work_status !== 'None' && (
+                                <span className={`inline-flex mt-1 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${user.work_status === 'Hiring' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'}`}>
+                                  {user.work_status}
+                                </span>
+                              )}
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center text-xs text-gray-500 dark:text-gray-400 font-medium p-10">{t('header.network_modal.no_connections')}</div>
+                      <div className="flex flex-col items-center justify-center py-14 text-center">
+                        <div className="w-14 h-14 bg-gray-100 dark:bg-white/[0.04] rounded-2xl flex items-center justify-center mb-3">
+                          <Users size={24} className="text-gray-400" />
+                        </div>
+                        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">
+                          {networkSearch || networkFilter !== 'all' ? 'No results found' : t('header.network_modal.no_connections')}
+                        </p>
+                        {(networkSearch || networkFilter !== 'all') && (
+                          <button onClick={() => { setNetworkSearch(''); setNetworkFilter('all'); }} className="text-xs text-blue-500 font-bold hover:underline">Clear filters</button>
+                        )}
+                      </div>
                     )
                   )}
+
                   {networkTab === 'groups' && (
-                    networkData.groups.length > 0 ? (
-                      <div className="space-y-1 p-2">
-                        {networkData.groups.map(group => (
-                          <div key={`net-group-${group.id}`} onClick={() => handleNavigate('groups')} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group">
-                            <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shrink-0">
-                              <Hash size={16} />
+                    filteredGroups.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {filteredGroups.map(group => (
+                          <div
+                            key={`net-group-${group.id}`}
+                            onClick={() => handleNavigate('groups')}
+                            className="h-24 flex items-center gap-3.5 px-4 py-3 bg-white dark:bg-gray-900/70 border border-gray-100 dark:border-white/[0.06] rounded-2xl hover:border-blue-200 dark:hover:border-blue-500/20 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer group transition-all duration-200"
+                          >
+                            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
+                              <Hash size={18} className="text-white" />
                             </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{group.name}</p>
-                              <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{group.description || (group.is_private ? t('header.network_modal.private_channel') : t('header.network_modal.public_channel'))}</p>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <p className="text-[13px] font-black text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">{group.name}</p>
+                                {group.is_private && (
+                                  <span className="shrink-0 px-1.5 py-0.5 bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400 text-[8px] font-black uppercase tracking-widest rounded-md border border-gray-200 dark:border-white/[0.08]">Private</span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium line-clamp-2 leading-relaxed">
+                                {group.description || (group.is_private ? t('header.network_modal.private_channel') : t('header.network_modal.public_channel'))}
+                              </p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center text-xs text-gray-500 dark:text-gray-400 font-medium p-10">{t('header.network_modal.no_channels')}</div>
+                      <div className="flex flex-col items-center justify-center py-14 text-center">
+                        <div className="w-14 h-14 bg-gray-100 dark:bg-white/[0.04] rounded-2xl flex items-center justify-center mb-3">
+                          <Hash size={24} className="text-gray-400" />
+                        </div>
+                        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">
+                          {networkSearch ? 'No channels match your search' : t('header.network_modal.no_channels')}
+                        </p>
+                        {networkSearch && <button onClick={() => setNetworkSearch('')} className="text-xs text-blue-500 font-bold hover:underline">Clear search</button>}
+                      </div>
                     )
                   )}
                 </>
               )}
+            </div>
+
+            {/* ── Footer CTA ── */}
+            <div className="px-4 pb-4 pt-3 border-t border-gray-100 dark:border-white/[0.06] shrink-0">
+              <button
+                onClick={() => { setShowNetworkModal(false); setNetworkSearch(''); setNetworkFilter('all'); handleNavigate('connections'); }}
+                className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+              >
+                View Full Network <ArrowRight size={13} />
+              </button>
             </div>
           </div>
         </div>
@@ -936,7 +1158,7 @@ export default function Header({ setActiveTab }) {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setApplyingJob(null)} />
           <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl p-6 sm:p-8 animate-in fade-in zoom-in-95 duration-200">
-            <button onClick={() => setApplyingJob(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
+            <button onClick={() => setApplyingJob(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
               <X size={18} />
             </button>
             <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 pr-10 tracking-tight">{t('header.jobs_modal.apply_for')} {applyingJob.title}</h2>
@@ -1050,7 +1272,7 @@ export default function Header({ setActiveTab }) {
           <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto popup-scrollbar z-10 bg-white dark:bg-gray-900 rounded-[2rem] border border-gray-200 dark:border-gray-800 shadow-2xl animate-in zoom-in-95 duration-200">
             <button 
               onClick={() => setSelectedUserId(null)} 
-              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-full text-gray-500 dark:text-gray-400 transition-colors"
+              className="absolute top-6 right-6 z-[250] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-xl text-gray-500 dark:text-gray-400 transition-colors"
             >
               <X size={20} />
             </button>

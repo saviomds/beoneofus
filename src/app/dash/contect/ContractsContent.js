@@ -285,17 +285,24 @@ function Empty() {
 export default function ContractsContent() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
   const [selected, setSelected] = useState(null);
   const [userId, setUserId] = useState(null);
 
   const load = useCallback(async (uid) => {
-    const { data } = await supabase
+    setFetchError('');
+    const { data, error } = await supabase
       .from('contracts')
       .select('*')
       .eq('user_id', uid)
       .neq('status', 'draft')
       .order('created_at', { ascending: false });
-    setContracts(data || []);
+    if (error) {
+      console.error('contracts fetch error:', error);
+      setFetchError(error.message || 'Failed to load contracts.');
+    } else {
+      setContracts(data || []);
+    }
     setLoading(false);
   }, []);
 
@@ -309,9 +316,8 @@ export default function ContractsContent() {
 
   const openContract = async (c) => {
     setSelected(c);
-    // Mark as viewed if first open
     if (c.status === 'sent') {
-      await supabase.from('contracts').update({ status: 'viewed' }).eq('id', c.id);
+      await supabase.from('contracts').update({ status: 'viewed' }).eq('id', c.id).eq('user_id', userId);
       setContracts(prev => prev.map(x => x.id === c.id ? { ...x, status: 'viewed' } : x));
     }
   };
@@ -327,6 +333,26 @@ export default function ContractsContent() {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 size={24} className="animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="max-w-2xl mx-auto py-16 flex flex-col items-center text-center gap-4">
+        <div className="w-14 h-14 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center">
+          <AlertCircle size={24} className="text-red-500" />
+        </div>
+        <div>
+          <h3 className="text-base font-black text-gray-900 dark:text-white mb-1">Couldn't load contracts</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">{fetchError}</p>
+        </div>
+        <button
+          onClick={() => userId && load(userId)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all"
+        >
+          Try again
+        </button>
       </div>
     );
   }

@@ -5,8 +5,18 @@ import { Terminal, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function Error({ error, reset }) {
   useEffect(() => {
-    // Log the error to an error reporting service if needed
-    console.error("Application Error Caught:", error);
+    fetch('/api/system/log-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        level: 'error',
+        category: 'client',
+        message: error?.message || 'Application error boundary triggered',
+        stack: error?.stack,
+        url: typeof window !== 'undefined' ? window.location.href : undefined,
+        metadata: { digest: error?.digest },
+      }),
+    }).catch(() => {});
   }, [error]);
 
   return (

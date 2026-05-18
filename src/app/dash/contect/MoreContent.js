@@ -102,202 +102,318 @@ function statusColor(status) {
 }
 
 function SystemLogsView() {
-  const [stats, setStats] = useState({ totalUsers: 0, completedInterviews: 0, passRate: 0, avgScore: 0, totalApplications: 0, newUsersToday: 0 });
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [logStats, setLogStats] = useState({ total: 0, unresolved: 0, errors: 0, warnings: 0, thisWeek: 0 });
+  const [levelFilter, setLevelFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [resolvedFilter, setResolvedFilter] = useState("unresolved");
+  const [expandedId, setExpandedId] = useState(null);
+  const [resolvingId, setResolvingId] = useState(null);
   const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const terminalRef = useRef(null);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
-  const typeLabel = (type) => {
-    const map = {
-      interview_completed: "Interview completed",
-      handshake: "Connection approved",
-      blocked: "Verification denied",
-      message: "New message",
-      like: "Post liked",
-      comment: "Post commented",
-      follow: "New follower",
-    };
-    return map[type] || type;
-  };
+  const fetchLogs = useCallback(async () => {
+    setLogsLoading(true);
+    let query = supabase
+      .from("error_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (levelFilter !== "all") query = query.eq("level", levelFilter);
+    if (categoryFilter !== "all") query = query.eq("category", categoryFilter);
+    if (resolvedFilter === "unresolved") query = query.eq("resolved", false);
+    if (resolvedFilter === "resolved") query = query.eq("resolved", true);
+    const { data } = await query;
+    setLogs(data || []);
+    setLogsLoading(false);
+  }, [levelFilter, categoryFilter, resolvedFilter]);
 
-  const typeColor = (type) => {
-    if (type === "interview_completed") return "text-emerald-400";
-    if (type === "handshake") return "text-blue-400";
-    if (type === "blocked") return "text-red-400";
-    return "text-gray-400";
-  };
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-
-      const [
-        { count: totalUsers },
-        { data: interviews },
-        { count: totalApplications },
-        { count: newUsersToday },
-        { data: recentNotifs },
-      ] = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("interview_rooms").select("overall_score, status, job_title, profiles!interview_rooms_applicant_id_fkey(username), created_at").eq("status", "completed"),
-        supabase.from("job_applications").select("id", { count: "exact", head: true }),
-        supabase.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", today.toISOString()),
-        supabase.from("notifications").select("type, content, created_at, profiles!notifications_actor_id_fkey(username)").order("created_at", { ascending: false }).limit(30),
-      ]);
-
-      const completed = interviews || [];
-      const scored = completed.filter(r => r.overall_score != null);
-      const passed = scored.filter(r => r.overall_score >= 70);
-      const avgScore = scored.length ? Math.round(scored.reduce((s, r) => s + r.overall_score, 0) / scored.length) : 0;
-
-      setStats({
-        totalUsers: totalUsers || 0,
-        completedInterviews: completed.length,
-        passRate: scored.length ? Math.round((passed.length / scored.length) * 100) : 0,
-        avgScore,
-        totalApplications: totalApplications || 0,
-        newUsersToday: newUsersToday || 0,
-      });
-
-      const interviewEvents = completed.map(r => ({
-        id: `iv_${r.created_at}`,
-        type: "interview_completed",
-        label: `Interview completed`,
-        detail: `@${r.profiles?.username || "user"} — ${r.job_title} · ${r.overall_score != null ? (r.overall_score >= 70 ? `PASSED ${r.overall_score}%` : `FAILED ${r.overall_score}%`) : "no score"}`,
-        ts: r.created_at,
-        pass: r.overall_score != null ? r.overall_score >= 70 : null,
-      }));
-
-      const notifEvents = (recentNotifs || []).map(n => ({
-        id: `notif_${n.created_at}_${Math.random()}`,
-        type: n.type,
-        label: typeLabel(n.type),
-        detail: n.content?.slice(0, 80) || "",
-        ts: n.created_at,
-        pass: null,
-      }));
-
-      const combined = [...interviewEvents, ...notifEvents]
-        .sort((a, b) => new Date(b.ts) - new Date(a.ts))
-        .slice(0, 40);
-
-      setEvents(combined);
-      setLoading(false);
-    };
-
-    load();
-
-    const channel = supabase
-      .channel("system-logs-live")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
-        const n = payload.new;
-        setEvents(prev => [{
-          id: `notif_${n.created_at}_${Math.random()}`,
-          type: n.type,
-          label: typeLabel(n.type),
-          detail: n.content?.slice(0, 80) || "",
-          ts: n.created_at,
-          pass: null,
-        }, ...prev].slice(0, 40));
-      })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "interview_rooms" }, (payload) => {
-        const r = payload.new;
-        if (r.status !== "completed") return;
-        setStats(prev => {
-          const newCompleted = prev.completedInterviews + 1;
-          return { ...prev, completedInterviews: newCompleted };
-        });
-        setEvents(prev => [{
-          id: `iv_${r.id}`,
-          type: "interview_completed",
-          label: "Interview completed",
-          detail: `${r.job_title} · ${r.overall_score != null ? (r.overall_score >= 70 ? `PASSED ${r.overall_score}%` : `FAILED ${r.overall_score}%`) : "no score"}`,
-          ts: new Date().toISOString(),
-          pass: r.overall_score != null ? r.overall_score >= 70 : null,
-        }, ...prev].slice(0, 40));
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+  const fetchLogStats = useCallback(async () => {
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const [tot, unres, errs, warns, week] = await Promise.all([
+      supabase.from("error_logs").select("id", { count: "exact", head: true }),
+      supabase.from("error_logs").select("id", { count: "exact", head: true }).eq("resolved", false),
+      supabase.from("error_logs").select("id", { count: "exact", head: true }).eq("level", "error"),
+      supabase.from("error_logs").select("id", { count: "exact", head: true }).eq("level", "warn"),
+      supabase.from("error_logs").select("id", { count: "exact", head: true }).gte("created_at", weekAgo),
+    ]);
+    setLogStats({ total: tot.count ?? 0, unresolved: unres.count ?? 0, errors: errs.count ?? 0, warnings: warns.count ?? 0, thisWeek: week.count ?? 0 });
   }, []);
 
   useEffect(() => {
-    if (terminalRef.current) terminalRef.current.scrollTop = 0;
-  }, [events]);
+    fetchLogs();
+    fetchLogStats();
+
+    supabase.from("notifications")
+      .select("type, content, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => { setEvents(data || []); setEventsLoading(false); });
+
+    const ch = supabase.channel("error-logs-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "error_logs" }, (payload) => {
+        setLogs(prev => [payload.new, ...prev].slice(0, 100));
+        setLogStats(prev => ({
+          ...prev,
+          total: prev.total + 1,
+          unresolved: prev.unresolved + (payload.new.resolved ? 0 : 1),
+          errors: prev.errors + (payload.new.level === "error" ? 1 : 0),
+          warnings: prev.warnings + (payload.new.level === "warn" ? 1 : 0),
+          thisWeek: prev.thisWeek + 1,
+        }));
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(ch);
+  }, [fetchLogs, fetchLogStats]);
+
+  const handleResolve = async (logId) => {
+    setResolvingId(logId);
+    const { data: { session } } = await supabase.auth.getSession();
+    await supabase.from("error_logs").update({
+      resolved: true,
+      resolved_by: session?.user?.id,
+      resolved_at: new Date().toISOString(),
+    }).eq("id", logId);
+    setLogs(prev => prev.map(l => l.id === logId ? { ...l, resolved: true } : l));
+    setLogStats(prev => ({ ...prev, unresolved: Math.max(0, prev.unresolved - 1) }));
+    setResolvingId(null);
+  };
+
+  const levelCls = (level) => {
+    if (level === "error") return "bg-red-500/10 text-red-400 border-red-500/30";
+    if (level === "warn")  return "bg-amber-500/10 text-amber-400 border-amber-500/30";
+    return "bg-blue-500/10 text-blue-400 border-blue-500/30";
+  };
+  const catCls = (cat) => ({
+    client:  "bg-violet-500/10 text-violet-400",
+    react:   "bg-indigo-500/10 text-indigo-400",
+    api:     "bg-cyan-500/10 text-cyan-400",
+    auth:    "bg-rose-500/10 text-rose-400",
+    payment: "bg-emerald-500/10 text-emerald-400",
+  }[cat] || "bg-gray-800 text-gray-500");
+
+  const CYBER_PANEL = "rounded-xl bg-gray-950 border border-white/[0.06] overflow-hidden";
+  const WIN_BAR = "flex items-center gap-2 px-4 py-2.5 border-b border-white/[0.04] bg-black/40";
 
   return (
-    <div className="space-y-4">
-      {/* Live stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <StatCard icon={Users} label="Total Users" value={stats.totalUsers.toLocaleString()} color="blue" sub={`+${stats.newUsersToday} today`} />
-        <StatCard icon={Video} label="Interviews Done" value={stats.completedInterviews} color="violet" sub={`${stats.avgScore}% avg score`} />
-        <StatCard icon={CheckCircle2} label="Pass Rate" value={`${stats.passRate}%`} color={stats.passRate >= 60 ? "emerald" : "rose"} sub="Score ≥ 70%" />
-        <StatCard icon={Briefcase} label="Applications" value={stats.totalApplications.toLocaleString()} color="amber" sub="All time" />
-        <StatCard icon={TrendingUp} label="Avg Interview Score" value={stats.avgScore ? `${stats.avgScore}%` : "—"} color="blue" sub="Completed interviews" />
-        <StatCard icon={Activity} label="Passed Interviews" value={stats.completedInterviews && stats.passRate ? Math.round(stats.completedInterviews * stats.passRate / 100) : 0} color="emerald" sub={`of ${stats.completedInterviews} total`} />
-      </div>
+    <div className="space-y-4 font-mono">
 
-      {/* Live event feed */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
-        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Live Activity Feed</p>
-          <span className="flex items-center gap-1.5 text-[9px] font-black text-emerald-500 uppercase tracking-widest">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
-          </span>
+      {/* ── CYBER HEADER ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gray-950 border border-cyan-500/20 p-5"
+        style={{ boxShadow: "0 0 40px rgba(6,182,212,0.06), inset 0 0 60px rgba(0,0,0,0.5)" }}>
+        <div className="absolute inset-0 opacity-[0.025] pointer-events-none"
+          style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,1) 2px, rgba(255,255,255,1) 3px)" }} />
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(6,182,212,1) 1px, transparent 0)", backgroundSize: "28px 28px" }} />
+        <div className="relative flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[9px] font-black text-cyan-500/60 uppercase tracking-[0.35em]">beoneofus</span>
+              <span className="text-gray-700 text-xs">/</span>
+              <span className="text-[9px] text-gray-600 uppercase tracking-wider">sys.monitor</span>
+            </div>
+            <h3 className="text-xl font-black text-white flex items-center gap-2.5">
+              <Terminal size={17} className="text-cyan-400" />
+              SYSTEM MONITOR
+              <span className="inline-block w-[2px] h-5 bg-cyan-400 animate-pulse" />
+            </h3>
+            <p className="text-[10px] text-gray-600 mt-1.5 tracking-wider">&gt;_ real-time fault detection · auto-alerts admins on every new error event</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> LIVE
+            </div>
+            <button onClick={() => { fetchLogs(); fetchLogStats(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-[9px] font-black text-gray-400 hover:bg-cyan-500/10 hover:border-cyan-500/30 hover:text-cyan-400 transition-all uppercase tracking-widest">
+              <RefreshCw size={11} /> Sync
+            </button>
+          </div>
         </div>
-        {loading
-          ? <div className="py-10 flex justify-center"><Loader2 size={18} className="animate-spin text-blue-500" /></div>
-          : events.length === 0
-            ? <p className="text-xs text-gray-500 text-center py-10">No activity yet.</p>
-            : (
-              <div className="divide-y divide-gray-100 dark:divide-gray-800/60 max-h-72 overflow-y-auto">
-                {events.map((ev) => (
-                  <div key={ev.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${ev.type === "interview_completed" ? (ev.pass === true ? "bg-emerald-500" : ev.pass === false ? "bg-red-500" : "bg-gray-400") : "bg-blue-400"}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${ev.type === "interview_completed" ? (ev.pass === true ? "text-emerald-600 dark:text-emerald-400" : ev.pass === false ? "text-red-600 dark:text-red-400" : "text-gray-500") : "text-blue-600 dark:text-blue-400"}`}>{ev.label}</span>
-                        {ev.type === "interview_completed" && ev.pass !== null && (
-                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${ev.pass ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400"}`}>
-                            {ev.pass ? "PASSED" : "FAILED"}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-500 truncate mt-0.5">{ev.detail}</p>
-                    </div>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-600 font-mono shrink-0">
-                      {new Date(ev.ts).toLocaleTimeString([], { hour12: false })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )
-        }
       </div>
 
-      {/* Terminal — live realtime log */}
-      <div ref={terminalRef} className="bg-gray-950 rounded-2xl p-5 border border-gray-800 font-mono text-[11px] leading-relaxed shadow-lg overflow-y-auto max-h-56 relative">
-        <div className="absolute top-3 right-3"><Terminal size={13} className="text-gray-700" /></div>
-        <p className="text-gray-600 mb-3"># Realtime Postgres stream — {new Date().toLocaleDateString()}</p>
-        {loading && <p className="text-gray-500">[CONNECTING] Fetching platform data...</p>}
-        {!loading && (
-          <>
-            <p className="text-emerald-400">[OK] Connected · {stats.totalUsers} users · {stats.completedInterviews} interviews</p>
-            <p className="text-blue-400">[INFO] Pass rate: {stats.passRate}% · Avg score: {stats.avgScore}%</p>
-            {events.filter(e => e.type === "interview_completed").slice(0, 5).map((ev, i) => (
-              <p key={i} className={ev.pass ? "text-emerald-400/80" : "text-red-400/80"}>
-                [{new Date(ev.ts).toLocaleTimeString([], { hour12: false })}] {ev.detail}
+      {/* ── HUD STATS ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        {[
+          { label: "TOTAL",     value: logStats.total,      icon: Database,      color: "cyan"    },
+          { label: "UNRESOLVED",value: logStats.unresolved, icon: AlertTriangle, color: logStats.unresolved > 0 ? "red" : "emerald" },
+          { label: "CRITICAL",  value: logStats.errors,     icon: AlertCircle,   color: "red"     },
+          { label: "WARNINGS",  value: logStats.warnings,   icon: AlertTriangle, color: "amber"   },
+          { label: "THIS WEEK", value: logStats.thisWeek,   icon: Activity,      color: "violet"  },
+        ].map(({ label, value, icon: Icon, color }) => {
+          const c = {
+            cyan:    { b: "border-cyan-500/20",    t: "text-cyan-400",    s: "shadow-cyan-500/[0.07]",    bg: "bg-cyan-500/[0.04]"    },
+            red:     { b: "border-red-500/20",     t: "text-red-400",     s: "shadow-red-500/[0.07]",     bg: "bg-red-500/[0.04]"     },
+            emerald: { b: "border-emerald-500/20", t: "text-emerald-400", s: "shadow-emerald-500/[0.07]", bg: "bg-emerald-500/[0.04]" },
+            amber:   { b: "border-amber-500/20",   t: "text-amber-400",   s: "shadow-amber-500/[0.07]",   bg: "bg-amber-500/[0.04]"   },
+            violet:  { b: "border-violet-500/20",  t: "text-violet-400",  s: "shadow-violet-500/[0.07]",  bg: "bg-violet-500/[0.04]"  },
+          }[color];
+          return (
+            <div key={label} className={`relative rounded-xl bg-gray-950 border ${c.b} p-3 shadow-lg ${c.s} overflow-hidden`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${c.t}`}>{label}</span>
+                <Icon size={11} className={c.t} />
+              </div>
+              <p className={`text-2xl font-black tabular-nums leading-none ${c.t}`}>
+                {logsLoading ? <Loader2 size={16} className="animate-spin" /> : (value ?? 0).toLocaleString()}
               </p>
+              <div className={`absolute bottom-0 left-0 right-0 h-px ${c.bg}`} />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── FILTER TERMINAL ── */}
+      <div className={`${CYBER_PANEL} p-3`}>
+        <p className="text-[9px] font-black text-gray-700 uppercase tracking-[0.2em] mb-2.5">&gt;_ filter --flags</p>
+        <div className="flex gap-1.5 flex-wrap items-center">
+          <span className="text-[9px] text-gray-700 shrink-0">--level</span>
+          {["all", "error", "warn", "info"].map(l => (
+            <button key={l} onClick={() => setLevelFilter(l)}
+              className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border transition-all
+                ${levelFilter === l ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40" : "bg-transparent text-gray-600 border-gray-800 hover:border-gray-600 hover:text-gray-400"}`}>
+              {l}
+            </button>
+          ))}
+          <div className="w-px h-4 bg-gray-800 mx-0.5" />
+          <span className="text-[9px] text-gray-700 shrink-0">--src</span>
+          {["all", "client", "react", "api", "auth", "payment"].map(c => (
+            <button key={c} onClick={() => setCategoryFilter(c)}
+              className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border transition-all
+                ${categoryFilter === c ? "bg-violet-500/20 text-violet-300 border-violet-500/40" : "bg-transparent text-gray-600 border-gray-800 hover:border-gray-600 hover:text-gray-400"}`}>
+              {c}
+            </button>
+          ))}
+          <div className="w-px h-4 bg-gray-800 mx-0.5" />
+          <span className="text-[9px] text-gray-700 shrink-0">--status</span>
+          {["unresolved", "resolved", "all"].map(r => (
+            <button key={r} onClick={() => setResolvedFilter(r)}
+              className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border transition-all
+                ${resolvedFilter === r ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-transparent text-gray-600 border-gray-800 hover:border-gray-600 hover:text-gray-400"}`}>
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── LOG TERMINAL WINDOW ── */}
+      <div className={CYBER_PANEL}>
+        <div className={WIN_BAR}>
+          <div className="flex gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/50" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/50" />
+          </div>
+          <span className="text-[10px] text-gray-600 ml-2">error_logs — {logs.length} entries</span>
+        </div>
+
+        <div className="divide-y divide-white/[0.03] max-h-[520px] overflow-y-auto">
+          {logsLoading ? (
+            <div className="py-14 flex flex-col items-center gap-3">
+              <Loader2 size={18} className="animate-spin text-cyan-500" />
+              <p className="text-[9px] text-gray-600 tracking-[0.2em] uppercase">scanning fault data...</p>
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="py-16 text-center">
+              <CheckCircle2 size={26} className="mx-auto text-emerald-500 mb-3" />
+              <p className="text-sm font-black text-emerald-400 tracking-widest">ALL SYSTEMS NOMINAL</p>
+              <p className="text-[9px] text-gray-600 mt-1 tracking-wider">no faults detected · filter range clean</p>
+            </div>
+          ) : logs.map((log, idx) => {
+            const open = expandedId === log.id;
+            const prefix  = { error: "[ERR]", warn: "[WRN]", info: "[INF]" }[log.level] || "[LOG]";
+            const prefixT = { error: "text-red-400", warn: "text-amber-400", info: "text-blue-400" }[log.level] || "text-gray-500";
+            const leftBar = { error: "border-l-red-500/60", warn: "border-l-amber-500/50", info: "border-l-blue-500/30" }[log.level] || "border-l-gray-800";
+            return (
+              <div key={log.id} className={`border-l-2 ${leftBar} transition-all ${log.resolved ? "opacity-35" : ""}`}>
+                <button onClick={() => setExpandedId(open ? null : log.id)}
+                  className="w-full text-left px-4 py-2.5 hover:bg-white/[0.025] transition-colors">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={`text-[10px] font-black shrink-0 ${prefixT}`}>{prefix}</span>
+                    <span className="text-[9px] text-gray-700 shrink-0 tabular-nums">{String(idx + 1).padStart(3, "0")}</span>
+                    {log.count > 1 && (
+                      <span className="text-[8px] font-black text-gray-600 shrink-0 bg-gray-800/80 px-1.5 py-0.5 rounded border border-gray-700/60">×{log.count}</span>
+                    )}
+                    <span className="text-[11px] text-gray-200 truncate flex-1">{log.message}</span>
+                    <span className="text-[9px] text-gray-700 shrink-0 tabular-nums">{new Date(log.created_at).toLocaleTimeString([], { hour12: false })}</span>
+                    {log.resolved && <span className="text-[8px] font-black text-emerald-500 shrink-0 tracking-widest font-sans">✓ PATCHED</span>}
+                    <ChevronDown size={11} className={`text-gray-700 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 pl-[60px] flex-wrap">
+                    <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-px rounded border font-sans ${levelCls(log.level)}`}>{log.level}</span>
+                    <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-px rounded font-sans ${catCls(log.category)}`}>{log.category || "client"}</span>
+                    {log.url && <span className="text-[9px] text-gray-700 truncate max-w-[180px]">{log.url.replace(/^https?:\/\/[^/]+/, "")}</span>}
+                  </div>
+                </button>
+
+                {open && (
+                  <div className="px-4 pb-4 pt-2 bg-black/50 border-t border-white/[0.04] space-y-3">
+                    {log.stack && (
+                      <div>
+                        <p className="text-[8px] font-black text-red-500/50 uppercase tracking-[0.2em] mb-1.5 font-sans">&gt;_ STACK TRACE</p>
+                        <pre className="text-[9px] text-red-400/80 bg-red-950/20 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap leading-relaxed border border-red-900/20 max-h-48">{log.stack}</pre>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[9px] pl-1">
+                      {log.user_id && (
+                        <div className="flex gap-2"><span className="text-gray-700 shrink-0">uid</span><span className="text-cyan-400/80">{log.user_id.slice(0, 12)}…</span></div>
+                      )}
+                      {log.component && (
+                        <div className="flex gap-2"><span className="text-gray-700 shrink-0">cmp</span><span className="text-violet-400/80">{log.component}</span></div>
+                      )}
+                      {log.last_seen_at && (
+                        <div className="flex gap-2"><span className="text-gray-700 shrink-0">last</span><span className="text-gray-500">{new Date(log.last_seen_at).toLocaleString()}</span></div>
+                      )}
+                      {log.user_agent && (
+                        <div className="flex gap-2 col-span-2"><span className="text-gray-700 shrink-0">ua</span><span className="text-gray-600">{String(log.user_agent).slice(0, 90)}</span></div>
+                      )}
+                    </div>
+                    {!log.resolved && (
+                      <button onClick={() => handleResolve(log.id)} disabled={resolvingId === log.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[9px] font-black rounded-lg transition-all hover:bg-emerald-500/20 disabled:opacity-40 uppercase tracking-widest font-sans">
+                        {resolvingId === log.id ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />}
+                        PATCH · Mark Resolved
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── ACTIVITY FEED TERMINAL ── */}
+      <div className={CYBER_PANEL}>
+        <div className={WIN_BAR}>
+          <div className="flex gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/50" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/50" />
+          </div>
+          <span className="text-[10px] text-gray-600 ml-2">platform_activity</span>
+          <div className="ml-auto flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[8px] text-emerald-500 font-black uppercase tracking-widest font-sans">live</span>
+          </div>
+        </div>
+        {eventsLoading ? (
+          <div className="py-6 flex justify-center"><Loader2 size={14} className="animate-spin text-cyan-500" /></div>
+        ) : events.length === 0 ? (
+          <p className="text-[9px] text-gray-700 text-center py-8">// no recent activity</p>
+        ) : (
+          <div className="divide-y divide-white/[0.02] max-h-44 overflow-y-auto">
+            {events.map((ev, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-2 hover:bg-white/[0.02] transition-colors">
+                <span className="text-[9px] text-cyan-600/60 shrink-0">&gt;</span>
+                <span className="text-[8px] font-black text-cyan-500/70 uppercase tracking-wider shrink-0 font-sans">{ev.type?.replace(/_/g, ".")}</span>
+                <span className="text-[10px] text-gray-500 truncate flex-1">{ev.content?.slice(0, 70)}</span>
+                <span className="text-[9px] text-gray-700 tabular-nums shrink-0">{new Date(ev.created_at).toLocaleTimeString([], { hour12: false })}</span>
+              </div>
             ))}
-            {events.filter(e => e.type !== "interview_completed").slice(0, 5).map((ev, i) => (
-              <p key={i} className="text-gray-500">
-                [{new Date(ev.ts).toLocaleTimeString([], { hour12: false })}] {ev.label} — {ev.detail}
-              </p>
-            ))}
-          </>
+          </div>
         )}
-        <p className="text-emerald-400/60 animate-pulse mt-1">_</p>
       </div>
     </div>
   );

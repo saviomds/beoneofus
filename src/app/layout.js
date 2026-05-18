@@ -2,6 +2,7 @@ import './globals.css';
 import { ThemeProvider } from './components/ThemeProvider';
 import { InstallPrompt } from './components/InstallPrompt';
 import { LanguageProvider } from '../lib/i18n';
+import ErrorLogger from './components/ErrorLogger';
 
 export const metadata = {
   title: 'beoneofus - The network for developers',
@@ -50,6 +51,7 @@ export default function RootLayout({ children }) {
       <body className="antialiased overflow-x-hidden overflow-y-auto" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <LanguageProvider>
+            <ErrorLogger />
             {children}
             <InstallPrompt />
           </LanguageProvider>

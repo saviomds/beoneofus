@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { Terminal, ArrowLeft, Users, Globe, Cpu, Zap, Code2, MessageSquare } from "lucide-react";
-import FloatingAiAssistant from "../components/FloatingAiAssistant";
+import dynamic from "next/dynamic";
+const FloatingAiAssistant = dynamic(() => import("../components/FloatingAiAssistant"), { ssr: false });
 
 export default function Community() {
   const communities = [

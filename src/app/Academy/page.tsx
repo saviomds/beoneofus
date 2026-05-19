@@ -7,7 +7,8 @@ import {
   Terminal, ArrowLeft, Search, BookOpen, PlayCircle, 
   ChevronRight, Clock, User, Laptop
 } from "lucide-react";
-import FloatingAiAssistant from "../components/FloatingAiAssistant";
+import dynamic from "next/dynamic";
+const FloatingAiAssistant = dynamic(() => import("../components/FloatingAiAssistant"), { ssr: false });
 import { supabase } from "../supabaseClient";
 
 type Course = {

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Terminal, ArrowLeft, Search, Star, GitBranch, Code2, ChevronRight, X, ExternalLink, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "../supabaseClient";
-import FloatingAiAssistant from "../components/FloatingAiAssistant";
+import dynamic from "next/dynamic";
+const FloatingAiAssistant = dynamic(() => import("../components/FloatingAiAssistant"), { ssr: false });
 
 export default function ExploreProjects() {
   const [projects, setProjects] = useState([]);

@@ -10,8 +10,10 @@ import {
   AlertTriangle, Briefcase, GraduationCap, BookOpen, Star,
   Sparkles, Lock, CheckCircle2, MessageSquare, TrendingUp,
   Play, Shield, ChevronRight, Award, Pencil, Trash2,
+  Laptop, ShoppingBag, Trophy, FileText, Newspaper, Crown,
 } from "lucide-react";
-import FloatingAiAssistant from "./components/FloatingAiAssistant";
+import dynamic from "next/dynamic";
+const FloatingAiAssistant = dynamic(() => import("./components/FloatingAiAssistant"), { ssr: false });
 import { getAvatarSrc } from "../lib/avatar";
 
 /* ─── Animation helpers ─────────────────────────────────────── */
@@ -241,6 +243,8 @@ export default function LandingPage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [mobileSection, setMobileSection] = useState(null);
   const [authError, setAuthError] = useState(null);
   const [pageViews, setPageViews] = useState(null);
   const [liveStats, setLiveStats] = useState(FALLBACK_STATS);
@@ -404,11 +408,14 @@ export default function LandingPage() {
           style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
 
         {/* ── Navbar ──────────────────────────── */}
-        <nav className="fixed top-0 w-full z-50 border-b border-gray-200/80 dark:border-white/5 bg-white/75 dark:bg-[#080c12]/80 backdrop-blur-2xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-4">
+        <nav
+          className="fixed top-0 w-full z-50 border-b border-gray-200/80 dark:border-white/5 bg-white/95 dark:bg-[#080c12]/95 backdrop-blur-2xl"
+          onMouseLeave={() => setActiveDropdown(null)}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
 
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 shrink-0 group">
+            <Link href="/" className="flex items-center gap-2 shrink-0 group" onClick={() => setActiveDropdown(null)}>
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform">
                 <Terminal size={16} className="text-white" />
               </div>
@@ -417,18 +424,30 @@ export default function LandingPage() {
               </span>
             </Link>
 
-            {/* Desktop nav */}
-            <div className="hidden lg:flex items-center gap-1">
+            {/* Desktop nav — mega menus */}
+            <div className="hidden lg:flex items-center gap-0.5">
               {[
-                { href: "/Explore_Projects", label: "Explore" },
-                { href: "/LearnPage", label: "Learn" },
-                { href: "/how_it_works", label: "How It Works" },
-              ].map(({ href, label }) => (
-                <Link key={href} href={href}
-                  className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-all">
-                  {label}
-                </Link>
+                { id: "product",   label: "Product"   },
+                { id: "community", label: "Community" },
+                { id: "resources", label: "Resources" },
+                { id: "company",   label: "Company"   },
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onMouseEnter={() => setActiveDropdown(item.id)}
+                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                    activeDropdown === item.id
+                      ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
+                  }`}
+                >
+                  {item.label}
+                  <ChevronDown size={13} className={`transition-transform duration-200 ${activeDropdown === item.id ? "rotate-180 text-blue-500" : ""}`} />
+                </button>
               ))}
+              <Link href="/docs" onMouseEnter={() => setActiveDropdown(null)} className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-all">
+                Docs
+              </Link>
             </div>
 
             {/* Auth area */}
@@ -437,29 +456,30 @@ export default function LandingPage() {
                 <div className="w-32 sm:w-48 h-9 bg-gray-100 dark:bg-white/5 animate-pulse rounded-xl" />
               ) : session ? (
                 <>
-                  <Link href="/dash" className="relative text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-2 transition-colors shrink-0">
+                  <Link href="/dash" className="relative text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-2 transition-colors shrink-0" onMouseEnter={() => setActiveDropdown(null)}>
                     <Bell size={19} />
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#080c12]" />
                   </Link>
                   <Link href="/dash"
-                    className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 pl-1.5 pr-1.5 sm:pl-2 sm:pr-3 py-1 sm:py-1.5 rounded-full transition-all shrink-0">
-                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shadow-sm shrink-0">
+                    onMouseEnter={() => setActiveDropdown(null)}
+                    className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 pl-1.5 pr-3 py-1.5 rounded-full transition-all shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shadow-sm shrink-0">
                       {getAvatarSrc(profile, session) && !navAvatarError
                         ? <img src={getAvatarSrc(profile, session)} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
                         : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
                     </div>
-                    <span className="hidden sm:block text-sm font-bold text-gray-700 dark:text-gray-300">Dash</span>
-                    <ChevronDown size={14} className="text-gray-400 hidden lg:block" />
+                    <span className="hidden sm:block text-sm font-bold text-gray-700 dark:text-gray-300">Dashboard</span>
                   </Link>
                 </>
               ) : (
                 <>
-                  <Link href="/auth" className="px-3 sm:px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                    Login
+                  <Link href="/auth" onMouseEnter={() => setActiveDropdown(null)} className="hidden sm:block px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                    Sign in
                   </Link>
                   <Link href="/auth"
-                    className="hidden sm:block px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105">
-                    Join
+                    onMouseEnter={() => setActiveDropdown(null)}
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105">
+                    Get Started
                   </Link>
                 </>
               )}
@@ -467,44 +487,334 @@ export default function LandingPage() {
               {/* Mobile toggle */}
               <button
                 className="lg:hidden p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                onClick={() => { setMobileMenuOpen(!mobileMenuOpen); setMobileSection(null); }}>
                 {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             </div>
           </div>
 
-          {/* Mobile menu */}
-          <div className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
-            <div className="px-4 pb-6 pt-2 border-t border-gray-100 dark:border-white/5 space-y-1">
+          {/* ── Mega dropdown panel ── */}
+          {activeDropdown && (
+            <div
+              className="absolute top-full left-0 right-0 border-t border-gray-100 dark:border-white/[0.06] bg-white/98 dark:bg-[#080c12]/98 backdrop-blur-xl shadow-2xl shadow-black/10 dark:shadow-black/50"
+              onMouseEnter={() => {}}
+            >
+              <div className="max-w-7xl mx-auto px-6 py-8">
+
+                {/* ── Product ── */}
+                {activeDropdown === "product" && (
+                  <div className="grid grid-cols-4 gap-8">
+                    <div className="col-span-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Features</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { icon: <Bot size={17} />, label: "AI Assistant",     desc: "24/7 career & skill coaching",      href: "/dash/more",        color: "violet" },
+                          { icon: <Briefcase size={17} />, label: "Jobs & Services", desc: "Browse or post opportunities",   href: "/dash/jobs",        color: "blue"   },
+                          { icon: <GraduationCap size={17} />, label: "Mentorship", desc: "1-on-1 sessions with experts",   href: "/dash/mentorship",  color: "emerald" },
+                          { icon: <BookOpen size={17} />, label: "Academy",      desc: "AI-generated learning paths",       href: "/Academy",          color: "amber"  },
+                          { icon: <Users size={17} />, label: "Connections",     desc: "Grow your professional network",   href: "/dash/connections", color: "indigo" },
+                          { icon: <Award size={17} />, label: "Coaching",        desc: "Structured expert coaching",        href: "/dash/mentorship",  color: "rose"   },
+                        ].map(({ icon, label, desc, href, color }) => (
+                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
+                            className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                              color === "violet" ? "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400" :
+                              color === "blue"   ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" :
+                              color === "emerald"? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" :
+                              color === "amber"  ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" :
+                              color === "indigo" ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" :
+                                                   "bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400"
+                            }`}>{icon}</div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Tools</p>
+                      <div className="space-y-0.5">
+                        {[
+                          { icon: <Laptop size={15} />,       label: "In-Browser IDE",   href: "/IDEPage" },
+                          { icon: <ShoppingBag size={15} />,  label: "Marketplace",      href: "/dash/marketplace" },
+                          { icon: <Code2 size={15} />,        label: "Projects",         href: "/projects" },
+                          { icon: <Trophy size={15} />,       label: "Leaderboard",      href: "/dash/leaderboard" },
+                          { icon: <FileText size={15} />,     label: "Resume Builder",   href: "/dash/profile" },
+                          { icon: <Crown size={15} />,        label: "Premium",          href: "/dash/premium" },
+                        ].map(({ icon, label, href }) => (
+                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all font-medium">
+                            <span className="shrink-0">{icon}</span>{label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-600 to-violet-600 rounded-2xl p-6 text-white flex flex-col justify-between">
+                      <div>
+                        <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center mb-4"><Sparkles size={18} /></div>
+                        <p className="font-black text-lg leading-tight mb-2">Go Premium</p>
+                        <p className="text-sm text-white/80 leading-relaxed">Unlock mentorship booking, advanced AI, verified badge, and priority network access.</p>
+                      </div>
+                      <Link href="/dash/premium" onClick={() => setActiveDropdown(null)}
+                        className="mt-5 flex items-center gap-2 bg-white text-blue-600 font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-blue-50 transition-colors self-start">
+                        Upgrade now <ArrowRight size={14} />
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Community ── */}
+                {activeDropdown === "community" && (
+                  <div className="grid grid-cols-3 gap-10">
+                    <div className="col-span-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Community Hubs</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: "Tech & Engineering",    members: "31.5k", color: "blue"   },
+                          { label: "Design & Creativity",   members: "19.7k", color: "violet" },
+                          { label: "Founders & Startups",   members: "14.2k", color: "emerald"},
+                          { label: "Marketing & Growth",    members: "11.3k", color: "amber"  },
+                          { label: "Finance & Business",    members: "8.6k",  color: "indigo" },
+                          { label: "Education & Research",  members: "6.4k",  color: "rose"   },
+                        ].map(({ label, members }) => (
+                          <Link key={label} href="/community" onClick={() => setActiveDropdown(null)}
+                            className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-blue-200 dark:hover:border-blue-500/20 hover:bg-blue-50/40 dark:hover:bg-blue-500/5 transition-all group">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-2 h-2 rounded-full bg-blue-500/60 shrink-0" />
+                              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</span>
+                            </div>
+                            <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{members}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Explore</p>
+                      <div className="space-y-0.5">
+                        {[
+                          { icon: <Globe size={15} />,        label: "Explore Projects", href: "/Explore_Projects" },
+                          { icon: <Newspaper size={15} />,    label: "Blog",             href: "/blog" },
+                          { icon: <MessageSquare size={15} />,label: "Messaging",        href: "/dash/messages" },
+                          { icon: <Users size={15} />,        label: "Connections",      href: "/dash/connections" },
+                          { icon: <Star size={15} />,         label: "Sponsors",         href: "/sponsors" },
+                        ].map(({ icon, label, href }) => (
+                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all font-medium">
+                            <span className="shrink-0">{icon}</span>{label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Resources ── */}
+                {activeDropdown === "resources" && (
+                  <div className="grid grid-cols-3 gap-10">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Learn</p>
+                      {[
+                        { icon: <BookOpen size={16} />,     label: "Academy",          desc: "Browse all courses",            href: "/Academy"     },
+                        { icon: <Award size={16} />,        label: "Certificates",     desc: "Earn verified credentials",     href: "/certificate" },
+                        { icon: <Laptop size={16} />,       label: "In-Browser IDE",   desc: "Code directly in your browser", href: "/IDEPage"     },
+                        { icon: <Globe size={16} />,        label: "Explore Projects", desc: "See what members are building", href: "/Explore_Projects" },
+                      ].map(({ icon, label, desc, href }) => (
+                        <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
+                          className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/5 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 shrink-0 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-500 transition-colors">{icon}</div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{desc}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Documentation</p>
+                      {[
+                        { icon: <FileText size={16} />,  label: "Documentation",  desc: "Full platform guide",   href: "/docs"          },
+                        { icon: <Zap size={16} />,       label: "How It Works",   desc: "Platform overview",     href: "/how_it_works"  },
+                        { icon: <Shield size={16} />,    label: "Premium Guide",  desc: "What premium includes", href: "/dash/premium"  },
+                        { icon: <CheckCircle2 size={16}/>,label: "Quick Start",   desc: "Up and running in 5 min",href: "/docs#quick-start" },
+                      ].map(({ icon, label, desc, href }) => (
+                        <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
+                          className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/5 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 shrink-0 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-500 transition-colors">{icon}</div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{desc}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                    <div className="bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 rounded-2xl p-5 flex flex-col gap-4">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">Support</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Need help? Our support team and community are here for you.</p>
+                      </div>
+                      {[
+                        { icon: <MessageSquare size={14} />, label: "Open a Support Ticket", href: "/dash/more?tool=support" },
+                        { icon: <Users size={14} />,         label: "Community Forum",        href: "/community" },
+                      ].map(({ icon, label, href }) => (
+                        <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
+                          className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                          {icon}{label} <ChevronRight size={13} className="ml-auto" />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Company ── */}
+                {activeDropdown === "company" && (
+                  <div className="grid grid-cols-3 gap-10">
+                    <div className="col-span-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">About beoneofus</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { icon: <Star size={17} />,      label: "Sponsors",          desc: "Partner with the platform",      href: "/sponsors",         color: "amber"  },
+                          { icon: <Newspaper size={17} />, label: "Blog",              desc: "Updates, stories & insights",    href: "/blog",             color: "gray"   },
+                          { icon: <Users size={17} />,     label: "Community",         desc: "48k+ professionals worldwide",   href: "/community",        color: "indigo" },
+                          { icon: <Shield size={17} />,    label: "Founder Dashboard", desc: "Platform governance & ops",      href: "/founder-dashboard",color: "blue"   },
+                        ].map(({ icon, label, desc, href, color }) => (
+                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
+                            className="flex items-start gap-3 p-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                              color === "amber"  ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" :
+                              color === "indigo" ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" :
+                              color === "blue"   ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" :
+                                                   "bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"
+                            }`}>{icon}</div>
+                            <div>
+                              <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Join the Network</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Over 48,000 professionals use beoneofus to grow their career, skills, and income.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Link href="/auth" onClick={() => setActiveDropdown(null)}
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 w-full">
+                          Get Started Free <ArrowRight size={14} />
+                        </Link>
+                        <Link href="/sponsors" onClick={() => setActiveDropdown(null)}
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm transition-all hover:border-blue-300 dark:hover:border-blue-500/30 w-full">
+                          Become a Sponsor
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          )}
+
+          {/* ── Mobile menu ── */}
+          <div className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? "max-h-[85vh] opacity-100 overflow-y-auto" : "max-h-0 opacity-0"}`}>
+            <div className="px-4 pb-6 pt-2 border-t border-gray-100 dark:border-white/5">
+              {/* User card */}
               {session && (
-                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-white/5 rounded-xl mb-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-white/5 rounded-xl mb-4">
+                  <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
                     {getAvatarSrc(profile, session) && !navAvatarError
                       ? <img src={getAvatarSrc(profile, session)} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
                       : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">
-                      @{profile?.username || session?.user?.email?.split("@")[0] || "member"}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                      {profile?.role || "member"}
-                    </p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">@{profile?.username || session?.user?.email?.split("@")[0] || "member"}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{profile?.role || "member"}</p>
                   </div>
                 </div>
               )}
+
+              {/* Accordion sections */}
               {[
-                { href: "/Explore_Projects", label: "Explore" },
-                { href: "/LearnPage", label: "Learn" },
-                { href: "/how_it_works", label: "How It Works" },
-                ...(session ? [{ href: "/dash", label: "Dashboard" }, { href: "/projects", label: "My Projects" }] : []),
-              ].map(({ href, label }) => (
-                <Link key={href} href={href} onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all">
-                  {label}
-                </Link>
+                {
+                  id: "product", label: "Product",
+                  links: [
+                    { label: "AI Assistant",   href: "/dash/more"        },
+                    { label: "Jobs & Services", href: "/dash/jobs"        },
+                    { label: "Mentorship",      href: "/dash/mentorship"  },
+                    { label: "Academy",         href: "/Academy"          },
+                    { label: "Marketplace",     href: "/dash/marketplace" },
+                    { label: "In-Browser IDE",  href: "/IDEPage"          },
+                    { label: "Connections",     href: "/dash/connections" },
+                    { label: "Coaching",        href: "/dash/mentorship"  },
+                  ],
+                },
+                {
+                  id: "community", label: "Community",
+                  links: [
+                    { label: "Explore Projects",       href: "/Explore_Projects" },
+                    { label: "Community Hubs",         href: "/community"        },
+                    { label: "Blog",                   href: "/blog"             },
+                    { label: "Messaging",              href: "/dash/messages"    },
+                  ],
+                },
+                {
+                  id: "resources", label: "Resources",
+                  links: [
+                    { label: "Documentation",  href: "/docs"         },
+                    { label: "How It Works",   href: "/how_it_works" },
+                    { label: "Certificates",   href: "/certificate"  },
+                    { label: "Quick Start",    href: "/docs#quick-start" },
+                  ],
+                },
+                {
+                  id: "company", label: "Company",
+                  links: [
+                    { label: "Sponsors", href: "/sponsors"          },
+                    { label: "Blog",     href: "/blog"              },
+                    { label: "Community",href: "/community"         },
+                  ],
+                },
+              ].map(section => (
+                <div key={section.id} className="border-b border-gray-100 dark:border-white/5 last:border-0">
+                  <button
+                    onClick={() => setMobileSection(mobileSection === section.id ? null : section.id)}
+                    className="flex items-center justify-between w-full px-3 py-3.5 text-sm font-bold text-gray-700 dark:text-gray-300">
+                    {section.label}
+                    <ChevronDown size={15} className={`transition-transform text-gray-400 ${mobileSection === section.id ? "rotate-180" : ""}`} />
+                  </button>
+                  {mobileSection === section.id && (
+                    <div className="pb-2 pl-4 space-y-0.5">
+                      {section.links.map(link => (
+                        <Link key={link.href + link.label} href={link.href}
+                          onClick={() => { setMobileMenuOpen(false); setMobileSection(null); }}
+                          className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-all font-medium">
+                          <ChevronRight size={12} className="text-gray-300 dark:text-gray-600 shrink-0" />{link.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
-              <div className="pt-3 flex flex-col gap-2">
+
+              {/* Direct links */}
+              <div className="pt-3 space-y-0.5">
+                <Link href="/docs" onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center px-3 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-all">
+                  Docs
+                </Link>
+                {session && (
+                  <Link href="/dash" onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center px-3 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-all">
+                    Dashboard
+                  </Link>
+                )}
+              </div>
+
+              {/* CTA */}
+              <div className="pt-4 flex flex-col gap-2">
                 {!session && (
                   <Link href="/auth" onClick={() => setMobileMenuOpen(false)}
                     className="w-full text-center py-3 bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white font-bold rounded-xl text-sm border border-gray-200 dark:border-white/10">

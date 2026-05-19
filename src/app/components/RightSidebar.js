@@ -174,73 +174,88 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
   useEffect(() => {
     let isMounted = true;
 
+    const RS_CACHE_KEY = 'rightsidebar_v1';
+    const RS_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+
+    const loadCache = () => {
+      try {
+        const raw = sessionStorage.getItem(RS_CACHE_KEY);
+        if (!raw) return null;
+        const { data, ts } = JSON.parse(raw);
+        if (Date.now() - ts > RS_CACHE_TTL) return null;
+        return data;
+      } catch { return null; }
+    };
+
+    const saveCache = (data) => {
+      try { sessionStorage.setItem(RS_CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch {}
+    };
+
     const fetchSidebarData = async (showLoader = true) => {
       try {
+        // Serve from cache immediately so the sidebar renders without waiting
+        const cached = loadCache();
+        if (cached && isMounted) {
+          if (cached.suggestions) setSuggestions(cached.suggestions);
+          if (cached.groups) setGroups(cached.groups);
+          if (cached.spotlights) setSpotlights(cached.spotlights);
+          if (cached.followedIds) setFollowedIds(cached.followedIds);
+          if (showLoader) setLoading(false);
+          showLoader = false; // don't show loader, but still refresh in background
+        }
+
         if (showLoader) setLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session || !isMounted) {
-          return;
-        }
+        if (!session || !isMounted) return;
         const uid = session.user.id;
-  
-        // Fetch existing connections to know who we already follow
-        const { data: connections } = await supabase
-          .from('connections')
-          .select('sender_id, receiver_id')
-          .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
-  
+
+        // Run connections, groups, and spotlights in parallel — groups/spotlights don't depend on connections
+        const [{ data: connections }, { data: activeGroups }, { data: spotlightProfiles }] = await Promise.all([
+          supabase.from('connections')
+            .select('sender_id, receiver_id')
+            .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`),
+          supabase.from('groups')
+            .select('id, name, description, is_private')
+            .order('created_at', { ascending: false })
+            .limit(3),
+          supabase.from('profiles')
+            .select('id, username, avatar_url, bio, is_verified, is_premium, status')
+            .eq('is_verified', true)
+            .limit(6),
+        ]);
+
         let connectedIds = [];
         if (connections) {
           connectedIds = connections.map(c => c.sender_id === uid ? c.receiver_id : c.sender_id);
           if (isMounted) setFollowedIds(connectedIds);
         }
-  
-        // Fetch suggested users
+
+        // Fetch suggested users — limited to 50 to avoid fetching entire user table
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, username, status, avatar_url, is_verified')
-          .neq('id', uid);
-  
-        if (profiles && isMounted) {
-          // Filter out people we are already connected to
+          .neq('id', uid)
+          .limit(50);
+
+        if (!isMounted) return;
+
+        let newSuggestions = [];
+        if (profiles) {
           const unassociated = profiles.filter(p => !connectedIds.includes(p.id));
-          
-          setSuggestions(prev => {
-            if (!showLoader && prev.length > 0) {
-              const remaining = prev.filter(p => !connectedIds.includes(p.id));
-              if (remaining.length < 15) {
-                // Add unfollowed users back into the active suggestions list
-                const newToAdd = unassociated.filter(u => !remaining.some(r => r.id === u.id));
-                return [...remaining, ...newToAdd].slice(0, 15);
-              }
-              return remaining;
-            }
-            return unassociated.sort(() => 0.5 - Math.random()).slice(0, 15);
-          });
-        }
-  
-        // Fetch active groups
-        const { data: activeGroups } = await supabase
-          .from('groups')
-          .select('id, name, description, is_private')
-          .order('created_at', { ascending: false })
-          .limit(3);
-  
-        if (activeGroups && isMounted) {
-          setGroups(activeGroups);
+          newSuggestions = unassociated.sort(() => 0.5 - Math.random()).slice(0, 15);
+          setSuggestions(newSuggestions);
         }
 
-        // Fetch community spotlights
-        const { data: spotlightProfiles } = await supabase
-          .from('profiles')
-          .select('id, username, avatar_url, bio, is_verified, is_premium, status')
-          .eq('is_verified', true)
-          .limit(6);
+        const newGroups = activeGroups || [];
+        if (isMounted) setGroups(newGroups);
 
-        if (spotlightProfiles && isMounted) {
-          const shuffled = spotlightProfiles.sort(() => 0.5 - Math.random()).slice(0, 3);
-          setSpotlights(shuffled);
+        let newSpotlights = [];
+        if (spotlightProfiles) {
+          newSpotlights = spotlightProfiles.sort(() => 0.5 - Math.random()).slice(0, 3);
+          if (isMounted) setSpotlights(newSpotlights);
         }
+
+        saveCache({ suggestions: newSuggestions, groups: newGroups, spotlights: newSpotlights, followedIds: connectedIds });
       } catch (error) {
         console.error("RightSidebar fetch error:", error);
       } finally {

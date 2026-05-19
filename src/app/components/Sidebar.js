@@ -16,6 +16,7 @@ import VerifiedBadge from './VerifiedBadge';
 import PremiumBadge from './PremiumBadge';
 import { getAvatarSrc } from '../../lib/avatar';
 import { useLanguage } from '../../lib/i18n';
+import { usePlatformVersion } from '../../lib/usePlatformVersion';
 
 const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index, isNew }) => {
   const { t } = useLanguage();
@@ -60,14 +61,34 @@ const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction,
   );
 };
 
+const SIDEBAR_CACHE_KEY = 'sidebar_profile_v1';
+const SIDEBAR_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCachedProfile() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(SIDEBAR_CACHE_KEY);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    if (Date.now() - ts > SIDEBAR_CACHE_TTL) return null;
+    return data;
+  } catch { return null; }
+}
+
+function setCachedProfile(data) {
+  try { sessionStorage.setItem(SIDEBAR_CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch {}
+}
+
 export default function Sidebar({ onClose }) {
   const { t } = useLanguage();
-  const [profile, setProfile] = useState(null);
+  const { versionData } = usePlatformVersion();
+  const [profile, setProfile] = useState(() => getCachedProfile());
   const [authSession, setAuthSession] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0); // State for real notification count
   const [unreadGroups, setUnreadGroups] = useState(0);
-  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  // Skip loading skeleton if we already have a cached profile
+  const [isProfileLoading, setIsProfileLoading] = useState(() => !getCachedProfile());
   const [isRinging, setIsRinging] = useState(false);
   const [isGroupRinging, setIsGroupRinging] = useState(false);
   const [isBouncing, setIsBouncing] = useState(false);
@@ -195,8 +216,8 @@ export default function Sidebar({ onClose }) {
             .eq('id', uid)
             .single();
 
-          if (profileData) setProfile(profileData);
-  
+          if (profileData) { setProfile(profileData); setCachedProfile(profileData); }
+
           await fetchCounts(uid);
   
           // Remove existing subscription if any
@@ -236,7 +257,7 @@ export default function Sidebar({ onClose }) {
               filter: `id=eq.${uid}`
             }, async () => {
               const { data: updatedProfile } = await supabase.from('profiles').select('*').eq('id', uid).single();
-              if (updatedProfile) setProfile(updatedProfile);
+              if (updatedProfile) { setProfile(updatedProfile); setCachedProfile(updatedProfile); }
             })
             .subscribe();
   
@@ -297,6 +318,7 @@ export default function Sidebar({ onClose }) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    try { sessionStorage.removeItem(SIDEBAR_CACHE_KEY); } catch {}
     router.push('/auth');
   };
 
@@ -509,6 +531,18 @@ export default function Sidebar({ onClose }) {
               </div>
             </div>
           ) : (
+            <>
+              {versionData?.version && (
+                <div className="px-3 pb-2 flex items-center gap-2">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Platform</span>
+                  <span className="text-[9px] font-black text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 px-1.5 py-0.5 rounded-full">
+                    v{versionData.version}
+                  </span>
+                  {versionData.label && (
+                    <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{versionData.label}</span>
+                  )}
+                </div>
+              )}
             <div
               className="flex items-center gap-3 py-2.5 px-3 w-full rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all select-none min-w-0"
               onClick={() => { if (profile) { router.push('/dash/profile'); onClose?.(); } }}
@@ -546,6 +580,7 @@ export default function Sidebar({ onClose }) {
                 )}
               </div>
             </div>
+            </>
           )}
 
           {profile && (

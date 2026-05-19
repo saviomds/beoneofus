@@ -35,6 +35,10 @@ const nextConfig = {
 
   turbopack: {},
 
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'react-markdown', 'react-syntax-highlighter'],
+  },
+
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'jwjrogchwfzofpaczaah.supabase.co' },

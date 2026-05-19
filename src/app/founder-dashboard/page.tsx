@@ -67,9 +67,10 @@ const TABS = [
   { id: 'users',        label: 'Users',        icon: Users,        protected: true  },
   { id: 'tasks',        label: 'Tasks',        icon: ClipboardList, protected: false },
   { id: 'contracts',    label: 'Contracts',    icon: ScrollText,   protected: true  },
+  { id: 'platform',     label: 'Platform',     icon: Zap,          protected: true  },
 ];
 
-const PROTECTED_TABS = new Set(['applications', 'users', 'contracts']);
+const PROTECTED_TABS = new Set(['applications', 'users', 'contracts', 'platform']);
 
 export default function FounderDashboard() {
   const router = useRouter();
@@ -137,6 +138,12 @@ export default function FounderDashboard() {
     setTimeout(() => setToast({ msg: '', type: 'success' }), 3500);
   }, []);
 
+  // Platform version
+  const [pvData, setPvData] = useState<{ version: string; label: string; date: string; notes: string } | null>(null);
+  const [pvLoading, setPvLoading] = useState(false);
+  const [pvSaving, setPvSaving] = useState(false);
+  const [pvForm, setPvForm] = useState({ version: '', label: 'Core', date: '', notes: '' });
+
   // Password gate for protected tabs
   const [protectedUnlocked, setProtectedUnlocked] = useState(() =>
     typeof window !== 'undefined' && sessionStorage.getItem('fdash_unlocked') === 'true'
@@ -201,38 +208,29 @@ export default function FounderDashboard() {
       const uid = session.user.id;
       setCurrentUserId(uid);
 
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('username, avatar_url, is_verified, is_admin, role')
-        .eq('id', uid)
-        .single();
+      // Run profile and application checks in parallel to eliminate sequential round trips
+      const [{ data: profileData }, { data: apps }] = await Promise.all([
+        supabase.from('profiles')
+          .select('username, avatar_url, is_verified, is_admin, role')
+          .eq('id', uid)
+          .single(),
+        supabase.from('founder_applications')
+          .select('status, intended_role')
+          .eq('user_id', uid)
+          .eq('status', 'accepted')
+          .in('intended_role', ['cofounder', 'member']),
+      ]);
 
       if (profileData) {
         setProfile(profileData);
         if (profileData.is_admin) setIsAdmin(true);
       }
 
-      // Check if admin or accepted co-founder
       const isAdminUser = !!profileData?.is_admin;
       if (!isAdminUser) {
-        const { data: appData } = await supabase
-          .from('founder_applications')
-          .select('status')
-          .eq('user_id', uid)
-          .eq('status', 'accepted')
-          .eq('intended_role', 'cofounder')
-          .limit(1)
-          .single();
-        if (!appData) {
-          // Check if they're an accepted member and redirect them to the right dashboard
-          const { data: memberApp } = await supabase
-            .from('founder_applications')
-            .select('status')
-            .eq('user_id', uid)
-            .eq('status', 'accepted')
-            .eq('intended_role', 'member')
-            .limit(1)
-            .single();
+        const founderApp = apps?.find((a: any) => a.intended_role === 'cofounder');
+        if (!founderApp) {
+          const memberApp = apps?.find((a: any) => a.intended_role === 'member');
           router.push(memberApp ? '/member-dashboard' : '/dash/feed');
           return;
         }
@@ -438,6 +436,32 @@ export default function FounderDashboard() {
       if (allUsers.length === 0) fetchUsers();
     }
   }, [hasAccess, activeTab, fetchContracts, fetchUsers, allUsers.length]);
+
+  useEffect(() => {
+    if (!hasAccess || activeTab !== 'platform') return;
+    setPvLoading(true);
+    supabase.from('platform_settings').select('value').eq('key', 'platform_version').maybeSingle().then(({ data }) => {
+      const v = data?.value ?? null;
+      setPvData(v);
+      if (v) setPvForm({ version: v.version ?? '', label: v.label ?? 'Beta', date: v.date ?? '', notes: v.notes ?? '' });
+      setPvLoading(false);
+    });
+  }, [hasAccess, activeTab]);
+
+  const handleSavePlatformVersion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPvSaving(true);
+    const { error } = await supabase.from('platform_settings').upsert(
+      { key: 'platform_version', value: { ...pvForm }, updated_at: new Date().toISOString() },
+      { onConflict: 'key' }
+    );
+    if (error) { showToast('Failed to save: ' + error.message, 'error'); }
+    else {
+      setPvData({ ...pvForm });
+      showToast('Platform version updated!');
+    }
+    setPvSaving(false);
+  };
 
   const openEditContract = (c: any) => {
     setEditingContract(c);
@@ -1754,6 +1778,101 @@ export default function FounderDashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── PLATFORM ──────────────────────────────────────────────────────────── */}
+        {activeTab === 'platform' && (
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 sm:p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-500"><Zap size={18} /></div>
+                <div>
+                  <h2 className="text-lg font-black text-gray-900 dark:text-white">Platform Version</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">This version tag displays across the platform: docs, sidebar, and anywhere the version hook is used.</p>
+                </div>
+              </div>
+
+              {pvLoading ? (
+                <div className="flex items-center gap-3 py-8 justify-center text-gray-400"><Loader2 size={20} className="animate-spin" /> Loading…</div>
+              ) : (
+                <>
+                  {pvData && (
+                    <div className="flex flex-wrap gap-3 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Current</span>
+                        <span className="text-sm font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 px-2.5 py-0.5 rounded-full">v{pvData.version}</span>
+                        <Badge color="blue">{pvData.label}</Badge>
+                      </div>
+                      {pvData.date && <span className="text-[11px] text-gray-400 self-center">{pvData.date}</span>}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSavePlatformVersion} className="space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Version *</label>
+                        <input
+                          required
+                          type="text"
+                          placeholder="e.g. 2.1.0"
+                          value={pvForm.version}
+                          onChange={e => setPvForm({ ...pvForm, version: e.target.value })}
+                          className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-blue-500 transition-all text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Label</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Beta, Stable, RC1, Custom…"
+                          value={pvForm.label}
+                          onChange={e => setPvForm({ ...pvForm, label: e.target.value })}
+                          className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Release Date</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. June 2026"
+                        value={pvForm.date}
+                        onChange={e => setPvForm({ ...pvForm, date: e.target.value })}
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Changelog / Release Notes</label>
+                      <textarea
+                        rows={4}
+                        placeholder="What changed in this version…"
+                        value={pvForm.notes}
+                        onChange={e => setPvForm({ ...pvForm, notes: e.target.value })}
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all resize-none text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={pvSaving || !pvForm.version}
+                      className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-md disabled:opacity-50 text-sm"
+                    >
+                      {pvSaving ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                      {pvSaving ? 'Saving…' : 'Publish Version'}
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
+
+            {pvData?.notes && (
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 shadow-sm">
+                <h3 className="text-sm font-black text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <BookOpen size={14} className="text-blue-500" /> Release Notes
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">{pvData.notes}</p>
               </div>
             )}
           </div>

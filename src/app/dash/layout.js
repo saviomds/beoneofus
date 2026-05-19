@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { Menu, X, Home, MessageSquare, Bell, User, Users, ShoppingBag } from 'lucide-react';
 import '../globals.css'
 import Sidebar from '../components/Sidebar'
@@ -186,10 +186,29 @@ function DashLayoutContent({ children }) {
   );
 }
 
+// Returns true if Supabase has a cached session in localStorage (synchronous).
+function hasCachedSession() {
+  if (typeof window === 'undefined') return false;
+  try {
+    return Object.keys(localStorage).some(
+      k => k.startsWith('sb-') && k.endsWith('-auth-token') && !!localStorage.getItem(k)
+    );
+  } catch { return false; }
+}
+
 export default function DashLayout({ children }) {
+  // Always start with isLoading=true so server and client render the same initial HTML (no hydration mismatch).
+  // useLayoutEffect then immediately skips the spinner for returning users before the browser paints.
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
+
+  useLayoutEffect(() => {
+    if (hasCachedSession()) {
+      setIsLoading(false);
+      setIsAuthenticated(true);
+    }
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {

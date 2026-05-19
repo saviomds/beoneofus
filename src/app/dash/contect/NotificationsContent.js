@@ -98,10 +98,17 @@ export default function NotificationsContent() {
         }
         router.push('/dash/messages'); break;
       case 'connection_request':
+        router.push('/dash/connections'); break;
       case 'handshake':
+        if (notif.actor?.username) {
+          router.push(`/u/${notif.actor.username}`);
+        } else {
+          router.push('/dash/connections');
+        }
+        break;
       case 'blocked':
       case 'unblocked':
-        router.push('/dash/messages'); break;
+        break; // no navigation — just mark read and stay
       case 'partnership_update':
         router.push('/dash/partnerships'); break;
       default: break;

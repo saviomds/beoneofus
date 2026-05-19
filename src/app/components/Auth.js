@@ -117,6 +117,7 @@ export default function AuthForm() {
   const [usernameStatus, setUsernameStatus] = useState('idle');
   const usernameTimer = useRef(null);
   const suppressRedirect = useRef(false); // suppresses SIGNED_IN redirect during 2FA credential check
+  const isRecoveryFlow = useRef(false); // set when recovery link is detected; blocks SIGNED_IN redirect
 
   const [error, setError] = useState(null);
   const [successInfo, setSuccessInfo] = useState(null); // { title, message } | null
@@ -133,13 +134,17 @@ export default function AuthForm() {
 
     const bootstrap = async () => {
       try {
-        // Handle password-recovery token in URL hash
-        if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
-          if (isMounted) {
-            setView('update-password');
-            setIsCheckingAuth(false);
+        // Handle password-recovery — check hash (implicit flow) and ?recovery=1 query param (PKCE flow)
+        if (typeof window !== 'undefined') {
+          const sp = new URLSearchParams(window.location.search);
+          if (window.location.hash.includes('type=recovery') || sp.get('recovery') === '1') {
+            isRecoveryFlow.current = true;
+            if (isMounted) {
+              setView('update-password');
+              setIsCheckingAuth(false);
+            }
+            return;
           }
-          return;
         }
 
         const {
@@ -189,6 +194,7 @@ export default function AuthForm() {
         if (!isMounted) return;
 
         if (event === 'PASSWORD_RECOVERY') {
+          isRecoveryFlow.current = true;
           setView('update-password');
           setIsCheckingAuth(false);
           return; // stay on page — user must set new password
@@ -201,12 +207,19 @@ export default function AuthForm() {
             return;
           }
 
-          // If the URL hash contains type=recovery the user arrived via a reset
-          // link — do NOT redirect yet, let them set their new password first.
-          if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
-            setView('update-password');
-            setIsCheckingAuth(false);
-            return;
+          // If this is a recovery flow, stay on page so user can set new password.
+          if (typeof window !== 'undefined') {
+            const sp = new URLSearchParams(window.location.search);
+            if (
+              isRecoveryFlow.current ||
+              window.location.hash.includes('type=recovery') ||
+              sp.get('recovery') === '1'
+            ) {
+              isRecoveryFlow.current = true;
+              setView('update-password');
+              setIsCheckingAuth(false);
+              return;
+            }
           }
 
           // Block unconfirmed emails from accessing the platform
@@ -416,9 +429,12 @@ export default function AuthForm() {
         case 'update-password': {
           const { error: err } = await supabase.auth.updateUser({ password });
           if (err) throw err;
-          // Clear the recovery hash so it doesn't interfere on next visit
+          isRecoveryFlow.current = false;
+          // Clear recovery indicators from URL so they don't interfere on next visit
           if (typeof window !== 'undefined') {
-            window.history.replaceState(null, '', window.location.pathname);
+            const clean = new URL(window.location.href);
+            clean.searchParams.delete('recovery');
+            window.history.replaceState(null, '', clean.pathname + (clean.search !== '?' ? clean.search : ''));
           }
           setSuccessInfo({
             title: 'Password updated!',

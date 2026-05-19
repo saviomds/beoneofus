@@ -11,6 +11,8 @@ import {
   Sparkles, Lock, CheckCircle2, MessageSquare, TrendingUp,
   Play, Shield, ChevronRight, Award, Pencil, Trash2,
   Laptop, ShoppingBag, Trophy, FileText, Newspaper, Crown,
+  Heart, Check, ShieldAlert, ShieldCheck,
+  LogOut, User, Settings, LayoutDashboard,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 const FloatingAiAssistant = dynamic(() => import("./components/FloatingAiAssistant"), { ssr: false });
@@ -257,6 +259,18 @@ export default function LandingPage() {
   const charIndex = useRef(0);
   const deleting = useRef(false);
 
+  // Notification bell state
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [navNotifs, setNavNotifs] = useState([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const notifRef = useRef(null);
+  const notifChannelRef = useRef(null);
+
+  // Profile dropdown state
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef(null);
+
   /* auth */
   useEffect(() => {
     let isMounted = true;
@@ -322,6 +336,120 @@ export default function LandingPage() {
 
   /* hero entrance */
   useEffect(() => { const t = setTimeout(() => setHeroVisible(true), 100); return () => clearTimeout(t); }, []);
+
+  /* notification unread count + real-time */
+  useEffect(() => {
+    if (!session) { setUnreadCount(0); setNavNotifs([]); return; }
+    const uid = session.user.id;
+
+    const fetchCount = async () => {
+      const { count } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('receiver_id', uid)
+        .eq('unread', true);
+      setUnreadCount(count || 0);
+    };
+
+    fetchCount();
+
+    if (notifChannelRef.current) supabase.removeChannel(notifChannelRef.current);
+    notifChannelRef.current = supabase
+      .channel(`nav-notif-${uid}-${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `receiver_id=eq.${uid}` }, fetchCount)
+      .subscribe();
+
+    return () => { if (notifChannelRef.current) supabase.removeChannel(notifChannelRef.current); };
+  }, [session]);
+
+  /* fetch notification list when panel opens */
+  useEffect(() => {
+    if (!notifOpen || !session) return;
+    const fetchNotifs = async () => {
+      setNotifLoading(true);
+      const { data } = await supabase
+        .from('notifications')
+        .select('*, actor:actor_id(username, avatar_url)')
+        .eq('receiver_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(8);
+      setNavNotifs(data || []);
+      setNotifLoading(false);
+    };
+    fetchNotifs();
+  }, [notifOpen, session]);
+
+  /* close notif dropdown on outside click */
+  useEffect(() => {
+    if (!notifOpen) return;
+    const handler = (e) => { if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [notifOpen]);
+
+  /* close profile dropdown on outside click */
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handler = (e) => { if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [profileOpen]);
+
+  /* notification helpers */
+  const getNotifIcon = (type) => {
+    switch (type) {
+      case 'like': return <Heart size={9} className="text-rose-500" />;
+      case 'comment': return <MessageSquare size={9} className="text-blue-500" />;
+      case 'message': return <MessageSquare size={9} className="text-violet-500" />;
+      case 'handshake': return <Check size={9} className="text-emerald-500" />;
+      case 'blocked': return <ShieldAlert size={9} className="text-orange-500" />;
+      case 'unblocked': return <ShieldCheck size={9} className="text-green-500" />;
+      case 'group_invite':
+      case 'group_join_request': return <Users size={9} className="text-purple-500" />;
+      case 'connection_request': return <UserPlus size={9} className="text-blue-500" />;
+      case 'partnership_update': return <Handshake size={9} className="text-indigo-500" />;
+      default: return <Zap size={9} className="text-amber-500" />;
+    }
+  };
+
+  const formatNotifTime = (dateString) => {
+    const diff = Math.floor((Date.now() - new Date(dateString)) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!session) return;
+    await supabase.from('notifications').update({ unread: false }).eq('receiver_id', session.user.id).eq('unread', true);
+    setUnreadCount(0);
+    setNavNotifs(prev => prev.map(n => ({ ...n, unread: false })));
+  };
+
+  const getNotifDest = (notif) => {
+    if (notif.link) return notif.link;
+    return {
+      group_invite: '/dash/groups',
+      group_join_request: '/dash/groups',
+      comment: '/dash/feed',
+      like: '/dash/feed',
+      message: '/dash/messages',
+      connection_request: '/dash/connections',
+      handshake: notif.actor?.username ? `/u/${notif.actor.username}` : '/dash/connections',
+      partnership_update: '/dash/partnerships',
+    }[notif.type] || '/dash';
+  };
+
+  const handleNotifClick = (notif) => {
+    setNotifOpen(false);
+    if (notif.unread) {
+      supabase.from('notifications').update({ unread: false }).eq('id', notif.id).then(() => {});
+      setNavNotifs(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+  };
 
   /* typewriter */
   useEffect(() => {
@@ -456,20 +584,187 @@ export default function LandingPage() {
                 <div className="w-32 sm:w-48 h-9 bg-gray-100 dark:bg-white/5 animate-pulse rounded-xl" />
               ) : session ? (
                 <>
-                  <Link href="/dash" className="relative text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-2 transition-colors shrink-0" onMouseEnter={() => setActiveDropdown(null)}>
-                    <Bell size={19} />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#080c12]" />
-                  </Link>
-                  <Link href="/dash"
-                    onMouseEnter={() => setActiveDropdown(null)}
-                    className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 pl-1.5 pr-3 py-1.5 rounded-full transition-all shrink-0">
-                    <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shadow-sm shrink-0">
-                      {getAvatarSrc(profile, session) && !navAvatarError
-                        ? <img src={getAvatarSrc(profile, session)} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
-                        : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
-                    </div>
-                    <span className="hidden sm:block text-sm font-bold text-gray-700 dark:text-gray-300">Dashboard</span>
-                  </Link>
+                  {/* Notification bell with dropdown */}
+                  <div className="relative" ref={notifRef}>
+                    <button
+                      onClick={() => { setNotifOpen(o => !o); setProfileOpen(false); setActiveDropdown(null); }}
+                      onMouseEnter={() => setActiveDropdown(null)}
+                      className="relative text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-2 transition-colors shrink-0"
+                      aria-label="Notifications"
+                    >
+                      <Bell size={19} className={notifOpen ? 'text-blue-600 dark:text-blue-400' : ''} />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-black flex items-center justify-center rounded-full border-2 border-white dark:border-[#080c12] leading-none">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {notifOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/50 overflow-hidden z-[60]">
+                        {/* Panel header */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                          <div className="flex items-center gap-2">
+                            <Bell size={14} className="text-blue-600 dark:text-blue-400" />
+                            <span className="font-black text-sm text-gray-900 dark:text-gray-100">Notifications</span>
+                            {unreadCount > 0 && (
+                              <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">{unreadCount}</span>
+                            )}
+                          </div>
+                          {unreadCount > 0 && (
+                            <button onClick={handleMarkAllRead} className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                              Mark all read
+                            </button>
+                          )}
+                        </div>
+
+                        {/* List */}
+                        <div className="max-h-[340px] overflow-y-auto">
+                          {notifLoading ? (
+                            <div className="p-4 space-y-3">
+                              {[0, 1, 2].map(i => (
+                                <div key={i} className="flex gap-3 animate-pulse">
+                                  <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 shrink-0" />
+                                  <div className="flex-1 space-y-1.5 py-0.5">
+                                    <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded w-4/5" />
+                                    <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded w-2/5" />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : navNotifs.length === 0 ? (
+                            <div className="text-center py-10">
+                              <Bell size={26} className="text-gray-200 dark:text-gray-700 mx-auto mb-2" />
+                              <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold">No notifications yet</p>
+                            </div>
+                          ) : (
+                            navNotifs.map(notif => (
+                              <Link
+                                key={notif.id}
+                                href={getNotifDest(notif)}
+                                onClick={() => handleNotifClick(notif)}
+                                className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-50 dark:border-gray-800/40 last:border-0 ${notif.unread ? 'bg-blue-50/60 dark:bg-blue-950/30' : ''}`}
+                              >
+                                {/* Avatar + type icon */}
+                                <div className="relative shrink-0 mt-0.5">
+                                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-xs font-black text-gray-600 dark:text-gray-300">
+                                    {notif.actor?.avatar_url
+                                      ? <img src={notif.actor.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                      : (notif.actor?.username?.[0] || '?').toUpperCase()}
+                                  </div>
+                                  <span className="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] bg-white dark:bg-gray-950 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-700">
+                                    {getNotifIcon(notif.type)}
+                                  </span>
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[12px] text-gray-800 dark:text-gray-200 leading-relaxed line-clamp-2">
+                                    <span className="font-bold">{notif.actor?.username || 'Someone'}</span>{' '}{notif.content}
+                                  </p>
+                                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{formatNotifTime(notif.created_at)}</p>
+                                </div>
+
+                                {notif.unread && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 shrink-0" />}
+                              </Link>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-800">
+                          <Link
+                            href="/dash/notifications"
+                            onClick={() => setNotifOpen(false)}
+                            className="flex items-center justify-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline py-0.5"
+                          >
+                            View all notifications <ChevronRight size={12} />
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Profile dropdown */}
+                  <div className="relative" ref={profileRef}>
+                    <button
+                      onClick={() => { setProfileOpen(o => !o); setNotifOpen(false); setActiveDropdown(null); }}
+                      onMouseEnter={() => setActiveDropdown(null)}
+                      className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 pl-1.5 pr-3 py-1.5 rounded-full transition-all shrink-0"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shadow-sm shrink-0">
+                        {getAvatarSrc(profile, session) && !navAvatarError
+                          ? <img src={getAvatarSrc(profile, session)} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
+                          : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
+                      </div>
+                      <span className="hidden sm:block text-sm font-bold text-gray-700 dark:text-gray-300">
+                        {profile?.username || 'Dashboard'}
+                      </span>
+                      <ChevronDown size={13} className={`hidden sm:block transition-transform duration-200 text-gray-400 dark:text-gray-500 ${profileOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {profileOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/50 overflow-hidden z-[60]">
+                        {/* Profile header */}
+                        <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-br from-blue-50/80 to-white dark:from-blue-950/20 dark:to-gray-950">
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center text-base font-black overflow-hidden shadow-sm shrink-0 ring-2 ring-blue-100 dark:ring-blue-900/50">
+                              {getAvatarSrc(profile, session) && !navAvatarError
+                                ? <img src={getAvatarSrc(profile, session)} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
+                                : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-black text-gray-900 dark:text-gray-100 truncate">
+                                {profile?.username || profile?.full_name || session?.user?.email?.split('@')[0] || 'User'}
+                              </p>
+                              {profile?.username && (
+                                <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">@{profile.username}</p>
+                              )}
+                              {(profile?.role || profile?.company) && (
+                                <p className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold truncate mt-0.5">
+                                  {[profile.role, profile.company].filter(Boolean).join(' · ')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Nav links */}
+                        <div className="py-1.5">
+                          {[
+                            { href: '/dash', icon: <LayoutDashboard size={15} />, label: 'Dashboard' },
+                            { href: profile?.username ? `/u/${profile.username}` : '/dash', icon: <User size={15} />, label: 'My Profile' },
+                            { href: '/dash/notifications', icon: <Bell size={15} />, label: 'Notifications', badge: unreadCount > 0 ? unreadCount : null },
+                            { href: '/dash/settings', icon: <Settings size={15} />, label: 'Settings' },
+                          ].map(item => (
+                            <Link
+                              key={item.label}
+                              href={item.href}
+                              onClick={() => setProfileOpen(false)}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                            >
+                              <span className="text-gray-400 dark:text-gray-500 shrink-0">{item.icon}</span>
+                              <span className="flex-1 font-semibold">{item.label}</span>
+                              {item.badge && (
+                                <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">
+                                  {item.badge > 99 ? '99+' : item.badge}
+                                </span>
+                              )}
+                            </Link>
+                          ))}
+                        </div>
+
+                        {/* Sign out */}
+                        <div className="border-t border-gray-100 dark:border-gray-800 py-1.5">
+                          <button
+                            onClick={async () => { setProfileOpen(false); await supabase.auth.signOut(); }}
+                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                          >
+                            <LogOut size={15} className="shrink-0" />
+                            <span className="font-semibold">Sign out</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 <>

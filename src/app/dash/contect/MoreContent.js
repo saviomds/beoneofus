@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Image from "next/image";
 import {
@@ -11,7 +11,7 @@ import {
   BarChart3, Crown, Users, Award, TrendingUp, RefreshCw, Eye,
   BadgeCheck, Filter, ArrowUpRight, Terminal, Layers, Bell,
   CheckCircle2, Clock, XCircle, ChevronDown, MoreHorizontal,
-  Shield, Video, Handshake,
+  Shield, Video, Handshake, BookOpen, Mail, Hash, MessageSquare, Smile, Menu, Heart,
 } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "../../supabaseClient";
@@ -559,94 +559,438 @@ const ApiAccessTool = () => {
 
 // ─── Community Hub ───────────────────────────────────────────────────────────
 
-const CommunityHubTool = ({ currentUserId }) => {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [error, setError] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState(null);
-  const scrollRef = useRef(null);
+const COMMUNITY_CHANNELS = [
+  { id: "general",  label: "general",  Icon: Globe,       desc: "Open discussion for all members",       color: "text-blue-500",   bg: "bg-blue-50 dark:bg-blue-950/30"   },
+  { id: "tech",     label: "tech-talk",Icon: Code2,       desc: "Engineering, code & architecture",      color: "text-violet-500", bg: "bg-violet-50 dark:bg-violet-950/30"},
+  { id: "career",   label: "career",   Icon: Briefcase,   desc: "Jobs, growth & career advice",          color: "text-green-500",  bg: "bg-green-50 dark:bg-green-950/30" },
+  { id: "showcase", label: "showcase", Icon: Award,       desc: "Share projects, wins & launches",       color: "text-amber-500",  bg: "bg-amber-50 dark:bg-amber-950/30" },
+  { id: "help",     label: "help",     Icon: HelpCircle,  desc: "Ask the community for help",            color: "text-red-500",    bg: "bg-red-50 dark:bg-red-950/30"     },
+];
 
+function formatMsgTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDateLabel(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+}
+
+const CommunityHubTool = ({ currentUserId }) => {
+  const [allMessages, setAllMessages]     = useState([]);
+  const [input, setInput]                 = useState("");
+  const [error, setError]                 = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [activeChannel, setActiveChannel] = useState("general");
+  const [onlineUsers, setOnlineUsers]     = useState([]);
+  const [typingUsers, setTypingUsers]     = useState([]);
+  const [myProfile, setMyProfile]         = useState(null);
+  const [hoveredMsg, setHoveredMsg]       = useState(null);
+  const [copiedMsg, setCopiedMsg]         = useState(null);
+  const [showSidebar, setShowSidebar]     = useState(false);
+  const [sending, setSending]             = useState(false);
+  const scrollRef       = useRef(null);
+  const inputRef        = useRef(null);
+  const presenceRef     = useRef(null);
+  const typingTimers    = useRef({});
+
+  const currentChannel = COMMUNITY_CHANNELS.find(c => c.id === activeChannel) || COMMUNITY_CHANNELS[0];
+
+  /* fetch own profile */
   useEffect(() => {
-    const fetch = async () => {
-      const { data, error } = await supabase
+    if (!currentUserId) return;
+    supabase.from("profiles").select("username, avatar_url, is_verified")
+      .eq("id", currentUserId).single()
+      .then(({ data }) => { if (data) setMyProfile(data); });
+  }, [currentUserId]);
+
+  /* messages + realtime */
+  useEffect(() => {
+    const loadMessages = async () => {
+      const { data, error: err } = await supabase
         .from("community_messages")
         .select("*, profiles:user_id(username, avatar_url, is_verified)")
-        .order("created_at", { ascending: true }).limit(50);
-      if (error) setError(true);
-      else setMessages(data || []);
+        .order("created_at", { ascending: true })
+        .limit(150);
+      if (err) setError(true);
+      else setAllMessages(data || []);
     };
-    fetch();
-    const ch = supabase.channel("public:community_messages")
+    loadMessages();
+
+    const ch = supabase.channel("community:messages-v2")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "community_messages" }, async (payload) => {
         const { data } = await supabase.from("community_messages")
-          .select("*, profiles:user_id(username, avatar_url, is_verified)").eq("id", payload.new.id).single();
-        if (data) setMessages(prev => prev.find(m => m.id === data.id) ? prev : [...prev, data]);
-      }).subscribe();
+          .select("*, profiles:user_id(username, avatar_url, is_verified)")
+          .eq("id", payload.new.id).single();
+        if (data) setAllMessages(prev => prev.find(m => m.id === data.id) ? prev : [...prev, data]);
+      })
+      .subscribe();
+
     return () => supabase.removeChannel(ch);
   }, []);
 
+  /* presence — online count + typing */
+  useEffect(() => {
+    if (!currentUserId || !myProfile) return;
+
+    const pCh = supabase.channel("community:presence", {
+      config: { presence: { key: currentUserId } },
+    });
+
+    pCh
+      .on("presence", { event: "sync" }, () => {
+        const state = pCh.presenceState();
+        const users = Object.values(state).flat().map(u => u.info).filter(Boolean);
+        setOnlineUsers(users);
+      })
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (payload.uid === currentUserId) return;
+        const uname = payload.username || "Someone";
+        setTypingUsers(prev => prev.includes(uname) ? prev : [...prev, uname]);
+        clearTimeout(typingTimers.current[uname]);
+        typingTimers.current[uname] = setTimeout(() => {
+          setTypingUsers(prev => prev.filter(u => u !== uname));
+        }, 3000);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await pCh.track({ info: { id: currentUserId, username: myProfile.username, avatar_url: myProfile.avatar_url } });
+        }
+      });
+
+    presenceRef.current = pCh;
+    return () => supabase.removeChannel(pCh);
+  }, [currentUserId, myProfile]);
+
+  /* auto-scroll */
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [allMessages, typingUsers, activeChannel]);
+
+  /* broadcast typing */
+  const broadcastTyping = useCallback(() => {
+    if (!presenceRef.current || !myProfile) return;
+    presenceRef.current.send({ type: "broadcast", event: "typing", payload: { uid: currentUserId, username: myProfile.username } });
+  }, [currentUserId, myProfile]);
+
+  /* filter messages per channel */
+  const messages = useMemo(() => {
+    const hasChannel = allMessages.some(m => "channel" in m && m.channel);
+    if (!hasChannel) return activeChannel === "general" ? allMessages : [];
+    return allMessages.filter(m => (m.channel || "general") === activeChannel);
+  }, [allMessages, activeChannel]);
+
+  /* group by date */
+  const grouped = useMemo(() => {
+    const out = [];
+    let lastDate = "";
+    messages.forEach((msg, idx) => {
+      const dateKey = msg.created_at ? new Date(msg.created_at).toDateString() : "";
+      if (dateKey && dateKey !== lastDate) {
+        out.push({ type: "date", label: formatDateLabel(msg.created_at), key: `d-${dateKey}` });
+        lastDate = dateKey;
+      }
+      const prev = messages[idx - 1];
+      const grouped = prev?.user_id === msg.user_id && dateKey === (prev?.created_at ? new Date(prev.created_at).toDateString() : "");
+      out.push({ type: "msg", ...msg, grouped });
+    });
+    return out;
   }, [messages]);
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim() || !currentUserId) return;
-    const text = input;
+    const text = input.trim();
+    if (!text || !currentUserId || sending) return;
     setInput("");
-    setMessages(prev => [...prev, { id: Date.now(), user_id: currentUserId, text, profiles: { username: "You" } }]);
-    await supabase.from("community_messages").insert({ user_id: currentUserId, text });
+    setSending(true);
+    const optimistic = {
+      id: `opt-${Date.now()}`,
+      user_id: currentUserId,
+      text,
+      created_at: new Date().toISOString(),
+      channel: activeChannel,
+      profiles: myProfile || { username: "You" },
+      grouped: false,
+    };
+    setAllMessages(prev => [...prev, optimistic]);
+    try {
+      const payload = { user_id: currentUserId, text };
+      try { payload.channel = activeChannel; } catch {}
+      await supabase.from("community_messages").insert(payload);
+    } finally { setSending(false); }
   };
+
+  const handleCopyMsg = (id, text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedMsg(id);
+      setTimeout(() => setCopiedMsg(null), 2000);
+    });
+  };
+
+  const onlineCount = onlineUsers.length || 1;
 
   if (error) return (
     <div className="flex flex-col items-center justify-center h-full p-10 text-center">
-      <AlertCircle size={40} className="text-red-500/40 mb-4" />
-      <p className="text-red-500 dark:text-red-400 font-bold mb-2">Community Hub Not Initialized</p>
-      <p className="text-gray-500 text-xs max-w-sm leading-relaxed">
-        The <code className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded">community_messages</code> table does not exist. Run the setup SQL to enable global chat.
+      <AlertCircle size={40} className="text-red-400/40 mb-4" />
+      <p className="text-red-500 dark:text-red-400 font-bold text-sm mb-1">Community Hub Not Initialized</p>
+      <p className="text-gray-400 text-xs max-w-xs leading-relaxed">
+        The <code className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded font-mono">community_messages</code> table doesn't exist yet. Run the setup SQL migration to enable global chat.
       </p>
     </div>
   );
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden max-w-4xl mx-auto">
-      <div className="flex-1 overflow-y-auto p-5 space-y-3" ref={scrollRef}>
-        {messages.length === 0
-          ? <div className="flex flex-col items-center justify-center h-full text-gray-600">
-              <Globe size={36} className="mb-3 text-blue-500/20" />
-              <p className="font-bold text-xs uppercase tracking-widest">Global Chat Initialized</p>
-            </div>
-          : messages.map((msg, idx) => {
-            const prevMsg = messages[idx - 1];
-            const sameAsPrev = prevMsg?.user_id === msg.user_id;
+    <div className="flex h-full bg-white dark:bg-gray-950 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden max-w-4xl mx-auto shadow-sm">
+
+      {/* ── Sidebar ── */}
+      <div className={`${showSidebar ? "flex" : "hidden"} md:flex flex-col w-52 shrink-0 border-r border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 absolute md:relative inset-y-0 left-0 z-30 md:z-auto`}>
+        {/* Sidebar header */}
+        <div className="px-4 py-3.5 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-2 mb-1">
+            <Globe size={13} className="text-blue-500" />
+            <span className="text-[11px] font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest">Community</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-[10px] text-gray-400">{onlineCount} online</span>
+          </div>
+        </div>
+
+        {/* Channels */}
+        <div className="flex-1 overflow-y-auto py-2">
+          <p className="px-4 py-1.5 text-[9px] font-black text-gray-400 uppercase tracking-widest">Channels</p>
+          {COMMUNITY_CHANNELS.map(ch => {
+            const isActive = ch.id === activeChannel;
+            const count = ch.id === "general" ? allMessages.length : allMessages.filter(m => m.channel === ch.id).length;
             return (
-            <div key={msg.id} className={`flex gap-2 ${msg.user_id === currentUserId ? "justify-end" : "justify-start"}`}>
-              {msg.user_id !== currentUserId && (
-                <div onClick={() => setSelectedUserId(msg.user_id)}
-                  className={`relative w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-[10px] text-gray-500 dark:text-gray-400 uppercase shrink-0 mt-auto cursor-pointer hover:opacity-80 transition-opacity overflow-hidden ${sameAsPrev ? "opacity-0 pointer-events-none" : ""}`}>
-                  {msg.profiles?.avatar_url
-                    ? <Image src={msg.profiles.avatar_url} alt="avatar" fill sizes="28px" className="object-cover" />
-                    : msg.profiles?.username?.substring(0, 2)} 
-                </div>
-              )}
-              <div className={`flex flex-col max-w-[80%] ${msg.user_id === currentUserId ? "items-end" : "items-start"}`}>
-                {msg.user_id !== currentUserId && !sameAsPrev && (
-                  <span className="text-[10px] text-gray-500 font-bold mb-1 pl-1 flex items-center gap-1">
-                    @{msg.profiles?.username}
-                    {msg.profiles?.is_verified && <VerifiedBadge size={9} />}
+              <button
+                key={ch.id}
+                onClick={() => { setActiveChannel(ch.id); setShowSidebar(false); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 mx-1 rounded-lg transition-all text-left ${isActive ? "bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700" : "hover:bg-gray-100 dark:hover:bg-gray-800/50"}`}
+              >
+                <ch.Icon size={13} className={isActive ? ch.color : "text-gray-400 dark:text-gray-500"} />
+                <span className={`flex-1 text-[11px] font-bold truncate ${isActive ? "text-gray-900 dark:text-gray-100" : "text-gray-500 dark:text-gray-400"}`}>
+                  # {ch.label}
+                </span>
+                {count > 0 && (
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${isActive ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"}`}>
+                    {count > 99 ? "99+" : count}
                   </span>
                 )}
-                <div className={`px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${
-                  msg.user_id === currentUserId
-                    ? "bg-blue-600 text-white rounded-tr-none"
-                    : `bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 ${sameAsPrev ? "rounded-tl-2xl" : "rounded-tl-none"}`}`}>
-                  {msg.text}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Online users */}
+        {onlineUsers.length > 0 && (
+          <div className="border-t border-gray-100 dark:border-gray-800 py-2 px-4">
+            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Online now</p>
+            <div className="space-y-1.5">
+              {onlineUsers.slice(0, 5).map(u => (
+                <div key={u.id} className="flex items-center gap-2">
+                  <div className="relative shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-[8px] font-black text-gray-500">
+                      {u.avatar_url
+                        ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                        : (u.username?.[0] || "?").toUpperCase()}
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full border border-white dark:border-gray-900" />
+                  </div>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate font-medium">@{u.username}</span>
                 </div>
-              </div>
+              ))}
+              {onlineUsers.length > 5 && (
+                <p className="text-[9px] text-gray-400">+{onlineUsers.length - 5} more</p>
+              )}
             </div>
-          )})}
+          </div>
+        )}
       </div>
 
+      {/* ── Mobile sidebar overlay ── */}
+      {showSidebar && (
+        <div className="md:hidden fixed inset-0 z-20 bg-black/40 backdrop-blur-sm" onClick={() => setShowSidebar(false)} />
+      )}
+
+      {/* ── Main chat ── */}
+      <div className="flex flex-col flex-1 min-w-0">
+
+        {/* Channel header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-950">
+          <button onClick={() => setShowSidebar(s => !s)} className="md:hidden p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">
+            <Menu size={16} />
+          </button>
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${currentChannel.bg}`}>
+            <currentChannel.Icon size={14} className={currentChannel.color} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-black text-gray-900 dark:text-gray-100"># {currentChannel.label}</span>
+            </div>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{currentChannel.desc}</p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="hidden sm:flex items-center gap-1.5 bg-green-50 dark:bg-green-950/30 px-2.5 py-1 rounded-full border border-green-200 dark:border-green-900/40">
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+              <span className="text-[10px] font-bold text-green-600 dark:text-green-400">{onlineCount} online</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-1 text-[10px] text-gray-400">
+              <MessageSquare size={11} />
+              <span>{messages.length}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-0.5" ref={scrollRef}>
+          {grouped.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center py-16">
+              <div className={`w-14 h-14 rounded-2xl ${currentChannel.bg} flex items-center justify-center mb-4`}>
+                <currentChannel.Icon size={24} className={currentChannel.color} />
+              </div>
+              <p className="font-black text-sm text-gray-700 dark:text-gray-300 mb-1"># {currentChannel.label}</p>
+              <p className="text-xs text-gray-400 max-w-xs leading-relaxed">{currentChannel.desc}. Be the first to post!</p>
+            </div>
+          ) : (
+            grouped.map(item => {
+              if (item.type === "date") return (
+                <div key={item.key} className="flex items-center gap-3 py-3">
+                  <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+                  <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 shrink-0">{item.label}</span>
+                  <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+                </div>
+              );
+
+              const isMe = item.user_id === currentUserId;
+              return (
+                <div
+                  key={item.id}
+                  className={`flex gap-2.5 group ${isMe ? "flex-row-reverse" : "flex-row"} ${item.grouped ? "mt-0.5" : "mt-3"}`}
+                  onMouseEnter={() => setHoveredMsg(item.id)}
+                  onMouseLeave={() => setHoveredMsg(null)}
+                >
+                  {/* Avatar */}
+                  {!isMe && (
+                    <div
+                      onClick={() => !item.id.toString().startsWith("opt-") && setSelectedUserId(item.user_id)}
+                      className={`relative w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-[9px] text-gray-500 uppercase shrink-0 self-end overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400/50 transition-all ${item.grouped ? "opacity-0 pointer-events-none" : ""}`}
+                    >
+                      {item.profiles?.avatar_url
+                        ? <Image src={item.profiles.avatar_url} alt="" fill sizes="28px" className="object-cover" />
+                        : (item.profiles?.username || "?").substring(0, 2)}
+                    </div>
+                  )}
+
+                  {/* Bubble + meta */}
+                  <div className={`flex flex-col max-w-[78%] ${isMe ? "items-end" : "items-start"}`}>
+                    {!item.grouped && !isMe && (
+                      <div className="flex items-center gap-1.5 mb-1 px-1">
+                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">@{item.profiles?.username}</span>
+                        {item.profiles?.is_verified && <VerifiedBadge size={9} />}
+                        {item.created_at && (
+                          <span className="text-[9px] text-gray-300 dark:text-gray-600">{formatMsgTime(item.created_at)}</span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-end gap-1.5">
+                      {/* Hover actions (non-me messages, shown left) */}
+                      {!isMe && hoveredMsg === item.id && (
+                        <button
+                          onClick={() => handleCopyMsg(item.id, item.text)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+                        >
+                          {copiedMsg === item.id ? <Check size={10} className="text-green-500" /> : <Copy size={10} />}
+                        </button>
+                      )}
+
+                      <div className={`px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed break-words max-w-full ${
+                        isMe
+                          ? "bg-blue-600 text-white rounded-br-sm shadow-sm shadow-blue-200 dark:shadow-blue-900/30"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200/70 dark:border-gray-700/50 rounded-bl-sm"
+                      }`}>
+                        {item.text}
+                      </div>
+
+                      {/* Hover actions (my messages, shown right) */}
+                      {isMe && hoveredMsg === item.id && (
+                        <button
+                          onClick={() => handleCopyMsg(item.id, item.text)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+                        >
+                          {copiedMsg === item.id ? <Check size={10} className="text-green-500" /> : <Copy size={10} />}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* My message time */}
+                    {isMe && !item.grouped && item.created_at && (
+                      <p className="text-[9px] text-gray-300 dark:text-gray-600 mt-0.5 px-1">{formatMsgTime(item.created_at)}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {/* Typing indicator */}
+          {typingUsers.length > 0 && (
+            <div className="flex items-center gap-2.5 mt-3">
+              <div className="w-7 h-7 shrink-0" />
+              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-200/70 dark:border-gray-700/50 px-3.5 py-2.5 rounded-2xl rounded-bl-sm">
+                <div className="flex gap-1">
+                  {[0, 1, 2].map(i => (
+                    <span key={i} className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+                  ))}
+                </div>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                  {typingUsers.length === 1 ? `${typingUsers[0]} is typing` : `${typingUsers.length} people are typing`}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Input */}
+        <form onSubmit={handleSend} className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 shrink-0">
+          <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 focus-within:border-blue-400 dark:focus-within:border-blue-600 transition-all">
+            <span className={`text-[11px] font-bold ${currentChannel.color} shrink-0`}># {currentChannel.label}</span>
+            <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 shrink-0" />
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={e => { setInput(e.target.value); broadcastTyping(); }}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(e); } }}
+              placeholder={currentUserId ? `Message # ${currentChannel.label}…` : "Sign in to chat…"}
+              disabled={!currentUserId || sending}
+              className="flex-1 bg-transparent text-xs text-gray-900 dark:text-gray-100 focus:outline-none placeholder-gray-400 dark:placeholder-gray-600 min-w-0"
+            />
+            {input.length > 0 && (
+              <span className={`text-[9px] font-bold shrink-0 ${input.length > 480 ? "text-red-500" : "text-gray-300 dark:text-gray-600"}`}>
+                {input.length}/500
+              </span>
+            )}
+            <button
+              type="submit"
+              disabled={!input.trim() || !currentUserId || sending || input.length > 500}
+              className="w-7 h-7 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl flex items-center justify-center transition-all shrink-0"
+            >
+              {sending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-300 dark:text-gray-700 mt-1.5 text-center">Enter to send · Be kind · No spam</p>
+        </form>
+      </div>
+
+      {/* Profile modal */}
       {selectedUserId && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm" onClick={() => setSelectedUserId(null)} />
@@ -659,16 +1003,6 @@ const CommunityHubTool = ({ currentUserId }) => {
           </div>
         </div>
       )}
-
-      <form onSubmit={handleSend}
-        className="p-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex gap-2 shrink-0">
-        <input value={input} onChange={e => setInput(e.target.value)} placeholder="Broadcast to the network…"
-          className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all placeholder-gray-400 dark:placeholder-gray-600" />
-        <button type="submit" disabled={!input.trim()}
-          className="px-4 bg-blue-600 text-white hover:bg-blue-500 rounded-xl disabled:opacity-40 transition-all">
-          <Send size={15} />
-        </button>
-      </form>
     </div>
   );
 };
@@ -3147,91 +3481,350 @@ function TypewriterMessage({ content }) {
   return <ReactMarkdown components={mdComponents}>{displayed}</ReactMarkdown>;
 }
 
+const SUPPORT_CATEGORIES = [
+  { id: "technical", label: "Technical Issue", color: "bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/40" },
+  { id: "account",   label: "Account & Profile", color: "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/40" },
+  { id: "feature",   label: "Feature Request", color: "bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800/40" },
+  { id: "billing",   label: "Billing & Premium", color: "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/40" },
+  { id: "bug",       label: "Bug Report", color: "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800/40" },
+  { id: "general",   label: "General Question", color: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/40" },
+];
+
+const QUICK_PROMPTS = [
+  "How do I reset my password?",
+  "Why is my profile not showing up in search?",
+  "How do I connect with another user?",
+  "How do I upgrade to Premium?",
+  "I can't upload a profile picture",
+  "How do I delete my account?",
+];
+
+const FAQ_ITEMS = [
+  {
+    q: "How do I verify my profile?",
+    a: "Go to **Settings → Profile** and click **Request Verification**. Our team reviews accounts within 48 hours. You need at least one connection and a complete profile to be eligible.",
+  },
+  {
+    q: "Why aren't my notifications loading?",
+    a: "Try a hard refresh (`Ctrl+Shift+R`). If the issue persists, clear your browser cache or check your notification permissions in **Settings → Notifications**.",
+  },
+  {
+    q: "How do I cancel my Premium subscription?",
+    a: "Navigate to **Settings → Billing** and click **Cancel Subscription**. Your Premium access continues until the end of the current billing period.",
+  },
+  {
+    q: "Can I export my data?",
+    a: "Yes. Go to **Settings → Privacy** and click **Download my data**. A JSON export will be emailed to your registered address within 24 hours.",
+  },
+  {
+    q: "How does the AI Assistant work?",
+    a: "The beoneofus AI uses large language models to provide career guidance, code review, and support. Conversations are not stored beyond your current session unless you explicitly save them.",
+  },
+  {
+    q: "How do I report a user or content?",
+    a: "Click the **⋯** menu on any post or profile and select **Report**. Our moderation team reviews all reports within 24 hours.",
+  },
+];
+
 const SupportTool = () => {
   const [issue, setIssue] = useState("");
+  const [category, setCategory] = useState("general");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [tickets, setTickets] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [copiedId, setCopiedId] = useState(null);
+  const [ratings, setRatings] = useState({});
+  const [openFaq, setOpenFaq] = useState(null);
+  const bottomRef = useRef(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!issue.trim() || isProcessing) return;
-    const cur = issue;
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isProcessing]);
+
+  const handleSubmit = async (text) => {
+    const cur = (text || issue).trim();
+    if (!cur || isProcessing) return;
     setIssue("");
+    const msgId = Date.now();
+    setMessages(prev => [...prev, { id: msgId, role: "user", content: cur, category }]);
     setIsProcessing(true);
     try {
       const res = await fetch("/api/chats", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [{ role: "user", content: `You are the technical support AI for the beoneofus platform. User issue: "${cur}". Provide a concise, helpful, technical resolution.` }] }),
+        body: JSON.stringify({ messages: [{ role: "user", content: `You are the expert support AI for beoneofus — a professional networking and career platform. Category: ${category}. User issue: "${cur}". Respond with empathy and precision. Use markdown for structure when helpful.` }] }),
       });
-      const text = await res.text();
+      const responseText = await res.text();
       let data;
-      try { data = JSON.parse(text); } catch { throw new Error("AI API not active. Restart your dev server."); }
+      try { data = JSON.parse(responseText); } catch { throw new Error("AI service unavailable. Try again shortly."); }
       if (!res.ok) throw new Error(data.error || "Failed to get response");
-      setTickets(prev => [{ id: Date.now(), issue: cur, reply: data.message.content.replace(/^["']|["']$/g, "").trim(), isNew: true }, ...prev]);
+      setMessages(prev => [...prev, { id: Date.now(), role: "ai", content: data.message.content.replace(/^["']|["']$/g, "").trim(), isNew: true }]);
     } catch (err) {
-      setTickets(prev => [{ id: Date.now(), issue: cur, reply: "Error: " + err.message, isNew: false }, ...prev]);
+      setMessages(prev => [...prev, { id: Date.now(), role: "ai", content: `**Error:** ${err.message}`, isNew: false, isError: true }]);
     } finally { setIsProcessing(false); }
   };
 
+  const handleCopy = (id, text) => {
+    navigator.clipboard.writeText(text).then(() => { setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); });
+  };
+
+  const handleRate = (id, val) => setRatings(prev => ({ ...prev, [id]: prev[id] === val ? null : val }));
+
+  const catColor = SUPPORT_CATEGORIES.find(c => c.id === category)?.color || "";
+
   return (
-    <div className="space-y-5 max-w-2xl mx-auto py-4">
-      <div className="p-5 bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20 rounded-2xl flex items-start gap-4">
-        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0"><HelpCircle size={20} /></div>
-        <div>
-          <h3 className="text-gray-900 dark:text-white font-black mb-1">AI Technical Support</h3>
-          <p className="text-xs text-blue-700/80 dark:text-blue-300/60 leading-relaxed">Instant engineering assistance — debugging, architecture, platform guidance.</p>
+    <div className="max-w-2xl mx-auto py-4 space-y-4">
+
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-900 p-5 text-white shadow-lg">
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 70% 50%, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+        <div className="relative flex items-start gap-4">
+          <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 backdrop-blur-sm">
+            <HelpCircle size={22} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h2 className="font-black text-base">Help & Support</h2>
+              <span className="flex items-center gap-1 text-[10px] font-black bg-green-400/20 text-green-200 px-2 py-0.5 rounded-full border border-green-300/20">
+                <span className="w-1.5 h-1.5 bg-green-300 rounded-full animate-pulse" />
+                AI Online
+              </span>
+            </div>
+            <p className="text-xs text-blue-100/80 leading-relaxed">Ask anything about beoneofus — account help, technical issues, billing, and more.</p>
+          </div>
+          <div className="shrink-0 text-right hidden sm:block">
+            <p className="text-[10px] text-blue-200/60 uppercase tracking-widest">Avg. response</p>
+            <p className="text-sm font-black text-white">~3 sec</p>
+          </div>
         </div>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-3 bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
-        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Describe Your Issue</label>
-        <textarea rows={4} required value={issue} onChange={e => setIssue(e.target.value)} disabled={isProcessing}
-          placeholder="e.g. Getting a 500 error when invoking a serverless function…"
-          className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 resize-none transition-all placeholder-gray-400 dark:placeholder-gray-600" />
-        <button disabled={isProcessing || !issue.trim()} type="submit"
-          className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white font-black text-xs rounded-xl hover:bg-blue-500 transition-all disabled:opacity-40 shadow-sm">
-          {isProcessing ? <><Loader2 size={14} className="animate-spin" /> Analyzing…</> : "Submit Ticket"}
-        </button>
-      </form>
-      {tickets.map(ticket => (
-        <div key={ticket.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-3 animate-in fade-in slide-in-from-top-4 duration-300 shadow-sm">
-          <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-xl">
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Your Issue</p>
-            <p className="text-xs text-gray-800 dark:text-gray-300">{ticket.issue}</p>
+
+      {/* Category selector */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-3">
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Select a category</p>
+        <div className="flex flex-wrap gap-2">
+          {SUPPORT_CATEGORIES.map(c => (
+            <button
+              key={c.id}
+              onClick={() => setCategory(c.id)}
+              className={`text-[11px] font-bold px-3 py-1.5 rounded-full border transition-all ${c.id === category ? c.color + " ring-2 ring-offset-1 ring-current/30" : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat window */}
+      {messages.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center gap-2">
+              <Bot size={14} className="text-blue-600 dark:text-blue-400" />
+              <span className="text-xs font-black text-gray-900 dark:text-gray-100">Support Chat</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${catColor}`}>
+                {SUPPORT_CATEGORIES.find(c => c.id === category)?.label}
+              </span>
+            </div>
+            <button onClick={() => setMessages([])} className="text-[11px] font-bold text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+              Clear chat
+            </button>
           </div>
-          <div className="p-3 bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20 rounded-xl">
-            <div className="flex items-center gap-2 mb-2">
-              <Bot size={12} className="text-blue-600 dark:text-blue-400" />
-              <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-widest font-black">Support AI</p>
-            </div>
-            <div className="text-xs text-gray-800 dark:text-gray-300 leading-relaxed">
-              {ticket.isNew ? <TypewriterMessage content={ticket.reply} /> : <ReactMarkdown components={mdComponents}>{ticket.reply}</ReactMarkdown>}
-            </div>
+
+          <div className="p-4 space-y-4 max-h-[420px] overflow-y-auto">
+            {messages.map(msg => (
+              <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                {/* Avatar */}
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black mt-0.5 ${msg.role === "user" ? "bg-blue-600 text-white" : msg.isError ? "bg-red-100 dark:bg-red-900/30 text-red-600" : "bg-gradient-to-br from-blue-500 to-violet-600 text-white"}`}>
+                  {msg.role === "user" ? "You" : <Bot size={13} />}
+                </div>
+
+                <div className={`flex-1 max-w-[85%] ${msg.role === "user" ? "items-end" : "items-start"} flex flex-col gap-1`}>
+                  <div className={`rounded-2xl px-4 py-3 text-xs leading-relaxed ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-sm" : msg.isError ? "bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-300 rounded-tl-sm" : "bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-tl-sm"}`}>
+                    {msg.role === "user"
+                      ? msg.content
+                      : msg.isNew
+                        ? <TypewriterMessage content={msg.content} />
+                        : <ReactMarkdown components={mdComponents}>{msg.content}</ReactMarkdown>
+                    }
+                  </div>
+
+                  {/* AI message actions */}
+                  {msg.role === "ai" && !msg.isError && (
+                    <div className="flex items-center gap-2 px-1">
+                      <button onClick={() => handleCopy(msg.id, msg.content)} className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        {copiedId === msg.id ? <><CheckCircle2 size={11} className="text-green-500" /> Copied</> : <><Copy size={11} /> Copy</>}
+                      </button>
+                      <span className="text-gray-200 dark:text-gray-700">·</span>
+                      <button onClick={() => handleRate(msg.id, "up")} className={`text-[10px] transition-colors ${ratings[msg.id] === "up" ? "text-green-500" : "text-gray-400 hover:text-green-500"}`}>
+                        👍
+                      </button>
+                      <button onClick={() => handleRate(msg.id, "down")} className={`text-[10px] transition-colors ${ratings[msg.id] === "down" ? "text-red-500" : "text-gray-400 hover:text-red-500"}`}>
+                        👎
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {isProcessing && (
+              <div className="flex gap-3">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shrink-0">
+                  <Bot size={13} className="text-white" />
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
+                  {[0, 1, 2].map(i => (
+                    <span key={i} className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
           </div>
         </div>
-      ))}
+      )}
+
+      {/* Input */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 shadow-sm space-y-3">
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Describe your issue</p>
+        <textarea
+          rows={3}
+          value={issue}
+          onChange={e => setIssue(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSubmit(); }}
+          disabled={isProcessing}
+          placeholder="e.g. I can't log into my account after changing my email…"
+          className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 resize-none transition-all placeholder-gray-400 dark:placeholder-gray-600"
+        />
+        <div className="flex items-center gap-2">
+          <button
+            disabled={isProcessing || !issue.trim()}
+            onClick={() => handleSubmit()}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white font-black text-xs rounded-xl hover:bg-blue-500 transition-all disabled:opacity-40 shadow-sm"
+          >
+            {isProcessing ? <><Loader2 size={13} className="animate-spin" /> Thinking…</> : <><Send size={13} /> Send Message</>}
+          </button>
+          <p className="text-[10px] text-gray-400 shrink-0 hidden sm:block">Ctrl+Enter to send</p>
+        </div>
+      </div>
+
+      {/* Quick prompts */}
+      {messages.length === 0 && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-3">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Common questions</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {QUICK_PROMPTS.map(prompt => (
+              <button
+                key={prompt}
+                onClick={() => handleSubmit(prompt)}
+                disabled={isProcessing}
+                className="text-left text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:text-blue-600 dark:hover:text-blue-400 border border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800/40 rounded-xl px-3.5 py-2.5 transition-all font-medium leading-snug"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* FAQ accordion */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+          <BookOpen size={14} className="text-blue-600 dark:text-blue-400" />
+          <span className="text-xs font-black text-gray-900 dark:text-gray-100">Frequently Asked Questions</span>
+        </div>
+        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+          {FAQ_ITEMS.map((item, i) => (
+            <div key={i}>
+              <button
+                onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{item.q}</span>
+                <ChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`} />
+              </button>
+              {openFaq === i && (
+                <div className="px-4 pb-4 text-xs text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-50 dark:border-gray-800/50 pt-3">
+                  <ReactMarkdown components={mdComponents}>{item.a}</ReactMarkdown>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick resources */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {[
+          { icon: <Globe size={15} />, label: "Help Center", sub: "beoneofus.work/help", href: "https://beoneofus.work/help", color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30" },
+          { icon: <Users size={15} />, label: "Community", sub: "Ask the community", href: "/dash/more?tool=community", color: "text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/30" },
+          { icon: <FileText size={15} />, label: "Docs", sub: "beoneofus.work/docs", href: "https://beoneofus.work/docs", color: "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30" },
+        ].map(item => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className="flex items-center gap-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl px-4 py-3.5 hover:border-gray-300 dark:hover:border-gray-700 transition-all group"
+          >
+            <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}>{item.icon}</span>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.label}</p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{item.sub}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+
     </div>
   );
 };
 
 // ─── User Dashboard ───────────────────────────────────────────────────────────
 
-const UserDashboardTool = ({ currentUserId }) => {
-  const [activeTab, setActiveTab] = useState("");
-  const [isFounderOrMember, setIsFounderOrMember] = useState(null);
-  const [myTasks, setMyTasks] = useState([]);
-  const [myJobApps, setMyJobApps] = useState([]);
-  const [myFounderApps, setMyFounderApps] = useState([]);
-  const [myNotifications, setMyNotifications] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [actionProcessing, setActionProcessing] = useState(false);
-  const [acceptedRoles, setAcceptedRoles] = useState([]);
-  const [taskFilter, setTaskFilter] = useState("All");
+const PRIORITY_CONFIG = {
+  High:   { color: "text-red-600 dark:text-red-400",    bg: "bg-red-50 dark:bg-red-950/30",    border: "border-red-200 dark:border-red-800/40",    bar: "bg-red-500",    dot: "bg-red-500"    },
+  Medium: { color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-200 dark:border-amber-800/40", bar: "bg-amber-500", dot: "bg-amber-500" },
+  Low:    { color: "text-blue-600 dark:text-blue-400",   bg: "bg-blue-50 dark:bg-blue-950/30",   border: "border-blue-200 dark:border-blue-800/40",   bar: "bg-blue-400",   dot: "bg-blue-400"   },
+};
 
-  const FEATURES = [
-    { id: 1, title: "Real-time Workspace Chat", desc: "Secure, encrypted node communication.", date: "May 1, 2026" },
-    { id: 2, title: "AI Support Engineer", desc: "Instant technical assistance from AI.", date: "Apr 28, 2026" },
-    { id: 3, title: "Advanced Code Review", desc: "Highlight and analyze code in your feed.", date: "Apr 15, 2026" },
-  ];
+const STATUS_CONFIG = {
+  pending:     { label: "To Do",       color: "text-gray-600 dark:text-gray-400",    bg: "bg-gray-100 dark:bg-gray-800",            icon: <Clock size={10} />       },
+  in_progress: { label: "In Progress", color: "text-blue-600 dark:text-blue-400",    bg: "bg-blue-50 dark:bg-blue-950/30",          icon: <Loader2 size={10} />     },
+  completed:   { label: "Completed",   color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30", icon: <CheckCircle2 size={10} /> },
+};
+
+const CHANGELOG = [
+  { version: "v2.3", title: "Community Hub Redesign", desc: "Real-time presence, channels, typing indicators and a full chat overhaul.", date: "May 19, 2026", tag: "Design" },
+  { version: "v2.2", title: "Help & Support AI", desc: "Category-tagged tickets, FAQ accordion, quick prompts and chat-style responses.", date: "May 19, 2026", tag: "Feature" },
+  { version: "v2.1", title: "Profile Dropdown Nav", desc: "New avatar dropdown in the main navbar with quick links and sign-out.", date: "May 18, 2026", tag: "UX" },
+  { version: "v2.0", title: "Notification Bell", desc: "Live unread count, per-type routing, mark-all-read and real-time Supabase push.", date: "May 17, 2026", tag: "Feature" },
+  { version: "v1.9", title: "Public Profiles /u/[username]", desc: "Shareable public profile pages with social links and work history.", date: "May 10, 2026", tag: "Feature" },
+  { version: "v1.8", title: "Premium Tier", desc: "Premium subscription system with admin review and badge display.", date: "May 5, 2026", tag: "Feature" },
+];
+
+const NOTIF_ICONS = {
+  like: <Heart size={12} className="text-red-500" />,
+  comment: <MessageSquare size={12} className="text-blue-500" />,
+  connection_request: <UserPlus size={12} className="text-violet-500" />,
+  handshake: <Handshake size={12} className="text-green-500" />,
+  group_invite: <Users size={12} className="text-amber-500" />,
+  message: <Bell size={12} className="text-blue-500" />,
+  partnership_update: <Handshake size={12} className="text-indigo-500" />,
+};
+
+const TASK_STATUSES = ["All", "pending", "in_progress", "completed"];
+
+const UserDashboardTool = ({ currentUserId }) => {
+  const [activeTab, setActiveTab]               = useState("");
+  const [isFounderOrMember, setIsFounderOrMember] = useState(null);
+  const [myTasks, setMyTasks]                   = useState([]);
+  const [myJobApps, setMyJobApps]               = useState([]);
+  const [myFounderApps, setMyFounderApps]       = useState([]);
+  const [myNotifications, setMyNotifications]   = useState([]);
+  const [loading, setLoading]                   = useState(false);
+  const [actionProcessing, setActionProcessing] = useState(false);
+  const [acceptedRoles, setAcceptedRoles]       = useState([]);
+  const [taskFilter, setTaskFilter]             = useState("All");
+  const [taskSearch, setTaskSearch]             = useState("");
+  const [expandedTask, setExpandedTask]         = useState(null);
+  const [deletingApp, setDeletingApp]           = useState(null);
+  const [myProfile, setMyProfile]               = useState(null);
 
   const renderWithLinks = (text) => {
     if (!text) return text;
@@ -3250,25 +3843,30 @@ const UserDashboardTool = ({ currentUserId }) => {
     });
   };
 
+  /* bootstrap */
   useEffect(() => {
     if (!currentUserId) return;
-    const check = async () => {
+    const init = async () => {
       setLoading(true);
-      const { data } = await supabase.from("founder_applications").select("id, status, intended_role").eq("user_id", currentUserId);
-      if (data?.length) {
+      const [{ data: appData }, { data: profileData }] = await Promise.all([
+        supabase.from("founder_applications").select("id, status, intended_role").eq("user_id", currentUserId),
+        supabase.from("profiles").select("username, avatar_url, full_name, role, company").eq("id", currentUserId).single(),
+      ]);
+      if (profileData) setMyProfile(profileData);
+      if (appData?.length) {
         setIsFounderOrMember(true);
         setActiveTab(prev => prev || "tasks");
-        const accepted = data.filter(a => a.status === "accepted").map(a => a.intended_role);
-        setAcceptedRoles([...new Set(accepted)]);
+        setAcceptedRoles([...new Set(appData.filter(a => a.status === "accepted").map(a => a.intended_role))]);
       } else {
         setIsFounderOrMember(false);
         setActiveTab(prev => prev || "job_apps");
       }
       setLoading(false);
     };
-    check();
+    init();
   }, [currentUserId]);
 
+  /* tasks realtime */
   useEffect(() => {
     if (!currentUserId || isFounderOrMember !== true || activeTab !== "tasks") return;
     let ch;
@@ -3285,38 +3883,41 @@ const UserDashboardTool = ({ currentUserId }) => {
     return () => { if (ch) supabase.removeChannel(ch); };
   }, [activeTab, currentUserId, isFounderOrMember]);
 
+  /* job apps */
   useEffect(() => {
-    if (activeTab !== "job_apps" || isFounderOrMember !== false || myJobApps.length > 0) return;
-    const fetch = async () => {
+    if (activeTab !== "job_apps" || myJobApps.length > 0) return;
+    const load = async () => {
       setLoading(true);
       const { data } = await supabase.from("job_applications").select("*, jobs(title, company)").eq("user_id", currentUserId).order("created_at", { ascending: false });
       if (data) setMyJobApps(data);
       setLoading(false);
     };
-    fetch();
-  }, [activeTab, currentUserId, isFounderOrMember, myJobApps.length]);
+    load();
+  }, [activeTab, currentUserId, myJobApps.length]);
 
+  /* founder apps */
   useEffect(() => {
-    if (activeTab !== "founder_apps" || isFounderOrMember !== true || myFounderApps.length > 0) return;
-    const fetch = async () => {
+    if (activeTab !== "founder_apps" || myFounderApps.length > 0) return;
+    const load = async () => {
       setLoading(true);
       const { data } = await supabase.from("founder_applications").select("*").eq("user_id", currentUserId).order("created_at", { ascending: false });
       if (data) setMyFounderApps(data);
       setLoading(false);
     };
-    fetch();
-  }, [activeTab, currentUserId, isFounderOrMember, myFounderApps.length]);
+    load();
+  }, [activeTab, currentUserId, myFounderApps.length]);
 
+  /* notifications */
   useEffect(() => {
-    if (activeTab !== "notifications" || isFounderOrMember !== false || myNotifications.length > 0) return;
-    const fetch = async () => {
+    if (activeTab !== "notifications" || myNotifications.length > 0) return;
+    const load = async () => {
       setLoading(true);
-      const { data } = await supabase.from("notifications").select("*").eq("receiver_id", currentUserId).order("created_at", { ascending: false }).limit(20);
+      const { data } = await supabase.from("notifications").select("*").eq("receiver_id", currentUserId).order("created_at", { ascending: false }).limit(30);
       if (data) setMyNotifications(data);
       setLoading(false);
     };
-    fetch();
-  }, [activeTab, currentUserId, isFounderOrMember, myNotifications.length]);
+    load();
+  }, [activeTab, currentUserId, myNotifications.length]);
 
   const handleTaskUpdate = async (taskId, newStatus) => {
     setActionProcessing(true);
@@ -3335,164 +3936,407 @@ const UserDashboardTool = ({ currentUserId }) => {
     finally { setActionProcessing(false); }
   };
 
+  const handleDeleteApp = async (table, id, setter) => {
+    setDeletingApp(id);
+    const { error } = await supabase.from(table).delete().eq("id", id);
+    if (!error) setter(prev => prev.filter(a => a.id !== id));
+    setDeletingApp(null);
+  };
+
+  /* computed stats */
+  const taskStats = useMemo(() => ({
+    total: myTasks.length,
+    pending: myTasks.filter(t => t.status === "pending" || !t.status).length,
+    inProgress: myTasks.filter(t => t.status === "in_progress").length,
+    completed: myTasks.filter(t => t.status === "completed").length,
+    high: myTasks.filter(t => t.priority === "High").length,
+  }), [myTasks]);
+
+  const completionPct = taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0;
+
+  const filteredTasks = useMemo(() => {
+    let tasks = myTasks;
+    if (taskFilter !== "All") tasks = tasks.filter(t => t.status === taskFilter || t.priority === taskFilter);
+    if (taskSearch) tasks = tasks.filter(t => t.title?.toLowerCase().includes(taskSearch.toLowerCase()) || t.description?.toLowerCase().includes(taskSearch.toLowerCase()));
+    return tasks.sort((a, b) => ({ High: 3, Medium: 2, Low: 1 }[b.priority || "Medium"] - ({ High: 3, Medium: 2, Low: 1 }[a.priority || "Medium"])));
+  }, [myTasks, taskFilter, taskSearch]);
+
   const memberTabs = [
-    { id: "tasks", label: "Tasks" },
-    { id: "founder_apps", label: "My Applications" },
+    { id: "tasks", label: "Tasks", Icon: ClipboardList, badge: taskStats.pending || null },
+    { id: "founder_apps", label: "Applications", Icon: FileText, badge: myFounderApps.filter(a => a.status === "pending").length || null },
   ];
   const guestTabs = [
-    { id: "job_apps", label: "Job Apps" },
-    { id: "notifications", label: "Notifications" },
-    { id: "features", label: "What's New" },
+    { id: "job_apps", label: "Job Apps", Icon: Briefcase, badge: myJobApps.filter(a => a.status === "pending").length || null },
+    { id: "notifications", label: "Notifications", Icon: Bell, badge: myNotifications.filter(n => n.unread).length || null },
+    { id: "changelog", label: "What's New", Icon: Zap, badge: null },
   ];
   const tabs = isFounderOrMember ? memberTabs : guestTabs;
 
+  if (loading && isFounderOrMember === null) return (
+    <div className="py-20 flex flex-col items-center gap-3">
+      <Loader2 className="animate-spin text-violet-500" size={26} />
+      <p className="text-xs text-gray-400">Loading your dashboard…</p>
+    </div>
+  );
+
   return (
     <div className="space-y-4 max-w-3xl mx-auto py-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-violet-50 dark:bg-violet-500/5 border border-violet-200 dark:border-violet-500/20 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-violet-100 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-xl flex items-center justify-center shrink-0"><UserCog size={18} /></div>
-          <div>
-            <h3 className="text-gray-900 dark:text-white font-black text-sm">My Dashboard</h3>
-            <p className="text-[10px] text-violet-600/70 dark:text-violet-300/50 font-medium">Personal tasks & applications</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {acceptedRoles.includes("cofounder") && (
-            <a href="/founder-dashboard" className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
-              Founder Workspace <ArrowUpRight size={11} />
-            </a>
-          )}
-          {acceptedRoles.includes("member") && (
-            <a href="/member-dashboard" className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
-              Member Workspace <ArrowUpRight size={11} />
-            </a>
-          )}
-          <div className="flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-0.5 rounded-xl shadow-sm">
-            {tabs.map(t => (
-              <button key={t.id} onClick={() => setActiveTab(t.id)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${activeTab === t.id ? "bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
-        {loading
-          ? <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-violet-500" size={22} /></div>
-          : (
+      {/* ── Hero header ── */}
+      <div className="relative overflow-hidden rounded-2xl border border-violet-200 dark:border-violet-900/40 bg-gradient-to-br from-violet-600 via-violet-700 to-indigo-700 dark:from-violet-700 dark:via-violet-800 dark:to-indigo-900 p-5 text-white shadow-lg">
+        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle at 60% 40%, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0 overflow-hidden ring-2 ring-white/20">
+              {myProfile?.avatar_url
+                ? <img src={myProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+                : <UserCog size={22} />}
+            </div>
             <div>
-              {activeTab === "tasks" && (
-                <>
-                  <div className="flex gap-1 p-3 border-b border-gray-100 dark:border-gray-800 overflow-x-auto">
-                    {["All", "High", "Medium", "Low"].map(f => (
-                      <button key={f} onClick={() => setTaskFilter(f)}
-                        className={`px-3 py-1 text-[10px] font-bold uppercase rounded-lg transition-all whitespace-nowrap ${taskFilter === f ? "bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-400"}`}>
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                  {myTasks.filter(t => taskFilter === "All" || t.priority === taskFilter).length === 0
-                    ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-xs">No tasks assigned.</div>
-                    : myTasks.filter(t => taskFilter === "All" || t.priority === taskFilter)
-                      .sort((a, b) => ({ High: 3, Medium: 2, Low: 1 }[b.priority || "Medium"] - ({ High: 3, Medium: 2, Low: 1 }[a.priority || "Medium"]))
-                      ).map(task => (
-                        <div key={task.id} className="p-4 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="text-xs font-bold text-gray-900 dark:text-white">{task.title}</p>
-                                <Badge color={task.priority === "High" ? "rose" : task.priority === "Medium" ? "amber" : "blue"}>{task.priority}</Badge>
-                              </div>
-                              <p className="text-[10px] text-gray-500 dark:text-gray-500 line-clamp-2">{task.description}</p>
-                            </div>
-                            <button onClick={() => handleTaskUpdate(task.id, task.status === "completed" ? "pending" : "completed")}
-                              disabled={actionProcessing}
-                              className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-all disabled:opacity-50 ${task.status === "completed" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20" : "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20"}`}>
-                              {task.status}
-                            </button>
-                          </div>
-                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/60">
-                            <span className="text-[9px] text-gray-600">from @{task.assigner?.username || "Admin"}</span>
-                            <span className="text-[9px] text-gray-600">→ @{task.assignee?.username || "?"}</span>
-                          </div>
-                        </div>
-                      ))
-                  }
-                </>
+              <p className="text-[10px] text-violet-200/70 uppercase tracking-widest font-bold mb-0.5">My Dashboard</p>
+              <h2 className="font-black text-base leading-tight">{myProfile?.full_name || myProfile?.username || "User"}</h2>
+              {(myProfile?.role || myProfile?.company) && (
+                <p className="text-[11px] text-violet-200/80 mt-0.5">{[myProfile.role, myProfile.company].filter(Boolean).join(" · ")}</p>
               )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {acceptedRoles.includes("cofounder") && (
+              <a href="/founder-dashboard" className="flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white rounded-xl text-[11px] font-bold transition-all">
+                Founder Workspace <ArrowUpRight size={11} />
+              </a>
+            )}
+            {acceptedRoles.includes("member") && (
+              <a href="/member-dashboard" className="flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white rounded-xl text-[11px] font-bold transition-all">
+                Member Workspace <ArrowUpRight size={11} />
+              </a>
+            )}
+          </div>
+        </div>
 
-              {activeTab === "job_apps" && (
-                myJobApps.length === 0
-                  ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-xs">No job applications.</div>
-                  : myJobApps.map(app => (
-                    <div key={app.id} className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
-                      <div>
-                        <p className="text-xs font-bold text-gray-900 dark:text-white">{app.jobs?.title || "Unknown"}</p>
-                        <p className="text-[10px] text-gray-500">at {app.jobs?.company}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge color={statusColor(app.status)}>{app.status}</Badge>
-                        <button onClick={async () => {
-                          if (!confirm("Delete?")) return;
-                          const { error } = await supabase.from("job_applications").delete().eq("id", app.id);
-                          if (!error) setMyJobApps(prev => prev.filter(a => a.id !== app.id));
-                        }} className="p-1.5 text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
-                      </div>
-                    </div>
-                  ))
-              )}
-
-              {activeTab === "founder_apps" && (
-                myFounderApps.length === 0
-                  ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-xs">No applications found.</div>
-                  : myFounderApps.map(app => (
-                    <div key={app.id} className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
-                      <div>
-                        <p className={`text-xs font-bold ${app.intended_role === "cofounder" ? "text-violet-600 dark:text-violet-400" : "text-blue-600 dark:text-blue-400"}`}>
-                          {app.intended_role === "cofounder" ? "Co-founder Application" : "Member Application"}
-                        </p>
-                        <p className="text-[10px] text-gray-500">{new Date(app.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge color={statusColor(app.status)}>{app.status || "pending"}</Badge>
-                        <button onClick={async () => {
-                          if (!confirm("Delete?")) return;
-                          const { error } = await supabase.from("founder_applications").delete().eq("id", app.id);
-                          if (!error) setMyFounderApps(prev => prev.filter(a => a.id !== app.id));
-                        }} className="p-1.5 text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
-                      </div>
-                    </div>
-                  ))
-              )}
-
-              {activeTab === "notifications" && (
-                myNotifications.length === 0
-                  ? <div className="py-12 text-center text-gray-500 dark:text-gray-600 text-xs">No notifications.</div>
-                  : myNotifications.map(n => (
-                    <div key={n.id} className="p-4 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
-                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <span className="font-bold text-violet-600 dark:text-violet-400 capitalize">{(n.type || "alert").replace("_", " ")}: </span>
-                        {renderWithLinks(n.content)}
-                      </p>
-                      <p className="text-[9px] text-gray-500 dark:text-gray-600 mt-1">{new Date(n.created_at).toLocaleDateString()}</p>
-                    </div>
-                  ))
-              )}
-
-              {activeTab === "features" && FEATURES.map(f => (
-                <div key={f.id} className="p-4 border-b border-gray-100 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-all">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-bold text-gray-900 dark:text-white">{f.title}</p>
-                    <Badge color="violet">New</Badge>
-                  </div>
-                  <p className="text-[10px] text-gray-500">{f.desc}</p>
-                  <p className="text-[9px] text-gray-400 dark:text-gray-600 mt-1">{f.date}</p>
+        {/* Task progress bar (only for members) */}
+        {isFounderOrMember && myTasks.length > 0 && (
+          <div className="relative mt-4 pt-4 border-t border-white/10">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] text-white/70 font-bold uppercase tracking-widest">Task progress</span>
+              <span className="text-[11px] font-black text-white">{completionPct}% complete</span>
+            </div>
+            <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+              <div className="h-full bg-white rounded-full transition-all duration-700" style={{ width: `${completionPct}%` }} />
+            </div>
+            <div className="flex gap-4 mt-3">
+              {[
+                { label: "To Do",    val: taskStats.pending,    col: "text-white/60" },
+                { label: "In Progress", val: taskStats.inProgress, col: "text-blue-300" },
+                { label: "Done",     val: taskStats.completed,  col: "text-emerald-300" },
+                { label: "High Priority", val: taskStats.high, col: "text-red-300" },
+              ].map(s => (
+                <div key={s.label}>
+                  <p className={`text-base font-black ${s.col}`}>{s.val}</p>
+                  <p className="text-[9px] text-white/50">{s.label}</p>
                 </div>
               ))}
             </div>
-          )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Tab bar ── */}
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-1 rounded-2xl overflow-x-auto shadow-sm">
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all flex-1 justify-center ${activeTab === t.id ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}
+          >
+            <t.Icon size={13} />
+            {t.label}
+            {t.badge > 0 && (
+              <span className="text-[9px] font-black bg-violet-500 text-white px-1.5 py-0.5 rounded-full leading-none">{t.badge}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Content panel ── */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+        {loading ? (
+          <div className="py-16 flex flex-col items-center gap-3">
+            <Loader2 className="animate-spin text-violet-500" size={22} />
+            <p className="text-xs text-gray-400">Loading…</p>
+          </div>
+        ) : (
+          <>
+            {/* ─ Tasks ─ */}
+            {activeTab === "tasks" && (
+              <>
+                {/* Filter + search bar */}
+                <div className="flex flex-col sm:flex-row gap-2 p-3 border-b border-gray-100 dark:border-gray-800">
+                  <div className="relative flex-1">
+                    <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      value={taskSearch}
+                      onChange={e => setTaskSearch(e.target.value)}
+                      placeholder="Search tasks…"
+                      className="w-full pl-8 pr-3 py-2 text-[11px] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-violet-400 transition-all text-gray-800 dark:text-gray-200 placeholder-gray-400"
+                    />
+                  </div>
+                  <div className="flex gap-1 overflow-x-auto">
+                    {["All", ...TASK_STATUSES.slice(1), "High", "Medium", "Low"].map(f => (
+                      <button key={f} onClick={() => setTaskFilter(f)}
+                        className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all whitespace-nowrap ${taskFilter === f ? "bg-violet-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
+                        {f === "pending" ? "To Do" : f === "in_progress" ? "In Progress" : f === "completed" ? "Done" : f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {filteredTasks.length === 0 ? (
+                  <div className="py-16 flex flex-col items-center gap-2 text-center">
+                    <ClipboardList size={30} className="text-gray-200 dark:text-gray-700" />
+                    <p className="text-sm font-bold text-gray-400 dark:text-gray-500">{taskSearch ? "No tasks match your search" : "No tasks assigned yet"}</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800/60">
+                    {filteredTasks.map(task => {
+                      const pc = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.Medium;
+                      const sc = STATUS_CONFIG[task.status] || STATUS_CONFIG.pending;
+                      const isExpanded = expandedTask === task.id;
+                      return (
+                        <div
+                          key={task.id}
+                          className={`group relative transition-all ${isExpanded ? "bg-gray-50 dark:bg-gray-800/40" : "hover:bg-gray-50 dark:hover:bg-gray-800/20"}`}
+                        >
+                          {/* Priority left accent */}
+                          <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${pc.dot}`} />
+
+                          <div className="p-4 pl-5 cursor-pointer" onClick={() => setExpandedTask(isExpanded ? null : task.id)}>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <p className={`text-xs font-bold ${task.status === "completed" ? "line-through text-gray-400 dark:text-gray-600" : "text-gray-900 dark:text-white"}`}>
+                                    {task.title}
+                                  </p>
+                                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${pc.color} ${pc.bg} ${pc.border}`}>
+                                    {task.priority || "Medium"}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500 line-clamp-1">{task.description}</p>
+                              </div>
+
+                              {/* Status toggle */}
+                              <button
+                                onClick={e => { e.stopPropagation(); handleTaskUpdate(task.id, task.status === "completed" ? "pending" : task.status === "in_progress" ? "completed" : "in_progress"); }}
+                                disabled={actionProcessing}
+                                className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition-all disabled:opacity-50 ${sc.bg} ${sc.color}`}
+                              >
+                                {sc.icon}
+                                {sc.label}
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-3 mt-2">
+                              {/* Assigner */}
+                              <div className="flex items-center gap-1">
+                                <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-[7px] font-black text-gray-500 shrink-0">
+                                  {task.assigner?.avatar_url ? <img src={task.assigner.avatar_url} alt="" className="w-full h-full object-cover" /> : (task.assigner?.username?.[0] || "A").toUpperCase()}
+                                </div>
+                                <span className="text-[9px] text-gray-400">from @{task.assigner?.username || "Admin"}</span>
+                              </div>
+                              <span className="text-gray-200 dark:text-gray-700">·</span>
+                              {/* Assignee */}
+                              <div className="flex items-center gap-1">
+                                <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-[7px] font-black text-gray-500 shrink-0">
+                                  {task.assignee?.avatar_url ? <img src={task.assignee.avatar_url} alt="" className="w-full h-full object-cover" /> : (task.assignee?.username?.[0] || "?").toUpperCase()}
+                                </div>
+                                <span className="text-[9px] text-gray-400">@{task.assignee?.username || "?"}</span>
+                              </div>
+                              {task.created_at && (
+                                <>
+                                  <span className="text-gray-200 dark:text-gray-700">·</span>
+                                  <span className="text-[9px] text-gray-400">{new Date(task.created_at).toLocaleDateString()}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Expanded description */}
+                          {isExpanded && task.description && (
+                            <div className="px-5 pb-4">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-3">
+                                {task.description}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ─ Job Apps ─ */}
+            {activeTab === "job_apps" && (
+              myJobApps.length === 0 ? (
+                <div className="py-16 flex flex-col items-center gap-2 text-center">
+                  <Briefcase size={30} className="text-gray-200 dark:text-gray-700" />
+                  <p className="text-sm font-bold text-gray-400 dark:text-gray-500">No job applications yet</p>
+                  <Link href="/dash/jobs" className="mt-1 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1">
+                    Browse jobs <ChevronRight size={12} />
+                  </Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-gray-800/60">
+                  {myJobApps.map(app => {
+                    const sc = statusColor(app.status);
+                    const statusSteps = ["pending", "reviewing", "interview", "accepted", "rejected"];
+                    const stepIdx = statusSteps.indexOf(app.status);
+                    return (
+                      <div key={app.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-all">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm">
+                              {(app.jobs?.company || "?")[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-gray-900 dark:text-white">{app.jobs?.title || "Unknown Role"}</p>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400">{app.jobs?.company || "—"}</p>
+                              {app.created_at && (
+                                <p className="text-[9px] text-gray-400 mt-0.5">Applied {new Date(app.created_at).toLocaleDateString()}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge color={sc}>{app.status || "pending"}</Badge>
+                            <button
+                              onClick={() => handleDeleteApp("job_applications", app.id, setMyJobApps)}
+                              disabled={deletingApp === app.id}
+                              className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20"
+                            >
+                              {deletingApp === app.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                            </button>
+                          </div>
+                        </div>
+                        {/* Status pipeline */}
+                        {stepIdx >= 0 && (
+                          <div className="mt-3 flex items-center gap-1">
+                            {statusSteps.slice(0, -1).map((step, i) => (
+                              <div key={step} className="flex items-center gap-1 flex-1">
+                                <div className={`h-1 flex-1 rounded-full transition-all ${i <= stepIdx ? "bg-blue-500" : "bg-gray-100 dark:bg-gray-800"}`} />
+                                {i < statusSteps.length - 2 && (
+                                  <div className={`w-2 h-2 rounded-full border-2 transition-all ${i < stepIdx ? "bg-blue-500 border-blue-500" : i === stepIdx ? "bg-white dark:bg-gray-900 border-blue-500" : "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700"}`} />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            )}
+
+            {/* ─ Founder Apps ─ */}
+            {activeTab === "founder_apps" && (
+              myFounderApps.length === 0 ? (
+                <div className="py-16 flex flex-col items-center gap-2 text-center">
+                  <FileText size={30} className="text-gray-200 dark:text-gray-700" />
+                  <p className="text-sm font-bold text-gray-400 dark:text-gray-500">No applications found</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-gray-800/60">
+                  {myFounderApps.map(app => (
+                    <div key={app.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-all">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${app.intended_role === "cofounder" ? "bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400" : "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400"}`}>
+                            {app.intended_role === "cofounder" ? <Crown size={15} /> : <Users size={15} />}
+                          </div>
+                          <div>
+                            <p className={`text-xs font-bold ${app.intended_role === "cofounder" ? "text-violet-600 dark:text-violet-400" : "text-blue-600 dark:text-blue-400"}`}>
+                              {app.intended_role === "cofounder" ? "Co-founder Application" : "Member Application"}
+                            </p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">Submitted {new Date(app.created_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge color={statusColor(app.status)}>{app.status || "pending"}</Badge>
+                          <button
+                            onClick={() => handleDeleteApp("founder_applications", app.id, setMyFounderApps)}
+                            disabled={deletingApp === app.id}
+                            className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20"
+                          >
+                            {deletingApp === app.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* ─ Notifications ─ */}
+            {activeTab === "notifications" && (
+              myNotifications.length === 0 ? (
+                <div className="py-16 flex flex-col items-center gap-2 text-center">
+                  <Bell size={30} className="text-gray-200 dark:text-gray-700" />
+                  <p className="text-sm font-bold text-gray-400 dark:text-gray-500">No notifications yet</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-gray-800/60">
+                  {myNotifications.map(n => (
+                    <div key={n.id} className={`flex items-start gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-all ${n.unread ? "bg-blue-50/40 dark:bg-blue-950/10" : ""}`}>
+                      <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 mt-0.5">
+                        {NOTIF_ICONS[n.type] || <Bell size={12} className="text-gray-400" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                          <span className="font-bold capitalize text-gray-900 dark:text-white">{(n.type || "alert").replace(/_/g, " ")}: </span>
+                          {renderWithLinks(n.content)}
+                        </p>
+                        <p className="text-[9px] text-gray-400 dark:text-gray-600 mt-1">{new Date(n.created_at).toLocaleDateString()}</p>
+                      </div>
+                      {n.unread && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 shrink-0" />}
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* ─ Changelog ─ */}
+            {activeTab === "changelog" && (
+              <div className="divide-y divide-gray-100 dark:divide-gray-800/60">
+                {CHANGELOG.map((item, i) => (
+                  <div key={i} className="flex gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-all">
+                    <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
+                      <div className="w-7 h-7 rounded-xl bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+                        <Zap size={12} />
+                      </div>
+                      {i < CHANGELOG.length - 1 && <div className="flex-1 w-px bg-gray-100 dark:bg-gray-800 min-h-[20px]" />}
+                    </div>
+                    <div className="flex-1 min-w-0 pb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-[9px] font-black font-mono bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded">{item.version}</span>
+                        <p className="text-xs font-bold text-gray-900 dark:text-white">{item.title}</p>
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                          item.tag === "Feature" ? "bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400" :
+                          item.tag === "Design" ? "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400" :
+                          item.tag === "UX" ? "bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400" :
+                          "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400"
+                        }`}>{item.tag}</span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">{item.desc}</p>
+                      <p className="text-[9px] text-gray-300 dark:text-gray-700 mt-1">{item.date}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -3602,14 +4446,107 @@ const QuoteTool = () => {
 // ─── Tool Registry ────────────────────────────────────────────────────────────
 
 const TOOLS = [
-  { id: "user_dashboard", label: "My Dashboard",    icon: UserCog,    desc: "Applications & task management" },
-  { id: "api",            label: "API Access",       icon: Code2,      desc: "Developer keys & integration" },
-  { id: "status",         label: "System Status",    icon: Zap,        desc: "Platform health & latency" },
-  { id: "community",      label: "Community Hub",    icon: Globe,      desc: "Global network chat" },
-  { id: "support",        label: "Help & Support",   icon: HelpCircle, desc: "AI technical assistance" },
-  { id: "quotes",         label: "Daily Quotes",     icon: Quote,      desc: "Inspiration for builders & coders" },
-  { id: "admin",          label: "Admin Dashboard",  icon: ShieldAlert, desc: "Platform management", adminOnly: true },
+  {
+    id: "user_dashboard", label: "My Dashboard", icon: UserCog,
+    desc: "Track your tasks, job applications, and platform activity at a glance.",
+    color: "violet", tags: ["Tasks", "Applications", "Notifications"], isNew: false,
+    category: "personal",
+  },
+  {
+    id: "api", label: "API Access", icon: Code2,
+    desc: "Generate and manage secret keys, explore endpoints, and integrate with the platform API.",
+    color: "blue", tags: ["REST API", "SDK", "Keys"], isNew: false,
+    category: "developer",
+  },
+  {
+    id: "status", label: "System Status", icon: Zap,
+    desc: "Real-time health dashboard — service uptime, latency, and incident history.",
+    color: "emerald", tags: ["Uptime", "Latency", "Incidents"], isNew: false,
+    category: "developer",
+  },
+  {
+    id: "community", label: "Community Hub", icon: Globe,
+    desc: "Live global chat with channels, online presence, typing indicators and more.",
+    color: "indigo", tags: ["Chat", "Channels", "Live"], isNew: true,
+    category: "community",
+  },
+  {
+    id: "support", label: "Help & Support", icon: HelpCircle,
+    desc: "AI-powered support with categorised tickets, FAQ, quick prompts and chat-style responses.",
+    color: "orange", tags: ["AI Support", "FAQ", "Tickets"], isNew: true,
+    category: "community",
+  },
+  {
+    id: "quotes", label: "Daily Quotes", icon: Quote,
+    desc: "Curated inspiration for builders, coders, and entrepreneurs — refreshed daily.",
+    color: "amber", tags: ["Motivation", "Coding", "Career"], isNew: false,
+    category: "community",
+  },
+  {
+    id: "admin", label: "Admin Dashboard", icon: ShieldAlert,
+    desc: "Full platform management — users, content, applications, and system controls.",
+    color: "red", tags: ["Users", "Tasks", "Moderation"], isNew: false,
+    category: "platform", adminOnly: true,
+  },
 ];
+
+const TOOL_CATEGORIES = [
+  { id: "personal",   label: "Personal",        icon: UserCog,    accent: "from-violet-500 to-violet-600" },
+  { id: "developer",  label: "Developer Tools",  icon: Terminal,   accent: "from-blue-500 to-blue-600"    },
+  { id: "community",  label: "Community",        icon: Users,      accent: "from-indigo-500 to-indigo-600" },
+  { id: "platform",   label: "Platform",         icon: ShieldAlert,accent: "from-red-500 to-red-600"      },
+];
+
+const TOOL_COLOR_MAP = {
+  violet:  { bg: "bg-violet-100 dark:bg-violet-950/50", text: "text-violet-600 dark:text-violet-400", border: "border-violet-200 dark:border-violet-800/40", gradient: "from-violet-600 to-violet-700", tag: "bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800/30", glow: "shadow-violet-500/15" },
+  blue:    { bg: "bg-blue-100 dark:bg-blue-950/50",    text: "text-blue-600 dark:text-blue-400",    border: "border-blue-200 dark:border-blue-800/40",    gradient: "from-blue-600 to-blue-700",    tag: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/30",    glow: "shadow-blue-500/15"    },
+  emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/50", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-800/40", gradient: "from-emerald-600 to-emerald-700", tag: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30", glow: "shadow-emerald-500/15" },
+  indigo:  { bg: "bg-indigo-100 dark:bg-indigo-950/50", text: "text-indigo-600 dark:text-indigo-400", border: "border-indigo-200 dark:border-indigo-800/40", gradient: "from-indigo-600 to-indigo-700", tag: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/30", glow: "shadow-indigo-500/15" },
+  orange:  { bg: "bg-orange-100 dark:bg-orange-950/50", text: "text-orange-600 dark:text-orange-400", border: "border-orange-200 dark:border-orange-800/40", gradient: "from-orange-500 to-orange-600", tag: "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800/30", glow: "shadow-orange-500/15" },
+  amber:   { bg: "bg-amber-100 dark:bg-amber-950/50",  text: "text-amber-600 dark:text-amber-400",  border: "border-amber-200 dark:border-amber-800/40",  gradient: "from-amber-500 to-amber-600",  tag: "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/30",  glow: "shadow-amber-500/15"  },
+  red:     { bg: "bg-red-100 dark:bg-red-950/50",      text: "text-red-600 dark:text-red-400",      border: "border-red-200 dark:border-red-800/40",      gradient: "from-red-600 to-red-700",      tag: "bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/30",      glow: "shadow-red-500/15"      },
+};
+
+// ─── Tool Card ────────────────────────────────────────────────────────────────
+
+function ToolCard({ tool, onClick }) {
+  const tc = TOOL_COLOR_MAP[tool.color] || TOOL_COLOR_MAP.blue;
+  return (
+    <button
+      onClick={onClick}
+      className={`group relative flex flex-col p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-lg ${tc.glow} transition-all duration-200 text-left hover:-translate-y-0.5 overflow-hidden w-full`}
+    >
+      {/* hover accent top bar */}
+      <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${tc.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
+
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className={`w-10 h-10 rounded-xl ${tc.bg} border ${tc.border} flex items-center justify-center shrink-0 transition-transform group-hover:scale-105`}>
+          <tool.icon size={18} className={tc.text} />
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {tool.isNew && (
+            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${tc.tag}`}>Updated</span>
+          )}
+          <div className={`w-6 h-6 rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.04] flex items-center justify-center group-hover:${tc.bg} group-hover:border-${tool.color}-200 dark:group-hover:border-${tool.color}-800/40 transition-all`}>
+            <ChevronRight size={12} className={`text-gray-300 dark:text-gray-700 group-hover:${tc.text} group-hover:translate-x-0.5 transition-all`} />
+          </div>
+        </div>
+      </div>
+
+      <p className={`text-sm font-black text-gray-900 dark:text-gray-100 group-hover:${tc.text} transition-colors mb-1`}>{tool.label}</p>
+      <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium leading-relaxed line-clamp-2 flex-1">{tool.desc}</p>
+
+      {/* Tags */}
+      <div className="flex gap-1.5 flex-wrap mt-3">
+        {tool.tags.map(tag => (
+          <span key={tag} className="text-[9px] font-bold text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 px-2 py-0.5 rounded-full">
+            {tag}
+          </span>
+        ))}
+      </div>
+    </button>
+  );
+}
 
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
@@ -3679,173 +4616,284 @@ export default function MoreContent() {
     window.location.href = "/auth";
   };
 
+  const [toolSearch, setToolSearch] = useState("");
+
+  const searchedTools = visibleTools.filter(t =>
+    !toolSearch || t.label.toLowerCase().includes(toolSearch.toLowerCase()) || t.desc.toLowerCase().includes(toolSearch.toLowerCase()) || t.tags.some(tag => tag.toLowerCase().includes(toolSearch.toLowerCase()))
+  );
+
   return (
-    <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-1.5">
-          <div className="w-1 h-5 bg-gradient-to-b from-blue-500 to-violet-600 rounded-full" />
-          <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[2px]">Workspace</p>
+    <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
+
+      {/* ── Hero banner ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 dark:from-[#0a0a12] dark:via-[#0d0d1a] dark:to-[#0f0f1f] border border-white/[0.07] mb-8 p-6 shadow-xl">
+        {/* dot-grid texture */}
+        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
+        {/* gradient orbs */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-8 -left-8 w-36 h-36 bg-violet-600/15 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-end justify-between gap-5">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1.5 bg-white/10 border border-white/10 px-2.5 py-1 rounded-full">
+                <Layers size={10} className="text-blue-400" />
+                <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Workspace</span>
+              </div>
+              {isAdmin && (
+                <div className="flex items-center gap-1.5 bg-red-500/20 border border-red-500/20 px-2.5 py-1 rounded-full">
+                  <ShieldAlert size={10} className="text-red-400" />
+                  <span className="text-[9px] font-black text-red-400 uppercase tracking-widest">Admin</span>
+                </div>
+              )}
+            </div>
+            <h1 className="text-3xl font-black text-white tracking-tighter leading-none mb-2">Resources</h1>
+            <p className="text-sm text-white/50 font-medium leading-relaxed max-w-md">
+              Developer tools, community features, and platform utilities — all in one workspace.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="text-right hidden sm:block">
+              <p className="text-xl font-black text-white">{visibleTools.length}</p>
+              <p className="text-[10px] text-white/40">tools available</p>
+            </div>
+            <div className="w-px h-10 bg-white/10 hidden sm:block" />
+            <div className="text-right hidden sm:block">
+              <p className="text-xl font-black text-white">{visibleTools.filter(t => t.isNew).length}</p>
+              <p className="text-[10px] text-white/40">recently updated</p>
+            </div>
+          </div>
         </div>
-        <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Resources</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">Developer tools & platform utilities.</p>
       </div>
 
-      {/* Tool Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-        {visibleTools.map(tool => (
-          <button key={tool.id} onClick={() => openTool(tool)}
-            className="group flex items-center justify-between p-4 bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-white/[0.05] rounded-2xl hover:border-blue-500/30 dark:hover:border-blue-500/20 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-200 text-left hover:-translate-y-0.5">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-200/60 dark:border-white/[0.06] flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 group-hover:border-blue-200 dark:group-hover:border-blue-500/20 transition-all shrink-0 shadow-sm">
-                <tool.icon size={18} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{tool.label}</p>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium mt-0.5">{tool.desc}</p>
-              </div>
-            </div>
-            <div className="w-7 h-7 rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.04] flex items-center justify-center group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 group-hover:border-blue-200 dark:group-hover:border-blue-500/20 transition-all shrink-0">
-              <ChevronRight size={13} className="text-gray-400 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5" />
-            </div>
+      {/* ── Search ── */}
+      <div className="relative mb-6">
+        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          value={toolSearch}
+          onChange={e => setToolSearch(e.target.value)}
+          placeholder="Search tools by name, description, or tag…"
+          className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-blue-400 dark:focus:border-blue-600 transition-all shadow-sm"
+        />
+        {toolSearch && (
+          <button onClick={() => setToolSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-colors">
+            <X size={13} />
           </button>
-        ))}
+        )}
       </div>
 
-      {/* Founder Node Section */}
-      <div className="mt-8">
-        <div className="flex items-center gap-2 mb-3 px-1">
-          <div className="w-1 h-4 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full" />
-          <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[2px]">Founder Node</p>
+      {/* ── Tool grid (categorised) ── */}
+      {toolSearch ? (
+        /* flat search results */
+        <div className="space-y-3 mb-8">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+            {searchedTools.length} result{searchedTools.length !== 1 ? "s" : ""} for "{toolSearch}"
+          </p>
+          {searchedTools.length === 0 ? (
+            <div className="py-12 text-center">
+              <Search size={28} className="text-gray-200 dark:text-gray-700 mx-auto mb-2" />
+              <p className="text-sm font-bold text-gray-400">No tools match your search</p>
+            </div>
+          ) : searchedTools.map(tool => <ToolCard key={tool.id} tool={tool} onClick={() => openTool(tool)} />)}
+        </div>
+      ) : (
+        TOOL_CATEGORIES.map(cat => {
+          const catTools = visibleTools.filter(t => t.category === cat.id);
+          if (catTools.length === 0) return null;
+          return (
+            <div key={cat.id} className="mb-8">
+              <div className="flex items-center gap-2.5 mb-3 px-1">
+                <div className={`w-5 h-5 rounded-lg bg-gradient-to-br ${cat.accent} flex items-center justify-center shrink-0`}>
+                  <cat.icon size={11} className="text-white" />
+                </div>
+                <p className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{cat.label}</p>
+                <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+                <span className="text-[10px] text-gray-400 dark:text-gray-600">{catTools.length} tool{catTools.length !== 1 ? "s" : ""}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {catTools.map(tool => <ToolCard key={tool.id} tool={tool} onClick={() => openTool(tool)} />)}
+              </div>
+            </div>
+          );
+        })
+      )}
+
+      {/* ── Founder Node ── */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2.5 mb-3 px-1">
+          <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
+            <Crown size={11} className="text-white" />
+          </div>
+          <p className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Founder Node</p>
+          <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
         </div>
 
-        {/* Accepted founder or admin: show dashboard link */}
-        {(isFounder || isAdmin) && (
-          <Link
-            href="/founder-dashboard"
-            className="group flex items-center justify-between p-5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-2xl shadow-lg shadow-blue-500/20 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+        {(isFounder || isAdmin) ? (
+          <Link href="/founder-dashboard" className="group relative overflow-hidden flex items-center justify-between p-5 bg-gradient-to-r from-blue-600 via-blue-600 to-blue-700 hover:from-blue-700 hover:via-blue-700 hover:to-blue-800 rounded-2xl shadow-lg shadow-blue-500/20 transition-all">
+            <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+            <div className="relative flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-sm">
                 <Crown size={20} className="text-white" />
               </div>
               <div>
-                <p className="text-sm font-bold text-white">Founder Dashboard</p>
-                <p className="text-[11px] text-blue-200 font-medium mt-0.5">Team, tasks & applications</p>
+                <p className="text-sm font-black text-white">Founder Dashboard</p>
+                <p className="text-[11px] text-blue-200/80 font-medium mt-0.5">Team, tasks, applications & more</p>
               </div>
             </div>
-            <ChevronRight size={16} className="text-blue-200 group-hover:translate-x-0.5 transition-transform" />
+            <div className="relative flex items-center gap-2">
+              <span className="hidden sm:flex items-center gap-1 text-[10px] font-bold bg-white/15 text-white/80 px-2.5 py-1 rounded-full border border-white/10">
+                Open workspace <ArrowUpRight size={10} />
+              </span>
+              <ChevronRight size={16} className="text-blue-200 group-hover:translate-x-0.5 transition-transform" />
+            </div>
           </Link>
-        )}
-
-        {/* Pending application */}
-        {!isFounder && !isAdmin && applicationStatus === 'pending' && (
-          <div className="flex items-center gap-4 p-5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center shrink-0">
-              <Clock size={20} className="text-amber-600 dark:text-amber-400" />
+        ) : applicationStatus === "pending" ? (
+          <div className="relative overflow-hidden flex items-start gap-4 p-5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+              <Clock size={18} className="text-amber-600 dark:text-amber-400" />
             </div>
-            <div>
-              <p className="text-sm font-bold text-amber-700 dark:text-amber-300">Application Under Review</p>
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">Your co-founder application is being reviewed. We will notify you soon.</p>
+            <div className="flex-1">
+              <p className="text-sm font-black text-amber-700 dark:text-amber-300">Application Under Review</p>
+              <p className="text-[11px] text-amber-600/80 dark:text-amber-400/70 font-medium mt-1 leading-relaxed">Your co-founder application is being reviewed by the team. We'll notify you once a decision is made — usually within 48 hours.</p>
             </div>
+            <span className="shrink-0 w-2 h-2 bg-amber-400 rounded-full animate-pulse mt-1" />
           </div>
-        )}
-
-        {/* Declined or no application: show apply option */}
-        {!isFounder && !isAdmin && applicationStatus !== 'pending' && (
-          <button
-            onClick={() => setShowApplyModal(true)}
-            className="group w-full flex items-center justify-between p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-blue-500/40 dark:hover:border-blue-500/30 hover:shadow-lg rounded-2xl transition-all text-left"
-          >
+        ) : (
+          <button onClick={() => setShowApplyModal(true)} className="group w-full relative overflow-hidden flex items-center justify-between p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-lg hover:shadow-blue-500/5 rounded-2xl transition-all text-left">
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0">
-                <Crown size={20} />
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-200 dark:border-gray-700 group-hover:from-blue-50 group-hover:to-blue-50 dark:group-hover:from-blue-950/30 dark:group-hover:border-blue-800/40 flex items-center justify-center shrink-0 transition-all">
+                <Crown size={18} className="text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
               </div>
               <div>
-                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                  {applicationStatus === 'declined' ? 'Reapply as Co-Founder' : 'Apply as Co-Founder'}
+                <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+                  {applicationStatus === "declined" ? "Reapply as Co-Founder" : "Apply as Co-Founder"}
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-500 font-medium mt-0.5">
-                  {applicationStatus === 'declined' ? 'Your previous application was not accepted. Try again.' : 'Join the founding team and help shape the platform.'}
+                  {applicationStatus === "declined" ? "Your previous application was declined. You can apply again." : "Join the founding team and help shape the future of beoneofus."}
                 </p>
               </div>
             </div>
-            <ChevronRight size={15} className="text-gray-400 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5 shrink-0" />
+            <div className="flex items-center gap-2 shrink-0">
+              {applicationStatus === "declined" && <Badge color="red">Reapply</Badge>}
+              <ChevronRight size={15} className="text-gray-300 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5" />
+            </div>
           </button>
         )}
       </div>
 
-      {/* Sign out */}
-      <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/[0.04]">
+      {/* ── Quick links ── */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2.5 mb-3 px-1">
+          <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Quick links</p>
+          <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { label: "Feed",        href: "/dash/feed",          icon: <BarChart3 size={14} />,   color: "text-blue-500"   },
+            { label: "Jobs",        href: "/dash/jobs",          icon: <Briefcase size={14} />,   color: "text-green-500"  },
+            { label: "Connections", href: "/dash/connections",   icon: <Users size={14} />,       color: "text-violet-500" },
+            { label: "Notifications", href: "/dash/notifications", icon: <Bell size={14} />,      color: "text-amber-500"  },
+          ].map(item => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex items-center gap-2.5 p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:border-gray-300 dark:hover:border-gray-700 hover:-translate-y-0.5 transition-all group shadow-sm"
+            >
+              <span className={`${item.color} shrink-0`}>{item.icon}</span>
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">{item.label}</span>
+              <ChevronRight size={10} className="text-gray-300 dark:text-gray-700 ml-auto shrink-0 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Sign out ── */}
+      <div className="pt-4 border-t border-gray-100 dark:border-white/[0.04]">
         <button onClick={handleSignOut} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all text-sm font-bold group">
-          <LogOut size={15} className="group-hover:-translate-x-0.5 transition-transform" /> Sign Out
+          <LogOut size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+          Sign Out
         </button>
       </div>
 
-      {/* Co-Founder Application Modal */}
+      {/* ── Co-Founder Apply Modal ── */}
       {showApplyModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowApplyModal(false)} />
           <div className="relative w-full max-w-2xl max-h-[90vh] bg-gray-50 dark:bg-[#0c0c10] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 shrink-0">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 shrink-0 backdrop-blur-sm">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
                   <Crown size={16} className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <h2 className="text-sm font-black text-gray-900 dark:text-white">Co-Founder Application</h2>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-600 font-medium">Join the founding team</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-500 font-medium">Join the founding team at beoneofus</p>
                 </div>
               </div>
-              <button onClick={() => setShowApplyModal(false)}
-                className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-500 rounded-xl transition-all">
+              <button onClick={() => setShowApplyModal(false)} className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-500 rounded-xl transition-all">
                 <X size={16} />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-5">
-              <FounderContent onSubmitSuccess={() => { setShowApplyModal(false); setApplicationStatus('pending'); }} />
+              <FounderContent onSubmitSuccess={() => { setShowApplyModal(false); setApplicationStatus("pending"); }} />
             </div>
           </div>
         </div>
       )}
 
-      {/* Full-screen Tool Modal */}
-      {activeItem && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={closeTool} />
-          <div className="relative w-full max-w-4xl h-[88vh] bg-gray-50 dark:bg-[#0c0c10] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
-                  <activeItem.icon size={16} />
+      {/* ── Tool Modal ── */}
+      {activeItem && (() => {
+        const tc = TOOL_COLOR_MAP[activeItem.color] || TOOL_COLOR_MAP.blue;
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={closeTool} />
+            <div className="relative w-full max-w-4xl h-[88vh] bg-gray-50 dark:bg-[#0c0c10] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+
+              {/* Colored modal header */}
+              <div className={`relative overflow-hidden flex items-center justify-between px-5 py-4 bg-gradient-to-r ${tc.gradient} shrink-0`}>
+                <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "16px 16px" }} />
+                <div className="relative flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur-sm">
+                    <activeItem.icon size={16} className="text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-black text-white">{activeItem.label}</h2>
+                      {activeItem.isNew && (
+                        <span className="text-[9px] font-black bg-white/20 text-white px-1.5 py-0.5 rounded-full border border-white/20">Updated</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-white/60 font-medium">{activeItem.desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-sm font-black text-gray-900 dark:text-white">{activeItem.label}</h2>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-600 font-medium">{activeItem.desc}</p>
+                <div className="relative flex items-center gap-2">
+                  <div className="hidden sm:flex gap-1">
+                    {activeItem.tags.slice(0, 2).map(tag => (
+                      <span key={tag} className="text-[9px] font-bold bg-white/15 text-white/80 px-2 py-0.5 rounded-full border border-white/10">{tag}</span>
+                    ))}
+                  </div>
+                  <button onClick={closeTool} className="p-2 bg-white/15 hover:bg-white/25 border border-white/10 text-white/80 hover:text-white transition-all rounded-xl backdrop-blur-sm">
+                    <X size={15} />
+                  </button>
                 </div>
               </div>
-              <button onClick={closeTool}
-                className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all rounded-xl">
-                <X size={16} />
-              </button>
-            </div>
 
-            {/* Modal body */}
-            <div className={`flex-1 overflow-hidden ${activeItem.id === "admin" ? "flex flex-col" : "overflow-y-auto"}`}>
-              <div className={activeItem.id === "admin" ? "flex flex-col h-full" : "p-5"}>
-                {activeItem.id === "user_dashboard" && <UserDashboardTool currentUserId={currentUserId} />}
-                {activeItem.id === "status" && <SystemStatusTool />}
-                {activeItem.id === "api" && <ApiAccessTool />}
-                {activeItem.id === "community" && <div className="h-full"><CommunityHubTool currentUserId={currentUserId} /></div>}
-                {activeItem.id === "support" && <SupportTool />}
-                {activeItem.id === "quotes" && <QuoteTool />}
-                {activeItem.id === "admin" && <AdminPanelTool currentUserId={currentUserId} />}
+              {/* Modal body */}
+              <div className={`flex-1 overflow-hidden ${activeItem.id === "admin" ? "flex flex-col" : "overflow-y-auto"}`}>
+                <div className={activeItem.id === "admin" ? "flex flex-col h-full" : "p-5"}>
+                  {activeItem.id === "user_dashboard" && <UserDashboardTool currentUserId={currentUserId} />}
+                  {activeItem.id === "status"         && <SystemStatusTool />}
+                  {activeItem.id === "api"            && <ApiAccessTool />}
+                  {activeItem.id === "community"      && <div className="h-full"><CommunityHubTool currentUserId={currentUserId} /></div>}
+                  {activeItem.id === "support"        && <SupportTool />}
+                  {activeItem.id === "quotes"         && <QuoteTool />}
+                  {activeItem.id === "admin"          && <AdminPanelTool currentUserId={currentUserId} />}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

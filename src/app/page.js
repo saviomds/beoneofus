@@ -508,12 +508,12 @@ export default function LandingPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Features</p>
                       <div className="grid grid-cols-2 gap-2">
                         {[
-                          { icon: <Bot size={17} />, label: "AI Assistant",     desc: "24/7 career & skill coaching",      href: "/dash/more",        color: "violet" },
-                          { icon: <Briefcase size={17} />, label: "Jobs & Services", desc: "Browse or post opportunities",   href: "/dash/jobs",        color: "blue"   },
-                          { icon: <GraduationCap size={17} />, label: "Mentorship", desc: "1-on-1 sessions with experts",   href: "/dash/mentorship",  color: "emerald" },
-                          { icon: <BookOpen size={17} />, label: "Academy",      desc: "AI-generated learning paths",       href: "/Academy",          color: "amber"  },
-                          { icon: <Users size={17} />, label: "Connections",     desc: "Grow your professional network",   href: "/dash/connections", color: "indigo" },
-                          { icon: <Award size={17} />, label: "Coaching",        desc: "Structured expert coaching",        href: "/dash/mentorship",  color: "rose"   },
+                          { icon: <Bot size={17} />,          label: "AI Assistant",    desc: "24/7 career & skill coaching",    href: "/dash/ai",          color: "violet"  },
+                          { icon: <Briefcase size={17} />,    label: "Jobs & Services", desc: "Browse jobs & freelance work",    href: "/dash/services",    color: "blue"    },
+                          { icon: <GraduationCap size={17} />,label: "Mentorship",      desc: "1-on-1 sessions with experts",    href: "/dash/mentorship",  color: "emerald" },
+                          { icon: <BookOpen size={17} />,     label: "Academy",         desc: "AI-generated learning paths",     href: "/Academy",          color: "amber"   },
+                          { icon: <Users size={17} />,        label: "Connections",     desc: "Grow your professional network",  href: "/dash/connections", color: "indigo"  },
+                          { icon: <Award size={17} />,        label: "Coaching",        desc: "Structured expert coaching",      href: "/dash/coaching",    color: "rose"    },
                         ].map(({ icon, label, desc, href, color }) => (
                           <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                             className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
@@ -537,12 +537,12 @@ export default function LandingPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Tools</p>
                       <div className="space-y-0.5">
                         {[
-                          { icon: <Laptop size={15} />,       label: "In-Browser IDE",   href: "/IDEPage" },
-                          { icon: <ShoppingBag size={15} />,  label: "Marketplace",      href: "/dash/marketplace" },
-                          { icon: <Code2 size={15} />,        label: "Projects",         href: "/projects" },
-                          { icon: <Trophy size={15} />,       label: "Leaderboard",      href: "/dash/leaderboard" },
-                          { icon: <FileText size={15} />,     label: "Resume Builder",   href: "/dash/profile" },
-                          { icon: <Crown size={15} />,        label: "Premium",          href: "/dash/premium" },
+                          { icon: <Laptop size={15} />,      label: "In-Browser IDE", href: "/IDEPage"            },
+                          { icon: <ShoppingBag size={15} />, label: "Marketplace",    href: "/dash/marketplace"   },
+                          { icon: <Code2 size={15} />,       label: "Projects",       href: "/projects"           },
+                          { icon: <Trophy size={15} />,      label: "Leaderboard",    href: "/dash/leaderboard"   },
+                          { icon: <FileText size={15} />,    label: "Resume Builder", href: "/dash/profile"       },
+                          { icon: <Crown size={15} />,       label: "Premium",        href: "/dash/premium"       },
                         ].map(({ icon, label, href }) => (
                           <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all font-medium">
@@ -616,10 +616,10 @@ export default function LandingPage() {
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Learn</p>
                       {[
-                        { icon: <BookOpen size={16} />,     label: "Academy",          desc: "Browse all courses",            href: "/Academy"     },
-                        { icon: <Award size={16} />,        label: "Certificates",     desc: "Earn verified credentials",     href: "/certificate" },
-                        { icon: <Laptop size={16} />,       label: "In-Browser IDE",   desc: "Code directly in your browser", href: "/IDEPage"     },
-                        { icon: <Globe size={16} />,        label: "Explore Projects", desc: "See what members are building", href: "/Explore_Projects" },
+                        { icon: <BookOpen size={16} />, label: "Academy",          desc: "Browse all courses",            href: "/Academy"          },
+                        { icon: <Award size={16} />,    label: "Certificates",     desc: "Earn verified credentials",     href: "/dash/more"        },
+                        { icon: <Laptop size={16} />,   label: "In-Browser IDE",   desc: "Code directly in your browser", href: "/IDEPage"          },
+                        { icon: <Globe size={16} />,    label: "Explore Projects", desc: "See what members are building", href: "/Explore_Projects" },
                       ].map(({ icon, label, desc, href }) => (
                         <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                           className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
@@ -634,10 +634,10 @@ export default function LandingPage() {
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Documentation</p>
                       {[
-                        { icon: <FileText size={16} />,  label: "Documentation",  desc: "Full platform guide",   href: "/docs"          },
-                        { icon: <Zap size={16} />,       label: "How It Works",   desc: "Platform overview",     href: "/how_it_works"  },
-                        { icon: <Shield size={16} />,    label: "Premium Guide",  desc: "What premium includes", href: "/dash/premium"  },
-                        { icon: <CheckCircle2 size={16}/>,label: "Quick Start",   desc: "Up and running in 5 min",href: "/docs#quick-start" },
+                        { icon: <FileText size={16} />,    label: "Documentation", desc: "Full platform guide",     href: "/docs"         },
+                        { icon: <Zap size={16} />,         label: "How It Works",  desc: "Platform overview",       href: "/how_it_works" },
+                        { icon: <Shield size={16} />,      label: "Premium Guide", desc: "What premium includes",   href: "/dash/premium" },
+                        { icon: <CheckCircle2 size={16} />,label: "Quick Start",   desc: "Up and running in 5 min", href: "/docs"         },
                       ].map(({ icon, label, desc, href }) => (
                         <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                           className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
@@ -741,14 +741,14 @@ export default function LandingPage() {
                 {
                   id: "product", label: "Product",
                   links: [
-                    { label: "AI Assistant",   href: "/dash/more"        },
-                    { label: "Jobs & Services", href: "/dash/jobs"        },
+                    { label: "AI Assistant",    href: "/dash/ai"          },
+                    { label: "Jobs & Services", href: "/dash/services"    },
                     { label: "Mentorship",      href: "/dash/mentorship"  },
                     { label: "Academy",         href: "/Academy"          },
                     { label: "Marketplace",     href: "/dash/marketplace" },
                     { label: "In-Browser IDE",  href: "/IDEPage"          },
                     { label: "Connections",     href: "/dash/connections" },
-                    { label: "Coaching",        href: "/dash/mentorship"  },
+                    { label: "Coaching",        href: "/dash/coaching"    },
                   ],
                 },
                 {
@@ -763,10 +763,10 @@ export default function LandingPage() {
                 {
                   id: "resources", label: "Resources",
                   links: [
-                    { label: "Documentation",  href: "/docs"         },
-                    { label: "How It Works",   href: "/how_it_works" },
-                    { label: "Certificates",   href: "/certificate"  },
-                    { label: "Quick Start",    href: "/docs#quick-start" },
+                    { label: "Documentation", href: "/docs"         },
+                    { label: "How It Works",  href: "/how_it_works" },
+                    { label: "Academy",       href: "/Academy"      },
+                    { label: "Quick Start",   href: "/docs"         },
                   ],
                 },
                 {

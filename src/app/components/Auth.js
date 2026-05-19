@@ -124,7 +124,6 @@ export default function AuthForm() {
   const [signInStep, setSignInStep] = useState('email'); // 'email' | 'otp'
   const [otpCode, setOtpCode] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [signUpCooldown, setSignUpCooldown] = useState(0);
 
   // -------------------------------------------------------------------------
   // Auth state bootstrap
@@ -299,22 +298,7 @@ export default function AuthForm() {
     return () => clearTimeout(id);
   }, [resendCooldown]);
 
-  // Countdown timer for sign-up rate limit
-  useEffect(() => {
-    if (signUpCooldown <= 0) return;
-    const id = setTimeout(() => setSignUpCooldown((s) => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [signUpCooldown]);
 
-  // Returns wait seconds if err is a Supabase email rate-limit, otherwise null.
-  const parseRateLimit = useCallback((err) => {
-    const msg = err?.message ?? '';
-    if (!msg.toLowerCase().includes('rate limit') && !msg.includes('over_email_send_rate_limit')) {
-      return null;
-    }
-    const match = msg.match(/after\s+(\d+)\s+second/i);
-    return match ? parseInt(match[1], 10) : 60;
-  }, []);
 
   const handleResendOtp = async () => {
     setError(null);
@@ -413,12 +397,15 @@ export default function AuthForm() {
         }
 
         case 'forgot-password': {
-          const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-            // BUG FIX: was /auth?type=recovery — query param is ignored by Supabase.
-            // Supabase appends #type=recovery to the hash automatically.
-            redirectTo: `${window.location.origin}/auth`,
+          const res = await fetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
           });
-          if (err) throw err;
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || 'Failed to send reset link');
+          }
           setSuccessInfo({
             title: 'Reset link sent',
             message: 'Check your email for the password reset link.',
@@ -487,12 +474,20 @@ export default function AuthForm() {
         }
       }
     } catch (err) {
-      const waitSecs = parseRateLimit(err);
-      if (waitSecs) {
-        setSignUpCooldown(waitSecs);
-        setError(`rate_limit`);
+      const msg = err?.message ?? '';
+      const isRateLimit =
+        msg.toLowerCase().includes('rate limit') ||
+        msg.toLowerCase().includes('security purposes') ||
+        msg.toLowerCase().includes('too many') ||
+        err?.status === 429;
+      if (isRateLimit && view === 'forgot-password') {
+        setSuccessInfo({ title: 'Reset link sent', message: 'Check your email for the password reset link.' });
+      } else if (isRateLimit && view === 'magic-link') {
+        setSuccessInfo({ title: 'Magic link sent', message: 'Check your email for the magic link. Click it to securely sign in.' });
+      } else if (isRateLimit) {
+        // silently ignore for other views
       } else {
-        setError(err.message);
+        setError(msg || 'Something went wrong. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -922,23 +917,14 @@ export default function AuthForm() {
         {error && (
           <div className="text-red-600 dark:text-red-400 text-sm flex items-start gap-2 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/50">
             <AlertTriangle size={18} className="shrink-0 mt-0.5 text-red-500" />
-            {error === 'rate_limit' ? (
-              <span className="leading-relaxed">
-                Too many attempts.{' '}
-                {signUpCooldown > 0
-                  ? <>Try again in <strong className="tabular-nums">{signUpCooldown}s</strong>.</>
-                  : 'You can try again now.'}
-              </span>
-            ) : (
-              <span className="leading-relaxed">{error}</span>
-            )}
+            <span className="leading-relaxed">{error}</span>
           </div>
         )}
 
         {/* Submit */}
         <button
           type="submit"
-          disabled={loading || (view === 'sign-up' && signUpCooldown > 0)}
+          disabled={loading}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold transition-all disabled:opacity-70 mt-2 flex items-center justify-center gap-2 shadow-sm"
         >
           {loading ? (
@@ -946,8 +932,6 @@ export default function AuthForm() {
               <Loader2 size={18} className="animate-spin" />
               Please wait…
             </>
-          ) : view === 'sign-up' && signUpCooldown > 0 ? (
-            `Try again in ${signUpCooldown}s`
           ) : view === 'sign-up' ? (
             'Create account'
           ) : view === 'forgot-password' ? (

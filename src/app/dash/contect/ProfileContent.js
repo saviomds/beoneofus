@@ -51,7 +51,7 @@ export default function ProfileContent({ viewUserId }) {
   const [skillsInput, setSkillsInput] = useState("");
   const [editSkills, setEditSkills] = useState([]);
   const [toast, setToast] = useState({ message: "", type: "success" });
-  const [visibility, setVisibility] = useState({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true });
+  const [visibility, setVisibility] = useState({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, premium_badge: true });
   const [savingVisibility, setSavingVisibility] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState('none');
@@ -200,12 +200,12 @@ export default function ProfileContent({ viewUserId }) {
           });
           setEditSkills(Array.isArray(profileData.skills) ? profileData.skills : []);
           if (profileData.profile_visibility) {
-            setVisibility({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, ...profileData.profile_visibility });
+            setVisibility({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, premium_badge: true, ...profileData.profile_visibility });
           }
         } else {
           // Apply viewed user's visibility settings when viewing another profile
           if (profileData.profile_visibility) {
-            setVisibility({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, ...profileData.profile_visibility });
+            setVisibility({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, premium_badge: true, ...profileData.profile_visibility });
           }
         }
 
@@ -1030,7 +1030,7 @@ export default function ProfileContent({ viewUserId }) {
               <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-center gap-2 tracking-tight">
                 {profile?.full_name || profile?.username || 'Unknown User'}
                 {profile?.is_verified && <VerifiedBadge size={26} />}
-                {(profile?.is_premium || profile?.is_admin) && <PremiumBadge size={22} />}
+                {(profile?.is_premium || profile?.is_admin) && visibility.premium_badge !== false && <PremiumBadge size={22} isTrial={!!profile?.is_trial_premium} />}
               </h2>
               {profile?.full_name && (
                 <p className="text-sm font-bold text-gray-400 dark:text-gray-500 mt-1">@{profile.username}</p>
@@ -1464,8 +1464,14 @@ export default function ProfileContent({ viewUserId }) {
                       { key: 'github',      label: 'GitHub',      desc: 'Your GitHub profile link',      icon: GitBranch },
                       { key: 'website',     label: 'Website',     desc: 'Your personal/portfolio URL',   icon: Link },
                       { key: 'work_status', label: 'Work Status', desc: 'Open to work / hired etc.',     icon: Briefcase },
-                      { key: 'certificates',label: 'Certificates','desc': 'Earned course certificates',  icon: Award },
-                      { key: 'posts',       label: 'Recent Posts','desc': 'Your latest feed activity',   icon: Activity },
+                      { key: 'certificates',label: 'Certificates', desc: 'Earned course certificates',   icon: Award },
+                      { key: 'posts',       label: 'Recent Posts', desc: 'Your latest feed activity',    icon: Activity },
+                      ...((profile?.is_premium || profile?.is_admin) ? [{
+                        key: 'premium_badge',
+                        label: profile?.is_trial_premium ? 'Freemium Badge' : 'Premium Badge',
+                        desc: profile?.is_trial_premium ? 'Show your Freemium status publicly' : 'Show your Premium status publicly',
+                        icon: Award,
+                      }] : []),
                     ].map(({ key, label, desc, icon: Icon }) => {
                       const on = visibility[key] !== false;
                       return (

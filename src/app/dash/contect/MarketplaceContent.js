@@ -315,7 +315,8 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
               <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                 @{listing.profiles.username}
                 {listing.profiles.is_verified && <BadgeCheck size={11} className="text-blue-500" fill="currentColor" stroke="white" />}
-                {listing.profiles.is_premium && <Crown size={10} className="text-amber-500" />}
+                {listing.profiles.is_premium && !listing.profiles.is_trial_premium && listing.profiles.profile_visibility?.premium_badge !== false && <Crown size={10} className="text-amber-500" />}
+                {listing.profiles.is_premium && listing.profiles.is_trial_premium && listing.profiles.profile_visibility?.premium_badge !== false && <Sparkles size={10} className="text-blue-500" />}
               </span>
               {listing.purchases > 0 && (
                 <span className="ml-auto text-[10px] text-gray-400 dark:text-gray-500">
@@ -517,7 +518,7 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
     setLoading(true);
     const { data, error } = await supabase
       .from('marketplace_listings')
-      .select('id, title, description, category, price, currency, image_url, tags, purchases, created_at, profiles:seller_id(id, username, avatar_url, is_verified, is_premium)')
+      .select('id, title, description, category, price, currency, image_url, tags, purchases, created_at, profiles:seller_id(id, username, avatar_url, is_verified, is_premium, is_trial_premium, profile_visibility)')
       .eq('is_active', true)
       .order('purchases', { ascending: false });
     if (!error && data) {
@@ -653,7 +654,8 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
                       <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate flex items-center gap-0.5">
                         @{listing.profiles.username}
                         {listing.profiles.is_verified && <BadgeCheck size={10} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />}
-                        {listing.profiles.is_premium && <Crown size={10} className="text-amber-500 shrink-0" />}
+                        {listing.profiles.is_premium && !listing.profiles.is_trial_premium && listing.profiles.profile_visibility?.premium_badge !== false && <Crown size={10} className="text-amber-500 shrink-0" />}
+                        {listing.profiles.is_premium && listing.profiles.is_trial_premium && listing.profiles.profile_visibility?.premium_badge !== false && <Sparkles size={10} className="text-blue-500 shrink-0" />}
                       </span>
                       {listing.purchases > 0 && (
                         <span className="ml-auto text-[9px] text-gray-400 dark:text-gray-500 shrink-0">{listing.purchases} sold</span>
@@ -711,7 +713,7 @@ function MyLibraryTab({ currentUserId, onSelectItem }) {
       setLoading(true);
       const { data, error } = await supabase
         .from('user_library')
-        .select('acquired_at, listing:listing_id(id, title, description, category, price, currency, image_url, tags, profiles:seller_id(username, avatar_url, is_verified, is_premium))')
+        .select('acquired_at, listing:listing_id(id, title, description, category, price, currency, image_url, tags, profiles:seller_id(username, avatar_url, is_verified, is_premium, is_trial_premium, profile_visibility))')
         .eq('user_id', currentUserId)
         .order('acquired_at', { ascending: false });
       if (!error && data) setItems(data.filter(d => d.listing));

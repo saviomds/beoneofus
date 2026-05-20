@@ -49,7 +49,7 @@ function HighlightMatch({ text, query }) {
 
 const SELECT = `
   id, title, slug, excerpt, cover_url, tags, views, is_featured, created_at,
-  author:profiles!author_id(id, username, avatar_url, is_verified, is_premium),
+  author:profiles!author_id(id, username, avatar_url, is_verified, is_premium, is_trial_premium, profile_visibility),
   blog_comments(count),
   blog_likes(count)
 `;
@@ -378,7 +378,8 @@ function FeaturedCard({ post, query = "" }) {
           <div>
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="px-2.5 py-1 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full">{post.is_featured ? "⭐ Featured" : "Latest"}</span>
-              {post.author?.is_premium && <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-200 dark:border-amber-700/40 flex items-center gap-1"><Crown size={9} /> Premium</span>}
+              {post.author?.is_premium && !post.author?.is_trial_premium && post.author?.profile_visibility?.premium_badge !== false && <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-200 dark:border-amber-700/40 flex items-center gap-1"><Crown size={9} /> Premium</span>}
+              {post.author?.is_premium && post.author?.is_trial_premium && post.author?.profile_visibility?.premium_badge !== false && <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-200 dark:border-blue-700/40 flex items-center gap-1"><Sparkles size={9} /> Freemium</span>}
               {post.author?.is_verified && !post.author?.is_premium && <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-200 dark:border-emerald-700/40 flex items-center gap-1"><ShieldCheck size={9} /> Verified</span>}
               {(post.tags || []).slice(0, 2).map((t) => (
                 <span key={t} className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${tagColor(t)}`}>{t}</span>
@@ -446,13 +447,14 @@ function PostCard({ post, query = "" }) {
 function AuthorMeta({ author, date, compact = false }) {
   return (
     <div className="flex items-center gap-2">
-      <div className={`relative ${compact ? "w-6 h-6" : "w-8 h-8"} rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center text-xs font-bold overflow-hidden shrink-0 ${author?.is_premium ? "ring-2 ring-amber-400" : author?.is_verified ? "ring-2 ring-emerald-400" : ""}`}>
+      <div className={`relative ${compact ? "w-6 h-6" : "w-8 h-8"} rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center text-xs font-bold overflow-hidden shrink-0 ${author?.is_premium && !author?.is_trial_premium && author?.profile_visibility?.premium_badge !== false ? "ring-2 ring-amber-400" : author?.is_premium && author?.is_trial_premium && author?.profile_visibility?.premium_badge !== false ? "ring-2 ring-blue-400" : author?.is_verified ? "ring-2 ring-emerald-400" : ""}`}>
         {author?.avatar_url ? <Image src={author.avatar_url} alt="av" fill className="object-cover" sizes="32px" /> : <User size={compact ? 11 : 14} />}
       </div>
       <div>
         <p className={`font-bold text-gray-900 dark:text-white ${compact ? "text-xs" : "text-sm"} flex items-center gap-1`}>
           @{author?.username || "beoneofus"}
-          {author?.is_premium && <Crown size={10} className="text-amber-500" />}
+          {author?.is_premium && !author?.is_trial_premium && author?.profile_visibility?.premium_badge !== false && <Crown size={10} className="text-amber-500" />}
+          {author?.is_premium && author?.is_trial_premium && author?.profile_visibility?.premium_badge !== false && <Sparkles size={10} className="text-blue-500" />}
           {author?.is_verified && !author?.is_premium && <ShieldCheck size={10} className="text-emerald-500" />}
         </p>
         {!compact && <p className="text-xs text-gray-500 flex items-center gap-1"><Clock size={10} />{timeAgo(date)}</p>}

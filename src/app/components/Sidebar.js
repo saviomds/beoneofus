@@ -563,7 +563,7 @@ export default function Sidebar({ onClose }) {
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-1 max-w-full">
                       <span className="truncate">@{profile.username}</span>
                       {profile.is_verified && <VerifiedBadge size={13} />}
-                      {(profile.is_premium || profile.is_admin) && <PremiumBadge size={13} />}
+                      {(profile.is_premium || profile.is_admin) && profile.profile_visibility?.premium_badge !== false && <PremiumBadge size={13} isTrial={!!profile.is_trial_premium} />}
                     </p>
                     <div className="flex items-center gap-1.5 min-w-0">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0" />

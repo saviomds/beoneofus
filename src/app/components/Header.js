@@ -184,7 +184,7 @@ export default function Header({ setActiveTab }) {
           // Fetch Connections
           const { data: connectionsData } = await supabase.from('connections').select('sender_id, receiver_id').or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`).eq('status', 'accepted');
           const connectedIds = connectionsData ? connectionsData.map(c => c.sender_id === currentUserId ? c.receiver_id : c.sender_id) : [];
-          const { data: profiles } = connectedIds.length > 0 ? await supabase.from('profiles').select('id, username, status, avatar_url, is_verified, work_status').in('id', connectedIds) : { data: [] };
+          const { data: profiles } = connectedIds.length > 0 ? await supabase.from('profiles').select('id, username, status, avatar_url, is_verified, work_status, is_premium, is_trial_premium, profile_visibility').in('id', connectedIds) : { data: [] };
 
           // Fetch Groups
           const { data: groupMemberships } = await supabase.from('group_members').select('group_id').eq('user_id', currentUserId);
@@ -860,8 +860,11 @@ export default function Header({ setActiveTab }) {
                               <div className="flex items-center gap-1 flex-wrap mb-0.5">
                                 <p className="text-[13px] font-black text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-[120px]">@{user.username}</p>
                                 {user.is_verified && <VerifiedBadge size={13} />}
-                                {user.is_premium && (
+                                {user.is_premium && !user.is_trial_premium && user.profile_visibility?.premium_badge !== false && (
                                   <span className="px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-400 text-white text-[8px] font-black uppercase tracking-widest rounded-md shadow-sm">PRO</span>
+                                )}
+                                {user.is_premium && user.is_trial_premium && user.profile_visibility?.premium_badge !== false && (
+                                  <span className="px-1.5 py-0.5 bg-gradient-to-r from-blue-400 to-violet-400 text-white text-[8px] font-black uppercase tracking-widest rounded-md shadow-sm">FREEMIUM</span>
                                 )}
                               </div>
                               <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold truncate leading-tight">{user.status || 'Active Member'}</p>

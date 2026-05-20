@@ -11,7 +11,7 @@ import {
   BarChart3, Crown, Users, Award, TrendingUp, RefreshCw, Eye,
   BadgeCheck, Filter, ArrowUpRight, Terminal, Layers, Bell,
   CheckCircle2, Clock, XCircle, ChevronDown, MoreHorizontal,
-  Shield, Video, Handshake, BookOpen, Mail, Hash, MessageSquare, Smile, Menu, Heart,
+  Shield, Video, Handshake, BookOpen, Mail, Hash, MessageSquare, Smile, Menu, Heart, Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "../../supabaseClient";
@@ -1075,6 +1075,39 @@ const AdminPanelTool = ({ currentUserId }) => {
   const [trialMode, setTrialMode] = useState({ active: false, expires_at: null, user_count: 0 });
   const [trialLoading, setTrialLoading] = useState(false);
   const [showTrialConfirm, setShowTrialConfirm] = useState(null);
+  const [trialCountdown, setTrialCountdown] = useState({ d: 0, h: 0, m: 0, s: 0, expired: false });
+
+  useEffect(() => {
+    if (!trialMode.active || !trialMode.expires_at) return;
+    let autoExpired = false;
+    const tick = async () => {
+      const diff = new Date(trialMode.expires_at).getTime() - Date.now();
+      if (diff <= 0) {
+        setTrialCountdown({ d: 0, h: 0, m: 0, s: 0, expired: true });
+        if (!autoExpired) {
+          autoExpired = true;
+          // Trial has expired client-side — call the API to revert all trial users
+          const { data: { session } } = await supabase.auth.getSession();
+          await fetch("/api/admin/premium-trial", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+            body: JSON.stringify({ action: "disable" }),
+          });
+          setTrialMode({ active: false, expires_at: null, user_count: 0 });
+          showToast("Freemium trial has expired — all trial users reverted to free tier.");
+        }
+        return;
+      }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setTrialCountdown({ d, h, m, s, expired: false });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [trialMode.active, trialMode.expires_at]);
   const [taskForm, setTaskForm] = useState({ assignee_id: "", title: "", description: "", priority: "Medium", linked_to: "" });
   const [taskFilter, setTaskFilter] = useState("All");
   const [teamMembers, setTeamMembers] = useState([]);
@@ -1279,7 +1312,7 @@ const AdminPanelTool = ({ currentUserId }) => {
     const to = from + USERS_PER_PAGE - 1;
 
     const { data, error } = await supabase.from("profiles")
-      .select("id, username, avatar_url, status, is_verified, is_admin, is_premium, premium_requested, role")
+      .select("id, username, avatar_url, status, is_verified, is_admin, is_premium, is_trial_premium, premium_requested, role")
       .range(from, to);
     if (!error) {
       if (append) {
@@ -1999,17 +2032,43 @@ const AdminPanelTool = ({ currentUserId }) => {
                         )}
                       </div>
                       {trialMode.active ? (
-                        <div className="space-y-0.5">
-                          <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-                            <p className="text-[11px] text-violet-600 dark:text-violet-400 font-bold flex items-center gap-1">
-                              <Users size={10} /> {(trialMode.user_count || 0).toLocaleString()} users on trial
-                            </p>
-                            {trialMode.expires_at && (
-                              <p className={`text-[11px] font-bold flex items-center gap-1 ${Math.max(0, Math.ceil((new Date(trialMode.expires_at) - Date.now()) / 86400000)) < 30 ? "text-red-500" : Math.max(0, Math.ceil((new Date(trialMode.expires_at) - Date.now()) / 86400000)) < 90 ? "text-amber-500" : "text-gray-500 dark:text-gray-400"}`}>
-                                <Clock size={10} /> {Math.max(0, Math.ceil((new Date(trialMode.expires_at) - Date.now()) / 86400000))} days remaining
-                              </p>
-                            )}
-                          </div>
+                        <div className="space-y-2">
+                          <p className="text-[11px] text-violet-600 dark:text-violet-400 font-bold flex items-center gap-1">
+                            <Users size={10} /> {(trialMode.user_count || 0).toLocaleString()} users on trial
+                          </p>
+                          {trialMode.expires_at && (
+                            trialCountdown.expired ? (
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40">
+                                <XCircle size={12} className="text-red-500 shrink-0" />
+                                <span className="text-[11px] font-black text-red-600 dark:text-red-400">Trial expired — reverting users…</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                {[
+                                  { v: trialCountdown.d, label: "days" },
+                                  { v: trialCountdown.h, label: "hrs" },
+                                  { v: trialCountdown.m, label: "min" },
+                                  { v: trialCountdown.s, label: "sec" },
+                                ].map(({ v, label }, i) => (
+                                  <div key={label} className="flex items-center">
+                                    <div className={`flex flex-col items-center min-w-[36px] px-1.5 py-1 rounded-lg border text-center ${
+                                      trialCountdown.d < 30 ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/40" :
+                                      trialCountdown.d < 90 ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/40" :
+                                      "bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800/40"
+                                    }`}>
+                                      <span className={`text-sm font-black tabular-nums leading-none ${
+                                        trialCountdown.d < 30 ? "text-red-600 dark:text-red-400" :
+                                        trialCountdown.d < 90 ? "text-amber-600 dark:text-amber-400" :
+                                        "text-violet-700 dark:text-violet-300"
+                                      }`}>{String(v).padStart(2, "0")}</span>
+                                      <span className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider leading-none mt-0.5">{label}</span>
+                                    </div>
+                                    {i < 3 && <span className="text-gray-300 dark:text-gray-700 font-black text-xs mx-0.5">:</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          )}
                           {trialMode.expires_at && (
                             <p className="text-[10px] text-gray-400 dark:text-gray-500">
                               Expires {new Date(trialMode.expires_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
@@ -2165,7 +2224,8 @@ const AdminPanelTool = ({ currentUserId }) => {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="text-xs font-bold text-gray-900 dark:text-white hover:text-blue-500 dark:hover:text-blue-400 transition-colors">@{user.username}</p>
                             {user.is_verified && <BadgeCheck size={12} className="text-blue-500 dark:text-blue-400" />}
-                            {user.is_premium && <Crown size={12} className="text-amber-500 dark:text-amber-400" />}
+                            {user.is_premium && !user.is_trial_premium && <Crown size={12} className="text-amber-500 dark:text-amber-400" />}
+                            {user.is_premium && user.is_trial_premium && <Sparkles size={12} className="text-blue-500 dark:text-blue-400" />}
                             {user.premium_requested && !user.is_premium && <span className="text-[9px] font-black bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 px-1.5 py-0.5 rounded-full">Req</span>}
                             {user.is_admin && <Badge color="amber">Admin</Badge>}
                             {user.role && <Badge color="gray">{user.role}</Badge>}

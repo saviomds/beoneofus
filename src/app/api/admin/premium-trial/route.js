@@ -19,6 +19,18 @@ async function requireAdmin(request) {
   return data?.is_admin ? { supa, user } : null;
 }
 
+async function disableTrial(supa) {
+  await supa.from('profiles')
+    .update({ is_premium: false, is_trial_premium: false })
+    .eq('is_trial_premium', true);
+
+  await supa.from('platform_settings').upsert({
+    key: 'premium_trial',
+    value: { active: false, expires_at: null },
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'key' });
+}
+
 export async function GET(request) {
   const auth = await requireAdmin(request);
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,9 +41,20 @@ export async function GET(request) {
       supa.from('platform_settings').select('value').eq('key', 'premium_trial').single(),
       supa.from('profiles').select('id', { count: 'exact', head: true }).eq('is_trial_premium', true),
     ]);
+
+    const val = setting?.value;
+
+    // Auto-expire: if trial is marked active but the expiry date has passed, revert all trial users
+    if (val?.active && val?.expires_at && new Date(val.expires_at) <= new Date()) {
+      await disableTrial(supa);
+      return NextResponse.json({
+        trialMode: { active: false, expires_at: null, user_count: 0, autoExpired: true },
+      });
+    }
+
     return NextResponse.json({
-      trialMode: setting?.value
-        ? { ...setting.value, user_count: trialCount ?? 0 }
+      trialMode: val
+        ? { ...val, user_count: trialCount ?? 0 }
         : { active: false, expires_at: null, user_count: 0 },
     });
   } catch (err) {
@@ -78,17 +101,7 @@ export async function POST(request) {
     }
 
     if (action === 'disable') {
-      // Only revert users who got premium via trial — paid subscribers keep theirs
-      await supa.from('profiles')
-        .update({ is_premium: false, is_trial_premium: false })
-        .eq('is_trial_premium', true);
-
-      await supa.from('platform_settings').upsert({
-        key: 'premium_trial',
-        value: { active: false, expires_at: null },
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'key' });
-
+      await disableTrial(supa);
       return NextResponse.json({
         trialMode: { active: false, expires_at: null, user_count: 0 },
       });

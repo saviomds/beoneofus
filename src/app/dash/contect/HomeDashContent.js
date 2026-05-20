@@ -228,7 +228,7 @@ export default function HomeDashContent() {
         const uid = s.user.id;
 
         const [profileRes, connRes, msgRes, notifRes, groupNotifRes] = await Promise.all([
-          supabase.from('profiles').select('username, avatar_url, banner_url, status, is_verified, is_premium, is_admin, full_name, location, work_status, github, website, skills, role, field').eq('id', uid).single(),
+          supabase.from('profiles').select('username, avatar_url, banner_url, status, is_verified, is_premium, is_trial_premium, profile_visibility, is_admin, full_name, location, work_status, github, website, skills, role, field').eq('id', uid).single(),
           supabase.from('connections').select('id', { count: 'exact', head: true }).or(`sender_id.eq.${uid},receiver_id.eq.${uid}`).eq('status', 'accepted'),
           supabase.from('messages').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('is_read', false),
           supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('unread', true),
@@ -355,7 +355,7 @@ export default function HomeDashContent() {
                 <span className="flex items-center gap-2 flex-wrap mt-0.5">
                   <span className="text-blue-300">@{profile.username}</span>
                   {profile.is_verified && <VerifiedBadge size={16} />}
-                  {(profile.is_premium || profile.is_admin) && <PremiumBadge size={16} />}
+                  {(profile.is_premium || profile.is_admin) && profile.profile_visibility?.premium_badge !== false && <PremiumBadge size={16} isTrial={!!profile.is_trial_premium} />}
                 </span>
               ) : ''}
             </h1>

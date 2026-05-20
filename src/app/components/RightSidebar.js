@@ -219,7 +219,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
             .order('created_at', { ascending: false })
             .limit(3),
           supabase.from('profiles')
-            .select('id, username, avatar_url, bio, is_verified, is_premium, status')
+            .select('id, username, avatar_url, bio, is_verified, is_premium, is_trial_premium, profile_visibility, status')
             .eq('is_verified', true)
             .limit(6),
         ]);
@@ -350,7 +350,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
         // Fetch latest posts from premium members (premium-exclusive feed)
         const { data: pPosts } = await supabase
           .from('posts')
-          .select('id, title, content, created_at, image_url, profiles:user_id(id, username, avatar_url, is_verified, is_premium)')
+          .select('id, title, content, created_at, image_url, profiles:user_id(id, username, avatar_url, is_verified, is_premium, is_trial_premium, profile_visibility)')
           .order('created_at', { ascending: false })
           .limit(20);
 
@@ -612,9 +612,14 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
                         {user.username?.[0]}
                       </div>
                     )}
-                    {user.is_premium && (
+                    {user.is_premium && !user.is_trial_premium && user.profile_visibility?.premium_badge !== false && (
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center border border-white dark:border-gray-900">
                         <Crown size={8} className="text-white" />
+                      </div>
+                    )}
+                    {user.is_premium && user.is_trial_premium && user.profile_visibility?.premium_badge !== false && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center border border-white dark:border-gray-900">
+                        <Sparkles size={8} className="text-white" />
                       </div>
                     )}
                   </div>
@@ -914,9 +919,17 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
                               {post.profiles?.username?.[0] || '?'}
                             </div>
                           )}
-                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center">
-                            <Crown size={6} className="text-white" strokeWidth={3} />
-                          </div>
+                          {post.profiles?.profile_visibility?.premium_badge !== false && (
+                            post.profiles?.is_trial_premium ? (
+                              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-br from-blue-400 to-violet-500 rounded-full flex items-center justify-center">
+                                <Sparkles size={6} className="text-white" strokeWidth={3} />
+                              </div>
+                            ) : (
+                              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center">
+                                <Crown size={6} className="text-white" strokeWidth={3} />
+                              </div>
+                            )
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200 leading-tight line-clamp-1 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">

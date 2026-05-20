@@ -205,6 +205,7 @@ export default function PremiumContent() {
   );
 
   const isPremium  = profile?.is_premium || profile?.is_admin;
+  const isFreemium = profile?.is_premium && profile?.is_trial_premium && !profile?.is_admin;
   const isAdmin    = profile?.is_admin;
   const subStatus  = subscription?.status;
   const hasPending = subStatus === "pending_review";
@@ -227,8 +228,14 @@ export default function PremiumContent() {
           <div className="relative flex items-start justify-between gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-2 mb-1.5">
-                <Crown size={22} className="text-amber-500" fill="currentColor" strokeWidth={1.5} stroke="white" />
-                <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Premium Membership</h1>
+                {isFreemium ? (
+                  <Sparkles size={22} className="text-blue-500" />
+                ) : (
+                  <Crown size={22} className="text-amber-500" fill="currentColor" strokeWidth={1.5} stroke="white" />
+                )}
+                <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">
+                  {isFreemium ? "Freemium Trial" : "Premium Membership"}
+                </h1>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 font-medium max-w-sm leading-relaxed">
                 Advanced courses, 1-on-1 coaching, early event access, and verified certifications.
@@ -236,10 +243,16 @@ export default function PremiumContent() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {subscription && <StatusBadge status={subStatus} />}
-              {isPremium && (
+              {isPremium && !isFreemium && (
                 <span className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-black px-3 py-1.5 rounded-xl border border-amber-200 dark:border-amber-500/30 whitespace-nowrap">
                   <Crown size={11} fill="currentColor" strokeWidth={1.5} stroke="white" />
                   {isAdmin ? "Admin Access" : "Active"}
+                </span>
+              )}
+              {isFreemium && (
+                <span className="flex items-center gap-1.5 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 text-xs font-black px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-500/30 whitespace-nowrap">
+                  <Sparkles size={11} />
+                  Freemium Trial
                 </span>
               )}
               {!isPremium && !subscription && (
@@ -251,10 +264,14 @@ export default function PremiumContent() {
           </div>
 
           {isPremium && (
-            <div className="relative mt-4 flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400 font-medium">
-              <ShieldCheck size={15} className="text-amber-500 shrink-0" />
+            <div className={`relative mt-4 flex items-center gap-2 text-sm font-medium ${isFreemium ? "text-blue-700 dark:text-blue-400" : "text-amber-700 dark:text-amber-400"}`}>
+              <ShieldCheck size={15} className={`${isFreemium ? "text-blue-500" : "text-amber-500"} shrink-0`} />
               {isAdmin
                 ? "Admin-level access — all premium features fully unlocked."
+                : isFreemium
+                  ? profile?.premium_expires_at
+                    ? `Freemium trial active until ${new Date(profile.premium_expires_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                    : "Your freemium trial is active — enjoy all features!"
                 : profile?.premium_expires_at
                   ? `Active until ${new Date(profile.premium_expires_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
                   : "All premium features are active on your account."}

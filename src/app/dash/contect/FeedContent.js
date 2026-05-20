@@ -310,7 +310,7 @@ export default function FeedContent() {
         .from('posts')
         .select(`
           *,
-          profiles:user_id (username, status, avatar_url, github, website, is_verified, is_premium, is_admin),
+          profiles:user_id (username, status, avatar_url, github, website, is_verified, is_premium, is_trial_premium, is_admin, profile_visibility),
           likes (user_id),
           comments (
             id, content, created_at, user_id,
@@ -369,7 +369,7 @@ export default function FeedContent() {
       // Build member spotlight: one card per user showing their first post
       const { data: oldestPosts } = await supabase
         .from('posts')
-        .select('id, title, content, image_url, image_fit, created_at, user_id, profiles:user_id(username, avatar_url, status, is_verified, is_premium, is_admin)')
+        .select('id, title, content, image_url, image_fit, created_at, user_id, profiles:user_id(username, avatar_url, status, is_verified, is_premium, is_trial_premium, is_admin, profile_visibility)')
         .order('created_at', { ascending: true })
         .limit(300);
       if (oldestPosts) {
@@ -826,14 +826,14 @@ export default function FeedContent() {
                     <div className="flex items-center gap-1 min-w-0">
                       <span className="text-[11px] font-black text-gray-900 dark:text-gray-100 truncate">@{p?.username}</span>
                       {isVerified && <VerifiedBadge size={11} />}
-                      {isPremium && <PremiumBadge size={11} />}
+                      {isPremium && p?.profile_visibility?.premium_badge !== false && <PremiumBadge size={11} isTrial={!!p?.is_trial_premium} />}
                     </div>
 
                     <p className="text-[9px] text-gray-400 dark:text-gray-500 truncate font-medium mt-0.5">{p?.status || 'Network Member'}</p>
 
-                    {isPremium && (
-                      <span className="mt-1.5 self-start text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800/50">
-                        Premium
+                    {isPremium && p?.profile_visibility?.premium_badge !== false && (
+                      <span className={`mt-1.5 self-start text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${p?.is_trial_premium ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50'}`}>
+                        {p?.is_trial_premium ? 'Freemium' : 'Premium'}
                       </span>
                     )}
 
@@ -1027,7 +1027,7 @@ export default function FeedContent() {
                       {post.profiles?.username || 'Unknown User'}
                     </span>
                     {post.profiles?.is_verified && <VerifiedBadge size={14} />}
-                    {(post.profiles?.is_premium || post.profiles?.is_admin) && <PremiumBadge size={14} />}
+                    {(post.profiles?.is_premium || post.profiles?.is_admin) && post.profiles?.profile_visibility?.premium_badge !== false && <PremiumBadge size={14} isTrial={!!post.profiles?.is_trial_premium} />}
                     {post.profiles?.github && (
                       <a href={`https://github.com/${post.profiles.github}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0" title="GitHub">
                         <GitBranch size={13} />

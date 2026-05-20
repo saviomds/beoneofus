@@ -33,7 +33,7 @@ function timeAgo(dateStr) {
 /* visibility defaults — all public if not set */
 const DEFAULT_VIS = {
   bio: true, location: true, github: true, website: true,
-  work_status: true, certificates: true, posts: true,
+  work_status: true, certificates: true, posts: true, premium_badge: true,
 };
 
 function vis(profile, key) {
@@ -375,7 +375,7 @@ export default function PublicProfilePage() {
                 {profile.full_name || `@${profile.username}`}
               </h1>
               {profile.is_verified && <VerifiedBadge size={22} />}
-              {(profile.is_premium || profile.is_admin) && <PremiumBadge size={20} />}
+              {(profile.is_premium || profile.is_admin) && vis(profile, 'premium_badge') && <PremiumBadge size={20} isTrial={!!profile.is_trial_premium} />}
               {profile.is_admin && (
                 <span className="text-[10px] font-black px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-800/50 uppercase tracking-widest">
                   Admin

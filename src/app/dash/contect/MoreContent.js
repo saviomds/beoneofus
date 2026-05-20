@@ -794,8 +794,8 @@ const CommunityHubTool = ({ currentUserId }) => {
           <div className="border-t border-gray-100 dark:border-gray-800 py-2 px-4">
             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Online now</p>
             <div className="space-y-1.5">
-              {onlineUsers.slice(0, 5).map(u => (
-                <div key={u.id} className="flex items-center gap-2">
+              {onlineUsers.filter((u, i, arr) => arr.findIndex(x => x.id === u.id) === i).slice(0, 5).map((u, i) => (
+                <div key={`${u.id}-${i}`} className="flex items-center gap-2">
                   <div className="relative shrink-0">
                     <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-[8px] font-black text-gray-500">
                       {u.avatar_url

@@ -10,6 +10,19 @@ import { DashboardProvider } from './contect/DashboardContext'
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../supabaseClient';
 
+/* Patch performance.measure at module load time — Next.js/Turbopack calls it
+   synchronously during render with marks that have negative timestamps in dev. */
+if (typeof globalThis !== 'undefined' && typeof globalThis.performance !== 'undefined') {
+  const _origMeasure = globalThis.performance.measure.bind(globalThis.performance);
+  globalThis.performance.measure = (...args) => {
+    try { return _origMeasure(...args); } catch { /* swallow negative-timestamp error */ }
+  };
+  const _origMark = globalThis.performance.mark.bind(globalThis.performance);
+  globalThis.performance.mark = (...args) => {
+    try { return _origMark(...args); } catch { /* swallow mark errors */ }
+  };
+}
+
 /* ── Bottom nav items shown on mobile ── */
 const BOTTOM_NAV = [
   { id: 'home',          icon: Home,          label: 'Home' },
@@ -47,14 +60,6 @@ function DashLayoutContent({ children }) {
   const [isLeftOpen, setIsLeftOpen] = useState(false);
   const [isRightOpen, setIsRightOpen] = useState(false);
   const pathname = usePathname();
-
-  /* Patch Performance.measure to swallow Next.js negative-timestamp bug in dev */
-  useEffect(() => {
-    if (typeof performance === 'undefined') return;
-    const orig = performance.measure.bind(performance);
-    performance.measure = (...args) => { try { return orig(...args); } catch {} };
-    return () => { performance.measure = orig; };
-  }, []);
 
   /* Close drawers on route change */
   useEffect(() => {

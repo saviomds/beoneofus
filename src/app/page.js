@@ -867,14 +867,14 @@ export default function LandingPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Community Hubs</p>
                       <div className="grid grid-cols-2 gap-2">
                         {[
-                          { label: "Tech & Engineering",    members: "31.5k", color: "blue"   },
-                          { label: "Design & Creativity",   members: "19.7k", color: "violet" },
-                          { label: "Founders & Startups",   members: "14.2k", color: "emerald"},
-                          { label: "Marketing & Growth",    members: "11.3k", color: "amber"  },
-                          { label: "Finance & Business",    members: "8.6k",  color: "indigo" },
-                          { label: "Education & Research",  members: "6.4k",  color: "rose"   },
-                        ].map(({ label, members }) => (
-                          <Link key={label} href="/community" onClick={() => setActiveDropdown(null)}
+                          { label: "Tech & Engineering",    members: "31.5k", color: "blue",    href: "/community/tech-engineering"    },
+                          { label: "Design & Creativity",   members: "19.7k", color: "violet",  href: "/community/design-creativity"   },
+                          { label: "Founders & Startups",   members: "14.2k", color: "emerald", href: "/community/founders-startups"   },
+                          { label: "Marketing & Growth",    members: "11.3k", color: "amber",   href: "/community/marketing-growth"    },
+                          { label: "Finance & Business",    members: "8.6k",  color: "indigo",  href: "/community/finance-business"    },
+                          { label: "Education & Research",  members: "6.4k",  color: "rose",    href: "/community/education-research"  },
+                        ].map(({ label, members, href }) => (
+                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                             className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-blue-200 dark:hover:border-blue-500/20 hover:bg-blue-50/40 dark:hover:bg-blue-500/5 transition-all group">
                             <div className="flex items-center gap-2.5">
                               <div className="w-2 h-2 rounded-full bg-blue-500/60 shrink-0" />
@@ -932,7 +932,7 @@ export default function LandingPage() {
                         { icon: <FileText size={16} />,    label: "Documentation", desc: "Full platform guide",     href: "/docs"         },
                         { icon: <Zap size={16} />,         label: "How It Works",  desc: "Platform overview",       href: "/how_it_works" },
                         { icon: <Shield size={16} />,      label: "Premium Guide", desc: "What premium includes",   href: "/dash/premium" },
-                        { icon: <CheckCircle2 size={16} />,label: "Quick Start",   desc: "Up and running in 5 min", href: "/docs"         },
+                        { icon: <CheckCircle2 size={16} />,label: "Quick Start",   desc: "Up and running in 5 min", href: "/quick-start"  },
                       ].map(({ icon, label, desc, href }) => (
                         <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                           className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
@@ -946,12 +946,13 @@ export default function LandingPage() {
                     </div>
                     <div className="bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 rounded-2xl p-5 flex flex-col gap-4">
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">Support</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">Support & Hub</p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">Need help? Our support team and community are here for you.</p>
                       </div>
                       {[
-                        { icon: <MessageSquare size={14} />, label: "Open a Support Ticket", href: "/dash/more?tool=support" },
-                        { icon: <Users size={14} />,         label: "Community Forum",        href: "/community" },
+                        { icon: <Globe size={14} />,         label: "All Resources",          href: "/resources" },
+                        { icon: <MessageSquare size={14} />, label: "Open a Support Ticket",  href: "/dash/more?tool=support" },
+                        { icon: <Users size={14} />,         label: "Community Forum",         href: "/community" },
                       ].map(({ icon, label, href }) => (
                         <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                           className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">

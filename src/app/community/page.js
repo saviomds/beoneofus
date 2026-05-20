@@ -1,92 +1,295 @@
 "use client";
 
 import Link from "next/link";
-import { Terminal, ArrowLeft, Users, Globe, Cpu, Zap, Code2, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import {
+  Terminal, ArrowLeft, Users, Globe, Cpu, Zap, Code2, MessageSquare,
+  Palette, Rocket, TrendingUp, BookOpen, DollarSign, GraduationCap,
+  ChevronRight, Star, Search, Hash, Briefcase, Award, ArrowUpRight,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 const FloatingAiAssistant = dynamic(() => import("../components/FloatingAiAssistant"), { ssr: false });
 
-export default function Community() {
-  const communities = [
-    { name: 'Systems & Rust', members: '12.4k', icon: <Cpu size={24} />, desc: 'Low-level programming, memory safety, and performance optimization discussions.' },
-    { name: 'Frontend Architecture', members: '24.1k', icon: <Code2 size={24} />, desc: 'React, Next.js, component design patterns, and modern CSS frameworks.' },
-    { name: 'Indie Hackers', members: '8.9k', icon: <Zap size={24} />, desc: 'Solo founders building SaaS products, sharing MRR, and growth hacking.' },
-    { name: 'AI & Machine Learning', members: '18.2k', icon: <Globe size={24} />, desc: 'LLM integration, prompt engineering, and neural network discussions.' },
-  ];
+const HUBS = [
+  {
+    label: "Tech & Engineering",
+    href: "/community/tech-engineering",
+    members: "31.5k",
+    color: "blue",
+    icon: <Code2 size={26} />,
+    desc: "Web dev, systems, cloud, AI/ML, databases, mobile, DevOps, and everything in between.",
+    tags: ["React", "Rust", "AI/ML", "DevOps", "Cloud"],
+    activity: "4.2k posts/week",
+  },
+  {
+    label: "Design & Creativity",
+    href: "/community/design-creativity",
+    members: "19.7k",
+    color: "violet",
+    icon: <Palette size={26} />,
+    desc: "UI/UX, brand identity, motion design, illustration, 3D, and design-led product thinking.",
+    tags: ["Figma", "UI/UX", "Branding", "Motion", "3D"],
+    activity: "2.8k posts/week",
+  },
+  {
+    label: "Founders & Startups",
+    href: "/community/founders-startups",
+    members: "14.2k",
+    color: "emerald",
+    icon: <Rocket size={26} />,
+    desc: "Idea validation, fundraising, co-founder matching, growth, and the honest side of building.",
+    tags: ["SaaS", "Fundraising", "MVP", "Co-founder", "Revenue"],
+    activity: "1.9k posts/week",
+  },
+  {
+    label: "Marketing & Growth",
+    href: "/community/marketing-growth",
+    members: "11.3k",
+    color: "amber",
+    icon: <TrendingUp size={26} />,
+    desc: "SEO, growth hacking, email marketing, paid ads, brand building, and community-led growth.",
+    tags: ["SEO", "Growth", "Email", "Social", "Paid Ads"],
+    activity: "1.6k posts/week",
+  },
+  {
+    label: "Finance & Business",
+    href: "/community/finance-business",
+    members: "8.6k",
+    color: "indigo",
+    icon: <DollarSign size={26} />,
+    desc: "Investing, personal finance, financial modeling, FinTech, and serious business strategy.",
+    tags: ["Investing", "FIRE", "FinTech", "Strategy", "M&A"],
+    activity: "1.2k posts/week",
+  },
+  {
+    label: "Education & Research",
+    href: "/community/education-research",
+    members: "6.4k",
+    color: "rose",
+    icon: <GraduationCap size={26} />,
+    desc: "Lifelong learners, researchers, educators, and students sharing knowledge and opportunities.",
+    tags: ["EdTech", "Research", "STEM", "Learning", "AI"],
+    activity: "890 posts/week",
+  },
+];
+
+const PLATFORM_STATS = [
+  { label: "Total Members", value: "91.7k", icon: Users },
+  { label: "Weekly Posts", value: "12.6k", icon: MessageSquare },
+  { label: "Countries", value: "87", icon: Globe },
+  { label: "Active Jobs", value: "580+", icon: Briefcase },
+];
+
+const colorMap = {
+  blue:    { bg: "bg-blue-50 dark:bg-blue-900/20",    text: "text-blue-600 dark:text-blue-400",    border: "border-blue-100 dark:border-blue-800/40",    hero: "from-blue-600 to-indigo-700",    dot: "bg-blue-500", badge: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300", btn: "bg-blue-600 hover:bg-blue-700" },
+  violet:  { bg: "bg-violet-50 dark:bg-violet-900/20", text: "text-violet-600 dark:text-violet-400", border: "border-violet-100 dark:border-violet-800/40", hero: "from-violet-600 to-purple-700", dot: "bg-violet-500", badge: "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300", btn: "bg-violet-600 hover:bg-violet-700" },
+  emerald: { bg: "bg-emerald-50 dark:bg-emerald-900/20", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-100 dark:border-emerald-800/40", hero: "from-emerald-600 to-teal-700", dot: "bg-emerald-500", badge: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300", btn: "bg-emerald-600 hover:bg-emerald-700" },
+  amber:   { bg: "bg-amber-50 dark:bg-amber-900/20",  text: "text-amber-600 dark:text-amber-400",  border: "border-amber-100 dark:border-amber-800/40",  hero: "from-amber-500 to-orange-600",  dot: "bg-amber-500",  badge: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300",  btn: "bg-amber-500 hover:bg-amber-600" },
+  indigo:  { bg: "bg-indigo-50 dark:bg-indigo-900/20", text: "text-indigo-600 dark:text-indigo-400", border: "border-indigo-100 dark:border-indigo-800/40", hero: "from-indigo-700 to-slate-800",  dot: "bg-indigo-500", badge: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300", btn: "bg-indigo-600 hover:bg-indigo-700" },
+  rose:    { bg: "bg-rose-50 dark:bg-rose-900/20",    text: "text-rose-600 dark:text-rose-400",    border: "border-rose-100 dark:border-rose-800/40",    hero: "from-rose-600 to-pink-700",    dot: "bg-rose-500",   badge: "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300",    btn: "bg-rose-600 hover:bg-rose-700" },
+};
+
+export default function CommunityPage() {
+  const [search, setSearch] = useState("");
+  const filtered = HUBS.filter(h =>
+    h.label.toLowerCase().includes(search.toLowerCase()) ||
+    h.tags.some(t => t.toLowerCase().includes(search.toLowerCase()))
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 selection:bg-blue-500/30 overflow-x-hidden relative">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000008_1px,transparent_1px),linear-gradient(to_bottom,#00000008_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
-      
-      <nav className="fixed top-0 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl z-50">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="font-black text-2xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Terminal className="text-blue-500 dark:text-blue-400" size={28} />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 overflow-x-hidden">
+      <div className="fixed inset-0 bg-[linear-gradient(to_right,#00000006_1px,transparent_1px),linear-gradient(to_bottom,#00000006_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none" />
+
+      {/* Navbar */}
+      <nav className="fixed top-0 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          <Link href="/" className="font-black text-xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100 shrink-0">
+            <Terminal className="text-blue-500" size={24} />
             <span>beone<span className="text-blue-600 dark:text-blue-400">of</span>us</span>
           </Link>
-          <Link href="/" className="text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-2">
-            <ArrowLeft size={16} /> Back to Home
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/resources" className="hidden sm:flex text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Resources</Link>
+            <Link href="/quick-start" className="hidden md:flex text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Quick Start</Link>
+            <Link href="/" className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-1.5 transition-colors">
+              <ArrowLeft size={14} /> Home
+            </Link>
+            <Link href="/auth" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors">
+              Join Free
+            </Link>
+          </div>
         </div>
       </nav>
 
-      <main className="pt-32 pb-20 px-6 relative z-10 max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm border border-blue-100 dark:border-blue-800/50">
-            <Users size={40} />
+      <main className="pt-16 relative z-10">
+        {/* Hero */}
+        <div className="bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:24px_24px]" />
+          <div className="absolute -top-32 -right-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl" />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 sm:py-28 relative text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold uppercase tracking-widest mb-8">
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+              91.7k professionals worldwide
+            </div>
+            <h1 className="text-4xl sm:text-7xl font-black tracking-tight mb-5 leading-tight">
+              6 Communities.<br />
+              <span className="bg-gradient-to-r from-blue-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
+                Endless Opportunity.
+              </span>
+            </h1>
+            <p className="text-gray-300 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
+              Find your professional home. Learn from peers, share what works, discover opportunities, and build a career on your terms.
+            </p>
+
+            {/* Platform Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto mb-10">
+              {PLATFORM_STATS.map(({ label, value, icon: Icon }) => (
+                <div key={label} className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                  <p className="text-2xl font-black">{value}</p>
+                  <p className="text-[11px] text-gray-400 font-medium mt-0.5">{label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Search */}
+            <div className="relative max-w-md mx-auto">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search communities, topics, tags..."
+                className="w-full pl-10 pr-4 py-3.5 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-gray-400 text-sm font-medium focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all"
+              />
+            </div>
           </div>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-4 text-gray-900 dark:text-gray-100">The Global Community</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 font-medium max-w-2xl mx-auto">Join thousands of developers in real-time discussions across specialized technological spaces.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
-          {communities.map((space, i) => (
-            <div key={i} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] p-8 hover:border-blue-500/50 dark:hover:border-blue-500/50 hover:shadow-xl transition-all cursor-pointer group flex items-start gap-6">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800/50 rounded-2xl flex items-center justify-center text-gray-700 dark:text-gray-300 shrink-0 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors border border-gray-100 dark:border-gray-700">
-                {space.icon}
-              </div>
-              <div>
-                <h4 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{space.name}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">{space.desc}</p>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">
-                  <Users size={12} /> {space.members} Active
-                </span>
-              </div>
+        {/* Hubs Grid */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-black tracking-tight">
+              {search ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""}` : "All Communities"}
+            </h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{filtered.length} hubs</span>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-gray-400 text-lg font-medium">No communities match "{search}"</p>
+              <button onClick={() => setSearch("")} className="mt-4 text-blue-500 text-sm font-bold hover:text-blue-600 transition-colors">Clear search</button>
             </div>
-          ))}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {filtered.map(({ label, href, members, color, icon, desc, tags, activity }) => {
+                const c = colorMap[color] || colorMap.blue;
+                return (
+                  <Link key={label} href={href}
+                    className={`group relative flex flex-col bg-white dark:bg-gray-900 border ${c.border} rounded-3xl p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 overflow-hidden`}>
+                    <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-30 ${c.bg} -translate-y-1/2 translate-x-1/2`} />
+                    <div className="flex items-start justify-between mb-5 relative">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${c.bg} ${c.text} shrink-0`}>{icon}</div>
+                      <div className="text-right">
+                        <p className="text-xl font-black text-gray-900 dark:text-white">{members}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">members</p>
+                      </div>
+                    </div>
+                    <h3 className={`text-lg font-black mb-2 ${c.text} group-hover:opacity-90 transition-opacity`}>{label}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">{desc}</p>
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {tags.map(tag => (
+                        <span key={tag} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.badge}`}>{tag}</span>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${c.dot} animate-pulse`} />
+                        <span className="text-[11px] text-gray-400 font-medium">{activity}</span>
+                      </div>
+                      <span className={`text-xs font-bold flex items-center gap-1 ${c.text}`}>
+                        Explore <ArrowUpRight size={12} />
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Mini Preview of Community Hub */}
-        <div className="max-w-3xl mx-auto bg-gray-900 rounded-[2rem] border border-gray-800 overflow-hidden shadow-2xl">
-          <div className="bg-gray-950 px-6 py-4 border-b border-gray-800 flex items-center gap-3">
-            <Globe size={18} className="text-blue-500" />
-            <h3 className="text-white font-bold text-sm tracking-widest uppercase">Live Hub Preview</h3>
-          </div>
-          <div className="p-6 space-y-6 font-mono text-sm">
-            <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">S</div>
-              <div>
-                <span className="text-purple-400 font-bold">@sarah_dev</span> <span className="text-gray-500 text-xs">2m ago</span>
-                <p className="text-gray-300 mt-1">Has anyone here successfully integrated WebRTC into a Next.js App Router project?</p>
+        {/* Quick links bar */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Link href="/quick-start" className="flex items-center gap-4 p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:shadow-md hover:-translate-y-0.5 transition-all group">
+              <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-xl flex items-center justify-center shrink-0"><Zap size={18} /></div>
+              <div className="min-w-0">
+                <p className="font-black text-sm text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">New here? Quick Start Guide</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Get set up in under 10 minutes</p>
               </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">D</div>
-              <div>
-                <span className="text-blue-400 font-bold">@dominique_sys</span> <span className="text-gray-500 text-xs">Just now</span>
-                <p className="text-gray-300 mt-1">Yes, make sure your peer connection logic runs strictly in a useEffect client-side hook!</p>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 bg-gray-950 border-t border-gray-800 text-center">
-            <Link href="/auth" className="text-blue-400 hover:text-blue-300 font-bold text-sm inline-flex items-center gap-2 transition-colors">
-              Login to join the conversation <ArrowLeft size={16} className="rotate-180" />
+              <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-400 transition-colors shrink-0 ml-auto" />
             </Link>
+            <Link href="/resources" className="flex items-center gap-4 p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:shadow-md hover:-translate-y-0.5 transition-all group">
+              <div className="w-10 h-10 bg-violet-50 dark:bg-violet-900/20 text-violet-500 rounded-xl flex items-center justify-center shrink-0"><BookOpen size={18} /></div>
+              <div className="min-w-0">
+                <p className="font-black text-sm text-gray-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">Resources & Tools</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Courses, IDE, certificates, docs</p>
+              </div>
+              <ChevronRight size={14} className="text-gray-300 group-hover:text-violet-400 transition-colors shrink-0 ml-auto" />
+            </Link>
+            <Link href="/dash/more?tool=community" className="flex items-center gap-4 p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:shadow-md hover:-translate-y-0.5 transition-all group">
+              <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-xl flex items-center justify-center shrink-0"><MessageSquare size={18} /></div>
+              <div className="min-w-0">
+                <p className="font-black text-sm text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Open Live Community Hub</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Real-time discussions inside the platform</p>
+              </div>
+              <ChevronRight size={14} className="text-gray-300 group-hover:text-emerald-400 transition-colors shrink-0 ml-auto" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 sm:p-12 text-white text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:24px_24px]" />
+            <div className="relative">
+              <h2 className="text-3xl sm:text-4xl font-black mb-3">Ready to find your community?</h2>
+              <p className="text-gray-300 text-lg mb-8 max-w-xl mx-auto">Create your free account in 60 seconds and get access to all 6 communities, the job board, mentorship network, and more.</p>
+              <div className="flex flex-wrap gap-3 justify-center">
+                <Link href="/auth" className="px-8 py-3.5 bg-white text-gray-900 font-black rounded-2xl hover:bg-gray-100 transition-colors text-sm shadow-lg">
+                  Create Free Account
+                </Link>
+                <Link href="/quick-start" className="px-8 py-3.5 bg-white/10 border border-white/20 text-white font-bold rounded-2xl hover:bg-white/20 transition-colors text-sm">
+                  Quick Start Guide
+                </Link>
+                <Link href="/resources" className="px-8 py-3.5 bg-white/10 border border-white/20 text-white font-bold rounded-2xl hover:bg-white/20 transition-colors text-sm">
+                  Browse Resources
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </main>
 
-      <footer className="border-t border-gray-200 dark:border-gray-800 py-10 text-center text-gray-500 dark:text-gray-400 text-xs font-mono uppercase tracking-widest relative z-10 bg-white dark:bg-gray-900 mt-10">
-        beoneofus platform v1.0 © {new Date().getFullYear()}
+      <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <Link href="/" className="font-black text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <Terminal size={20} className="text-blue-500" /> beone<span className="text-blue-600">of</span>us
+          </Link>
+          <div className="flex flex-wrap justify-center gap-4">
+            {[
+              { href: "/resources", label: "Resources" },
+              { href: "/quick-start", label: "Quick Start" },
+              { href: "/Academy", label: "Academy" },
+              { href: "/IDEPage", label: "IDE" },
+              { href: "/Explore_Projects", label: "Projects" },
+              { href: "/blog", label: "Blog" },
+            ].map(({ href, label }) => (
+              <Link key={href} href={href} className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors font-medium">
+                {label}
+              </Link>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400">© {new Date().getFullYear()} beoneofus</p>
+        </div>
       </footer>
       <FloatingAiAssistant />
     </div>

@@ -342,6 +342,211 @@ const templates = {
     };
   },
 
+  /* ── Project invite ───────────────────────────────────────────── */
+  project_invite({ name, projectTitle, role, senderName }) {
+    const n  = escapeHtml(name);
+    const pt = escapeHtml(projectTitle);
+    const r  = escapeHtml(role || 'contributor');
+    const sn = escapeHtml(senderName || 'A project owner');
+    return {
+      subject: `You've been invited to join "${pt}"`,
+      html: baseShell(
+        header('linear-gradient(90deg,#2563eb,#6366f1)', "You're Invited! 🎉", `Join "${pt}" on beoneofus`)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            <strong>${sn}</strong> has invited you to collaborate on <strong style="color:#2563eb;">${pt}</strong>
+            as a <strong>${r}</strong>. You've been added directly — open the workspace to start collaborating.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:20px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr><td style="padding-bottom:10px;">
+                  <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Project</p>
+                  <p style="margin:4px 0 0;font-size:14px;color:#1e40af;font-weight:700;">${pt}</p>
+                </td></tr>
+                <tr><td style="border-top:1px solid #bfdbfe;padding-top:10px;">
+                  <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Your Role</p>
+                  <p style="margin:4px 0 0;font-size:14px;color:#1e40af;font-weight:700;text-transform:capitalize;">${r}</p>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+          <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+            You now have access to the Live Code editor, team chat, video calls, and merge request tools.
+          </p>
+          ${ctaButton('Open Workspace →', SITE_URL + '/Explore_Projects', '#2563eb')}
+        </td></tr></table>`
+      ),
+    };
+  },
+
+  /* ── Project join request (to owner) ──────────────────────────── */
+  project_join_request({ name, projectTitle, requesterName, requesterUsername }) {
+    const n  = escapeHtml(name);
+    const pt = escapeHtml(projectTitle);
+    const rn = escapeHtml(requesterName || requesterUsername || 'Someone');
+    const ru = escapeHtml(requesterUsername || '');
+    return {
+      subject: `New join request for "${pt}"`,
+      html: baseShell(
+        header('linear-gradient(90deg,#f59e0b,#fbbf24)', 'New Join Request', `For your project: ${pt}`)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            <strong>${rn}</strong>${ru ? ` (@${ru})` : ''} has requested to join your project
+            <strong style="color:#d97706;">${pt}</strong>. Review their request in the Team tab.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:1px solid #fde68a;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:18px 24px;text-align:center;">
+              <div style="width:48px;height:48px;background:linear-gradient(135deg,#2563eb,#6366f1);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:8px;">
+                <span style="color:#fff;font-size:20px;font-weight:900;">${rn[0].toUpperCase()}</span>
+              </div>
+              <p style="margin:0;font-size:14px;font-weight:700;color:#92400e;">${rn}</p>
+              ${ru ? `<p style="margin:4px 0 0;font-size:12px;color:#b45309;">@${ru}</p>` : ''}
+            </td></tr>
+          </table>
+          ${ctaButton('Review Request →', SITE_URL + '/Explore_Projects', '#f59e0b')}
+        </td></tr></table>`
+      ),
+    };
+  },
+
+  /* ── Join request approved ─────────────────────────────────────── */
+  project_join_approved({ name, projectTitle, ownerName }) {
+    const n  = escapeHtml(name);
+    const pt = escapeHtml(projectTitle);
+    const on = escapeHtml(ownerName || 'The project owner');
+    return {
+      subject: `You've been approved to join "${pt}"!`,
+      html: baseShell(
+        header('linear-gradient(90deg,#10b981,#34d399)', 'Request Approved! ✓', `Welcome to the team`)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            <strong>${on}</strong> approved your request to join
+            <strong style="color:#059669;">${pt}</strong>. You're now a contributor on this project!
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:18px 24px;text-align:center;">
+              <p style="margin:0;font-size:28px;">🚀</p>
+              <p style="margin:6px 0 0;font-size:14px;font-weight:700;color:#15803d;">You're on the team!</p>
+              <p style="margin:4px 0 0;font-size:12px;color:#166534;">${pt}</p>
+            </td></tr>
+          </table>
+          <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+            Open the workspace to start using Live Code, team chat, video calls, and more.
+          </p>
+          ${ctaButton('Open Workspace →', SITE_URL + '/Explore_Projects', '#10b981')}
+        </td></tr></table>`
+      ),
+    };
+  },
+
+  /* ── Join request rejected ─────────────────────────────────────── */
+  project_join_rejected({ name, projectTitle }) {
+    const n  = escapeHtml(name);
+    const pt = escapeHtml(projectTitle);
+    return {
+      subject: `Update on your request to join "${pt}"`,
+      html: baseShell(
+        header('linear-gradient(90deg,#6b7280,#9ca3af)', 'Request Update', `Regarding your request for ${pt}`)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            Your request to join <strong>${pt}</strong> was not approved at this time.
+            The project owner may have a full team or specific collaboration requirements.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:14px 18px;">
+              <p style="margin:0;font-size:13px;color:#374151;line-height:1.6;">
+                Explore other open projects on the platform — there are many teams looking for collaborators.
+              </p>
+            </td></tr>
+          </table>
+          ${ctaButton('Explore Other Projects', SITE_URL + '/Explore_Projects', '#3b82f6')}
+        </td></tr></table>`
+      ),
+    };
+  },
+
+  /* ── Task assigned ─────────────────────────────────────────────── */
+  project_task_assigned({ name, projectTitle, taskTitle, taskDescription, priority, dueDate, assignerName }) {
+    const n   = escapeHtml(name);
+    const pt  = escapeHtml(projectTitle);
+    const tt  = escapeHtml(taskTitle);
+    const td  = taskDescription ? escapeHtml(taskDescription) : null;
+    const pr  = escapeHtml(priority || 'medium');
+    const an  = escapeHtml(assignerName || 'The project owner');
+    const dd  = dueDate ? new Date(dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null;
+    const prColor = priority === 'high' ? '#ef4444' : priority === 'low' ? '#6b7280' : '#f59e0b';
+    return {
+      subject: `New task assigned: "${tt}"`,
+      html: baseShell(
+        header('linear-gradient(90deg,#7c3aed,#8b5cf6)', 'Task Assigned', `On project: ${pt}`)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            <strong>${an}</strong> has assigned you a task on <strong style="color:#7c3aed;">${pt}</strong>.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:20px 24px;">
+              <p style="margin:0 0 6px;font-size:16px;font-weight:800;color:#1e1b4b;">${tt}</p>
+              ${td ? `<p style="margin:0 0 16px;font-size:13px;color:#374151;line-height:1.6;">${td}</p>` : ''}
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding-top:12px;border-top:1px solid #ddd6fe;">
+                    <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Priority</p>
+                    <p style="margin:4px 0 0;font-size:13px;font-weight:700;color:${prColor};text-transform:capitalize;">${pr}</p>
+                  </td>
+                  ${dd ? `<td style="padding-top:12px;border-top:1px solid #ddd6fe;">
+                    <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Due Date</p>
+                    <p style="margin:4px 0 0;font-size:13px;font-weight:700;color:#374151;">${dd}</p>
+                  </td>` : ''}
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+          <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+            Click the status circle in the Team tab to update your progress (To Do → In Progress → Done).
+          </p>
+          ${ctaButton('View Task →', SITE_URL + '/Explore_Projects', '#7c3aed')}
+        </td></tr></table>`
+      ),
+    };
+  },
+
+  /* ── Project role changed ──────────────────────────────────────── */
+  project_role_changed({ name, projectTitle, newRole, ownerName }) {
+    const n  = escapeHtml(name);
+    const pt = escapeHtml(projectTitle);
+    const nr = escapeHtml(newRole || 'contributor');
+    const on = escapeHtml(ownerName || 'The project owner');
+    const color = newRole === 'owner' ? '#f59e0b' : newRole === 'contributor' ? '#2563eb' : '#6b7280';
+    return {
+      subject: `Your role in "${pt}" has been updated`,
+      html: baseShell(
+        header(`linear-gradient(90deg,${color},${color}cc)`, 'Role Updated', `In project: ${pt}`)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            <strong>${on}</strong> has updated your role in
+            <strong style="color:${color};">${pt}</strong>.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:20px 24px;text-align:center;">
+              <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">New Role</p>
+              <p style="margin:8px 0 0;">
+                <span style="display:inline-block;background:${color}20;color:${color};font-size:14px;font-weight:800;padding:6px 18px;border-radius:10px;border:1px solid ${color}40;text-transform:capitalize;">${nr}</span>
+              </p>
+            </td></tr>
+          </table>
+          ${ctaButton('Open Workspace →', SITE_URL + '/Explore_Projects', color)}
+        </td></tr></table>`
+      ),
+    };
+  },
+
   /* ── Role changed ──────────────────────────────────────────────── */
   role_changed({ name, role }) {
     const n  = escapeHtml(name);

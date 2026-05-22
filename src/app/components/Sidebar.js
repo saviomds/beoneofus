@@ -16,7 +16,7 @@ import VerifiedBadge from './VerifiedBadge';
 import PremiumBadge from './PremiumBadge';
 import { getAvatarSrc } from '../../lib/avatar';
 import { useLanguage } from '../../lib/i18n';
-import { usePlatformVersion } from '../../lib/usePlatformVersion';
+import { usePlatformVersion } from '../../hooks/usePlatformVersion';
 
 const SidebarItem = ({ icon: Icon, label, badge, active, onClick, onBadgeAction, isRinging, isBouncing, index, isNew }) => {
   const { t } = useLanguage();
@@ -439,9 +439,9 @@ export default function Sidebar({ onClose }) {
     {
       label: t('nav.groups.tools'),
       items: [
-        { id: 'ai',          icon: Sparkles,  label: t('nav.items.ai'),        isNew: true },
-        { id: 'analytics',   icon: BarChart2, label: 'Analytics',             isNew: true },
-        { id: 'leaderboard', icon: Trophy,    label: 'Leaderboard',           isNew: true },
+        { id: 'ai',          icon: Sparkles,  label: t('nav.items.ai'),   isNew: true },
+        { id: 'analytics',   icon: BarChart2, label: 'Analytics',        isNew: true },
+        { id: 'leaderboard', icon: Trophy,    label: 'Leaderboard',      isNew: true },
       ],
     },
     {

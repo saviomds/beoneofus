@@ -1,4 +1,4 @@
-import FounderContent from '../../dash/contect/FounderContent';
+import FounderContent from '../../dash/content/FounderContent';
 
 export default function ApplicationPage() {
   return (

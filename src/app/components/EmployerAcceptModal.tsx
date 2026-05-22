@@ -13,9 +13,9 @@ import {
   ChevronDown, CornerUpLeft
 } from "lucide-react";
 import Link from "next/link";
-import { supabase } from "./src/app/supabaseClient";
-import ProfileContent from "./src/app/dash/contect/ProfileContent";
-import { useDashboard } from "./src/app/dash/contect/DashboardContext";
+import { supabase } from "../supabaseClient";
+import ProfileContent from "../dash/content/ProfileContent";
+import { useDashboard } from "../dash/content/DashboardContext";
 
 /* ─────────────────────────────────────────────────────────────
    HELPERS

@@ -5,7 +5,7 @@ import {
   Moon, Sun, Monitor, Palette, Check, AlertTriangle, Trash2, X,
   Loader2, BadgeCheck, Shield, Volume2, VolumeX, Users, Crown,
   UserCheck, Activity, TrendingUp, Bell, Settings,
-  ChevronRight, BarChart3, Zap, Lock, Globe, RefreshCw, Eye,
+  ChevronRight, BarChart3, Zap, Lock, Globe, RefreshCw, Eye, EyeOff,
   UserPlus, ShieldCheck, Award, Smartphone, Copy, KeyRound,
   LogOut, Fingerprint, Clock, CheckCircle2, XCircle,
   Camera, User, Link2, AtSign, Mail, Send, ChevronDown,
@@ -235,6 +235,16 @@ export default function SettingsContent() {
   const [emailCodeSent, setEmailCodeSent] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
   const [emailChanging, setEmailChanging] = useState(false);
+
+  // Password change
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwChanging, setPwChanging] = useState(false);
+  const [showPwCurrent, setShowPwCurrent] = useState(false);
+  const [showPwNew, setShowPwNew] = useState(false);
+  const [showPwConfirm, setShowPwConfirm] = useState(false);
 
   // Create user modal (admin)
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
@@ -623,6 +633,41 @@ export default function SettingsContent() {
     setEmailNew("");
     setEmailCode("");
     setEmailCodeSent(false);
+  };
+
+  const resetPasswordForm = () => {
+    setShowPasswordForm(false);
+    setPwCurrent("");
+    setPwNew("");
+    setPwConfirm("");
+  };
+
+  const handleChangePassword = async () => {
+    if (pwNew.length < 8) {
+      showToast("New password must be at least 8 characters.", "error");
+      return;
+    }
+    if (pwNew !== pwConfirm) {
+      showToast("New passwords don't match.", "error");
+      return;
+    }
+    setPwChanging(true);
+    try {
+      // Verify current password before updating
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: pwCurrent,
+      });
+      if (signInErr) throw new Error("Current password is incorrect.");
+      const { error: updateErr } = await supabase.auth.updateUser({ password: pwNew });
+      if (updateErr) throw updateErr;
+      resetPasswordForm();
+      showToast("Password changed successfully!");
+    } catch (e) {
+      showToast(e.message, "error");
+    } finally {
+      setPwChanging(false);
+    }
   };
 
   // ── Admin: create user ──────────────────────────────────────────────────────
@@ -1120,6 +1165,92 @@ export default function SettingsContent() {
                                 <p className="text-[10px] text-gray-500 mt-1.5">Enter the 6-digit code sent to <strong>{emailNew}</strong></p>
                               </div>
                             )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Change Password */}
+                      <div className="flex flex-col gap-2">
+                        <RowItem title="Password" desc="Change your account sign-in password.">
+                          <button
+                            onClick={() => showPasswordForm ? resetPasswordForm() : setShowPasswordForm(true)}
+                            className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-all"
+                          >
+                            <KeyRound size={15} /> {showPasswordForm ? "Cancel" : "Change"}
+                          </button>
+                        </RowItem>
+
+                        {showPasswordForm && (
+                          <div className="bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/60 rounded-xl p-4 space-y-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Current Password</label>
+                              <div className="relative">
+                                <input
+                                  type={showPwCurrent ? "text" : "password"}
+                                  value={pwCurrent}
+                                  onChange={(e) => setPwCurrent(e.target.value)}
+                                  placeholder="••••••••"
+                                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 pr-11 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPwCurrent((s) => !s)}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                >
+                                  {showPwCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">New Password</label>
+                              <div className="relative">
+                                <input
+                                  type={showPwNew ? "text" : "password"}
+                                  value={pwNew}
+                                  onChange={(e) => setPwNew(e.target.value)}
+                                  placeholder="••••••••"
+                                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 pr-11 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPwNew((s) => !s)}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                >
+                                  {showPwNew ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Confirm New Password</label>
+                              <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                  <input
+                                    type={showPwConfirm ? "text" : "password"}
+                                    value={pwConfirm}
+                                    onChange={(e) => setPwConfirm(e.target.value)}
+                                    placeholder="••••••••"
+                                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 pr-11 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowPwConfirm((s) => !s)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                  >
+                                    {showPwConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  </button>
+                                </div>
+                                <button
+                                  onClick={handleChangePassword}
+                                  disabled={pwChanging || !pwCurrent || !pwNew || !pwConfirm}
+                                  className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+                                >
+                                  {pwChanging ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                                  {pwChanging ? "Updating…" : "Update"}
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>

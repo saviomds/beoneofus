@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../supabaseClient";
-import { usePlatformVersion } from "../../lib/usePlatformVersion";
+import { usePlatformVersion } from "../../hooks/usePlatformVersion";
 import {
   Terminal, Search, Menu, X, ChevronRight, ChevronDown,
   ShieldCheck, Zap, Bot, BookOpen, ExternalLink,

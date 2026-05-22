@@ -13,7 +13,7 @@ import {
   Lightbulb, Calendar, FileText, Newspaper, MapPin, Hash, Activity,
   Award, Code, LayoutGrid, GraduationCap, Layers
 } from 'lucide-react';
-import ProfileContent from "../dash/contect/ProfileContent";
+import ProfileContent from "../dash/content/ProfileContent";
 import NewPost from "./NewPost";
 
 function timeAgo(dateStr) {

@@ -24,33 +24,33 @@ const TabSkeleton = () => (
 );
 
 const contentMap = {
-  home:          dynamic(() => import('../contect/HomeDashContent'),      { loading: () => <TabSkeleton /> }),
-  ai:            dynamic(() => import('../contect/AiAssistantContent'),   { loading: () => <TabSkeleton /> }),
-  feed:          dynamic(() => import('../contect/FeedContent'),          { loading: () => <TabSkeleton /> }),
-  connections:   dynamic(() => import('../contect/ConnectionsContent'),   { loading: () => <TabSkeleton /> }),
-  groups:        dynamic(() => import('../contect/GroupsContent'),        { loading: () => <TabSkeleton /> }),
-  pages:         dynamic(() => import('../contect/PagesContent'),         { loading: () => <TabSkeleton /> }),
-  messages:      dynamic(() => import('../contect/MessagesContent'),      { loading: () => <TabSkeleton /> }),
-  bookmarks:     dynamic(() => import('../contect/BookmarksContent'),     { loading: () => <TabSkeleton /> }),
-  more:          dynamic(() => import('../contect/MoreContent'),          { loading: () => <TabSkeleton /> }),
-  notifications: dynamic(() => import('../contect/NotificationsContent'), { loading: () => <TabSkeleton /> }),
-  settings:      dynamic(() => import('../contect/SettingsContent'),      { loading: () => <TabSkeleton /> }),
-  profile:       dynamic(() => import('../contect/ProfileContent'),       { loading: () => <TabSkeleton /> }),
-  docs:          dynamic(() => import('../contect/DocsContent'),          { loading: () => <TabSkeleton /> }),
-  premium:       dynamic(() => import('../contect/PremiumContent'),       { loading: () => <TabSkeleton /> }),
-  coaching:      dynamic(() => import('../contect/CoachingContent'),      { loading: () => <TabSkeleton /> }),
-  events:        dynamic(() => import('../contect/EventsContent'),        { loading: () => <TabSkeleton /> }),
-  marketplace:   dynamic(() => import('../contect/MarketplaceContent'),   { loading: () => <TabSkeleton /> }),
-  partnerships:  dynamic(() => import('../contect/PartnershipsContent'),  { loading: () => <TabSkeleton /> }),
-  mentorship:    dynamic(() => import('../contect/MentorshipContent'),    { loading: () => <TabSkeleton /> }),
-  blog:          dynamic(() => import('../contect/BlogContent'),          { loading: () => <TabSkeleton /> }),
-  learn:         dynamic(() => import('../contect/LearnContent'),         { loading: () => <TabSkeleton /> }),
-  analytics:     dynamic(() => import('../contect/AnalyticsContent'),     { loading: () => <TabSkeleton /> }),
-  services:      dynamic(() => import('../contect/ServicesContent'),      { loading: () => <TabSkeleton /> }),
-  interview:     dynamic(() => import('../contect/InterviewContent'),     { loading: () => <TabSkeleton /> }),
-  pathways:      dynamic(() => import('../contect/PathwaysContent'),      { loading: () => <TabSkeleton /> }),
-  leaderboard:   dynamic(() => import('../contect/LeaderboardContent'),   { loading: () => <TabSkeleton /> }),
-  contracts:     dynamic(() => import('../contect/ContractsContent'),     { loading: () => <TabSkeleton /> }),
+  home:          dynamic(() => import('../content/HomeDashContent'),      { loading: () => <TabSkeleton /> }),
+  ai:            dynamic(() => import('../content/AiAssistantContent'),   { loading: () => <TabSkeleton /> }),
+  feed:          dynamic(() => import('../content/FeedContent'),          { loading: () => <TabSkeleton /> }),
+  connections:   dynamic(() => import('../content/ConnectionsContent'),   { loading: () => <TabSkeleton /> }),
+  groups:        dynamic(() => import('../content/GroupsContent'),        { loading: () => <TabSkeleton /> }),
+  pages:         dynamic(() => import('../content/PagesContent'),         { loading: () => <TabSkeleton /> }),
+  messages:      dynamic(() => import('../content/MessagesContent'),      { loading: () => <TabSkeleton /> }),
+  bookmarks:     dynamic(() => import('../content/BookmarksContent'),     { loading: () => <TabSkeleton /> }),
+  more:          dynamic(() => import('../content/MoreContent'),          { loading: () => <TabSkeleton /> }),
+  notifications: dynamic(() => import('../content/NotificationsContent'), { loading: () => <TabSkeleton /> }),
+  settings:      dynamic(() => import('../content/SettingsContent'),      { loading: () => <TabSkeleton /> }),
+  profile:       dynamic(() => import('../content/ProfileContent'),       { loading: () => <TabSkeleton /> }),
+  docs:          dynamic(() => import('../content/DocsContent'),          { loading: () => <TabSkeleton /> }),
+  premium:       dynamic(() => import('../content/PremiumContent'),       { loading: () => <TabSkeleton /> }),
+  coaching:      dynamic(() => import('../content/CoachingContent'),      { loading: () => <TabSkeleton /> }),
+  events:        dynamic(() => import('../content/EventsContent'),        { loading: () => <TabSkeleton /> }),
+  marketplace:   dynamic(() => import('../content/MarketplaceContent'),   { loading: () => <TabSkeleton /> }),
+  partnerships:  dynamic(() => import('../content/PartnershipsContent'),  { loading: () => <TabSkeleton /> }),
+  mentorship:    dynamic(() => import('../content/MentorshipContent'),    { loading: () => <TabSkeleton /> }),
+  blog:          dynamic(() => import('../content/BlogContent'),          { loading: () => <TabSkeleton /> }),
+  learn:         dynamic(() => import('../content/LearnContent'),         { loading: () => <TabSkeleton /> }),
+  analytics:     dynamic(() => import('../content/AnalyticsContent'),     { loading: () => <TabSkeleton /> }),
+  services:      dynamic(() => import('../content/ServicesContent'),      { loading: () => <TabSkeleton /> }),
+  interview:     dynamic(() => import('../content/InterviewContent'),     { loading: () => <TabSkeleton /> }),
+  pathways:      dynamic(() => import('../content/PathwaysContent'),      { loading: () => <TabSkeleton /> }),
+  leaderboard:   dynamic(() => import('../content/LeaderboardContent'),   { loading: () => <TabSkeleton /> }),
+  contracts:     dynamic(() => import('../content/ContractsContent'),     { loading: () => <TabSkeleton /> }),
 };
 
 export default function DashSection() {
@@ -66,12 +66,12 @@ export default function DashSection() {
 
   useEffect(() => {
     const preload = () => {
-      import('../contect/ConnectionsContent');
-      import('../contect/GroupsContent');
-      import('../contect/MessagesContent');
-      import('../contect/NotificationsContent');
-      import('../contect/ProfileContent');
-      import('../contect/SettingsContent');
+      import('../content/ConnectionsContent');
+      import('../content/GroupsContent');
+      import('../content/MessagesContent');
+      import('../content/NotificationsContent');
+      import('../content/ProfileContent');
+      import('../content/SettingsContent');
     };
     if (typeof window !== 'undefined') {
       if ('requestIdleCallback' in window) requestIdleCallback(preload);

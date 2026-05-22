@@ -234,18 +234,27 @@ export default function AuthForm() {
           }
 
           const pendingUsername = localStorage.getItem('pending_username');
+          const doRedirect = () => {
+            const params = new URLSearchParams(window.location.search);
+            const next = params.get('next');
+            window.location.href = (next && next.startsWith('/')) ? next : '/dash';
+          };
+
           if (pendingUsername) {
             localStorage.removeItem('pending_username');
             supabase.from('profiles')
               .update({ username: pendingUsername })
               .eq('id', session.user.id)
               .is('username', null)
-              .then(() => {});
+              .then(({ error: updateErr }) => {
+                if (updateErr?.code === '23505') {
+                  localStorage.setItem('pick_username', '1');
+                }
+                doRedirect();
+              });
+          } else {
+            doRedirect();
           }
-
-          const params = new URLSearchParams(window.location.search);
-          const next = params.get('next');
-          window.location.href = (next && next.startsWith('/')) ? next : '/dash';
         }
       });
       subscription = result.data?.subscription ?? null;

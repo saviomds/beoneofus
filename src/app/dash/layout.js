@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect } from 'react';
-import { Menu, X, Home, MessageSquare, Bell, User, Users, ShoppingBag } from 'lucide-react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { Menu, X, Home, MessageSquare, Bell, User, Users, ShoppingBag, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import '../globals.css'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
 import RightSidebar from '../components/RightSidebar'
-import { DashboardProvider } from './contect/DashboardContext'
+import { DashboardProvider } from './content/DashboardContext'
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../supabaseClient';
 
@@ -191,6 +191,101 @@ function DashLayoutContent({ children }) {
   );
 }
 
+const USERNAME_RE = /^[a-z0-9_-]{3,20}$/;
+
+function PickUsernameModal({ onDone }) {
+  const [username, setUsername] = useState('');
+  const [status, setStatus] = useState('idle'); // idle | checking | available | taken | invalid
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const timer = useRef(null);
+
+  useEffect(() => {
+    clearTimeout(timer.current);
+    if (!username) { setStatus('idle'); return; }
+    if (!USERNAME_RE.test(username)) { setStatus('invalid'); return; }
+    setStatus('checking');
+    timer.current = setTimeout(async () => {
+      const { count } = await supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('username', username);
+      setStatus(count === 0 ? 'available' : 'taken');
+    }, 400);
+    return () => clearTimeout(timer.current);
+  }, [username]);
+
+  const handleSave = async () => {
+    if (status !== 'available') return;
+    setSaving(true);
+    setError(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setError('Not signed in.'); setSaving(false); return; }
+    const { error: err } = await supabase.from('profiles')
+      .update({ username })
+      .eq('id', session.user.id);
+    if (err?.code === '23505') {
+      setStatus('taken');
+      setError('That username was just taken. Try another.');
+    } else if (err) {
+      setError(err.message);
+    } else {
+      localStorage.removeItem('pick_username');
+      onDone();
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-300">
+        <h2 className="text-lg font-black text-gray-900 dark:text-gray-100 mb-1 tracking-tight">
+          Choose your username
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
+          Your original username was already taken. Pick a unique one to continue.
+        </p>
+        <div className="relative mb-1">
+          <input
+            type="text"
+            value={username}
+            onChange={e => setUsername(e.target.value.toLowerCase())}
+            maxLength={20}
+            placeholder="your_username"
+            autoFocus
+            className={`w-full bg-white dark:bg-gray-800 border rounded-xl py-3 px-4 pr-11 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm ${
+              status === 'taken' || status === 'invalid' ? 'border-red-400 dark:border-red-500' :
+              status === 'available' ? 'border-emerald-400 dark:border-emerald-500' :
+              'border-gray-300 dark:border-gray-700'
+            }`}
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            {status === 'checking' && <Loader2 size={15} className="animate-spin text-gray-400" />}
+            {status === 'available' && <CheckCircle2 size={15} className="text-emerald-500" />}
+            {(status === 'taken' || status === 'invalid') && <XCircle size={15} className="text-red-500" />}
+          </div>
+        </div>
+        {status === 'invalid' && username && (
+          <p className="text-xs text-red-500 mb-3">3–20 chars: lowercase letters, numbers, _ or -</p>
+        )}
+        {status === 'taken' && (
+          <p className="text-xs text-red-500 mb-3">Username already taken</p>
+        )}
+        {status === 'available' && (
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-3">Username available</p>
+        )}
+        {error && (
+          <p className="text-xs text-red-500 mb-3">{error}</p>
+        )}
+        <button
+          onClick={handleSave}
+          disabled={status !== 'available' || saving}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 mt-2"
+        >
+          {saving ? <><Loader2 size={15} className="animate-spin" /> Saving…</> : 'Save username'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Returns true if Supabase has a cached session in localStorage (synchronous).
 function hasCachedSession() {
   if (typeof window === 'undefined') return false;
@@ -206,12 +301,16 @@ export default function DashLayout({ children }) {
   // useLayoutEffect then immediately skips the spinner for returning users before the browser paints.
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showPickUsername, setShowPickUsername] = useState(false);
   const router = useRouter();
 
   useLayoutEffect(() => {
     if (hasCachedSession()) {
       setIsLoading(false);
       setIsAuthenticated(true);
+    }
+    if (typeof window !== 'undefined' && localStorage.getItem('pick_username') === '1') {
+      setShowPickUsername(true);
     }
   }, []);
 
@@ -242,6 +341,9 @@ export default function DashLayout({ children }) {
 
   return (
     <DashboardProvider>
+      {showPickUsername && (
+        <PickUsernameModal onDone={() => setShowPickUsername(false)} />
+      )}
       {!isAuthenticated && (
         <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-md text-white px-4 py-3 z-[100] flex flex-col sm:flex-row items-center justify-center gap-3 shadow-2xl border-t border-gray-700">
           <span className="text-sm text-gray-300 text-center">

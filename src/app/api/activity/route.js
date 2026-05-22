@@ -11,6 +11,8 @@ const ALLOWED_TYPES = new Set([
   'mentor_booked', 'coaching_session',
   'marketplace_listing', 'service_created',
   'profile_updated', 'login',
+  'project_created', 'project_joined',
+  'project_task_created', 'project_task_completed', 'project_task_updated',
 ]);
 
 export async function POST(req) {

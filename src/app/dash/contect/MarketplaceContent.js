@@ -7,7 +7,7 @@ import {
   Loader2, AlertTriangle, Crown, BadgeCheck, X,
   Tag, CheckCircle2, Library, ArrowRight, BookOpen, Sparkles,
   CreditCard, ExternalLink, Eye, EyeOff, Pencil, Trash2, Store,
-  Handshake,
+  Handshake, TrendingUp, Zap, Users, ChevronRight, Package,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import PartnershipsContent from "./PartnershipsContent";
@@ -45,7 +45,7 @@ function generateHash(userId, credId) {
   return (raw + extra).slice(0, 64);
 }
 
-/* ── Toast Popup Card ─────────────────────────────── */
+/* ── Toast ─────────────────────────────────────────── */
 function ToastCard({ item, onClose, onViewLibrary }) {
   useEffect(() => {
     const t = setTimeout(onClose, 5000);
@@ -55,9 +55,7 @@ function ToastCard({ item, onClose, onViewLibrary }) {
   return (
     <div className="fixed bottom-6 right-6 z-[300] w-80 animate-in slide-in-from-bottom-4 fade-in duration-300">
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl shadow-black/10 dark:shadow-black/40 overflow-hidden">
-        <div className="h-0.5 bg-gray-100 dark:bg-gray-800">
-          <div className="h-full bg-blue-500 animate-[shrink_5s_linear_forwards]" style={{ transformOrigin: 'left' }} />
-        </div>
+        <div className="h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 animate-[shrink_5s_linear_forwards]" style={{ transformOrigin: 'left' }} />
         <div className="p-4 flex gap-3">
           <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-gray-100 dark:border-gray-800 bg-gray-100 dark:bg-gray-800">
             {item.image_url ? (
@@ -100,75 +98,75 @@ function CredentialCard({ cred, onShare, onListTrade, showActions = true }) {
   };
 
   return (
-    <div className="relative rounded-2xl p-5 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-950/30 dark:via-yellow-950/30 dark:to-orange-950/20 border-2 border-amber-200 dark:border-amber-800/50 shadow-md hover:shadow-lg transition-all">
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-400/5 to-yellow-400/10 pointer-events-none" />
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-black text-gray-900 dark:text-gray-100 text-base leading-tight truncate">{cred.title}</h3>
-          {cred.description && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{cred.description}</p>
-          )}
-        </div>
-        <span className={`shrink-0 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${CRED_TYPE_BADGE[cred.credential_type] || CRED_TYPE_BADGE.Certificate}`}>
-          {cred.credential_type || "Certificate"}
-        </span>
-      </div>
-
-      {cred.issuer && (
-        <div className="flex items-center gap-2 mb-3">
-          <div className="relative w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
-            {cred.issuer.avatar_url ? (
-              <Image src={cred.issuer.avatar_url} alt="issuer" fill sizes="28px" className="object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-xs uppercase">
-                {cred.issuer.username?.[0]}
-              </div>
+    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-950/40 dark:via-yellow-950/30 dark:to-orange-950/20 border-2 border-amber-200/80 dark:border-amber-700/40 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+      <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-bl from-amber-200/40 dark:from-amber-600/10 to-transparent pointer-events-none" />
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-black text-gray-900 dark:text-gray-100 text-base leading-tight truncate">{cred.title}</h3>
+            {cred.description && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{cred.description}</p>
             )}
           </div>
-          <span className="text-xs text-gray-600 dark:text-gray-400 font-medium flex items-center gap-1">
-            @{cred.issuer.username}
-            {cred.issuer.is_verified && <BadgeCheck size={12} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />}
-          </span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
-            {cred.issued_at ? new Date(cred.issued_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : ""}
+          <span className={`shrink-0 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${CRED_TYPE_BADGE[cred.credential_type] || CRED_TYPE_BADGE.Certificate}`}>
+            {cred.credential_type || "Certificate"}
           </span>
         </div>
-      )}
 
-      {cred.blockchain_hash && (
-        <div className="bg-white/70 dark:bg-gray-900/50 rounded-xl px-3 py-2 flex items-center gap-2 mb-3 border border-amber-100 dark:border-amber-900/30">
-          <span className="font-mono text-[10px] text-gray-600 dark:text-gray-400 flex-1 truncate">{truncateHash(cred.blockchain_hash)}</span>
-          <button onClick={handleCopyHash} className="shrink-0 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-            {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
-          </button>
-        </div>
-      )}
+        {cred.issuer && (
+          <div className="flex items-center gap-2 mb-3">
+            <div className="relative w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
+              {cred.issuer.avatar_url ? (
+                <Image src={cred.issuer.avatar_url} alt="issuer" fill sizes="28px" className="object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-xs uppercase">{cred.issuer.username?.[0]}</div>
+              )}
+            </div>
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium flex items-center gap-1">
+              @{cred.issuer.username}
+              {cred.issuer.is_verified && <BadgeCheck size={12} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />}
+            </span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
+              {cred.issued_at ? new Date(cred.issued_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : ""}
+            </span>
+          </div>
+        )}
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 px-2.5 py-1 rounded-lg">
-          <Shield size={11} /> Verified on Chain
-        </span>
-        {showActions && onShare && (
-          <button
-            onClick={() => onShare(cred.blockchain_hash)}
-            className="flex items-center gap-1.5 text-[10px] font-bold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-gray-900 px-2.5 py-1 rounded-lg transition-all"
-          >
-            <Share2 size={11} /> Share
-          </button>
+        {cred.blockchain_hash && (
+          <div className="bg-white/70 dark:bg-gray-900/50 rounded-xl px-3 py-2 flex items-center gap-2 mb-3 border border-amber-100 dark:border-amber-900/30">
+            <span className="font-mono text-[10px] text-gray-600 dark:text-gray-400 flex-1 truncate">{truncateHash(cred.blockchain_hash)}</span>
+            <button onClick={handleCopyHash} className="shrink-0 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+              {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+            </button>
+          </div>
         )}
-        {showActions && cred.is_tradeable && onListTrade && (
-          <button
-            onClick={() => onListTrade(cred)}
-            className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 px-2.5 py-1 rounded-lg transition-all"
-          >
-            <Tag size={11} /> List for Trade
-          </button>
-        )}
-        {cred.expires_at && (
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
-            Expires {new Date(cred.expires_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 px-2.5 py-1 rounded-lg">
+            <Shield size={11} /> Verified on Chain
           </span>
-        )}
+          {showActions && onShare && (
+            <button
+              onClick={() => onShare(cred.blockchain_hash)}
+              className="flex items-center gap-1.5 text-[10px] font-bold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-gray-900 px-2.5 py-1 rounded-lg transition-all"
+            >
+              <Share2 size={11} /> Share
+            </button>
+          )}
+          {showActions && cred.is_tradeable && onListTrade && (
+            <button
+              onClick={() => onListTrade(cred)}
+              className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 px-2.5 py-1 rounded-lg transition-all"
+            >
+              <Tag size={11} /> List for Trade
+            </button>
+          )}
+          {cred.expires_at && (
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
+              Expires {new Date(cred.expires_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -186,22 +184,16 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
   const handleGet = async () => {
     if (!currentUserId) { setPayError('Sign in to continue.'); return; }
     if (inLibrary) return;
-
     setPayError('');
-
     if (isFree) {
       setPaying(true);
       try {
         const { error } = await supabase.from('user_library').insert({ user_id: currentUserId, listing_id: listing.id });
         if (!error) { onAddToLibrary(listing); onClose(); }
         else setPayError(error.message);
-      } finally {
-        setPaying(false);
-      }
+      } finally { setPaying(false); }
       return;
     }
-
-    /* Paid flow via Paystack */
     setPaying(true);
     try {
       const initRes = await fetch('/api/paystack/marketplace/initiate', {
@@ -211,7 +203,6 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
       });
       const initData = await initRes.json();
       if (!initRes.ok) throw new Error(initData.error || 'Failed to start payment');
-
       const handler = window.PaystackPop.setup({
         key:      process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
         email:    userEmail,
@@ -228,39 +219,24 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
                 body: JSON.stringify({ reference: response.reference, userId: currentUserId, listingId: listing.id }),
               });
               const verifyData = await verifyRes.json();
-              if (verifyRes.ok) {
-                onAddToLibrary(listing);
-                onClose();
-              } else {
-                setPayError(verifyData.error || 'Verification failed. Contact support.');
-              }
-            } catch {
-              setPayError('Verification failed. Contact support.');
-            } finally {
-              setPaying(false);
-            }
+              if (verifyRes.ok) { onAddToLibrary(listing); onClose(); }
+              else setPayError(verifyData.error || 'Verification failed. Contact support.');
+            } catch { setPayError('Verification failed. Contact support.'); }
+            finally { setPaying(false); }
           })();
         },
         onClose: () => setPaying(false),
       });
       handler.openIframe();
-    } catch (err) {
-      setPayError(err.message);
-      setPaying(false);
-    }
+    } catch (err) { setPayError(err.message); setPaying(false); }
   };
 
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full sm:max-w-2xl bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[92vh] flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
-
-        {/* Image header */}
         <div className="relative w-full h-48 sm:h-56 shrink-0 bg-gray-100 dark:bg-gray-800">
-          <Image
-            src={listing.image_url || `https://picsum.photos/seed/${listing.id}/800/400`}
-            alt={listing.title} fill sizes="100vw" className="object-cover"
-          />
+          <Image src={listing.image_url || `https://picsum.photos/seed/${listing.id}/800/400`} alt={listing.title} fill sizes="100vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
           <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm">
             <X size={15} />
@@ -277,7 +253,6 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <h2 className="font-black text-gray-900 dark:text-gray-100 text-xl leading-tight flex-1">{listing.title}</h2>
@@ -302,7 +277,6 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
             </div>
           </div>
 
-          {/* Seller + stats */}
           {listing.profiles && (
             <div className="flex items-center gap-2">
               <div className="relative w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0">
@@ -326,7 +300,6 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
             </div>
           )}
 
-          {/* Description */}
           {listing.description && (
             <div
               className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 [&_p]:mb-2 [&_strong]:font-bold"
@@ -334,7 +307,6 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
             />
           )}
 
-          {/* Tags */}
           {listing.tags?.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {listing.tags.map(tag => (
@@ -343,9 +315,8 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
             </div>
           )}
 
-          {/* Premium upsell for non-premium users on paid courses */}
           {!isPremium && listing.category === 'Course' && listing.price > 0 && (
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3 flex items-start gap-2.5">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3 flex items-start gap-2.5">
               <Crown size={14} className="text-amber-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Get every course free with Premium</p>
@@ -361,7 +332,6 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
           )}
         </div>
 
-        {/* Footer CTA */}
         <div className="shrink-0 p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
           {inLibrary ? (
             <button onClick={onClose} className="w-full flex items-center justify-center gap-2 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50 font-black text-sm rounded-xl">
@@ -394,17 +364,12 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
 /* ── Library Item Modal ───────────────────────────── */
 function LibraryItemModal({ item, onClose }) {
   const { listing, acquired_at } = item;
-
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full sm:max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
-
         <div className="relative w-full h-44 shrink-0 bg-gray-100 dark:bg-gray-800">
-          <Image
-            src={listing.image_url || `https://picsum.photos/seed/${listing.id}/600/300`}
-            alt={listing.title} fill sizes="100vw" className="object-cover"
-          />
+          <Image src={listing.image_url || `https://picsum.photos/seed/${listing.id}/600/300`} alt={listing.title} fill sizes="100vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           <button onClick={onClose} className="absolute top-3 right-3 w-8 h-8 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm">
             <X size={15} />
@@ -418,12 +383,9 @@ function LibraryItemModal({ item, onClose }) {
             </span>
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           <h2 className="font-black text-gray-900 dark:text-gray-100 text-lg leading-tight">{listing.title}</h2>
-          {listing.description && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{listing.description}</p>
-          )}
+          {listing.description && <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{listing.description}</p>}
           {listing.tags?.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {listing.tags.map(tag => (
@@ -441,13 +403,9 @@ function LibraryItemModal({ item, onClose }) {
             Added {new Date(acquired_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
-
         <div className="shrink-0 p-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
           {listing.category === 'Course' ? (
-            <a
-              href="/Academy"
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm rounded-xl hover:bg-blue-600 transition-all"
-            >
+            <a href="/Academy" className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm rounded-xl hover:bg-blue-600 transition-all">
               <BookOpen size={16} /> Open in Academy
             </a>
           ) : (
@@ -464,19 +422,16 @@ function LibraryItemModal({ item, onClose }) {
 /* ── Credential Detail Modal ──────────────────────── */
 function CredentialDetailModal({ cred, onClose }) {
   const [urlCopied, setUrlCopied] = useState(false);
-
   const handleShare = async (hash) => {
     const url = `${window.location.origin}/verify/${hash}`;
     await navigator.clipboard.writeText(url);
     setUrlCopied(true);
     setTimeout(() => setUrlCopied(false), 2000);
   };
-
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full sm:max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
-
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <h3 className="font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Award size={16} className="text-amber-500" /> Credential Detail
@@ -485,22 +440,15 @@ function CredentialDetailModal({ cred, onClose }) {
             <X size={16} />
           </button>
         </div>
-
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           <CredentialCard cred={cred} onShare={handleShare} onListTrade={() => alert('Trading coming soon!')} showActions />
           {cred.blockchain_hash && (
-            <a
-              href={`/verify/${cred.blockchain_hash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-xl transition-all"
-            >
+            <a href={`/verify/${cred.blockchain_hash}`} target="_blank" rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-xl transition-all">
               <ExternalLink size={14} /> Open Public Verification Page
             </a>
           )}
-          {urlCopied && (
-            <p className="text-center text-xs text-green-600 dark:text-green-400 font-bold">Verification link copied!</p>
-          )}
+          {urlCopied && <p className="text-center text-xs text-green-600 dark:text-green-400 font-bold">Verification link copied!</p>}
         </div>
       </div>
     </div>
@@ -512,6 +460,7 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [authError, setAuthError] = useState(false);
 
   const fetchListings = useCallback(async () => {
@@ -522,8 +471,6 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
       .eq('is_active', true)
       .order('purchases', { ascending: false });
     if (!error && data) {
-      // Deduplicate listings by title + category (case-insensitive)
-      // Keep the first occurrence (highest purchases due to ordering)
       const seen = new Set();
       const deduplicated = data.filter(listing => {
         const key = `${listing.title.toLowerCase().trim()}|${listing.category.toLowerCase()}`;
@@ -548,7 +495,17 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
     return () => { supabase.removeChannel(ch); };
   }, [fetchListings]);
 
-  const filtered = activeFilter === "All" ? listings : listings.filter(l => l.category === activeFilter);
+  const filtered = listings.filter(l => {
+    const matchesCat = activeFilter === "All" || l.category === activeFilter;
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q ||
+      l.title.toLowerCase().includes(q) ||
+      l.description?.toLowerCase().includes(q) ||
+      l.tags?.some(t => t.toLowerCase().includes(q));
+    return matchesCat && matchesSearch;
+  });
+
+  const featuredListing = !searchQuery && activeFilter === "All" && listings.length > 0 ? listings[0] : null;
 
   const handleQuickGet = async (e, listing) => {
     e.stopPropagation();
@@ -560,21 +517,32 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
 
   return (
     <div className="space-y-5">
-      {authError && (
-        <div className="flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl px-4 py-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
-          <AlertTriangle size={14} className="shrink-0" /> Sign in to add items to your library.
-        </div>
-      )}
+      {/* Search */}
+      <div className="relative">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <input
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Search courses, templates, services…"
+          className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl pl-11 pr-10 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 shadow-sm transition-all"
+        />
+        {searchQuery && (
+          <button onClick={() => setSearchQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+            <X size={15} />
+          </button>
+        )}
+      </div>
 
+      {/* Category filters */}
       <div className="flex gap-2 flex-wrap">
         {CATEGORIES.map(cat => (
           <button
             key={cat}
             onClick={() => setActiveFilter(cat)}
-            className={`text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${
+            className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-3.5 py-2 rounded-xl border transition-all ${
               activeFilter === cat
-                ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 border-transparent"
-                : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500"
+                ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 border-transparent shadow-md shadow-black/10"
+                : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-sm"
             }`}
           >
             {CATEGORY_ICON[cat] || ''} {cat}
@@ -582,74 +550,190 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
         ))}
       </div>
 
+      {authError && (
+        <div className="flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl px-4 py-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+          <AlertTriangle size={14} className="shrink-0" /> Sign in to add items to your library.
+        </div>
+      )}
+
+      {/* Featured hero banner */}
+      {!loading && featuredListing && (
+        <div
+          onClick={() => onSelectListing(featuredListing)}
+          className="relative w-full h-52 sm:h-60 rounded-2xl overflow-hidden cursor-pointer group shadow-xl shadow-black/10"
+        >
+          <Image
+            src={featuredListing.image_url || `https://picsum.photos/seed/${featuredListing.id}/1200/500`}
+            alt={featuredListing.title} fill sizes="100vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-700"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+          <div className="absolute top-4 left-4 flex gap-2">
+            <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-amber-400 text-black px-2.5 py-1 rounded-lg">
+              <TrendingUp size={10} /> Featured
+            </span>
+            <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg backdrop-blur-sm ${CATEGORY_BADGE[featuredListing.category] || CATEGORY_BADGE.Asset}`}>
+              {CATEGORY_ICON[featuredListing.category]} {featuredListing.category}
+            </span>
+          </div>
+          <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-black text-white text-xl sm:text-2xl leading-tight line-clamp-2 drop-shadow">{featuredListing.title}</h3>
+              {featuredListing.description && (
+                <p className="text-sm text-white/70 mt-1 line-clamp-1">{featuredListing.description}</p>
+              )}
+              {featuredListing.profiles && (
+                <div className="flex items-center gap-1.5 mt-2">
+                  <div className="relative w-5 h-5 rounded-md overflow-hidden border border-white/30">
+                    {featuredListing.profiles.avatar_url
+                      ? <Image src={featuredListing.profiles.avatar_url} alt="seller" fill sizes="20px" className="object-cover" />
+                      : <div className="w-full h-full bg-white/20 flex items-center justify-center text-[8px] font-bold text-white uppercase">{featuredListing.profiles.username?.[0]}</div>
+                    }
+                  </div>
+                  <span className="text-[11px] text-white/80 font-medium">@{featuredListing.profiles.username}</span>
+                  {featuredListing.purchases > 0 && (
+                    <span className="text-[10px] text-white/60 flex items-center gap-1 ml-2">
+                      <Users size={9} /> {featuredListing.purchases} {featuredListing.category === 'Course' ? 'enrolled' : 'sold'}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="shrink-0 flex flex-col items-end gap-2">
+              <span className="font-black text-white text-xl">
+                {(featuredListing.price || 0) === 0
+                  ? <span className="text-emerald-300">Free</span>
+                  : isPremium && featuredListing.category === 'Course'
+                    ? <span className="text-amber-300">Free ★</span>
+                    : `$${featuredListing.price}`
+                }
+              </span>
+              <span className="flex items-center gap-1.5 text-[11px] font-black uppercase bg-white/20 text-white backdrop-blur-sm px-3 py-2 rounded-xl group-hover:bg-white/30 transition-colors">
+                View Details <ChevronRight size={11} />
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Results meta */}
+      {!loading && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+            {searchQuery
+              ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${searchQuery}"`
+              : `${filtered.length} item${filtered.length !== 1 ? 's' : ''} ${activeFilter !== 'All' ? `in ${activeFilter}` : 'available'}`}
+          </p>
+          {filtered.length > 1 && (
+            <span className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
+              <TrendingUp size={10} /> Sorted by popularity
+            </span>
+          )}
+        </div>
+      )}
+
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {[1,2,3,4,5,6].map(i => (
             <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse">
-              <div className="w-full h-36 bg-gray-200 dark:bg-gray-800 rounded-xl mb-3" />
-              <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4 mb-2" />
-              <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/2" />
+              <div className="w-full h-44 bg-gray-100 dark:bg-gray-800 rounded-xl mb-4" />
+              <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded-lg w-3/4 mb-2" />
+              <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-lg w-1/2 mb-4" />
+              <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <div className="h-7 bg-gray-100 dark:bg-gray-800 rounded-lg w-12" />
+                <div className="h-7 bg-gray-100 dark:bg-gray-800 rounded-lg w-24 ml-auto" />
+              </div>
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <ShoppingBag size={40} className="text-gray-300 dark:text-gray-700 mb-4" />
-          <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">Nothing here yet</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Check back soon or be the first to list something.</p>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5 text-4xl shadow-inner">
+            {searchQuery ? '🔍' : '🛒'}
+          </div>
+          <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">
+            {searchQuery ? 'No results found' : 'Nothing here yet'}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
+            {searchQuery ? 'Try different keywords or browse all categories.' : 'Check back soon or be the first to list something.'}
+          </p>
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="mt-4 text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
+              Clear search
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map(listing => {
             const inLibrary = libraryIds.has(listing.id);
             const isPremiumFree = isPremium && listing.category === 'Course' && listing.price > 0;
             const effectivePrice = isPremiumFree ? 0 : (listing.price || 0);
             const isFree = effectivePrice === 0;
+            const isTrending = (listing.purchases || 0) >= 5;
+            const isNew = listing.created_at && new Date(listing.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
             return (
               <div
                 key={listing.id}
                 onClick={() => onSelectListing(listing)}
-                className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-lg transition-all flex flex-col overflow-hidden group cursor-pointer"
+                className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-blue-200 dark:hover:border-blue-800/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col overflow-hidden group cursor-pointer"
               >
-                <div className="relative w-full h-40 bg-gray-100 dark:bg-gray-800 shrink-0 overflow-hidden">
+                {/* Thumbnail */}
+                <div className="relative w-full h-44 bg-gray-100 dark:bg-gray-800 shrink-0 overflow-hidden">
                   <Image
                     src={listing.image_url || `https://picsum.photos/seed/${listing.id}/400/200`}
                     alt={listing.title} fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute top-2 left-2">
-                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${CATEGORY_BADGE[listing.category] || CATEGORY_BADGE.Asset}`}>
-                      {listing.category || "Asset"}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                  {/* Left badges */}
+                  <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg backdrop-blur-sm shadow-sm ${CATEGORY_BADGE[listing.category] || CATEGORY_BADGE.Asset}`}>
+                      {CATEGORY_ICON[listing.category]} {listing.category}
                     </span>
+                    {isTrending && !inLibrary && (
+                      <span className="flex items-center gap-1 text-[9px] font-black uppercase bg-rose-500 text-white px-2 py-1 rounded-lg shadow-sm">
+                        <TrendingUp size={8} /> Hot
+                      </span>
+                    )}
+                    {!isTrending && isNew && !inLibrary && (
+                      <span className="flex items-center gap-1 text-[9px] font-black uppercase bg-violet-500 text-white px-2 py-1 rounded-lg shadow-sm">
+                        <Zap size={8} /> New
+                      </span>
+                    )}
                   </div>
+
+                  {/* Right badge */}
                   {inLibrary && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg flex items-center gap-1">
+                    <div className="absolute top-3 right-3 bg-green-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg flex items-center gap-1 shadow-md">
                       <Check size={9} /> Owned
                     </div>
                   )}
                   {isPremiumFree && !inLibrary && (
-                    <div className="absolute top-2 right-2 bg-amber-400 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg flex items-center gap-1">
+                    <div className="absolute top-3 right-3 bg-gradient-to-br from-amber-400 to-orange-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg flex items-center gap-1 shadow-md">
                       <Crown size={9} /> Free
                     </div>
                   )}
                 </div>
 
+                {/* Body */}
                 <div className="p-4 flex flex-col flex-1">
-                  <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm leading-tight mb-1 line-clamp-2">{listing.title}</h3>
+                  <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm leading-snug mb-1.5 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{listing.title}</h3>
                   {listing.description && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3 flex-1">{listing.description}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3 flex-1 leading-relaxed">{listing.description}</p>
                   )}
 
+                  {/* Seller */}
                   {listing.profiles && (
                     <div className="flex items-center gap-1.5 mb-3">
                       <div className="relative w-5 h-5 rounded-md bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
-                        {listing.profiles.avatar_url ? (
-                          <Image src={listing.profiles.avatar_url} alt="seller" fill sizes="20px" className="object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-gray-400 uppercase">{listing.profiles.username?.[0]}</div>
-                        )}
+                        {listing.profiles.avatar_url
+                          ? <Image src={listing.profiles.avatar_url} alt="seller" fill sizes="20px" className="object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-gray-400 uppercase">{listing.profiles.username?.[0]}</div>
+                        }
                       </div>
                       <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate flex items-center gap-0.5">
                         @{listing.profiles.username}
@@ -657,18 +741,27 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
                         {listing.profiles.is_premium && !listing.profiles.is_trial_premium && listing.profiles.profile_visibility?.premium_badge !== false && <Crown size={10} className="text-amber-500 shrink-0" />}
                         {listing.profiles.is_premium && listing.profiles.is_trial_premium && listing.profiles.profile_visibility?.premium_badge !== false && <Sparkles size={10} className="text-blue-500 shrink-0" />}
                       </span>
-                      {listing.purchases > 0 && (
-                        <span className="ml-auto text-[9px] text-gray-400 dark:text-gray-500 shrink-0">{listing.purchases} sold</span>
+                      {(listing.purchases || 0) > 0 && (
+                        <span className="ml-auto text-[9px] text-gray-400 dark:text-gray-500 shrink-0 flex items-center gap-0.5">
+                          <Users size={9} /> {listing.purchases}
+                        </span>
                       )}
                     </div>
                   )}
 
+                  {/* Price row */}
                   <div className="flex items-center justify-between gap-2 mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
-                    <span className="font-black text-gray-900 dark:text-gray-100 text-sm">
-                      {isFree || isPremiumFree ? (
-                        <span className="text-green-600 dark:text-green-400">{isPremiumFree ? '★ Free' : 'Free'}</span>
-                      ) : `$${listing.price}`}
-                    </span>
+                    <div>
+                      <span className="font-black text-sm">
+                        {isFree || isPremiumFree
+                          ? <span className="text-emerald-600 dark:text-emerald-400">{isPremiumFree ? '★ Free' : 'Free'}</span>
+                          : <span className="text-gray-900 dark:text-gray-100">${listing.price}</span>
+                        }
+                      </span>
+                      {!isPremium && listing.category === 'Course' && (listing.price || 0) > 0 && (
+                        <p className="text-[9px] text-amber-500 font-bold leading-none mt-0.5">Premium: Free</p>
+                      )}
+                    </div>
                     <button
                       onClick={e => {
                         if (inLibrary) return;
@@ -676,11 +769,11 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
                         else { e.stopPropagation(); onSelectListing(listing); }
                       }}
                       disabled={inLibrary}
-                      className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all active:scale-95 ${
+                      className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-3.5 py-2 rounded-xl transition-all active:scale-95 ${
                         inLibrary
                           ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800 cursor-default'
                           : isFree || isPremiumFree
-                            ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 dark:hover:bg-blue-500 dark:hover:text-white'
+                            ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 dark:hover:bg-blue-500 dark:hover:text-white shadow-md hover:shadow-lg'
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white border border-gray-200 dark:border-gray-700'
                       }`}
                     >
@@ -723,66 +816,70 @@ function MyLibraryTab({ currentUserId, onSelectItem }) {
   }, [currentUserId]);
 
   if (!currentUserId) return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Library size={40} className="text-gray-300 dark:text-gray-700 mb-4" />
-      <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">Sign in to see your library</h3>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5 text-4xl">📚</div>
+      <h3 className="font-black text-gray-700 dark:text-gray-300 text-lg mb-2">Your Library</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to see your saved items.</p>
     </div>
   );
 
   if (loading) return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
       {[1,2,3].map(i => (
         <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse">
-          <div className="w-full h-36 bg-gray-200 dark:bg-gray-800 rounded-xl mb-3" />
-          <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4 mb-2" />
+          <div className="w-full h-40 bg-gray-100 dark:bg-gray-800 rounded-xl mb-4" />
+          <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded-lg w-3/4 mb-2" />
+          <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-lg w-1/2" />
         </div>
       ))}
     </div>
   );
 
   if (items.length === 0) return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <BookOpen size={48} className="text-gray-300 dark:text-gray-700 mb-4" />
-      <h3 className="font-bold text-gray-700 dark:text-gray-300 text-lg mb-2">Your library is empty</h3>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5 text-4xl">📭</div>
+      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">Your library is empty</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-        Browse the marketplace and click <strong>Get</strong> on any course, template, or asset to add it here.
+        Browse the marketplace and click <strong>Get</strong> on any course, template, or asset to save it here.
       </p>
     </div>
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Sparkles size={16} className="text-blue-500" />
-        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{items.length} item{items.length !== 1 ? 's' : ''} in your library</p>
+    <div className="space-y-5">
+      <div className="flex items-center gap-2 px-1">
+        <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+          <Library size={14} className="text-blue-600 dark:text-blue-400" />
+        </div>
+        <p className="text-sm font-black text-gray-800 dark:text-gray-200">{items.length} item{items.length !== 1 ? 's' : ''} in your library</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {items.map(item => (
           <div
             key={item.listing.id}
             onClick={() => onSelectItem(item)}
-            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all group cursor-pointer"
+            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden hover:border-blue-200 dark:hover:border-blue-800/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 group cursor-pointer"
           >
-            <div className="relative w-full h-36 bg-gray-100 dark:bg-gray-800 shrink-0 overflow-hidden">
+            <div className="relative w-full h-40 bg-gray-100 dark:bg-gray-800 shrink-0 overflow-hidden">
               <Image
                 src={item.listing.image_url || `https://picsum.photos/seed/${item.listing.id}/400/200`}
                 alt={item.listing.title} fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className="object-cover group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute top-2 left-2">
+              <div className="absolute top-3 left-3">
                 <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${CATEGORY_BADGE[item.listing.category] || CATEGORY_BADGE.Asset}`}>
-                  {item.listing.category}
+                  {CATEGORY_ICON[item.listing.category]} {item.listing.category}
                 </span>
               </div>
-              <div className="absolute top-2 right-2 bg-green-500 text-white text-[9px] font-black uppercase px-2 py-1 rounded-lg flex items-center gap-1">
+              <div className="absolute top-3 right-3 bg-green-500 text-white text-[9px] font-black uppercase px-2 py-1 rounded-lg flex items-center gap-1 shadow-md">
                 <Check size={9} /> Owned
               </div>
             </div>
             <div className="p-4 flex-1 flex flex-col">
-              <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm leading-tight mb-1 line-clamp-2">{item.listing.title}</h3>
+              <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm leading-snug mb-1.5 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.listing.title}</h3>
               {item.listing.description && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 flex-1">{item.listing.description}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 flex-1 leading-relaxed">{item.listing.description}</p>
               )}
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                 {item.listing.profiles && (
@@ -792,7 +889,7 @@ function MyLibraryTab({ currentUserId, onSelectItem }) {
                   </span>
                 )}
                 <span className="text-[9px] text-gray-400 dark:text-gray-500 ml-auto">
-                  Added {new Date(item.acquired_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  {new Date(item.acquired_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </span>
               </div>
             </div>
@@ -824,9 +921,10 @@ function MyCredentialsTab({ currentUserId, onSelectCred }) {
   }, [currentUserId]);
 
   if (!currentUserId) return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Award size={40} className="text-gray-300 dark:text-gray-700 mb-4" />
-      <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">Sign in to view your credentials</h3>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-5 text-4xl">🏅</div>
+      <h3 className="font-black text-gray-700 dark:text-gray-300 text-lg mb-2">Your Credentials</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to view your blockchain credentials.</p>
     </div>
   );
 
@@ -842,20 +940,28 @@ function MyCredentialsTab({ currentUserId, onSelectCred }) {
   );
 
   if (credentials.length === 0) return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Award size={40} className="text-gray-300 dark:text-gray-700 mb-4" />
-      <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">No credentials yet</h3>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-5 text-4xl">🎖️</div>
+      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">No credentials yet</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400">Complete achievements or receive credentials from others.</p>
     </div>
   );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {credentials.map(cred => (
-        <div key={cred.id} onClick={() => onSelectCred(cred)} className="cursor-pointer">
-          <CredentialCard cred={cred} showActions={false} />
+    <div className="space-y-5">
+      <div className="flex items-center gap-2 px-1">
+        <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+          <Award size={14} className="text-amber-600 dark:text-amber-400" />
         </div>
-      ))}
+        <p className="text-sm font-black text-gray-800 dark:text-gray-200">{credentials.length} credential{credentials.length !== 1 ? 's' : ''} earned</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {credentials.map(cred => (
+          <div key={cred.id} onClick={() => onSelectCred(cred)} className="cursor-pointer">
+            <CredentialCard cred={cred} showActions={false} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -899,52 +1005,57 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
       setForm(emptyForm); setSelectedRecipient(null); setRecipientSearch('');
     } catch (err) {
       setError(err.message || 'Failed to issue credential.');
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
   if (!canIssue) return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Shield size={40} className="text-gray-300 dark:text-gray-700 mb-4" />
-      <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">Access Restricted</h3>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5 text-4xl">🔒</div>
+      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">Access Restricted</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400">Only founders and admins can issue credentials.</p>
     </div>
   );
 
   if (success) return (
     <div className="max-w-md mx-auto flex flex-col items-center text-center gap-4 py-8">
-      <div className="w-16 h-16 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 flex items-center justify-center">
-        <CheckCircle2 size={32} className="text-green-500" />
-      </div>
-      <h3 className="font-black text-gray-900 dark:text-gray-100 text-lg">Credential Issued!</h3>
+      <div className="w-20 h-20 rounded-3xl bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800/50 flex items-center justify-center text-4xl">🎉</div>
+      <h3 className="font-black text-gray-900 dark:text-gray-100 text-xl">Credential Issued!</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400">
         <strong>"{success.title}"</strong> was issued to <strong>@{success.recipient}</strong>.
       </p>
-      <div className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 text-left">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Blockchain Hash</p>
+      <div className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-left">
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Blockchain Hash</p>
         <p className="font-mono text-xs text-gray-700 dark:text-gray-300 break-all">{success.hash}</p>
       </div>
-      <button onClick={() => setSuccess(null)} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">Issue Another</button>
+      <button onClick={() => setSuccess(null)} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
+        Issue Another
+      </button>
     </div>
   );
 
   return (
     <div className="max-w-xl mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-        <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Issue a Credential</h2>
+      <form onSubmit={handleSubmit} className="space-y-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <Award size={18} className="text-amber-600 dark:text-amber-400" />
+          </div>
+          <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Issue a Credential</h2>
+        </div>
+
         {error && (
           <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl px-3 py-2">
             <AlertTriangle size={14} /> {error}
           </div>
         )}
+
         <div className="space-y-1">
           <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Title *</label>
           <input required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Full-Stack Developer Certificate" className={inputCls} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Description</label>
-          <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Describe what this credential represents..." rows={3} className={inputCls + " resize-none"} />
+          <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Describe what this credential represents…" rows={3} className={inputCls + " resize-none"} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Type *</label>
@@ -968,7 +1079,7 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
             <>
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input value={recipientSearch} onChange={e => setRecipientSearch(e.target.value)} placeholder="Search by username..." className={inputCls + " pl-8"} />
+                <input value={recipientSearch} onChange={e => setRecipientSearch(e.target.value)} placeholder="Search by username…" className={inputCls + " pl-8"} />
               </div>
               {recipientResults.length > 0 && (
                 <div className="absolute z-20 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg mt-1 overflow-hidden">
@@ -998,7 +1109,7 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
         </div>
         <button type="submit" disabled={submitting} className="w-full flex items-center justify-center gap-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm py-3 rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all disabled:opacity-60 active:scale-95">
           {submitting ? <Loader2 size={16} className="animate-spin" /> : <Award size={16} />}
-          {submitting ? 'Issuing...' : 'Issue Credential'}
+          {submitting ? 'Issuing…' : 'Issue Credential'}
         </button>
       </form>
     </div>
@@ -1011,7 +1122,6 @@ const emptyListingForm = { title: '', description: '', category: 'Service', pric
 
 function SellTab({ currentUserId, isPremium, isAdmin }) {
   const canSell = isPremium || isAdmin;
-
   const [myListings, setMyListings] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -1036,36 +1146,17 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
   useEffect(() => { fetchMyListings(); }, [fetchMyListings]);
 
   const openNew = () => { setEditItem(null); setForm(emptyListingForm); setFormError(''); setShowForm(true); };
-
   const openEdit = (listing) => {
     setEditItem(listing);
-    setForm({
-      title: listing.title,
-      description: listing.description || '',
-      category: listing.category,
-      price: listing.price?.toString() || '',
-      image_url: listing.image_url || '',
-      tags: (listing.tags || []).join(', '),
-    });
-    setFormError('');
-    setShowForm(true);
+    setForm({ title: listing.title, description: listing.description || '', category: listing.category, price: listing.price?.toString() || '', image_url: listing.image_url || '', tags: (listing.tags || []).join(', ') });
+    setFormError(''); setShowForm(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) return;
     setSubmitting(true); setFormError('');
-    const payload = {
-      seller_id: currentUserId,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      category: form.category,
-      price: form.price !== '' ? parseFloat(form.price) : 0,
-      currency: 'USD',
-      image_url: form.image_url.trim() || null,
-      tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
-      is_active: true,
-    };
+    const payload = { seller_id: currentUserId, title: form.title.trim(), description: form.description.trim(), category: form.category, price: form.price !== '' ? parseFloat(form.price) : 0, currency: 'USD', image_url: form.image_url.trim() || null, tags: form.tags.split(',').map(t => t.trim()).filter(Boolean), is_active: true };
     try {
       if (editItem) {
         const { error } = await supabase.from('marketplace_listings').update(payload).eq('id', editItem.id);
@@ -1074,16 +1165,13 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
       } else {
         const { error } = await supabase.from('marketplace_listings').insert({ ...payload, purchases: 0 });
         if (error) throw error;
-        setSuccessMsg('Listing published! It\'s now live in Browse.');
+        setSuccessMsg("Listing published! It's now live in Browse.");
       }
       setShowForm(false); setEditItem(null); setForm(emptyListingForm);
       setTimeout(() => setSuccessMsg(''), 4000);
       fetchMyListings();
-    } catch (err) {
-      setFormError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (err) { setFormError(err.message); }
+    finally { setSubmitting(false); }
   };
 
   const handleToggleActive = async (listing) => {
@@ -1098,23 +1186,21 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
   };
 
   if (!currentUserId) return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Store size={40} className="text-gray-300 dark:text-gray-700 mb-4" />
-      <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">Sign in to sell</h3>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5 text-4xl">🏪</div>
+      <h3 className="font-black text-gray-700 dark:text-gray-300 text-lg mb-2">Start Selling</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to list your items in the marketplace.</p>
     </div>
   );
 
   if (!canSell) return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Crown size={40} className="text-amber-300 mb-4" />
-      <h3 className="font-black text-gray-900 dark:text-gray-100 text-lg mb-2">Premium Required to Sell</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mb-5">
-        Upgrade to Premium to list your services, templates, and assets in the marketplace and earn from the community.
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-5 text-4xl">👑</div>
+      <h3 className="font-black text-gray-900 dark:text-gray-100 text-xl mb-2">Premium Required to Sell</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mb-6">
+        Upgrade to Premium to list your services, templates, and assets and earn from the community.
       </p>
-      <a
-        href="/dash/premium"
-        className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-white font-black text-sm rounded-xl transition-all shadow-lg shadow-amber-500/30"
-      >
+      <a href="/dash/premium" className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black text-sm rounded-xl transition-all shadow-lg shadow-amber-500/30 hover:shadow-amber-500/40 hover:-translate-y-0.5 active:scale-95">
         <Crown size={14} /> Upgrade to Premium
       </a>
     </div>
@@ -1122,43 +1208,42 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
 
   return (
     <div className="space-y-5">
-
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-black text-gray-900 dark:text-gray-100">My Listings</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{myListings.length} listing{myListings.length !== 1 ? 's' : ''} published</p>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+            <Store size={16} className="text-green-600 dark:text-green-400" />
+          </div>
+          <div>
+            <h2 className="font-black text-gray-900 dark:text-gray-100 text-sm">My Listings</h2>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400">{myListings.length} listing{myListings.length !== 1 ? 's' : ''} published</p>
+          </div>
         </div>
         {!showForm && (
-          <button onClick={openNew} className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 transition-all">
+          <button onClick={openNew} className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest px-4 py-2.5 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 transition-all shadow-md hover:shadow-lg active:scale-95">
             <Plus size={13} /> New Listing
           </button>
         )}
       </div>
 
-      {/* Success */}
       {successMsg && (
         <div className="flex items-center gap-2 text-sm font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl px-4 py-3 animate-in fade-in duration-200">
           <CheckCircle2 size={15} /> {successMsg}
         </div>
       )}
 
-      {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200 shadow-sm">
           <div className="flex items-center justify-between">
             <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm">{editItem ? 'Edit Listing' : 'New Listing'}</h3>
             <button type="button" onClick={() => { setShowForm(false); setEditItem(null); }} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
               <X size={15} />
             </button>
           </div>
-
           {formError && (
             <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl px-3 py-2">
               <AlertTriangle size={13} /> {formError}
             </div>
           )}
-
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Category *</label>
@@ -1171,64 +1256,58 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
               <input type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} placeholder="0" className={inputCls} />
             </div>
           </div>
-
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Title *</label>
             <input required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. React Dashboard Template" className={inputCls} />
           </div>
-
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Description</label>
             <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="What does this include? Who is it for?" rows={3} className={`${inputCls} resize-none`} />
           </div>
-
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Cover Image URL</label>
-            <input value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://images.unsplash.com/..." className={inputCls} />
+            <input value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://images.unsplash.com/…" className={inputCls} />
             {form.image_url && (
               <div className="relative w-full h-24 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 mt-1.5">
                 <Image src={form.image_url} alt="preview" fill sizes="100%" className="object-cover" />
               </div>
             )}
           </div>
-
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Tags (comma-separated)</label>
             <input value={form.tags} onChange={e => setForm(p => ({ ...p, tags: e.target.value }))} placeholder="React, Tailwind, Next.js" className={inputCls} />
           </div>
-
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={() => { setShowForm(false); setEditItem(null); }} className="flex-1 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all">
               Cancel
             </button>
-            <button type="submit" disabled={submitting} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all disabled:opacity-60">
+            <button type="submit" disabled={submitting} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all disabled:opacity-60 active:scale-95">
               {submitting ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-              {submitting ? 'Publishing...' : editItem ? 'Save Changes' : 'Publish Listing'}
+              {submitting ? 'Publishing…' : editItem ? 'Save Changes' : 'Publish Listing'}
             </button>
           </div>
         </form>
       )}
 
-      {/* My listings grid */}
       {loadingList ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[1, 2].map(i => <div key={i} className="h-40 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />)}
         </div>
       ) : myListings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Store size={36} className="text-gray-300 dark:text-gray-700 mb-3" />
+        <div className="flex flex-col items-center justify-center py-14 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
+          <div className="text-4xl mb-3">📦</div>
           <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">No listings yet</p>
-          <p className="text-xs text-gray-400">Click "New Listing" to publish your first item.</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Click "New Listing" to publish your first item.</p>
+          <button onClick={openNew} className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 transition-all">
+            <Plus size={12} /> Create Listing
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {myListings.map(listing => (
-            <div key={listing.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div key={listing.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-md transition-all">
               <div className="relative w-full h-32 bg-gray-100 dark:bg-gray-800">
-                <Image
-                  src={listing.image_url || `https://picsum.photos/seed/${listing.id}/400/200`}
-                  alt={listing.title} fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover"
-                />
+                <Image src={listing.image_url || `https://picsum.photos/seed/${listing.id}/400/200`} alt={listing.title} fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover" />
                 <div className="absolute top-2 left-2">
                   <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${CATEGORY_BADGE[listing.category] || CATEGORY_BADGE.Asset}`}>
                     {CATEGORY_ICON[listing.category]} {listing.category}
@@ -1243,11 +1322,12 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
               <div className="p-3">
                 <p className="font-black text-sm text-gray-900 dark:text-gray-100 line-clamp-1 mb-2">{listing.title}</p>
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 shrink-0">
-                    {listing.price === 0 ? 'Free' : `$${listing.price}`} · {listing.purchases || 0} sold
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 shrink-0 flex items-center gap-2">
+                    <span>{listing.price === 0 ? 'Free' : `$${listing.price}`}</span>
+                    <span className="flex items-center gap-0.5 text-gray-400"><Users size={9} /> {listing.purchases || 0}</span>
                   </span>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => handleToggleActive(listing)} title={listing.is_active ? 'Hide listing' : 'Show listing'} className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all">
+                    <button onClick={() => handleToggleActive(listing)} title={listing.is_active ? 'Hide' : 'Show'} className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all">
                       {listing.is_active ? <EyeOff size={13} /> : <Eye size={13} />}
                     </button>
                     <button onClick={() => openEdit(listing)} title="Edit" className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all">
@@ -1287,46 +1367,66 @@ function VerifyTab() {
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
-        <h2 className="font-black text-gray-900 dark:text-gray-100 text-base mb-1">Verify a Credential</h2>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Paste a blockchain hash or verification URL to check authenticity.</p>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <Shield size={18} className="text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Verify a Credential</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Paste a blockchain hash or verification URL</p>
+          </div>
+        </div>
         <form onSubmit={handleVerify} className="flex gap-2">
-          <input value={input} onChange={e => { setInput(e.target.value); setNotFound(false); setResult(null); }} placeholder="e.g. a3f8b2c1... or /verify/..." className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
+          <input
+            value={input}
+            onChange={e => { setInput(e.target.value); setNotFound(false); setResult(null); }}
+            placeholder="e.g. a3f8b2c1… or /verify/…"
+            className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+          />
           <button type="submit" disabled={!input || loading} className="flex items-center gap-1.5 text-sm font-black uppercase tracking-widest px-4 py-2.5 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 transition-all disabled:opacity-60 active:scale-95">
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />} Verify
           </button>
         </form>
       </div>
+
       {notFound && (
-        <div className="flex flex-col items-center justify-center py-10 text-center bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-2xl">
-          <AlertTriangle size={32} className="text-red-400 mb-3" />
-          <h3 className="font-bold text-red-700 dark:text-red-400 mb-1">Not found or revoked</h3>
+        <div className="flex flex-col items-center justify-center py-12 text-center bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-2xl">
+          <div className="text-4xl mb-3">❌</div>
+          <h3 className="font-black text-red-700 dark:text-red-400 text-lg mb-1">Not Found or Revoked</h3>
+          <p className="text-sm text-red-500 dark:text-red-400/70">This credential hash does not exist or has been revoked.</p>
         </div>
       )}
+
       {result && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl px-3 py-2">
+          <div className="flex items-center gap-2 text-sm font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl px-4 py-3">
             <CheckCircle2 size={16} /> Credential verified successfully
           </div>
           <CredentialCard cred={result} showActions={false} />
-          {result.profiles && <p className="text-xs text-center text-gray-500 dark:text-gray-400">Held by <strong>@{result.profiles.username}</strong></p>}
+          {result.profiles && (
+            <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+              Held by <strong className="text-gray-700 dark:text-gray-300">@{result.profiles.username}</strong>
+            </p>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-/* ── Root Component ───────────────────────────────── */
+/* ── Tab definitions ──────────────────────────────── */
 const TABS = [
-  { key: 'browse',      label: 'Browse',          icon: ShoppingBag },
-  { key: 'library',     label: 'My Library',       icon: Library },
-  { key: 'credentials', label: 'My Credentials',   icon: Award },
-  { key: 'sell',        label: 'Sell',             icon: Store },
-  { key: 'issue',       label: 'Issue Credential', icon: Plus },
-  { key: 'verify',      label: 'Verify',           icon: Shield },
-  { key: 'partnerships', label: 'Partnerships',    icon: Handshake },
+  { key: 'browse',       label: 'Browse',          icon: ShoppingBag },
+  { key: 'library',      label: 'My Library',       icon: Library },
+  { key: 'credentials',  label: 'Credentials',      icon: Award },
+  { key: 'sell',         label: 'Sell',             icon: Store },
+  { key: 'issue',        label: 'Issue',            icon: Plus },
+  { key: 'verify',       label: 'Verify',           icon: Shield },
+  { key: 'partnerships', label: 'Partnerships',     icon: Handshake },
 ];
 
+/* ── Root Component ───────────────────────────────── */
 export default function MarketplaceContent() {
   const [activeTab, setActiveTab] = useState('browse');
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -1336,12 +1436,10 @@ export default function MarketplaceContent() {
   const [toast, setToast] = useState(null);
   const [paystackReady, setPaystackReady] = useState(false);
 
-  /* Modal state */
   const [selectedListing, setSelectedListing] = useState(null);
   const [selectedLibItem, setSelectedLibItem] = useState(null);
   const [selectedCred, setSelectedCred] = useState(null);
 
-  /* Load Paystack script once */
   useEffect(() => {
     if (window.PaystackPop) { setPaystackReady(true); return; }
     const existing = document.getElementById('paystack-mkt-script');
@@ -1382,41 +1480,101 @@ export default function MarketplaceContent() {
   const isPremium = currentProfile?.is_premium === true;
 
   return (
-    <div className="w-full space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Marketplace</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5 font-medium">Courses, credentials, templates, and more from the beoneofus community.</p>
+    <div className="w-full space-y-0">
+
+      {/* ── Hero Header ── */}
+      <div className="relative rounded-2xl overflow-hidden mb-5 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-6 sm:p-8">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-600/20 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent pointer-events-none" />
+
+        <div className="relative">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                  <ShoppingBag size={18} className="text-white" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Community Marketplace</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+                Discover & Share
+              </h1>
+              <p className="text-gray-400 text-sm mt-1 max-w-md">
+                Courses, credentials, templates, and more from the beoneofus community.
+              </p>
+            </div>
+          </div>
+
+          {/* Stats strip */}
+          <div className="flex items-center gap-4 sm:gap-6 mt-5 pt-5 border-t border-white/10">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <Package size={13} className="text-blue-400" />
+              </div>
+              <div>
+                <p className="text-white font-black text-sm leading-none">Items</p>
+                <p className="text-gray-500 text-[10px]">across 5 types</p>
+              </div>
+            </div>
+            <div className="w-px h-8 bg-white/10" />
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <Award size={13} className="text-green-400" />
+              </div>
+              <div>
+                <p className="text-white font-black text-sm leading-none">Credentials</p>
+                <p className="text-gray-500 text-[10px]">blockchain verified</p>
+              </div>
+            </div>
+            <div className="w-px h-8 bg-white/10" />
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <Users size={13} className="text-purple-400" />
+              </div>
+              <div>
+                <p className="text-white font-black text-sm leading-none">Community</p>
+                <p className="text-gray-500 text-[10px]">creators & learners</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto custom-scrollbar border-b border-gray-200 dark:border-gray-800 flex-nowrap pb-1">
+      {/* ── Tab Navigation (pill style) ── */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 flex-nowrap custom-scrollbar mb-5">
         {TABS.map(tab => {
           const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
           return (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center shrink-0 gap-1.5 px-4 py-2.5 text-xs font-black uppercase tracking-widest whitespace-nowrap border-b-2 transition-all -mb-px ${
-                activeTab === tab.key
-                  ? 'border-gray-900 dark:border-gray-100 text-gray-900 dark:text-gray-100'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              className={`flex items-center shrink-0 gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+                isActive
+                  ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-md shadow-black/10"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
-              <Icon size={13} /> {tab.label}
+              <Icon size={13} />
+              {tab.label}
               {tab.key === 'library' && libraryIds.size > 0 && (
-                <span className="ml-1 text-[9px] font-black bg-blue-600 text-white rounded-full px-1.5 py-0.5 leading-none">{libraryIds.size}</span>
+                <span className={`text-[9px] font-black rounded-full px-1.5 py-0.5 leading-none ${isActive ? 'bg-white/20 text-white' : 'bg-blue-600 text-white'}`}>
+                  {libraryIds.size}
+                </span>
               )}
             </button>
           );
         })}
       </div>
 
-      <div className="max-h-[calc(100vh-220px)] sm:max-h-[calc(100vh-280px)] lg:max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar transition-all duration-300 border-t border-gray-100 dark:border-gray-800/50 pt-4 sticky top-0 z-10 bg-white dark:bg-gray-900">
-        {activeTab === 'browse'      && <BrowseTab currentUserId={currentUserId} libraryIds={libraryIds} isPremium={isPremium} onAddToLibrary={handleAddToLibrary} onSelectListing={setSelectedListing} />}
-        {activeTab === 'library'     && <MyLibraryTab currentUserId={currentUserId} onSelectItem={setSelectedLibItem} />}
-        {activeTab === 'credentials' && <MyCredentialsTab currentUserId={currentUserId} onSelectCred={setSelectedCred} />}
-        {activeTab === 'sell'        && <SellTab currentUserId={currentUserId} isPremium={isPremium} isAdmin={currentProfile?.is_admin === true || currentProfile?.role === 'founder'} />}
-        {activeTab === 'issue'       && <IssueCredentialTab currentUserId={currentUserId} currentProfile={currentProfile} />}
-        {activeTab === 'verify'      && <VerifyTab />}
+      {/* ── Tab Content ── */}
+      <div className="max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden custom-scrollbar pr-1">
+        {activeTab === 'browse'       && <BrowseTab currentUserId={currentUserId} libraryIds={libraryIds} isPremium={isPremium} onAddToLibrary={handleAddToLibrary} onSelectListing={setSelectedListing} />}
+        {activeTab === 'library'      && <MyLibraryTab currentUserId={currentUserId} onSelectItem={setSelectedLibItem} />}
+        {activeTab === 'credentials'  && <MyCredentialsTab currentUserId={currentUserId} onSelectCred={setSelectedCred} />}
+        {activeTab === 'sell'         && <SellTab currentUserId={currentUserId} isPremium={isPremium} isAdmin={currentProfile?.is_admin === true || currentProfile?.role === 'founder'} />}
+        {activeTab === 'issue'        && <IssueCredentialTab currentUserId={currentUserId} currentProfile={currentProfile} />}
+        {activeTab === 'verify'       && <VerifyTab />}
         {activeTab === 'partnerships' && <PartnershipsContent />}
       </div>
 

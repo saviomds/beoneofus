@@ -137,7 +137,7 @@ export default function AuthForm() {
         // Handle password-recovery — check hash (implicit flow) and ?recovery=1 query param (PKCE flow)
         if (typeof window !== 'undefined') {
           const sp = new URLSearchParams(window.location.search);
-          if (window.location.hash.includes('type=recovery') || sp.get('recovery') === '1') {
+          if (window.location.hash.includes('type=recovery') || window.location.search.includes('recovery=1')) {
             isRecoveryFlow.current = true;
             if (isMounted) {
               setView('update-password');
@@ -213,7 +213,7 @@ export default function AuthForm() {
             if (
               isRecoveryFlow.current ||
               window.location.hash.includes('type=recovery') ||
-              sp.get('recovery') === '1'
+              window.location.search.includes('recovery=1')
             ) {
               isRecoveryFlow.current = true;
               setView('update-password');

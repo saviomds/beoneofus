@@ -21,6 +21,12 @@ export const metadata = {
   },
 
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: 'beoneofus',
+    statusBarStyle: 'default',
+    startupImage: '/appIcon.png',
+  },
   openGraph: {
     title: 'beoneofus',
     description: 'The network for developers. Connect, broadcast code, and join secure workspaces.',

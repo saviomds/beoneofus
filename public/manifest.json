@@ -40,22 +40,6 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshots/desktop.png",
-      "type": "image/png",
-      "sizes": "1280x800",
-      "form_factor": "wide",
-      "label": "beoneofus Dashboard"
-    },
-    {
-      "src": "/screenshots/mobile.png",
-      "type": "image/png",
-      "sizes": "390x844",
-      "form_factor": "narrow",
-      "label": "beoneofus on mobile"
-    }
-  ],
   "shortcuts": [
     {
       "name": "Network Feed",

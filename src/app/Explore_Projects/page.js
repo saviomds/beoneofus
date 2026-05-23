@@ -64,6 +64,33 @@ function timeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+// ── shared avatar ─────────────────────────────────────────────────────────
+
+function Avatar({ profile, size = 28, className = "" }) {
+  const [imgErr, setImgErr] = useState(false);
+  const src     = profile?.avatar_url;
+  const name    = profile?.full_name || profile?.username || "?";
+  const initial = name[0]?.toUpperCase() ?? "?";
+  if (src && !imgErr) {
+    return (
+      <img
+        src={src} alt={name}
+        style={{ width: size, height: size, minWidth: size, minHeight: size }}
+        className={`rounded-full object-cover shrink-0 ${className}`}
+        onError={() => setImgErr(true)}
+      />
+    );
+  }
+  return (
+    <div
+      className={`rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shrink-0 ${className}`}
+      style={{ width: size, height: size, minWidth: size, minHeight: size, fontSize: Math.floor(size * 0.42) }}
+    >
+      {initial}
+    </div>
+  );
+}
+
 // ── skeleton card ─────────────────────────────────────────────────────────
 
 function SkeletonCard() {
@@ -86,11 +113,13 @@ function SkeletonCard() {
 
 // ── project card ───────────────────────────────────────────────────────────
 
-function ProjectCard({ project, memberCount, onClick }) {
+function ProjectCard({ project, memberCount, memberAvatars = [], onClick }) {
   const lang    = project.language || project.tags?.[0] || null;
   const meta    = lang ? (LANG_META[lang] ?? null) : null;
   const author  = project.profiles?.username || "community";
   const isNew   = Date.now() - new Date(project.created_at).getTime() < 86_400_000;
+  const shown   = memberAvatars.slice(0, 3);
+  const extra   = Math.max(0, memberCount - shown.length);
 
   return (
     <div
@@ -133,20 +162,31 @@ function ProjectCard({ project, memberCount, onClick }) {
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
-          {memberCount > 0 && (
-            <span className="flex items-center gap-1 font-medium text-blue-500 dark:text-blue-400">
-              <Users size={11} /> {memberCount}
+        {/* Member avatar stack */}
+        {memberCount > 0 ? (
+          <div className="flex items-center gap-1.5">
+            <div className="flex -space-x-1.5">
+              {shown.map((p) => (
+                <Avatar key={p.id} profile={p} size={20} className="ring-2 ring-white dark:ring-gray-900" />
+              ))}
+            </div>
+            {extra > 0 && (
+              <span className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-gray-900 flex items-center justify-center text-[9px] font-black text-gray-500 dark:text-gray-400 -ml-1.5">
+                +{extra}
+              </span>
+            )}
+            <span className="text-[10px] text-gray-400 font-medium ml-0.5">
+              {memberCount === 1 ? "1 member" : `${memberCount} here`}
             </span>
-          )}
-          <span className="flex items-center gap-1">
-            <Clock size={11} /> {timeAgo(project.created_at)}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-6 h-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 text-[10px] font-black">
-            {author[0].toUpperCase()}
           </div>
+        ) : (
+          <span className="flex items-center gap-1 text-[10px] text-gray-400">
+            <Clock size={10} /> {timeAgo(project.created_at)}
+          </span>
+        )}
+        {/* Creator */}
+        <div className="flex items-center gap-1.5">
+          <Avatar profile={project.profiles} size={22} />
           <span className="text-[11px] text-gray-400 font-mono truncate max-w-[80px]">@{author}</span>
         </div>
       </div>
@@ -286,6 +326,7 @@ function CreateProjectForm({ currentUser, onCreated, onCancel }) {
 export default function ExploreProjects() {
   const [projects, setProjects]               = useState([]);
   const [memberCounts, setMemberCounts]       = useState({});
+  const [memberAvatarMap, setMemberAvatarMap] = useState({});
   const [stats, setStats]                     = useState({ projects: 0, members: 0 });
   const [onlineCount, setOnlineCount]         = useState(1);
   const [loading, setLoading]                 = useState(true);
@@ -327,7 +368,7 @@ export default function ExploreProjects() {
         .order("created_at", { ascending: false }),
       supabase
         .from("project_members")
-        .select("project_id, status")
+        .select("project_id, user_id, status")
         .eq("status", "approved"),
     ]);
 
@@ -354,6 +395,25 @@ export default function ExploreProjects() {
       });
       setMemberCounts(counts);
       setStats((s) => ({ ...s, members: membersRes.data.length }));
+
+      // Batch-fetch member profiles for avatar stacks on cards
+      const allIds = [...new Set(membersRes.data.map((r) => r.user_id).filter(Boolean))];
+      if (allIds.length > 0) {
+        const { data: memberProfs } = await supabase
+          .from("profiles")
+          .select("id, username, full_name, avatar_url")
+          .in("id", allIds);
+        const profMap = {};
+        if (memberProfs) memberProfs.forEach((p) => { profMap[p.id] = p; });
+        const avatarMap = {};
+        membersRes.data.forEach((row) => {
+          if (!avatarMap[row.project_id]) avatarMap[row.project_id] = [];
+          if (avatarMap[row.project_id].length < 4 && profMap[row.user_id]) {
+            avatarMap[row.project_id].push(profMap[row.user_id]);
+          }
+        });
+        setMemberAvatarMap(avatarMap);
+      }
     }
 
     setLoading(false);
@@ -669,6 +729,7 @@ export default function ExploreProjects() {
                     key={project.id}
                     project={project}
                     memberCount={memberCounts[project.id] || 0}
+                    memberAvatars={memberAvatarMap[project.id] || []}
                     onClick={setSelectedProject}
                   />
                 ))}

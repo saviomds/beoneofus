@@ -13,6 +13,7 @@ const ALLOWED_TYPES = new Set([
   'profile_updated', 'login',
   'project_created', 'project_joined',
   'project_task_created', 'project_task_completed', 'project_task_updated',
+  'chat_message_sent',
 ]);
 
 export async function POST(req) {

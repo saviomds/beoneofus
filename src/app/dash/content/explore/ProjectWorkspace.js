@@ -211,17 +211,28 @@ function OverviewTab({ project, currentUser, onUpdate, onDelete }) {
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4">Creator</h3>
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md shadow-blue-500/20">
-            {authorName[0].toUpperCase()}
-          </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{authorName}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              @{username} · {project.created_at
+          <Avatar profile={project.profiles} size={44} />
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{authorName}</p>
+            <p className="text-xs text-gray-400 mt-0.5 font-mono">
+              @{username}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              {project.created_at
                 ? new Date(project.created_at).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })
                 : "recently"}
             </p>
           </div>
+          {username !== "community" && (
+            <a href={`/u/${username}`} target="_blank" rel="noopener noreferrer"
+              className="ml-auto p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded-xl transition-colors shrink-0"
+              title="View profile"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+            </a>
+          )}
         </div>
       </div>
 
@@ -282,49 +293,93 @@ function OverviewTab({ project, currentUser, onUpdate, onDelete }) {
 
 // ── Main workspace ────────────────────────────────────────────────────────
 
+function Avatar({ profile, size = 28, className = "" }) {
+  const [imgErr, setImgErr] = useState(false);
+  const src     = profile?.avatar_url;
+  const name    = profile?.full_name || profile?.username || "?";
+  const initial = name[0]?.toUpperCase() ?? "?";
+  if (src && !imgErr) {
+    return (
+      <img src={src} alt={name}
+        style={{ width: size, height: size, minWidth: size, minHeight: size }}
+        className={`rounded-full object-cover shrink-0 ${className}`}
+        onError={() => setImgErr(true)}
+      />
+    );
+  }
+  return (
+    <div className={`rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shrink-0 ${className}`}
+      style={{ width: size, height: size, minWidth: size, minHeight: size, fontSize: Math.floor(size * 0.42) }}
+    >
+      {initial}
+    </div>
+  );
+}
+
 export default function ProjectWorkspace({ project, currentUser, onBack }) {
   const [projectState, setProjectState] = useState(project);
   const [activeTab, setActiveTab]       = useState("overview");
-  const [onlineUsers, setOnlineUsers]   = useState([]);
+  const [teamMembers, setTeamMembers]   = useState([]);  // approved members with profiles
+  const [onlineUserIds, setOnlineUserIds] = useState(new Set());
   const [connected, setConnected]       = useState(false);
   const channelRef                      = useRef(null);
   const myUsername = currentUser?.user_metadata?.username
     ?? currentUser?.email?.split("@")[0]
     ?? "Guest";
 
-  // Workspace-level presence
+  // Fetch approved team members with profiles (real data, not presence)
   useEffect(() => {
-    const key = currentUser?.id ?? `anon-${Math.random().toString(36).slice(2, 10)}`;
+    const load = async () => {
+      const { data: rows } = await supabase
+        .from("project_members")
+        .select("user_id, role")
+        .eq("project_id", projectState.id)
+        .eq("status", "approved");
+      if (!rows?.length) { setTeamMembers([]); return; }
+      const ids = [...new Set(rows.map((r) => r.user_id).filter(Boolean))];
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, username, full_name, avatar_url")
+        .in("id", ids);
+      const profMap = {};
+      if (profs) profs.forEach((p) => { profMap[p.id] = p; });
+      setTeamMembers(rows.map((r) => ({ ...r, profile: profMap[r.user_id] ?? null })));
+    };
+    load();
+  }, [projectState.id]);
+
+  // Workspace-level presence — only tracks authenticated users, deduplicates per key
+  useEffect(() => {
+    if (!currentUser?.id) { setConnected(false); return; }
     const channel = supabase.channel(`workspace:presence:${projectState.id}`, {
-      config: { presence: { key } },
+      config: { presence: { key: currentUser.id } },
     });
 
     channel
       .on("presence", { event: "sync" }, () => {
-        const users = Object.values(channel.presenceState()).flat();
-        setOnlineUsers(users);
+        // Take only the latest payload per key to avoid duplicate entries from repeated track() calls
+        const latest = Object.values(channel.presenceState())
+          .map((arr) => arr[arr.length - 1])
+          .filter(Boolean);
+        setOnlineUserIds(new Set(latest.map((u) => u.user_id).filter(Boolean)));
       })
       .subscribe((status) => {
         setConnected(status === "SUBSCRIBED");
         if (status === "SUBSCRIBED") {
-          channel.track({ user_id: currentUser?.id ?? null, username: myUsername, tab: activeTab });
+          channel.track({ user_id: currentUser.id, username: myUsername, tab: activeTab });
         }
       });
 
     channelRef.current = channel;
-    return () => supabase.removeChannel(channel);
-  }, [projectState.id, currentUser, myUsername]);
+    return () => { supabase.removeChannel(channel); channelRef.current = null; };
+  }, [projectState.id, currentUser?.id, myUsername]);
 
-  // Update tracked tab when switching
+  // Update only the tab field when switching — same connection, same key, no new presence entry
   useEffect(() => {
-    if (channelRef.current && connected) {
-      channelRef.current.track({
-        user_id:  currentUser?.id ?? null,
-        username: myUsername,
-        tab:      activeTab,
-      });
+    if (channelRef.current && connected && currentUser?.id) {
+      channelRef.current.track({ user_id: currentUser.id, username: myUsername, tab: activeTab });
     }
-  }, [activeTab, connected, currentUser, myUsername]);
+  }, [activeTab, connected, currentUser?.id, myUsername]);
 
   const renderTab = () => {
     switch (activeTab) {
@@ -336,9 +391,9 @@ export default function ProjectWorkspace({ project, currentUser, onBack }) {
           onDelete={onBack}
         />
       );
-      case "team":  return <TeamManager project={projectState} currentUser={currentUser} />;
+      case "team":  return <TeamManager project={projectState} currentUser={currentUser} onlineUserIds={onlineUserIds} />;
       case "code":  return <LiveCode    project={projectState} currentUser={currentUser} />;
-      case "chat":  return <LiveChat    project={projectState} currentUser={currentUser} />;
+      case "chat":  return <LiveChat    project={projectState} currentUser={currentUser} teamMemberIds={new Set([...teamMembers.map((m) => m.user_id), projectState.created_by].filter(Boolean))} />;
       case "calls": return <VideoCall   project={projectState} currentUser={currentUser} />;
       case "merge": return <CodeMerge   project={projectState} currentUser={currentUser} />;
       default:      return null;
@@ -374,29 +429,35 @@ export default function ProjectWorkspace({ project, currentUser, onBack }) {
           )}
         </div>
 
-        {/* Online users row */}
+        {/* Team members with live online indicators */}
         <div className="flex items-center gap-2 shrink-0">
-          {onlineUsers.length > 0 && (
-            <div className="flex items-center gap-2">
+          {teamMembers.length > 0 && (
+            <div className="flex items-center gap-1.5">
               <div className="flex -space-x-1.5">
-                {onlineUsers.slice(0, 5).map((u, i) => (
-                  <div
-                    key={i}
-                    title={u.username ?? "Guest"}
-                    className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 border-2 border-white dark:border-gray-900 flex items-center justify-center text-white text-[9px] font-black shadow-sm"
-                  >
-                    {(u.username ?? "G")[0].toUpperCase()}
-                  </div>
-                ))}
-                {onlineUsers.length > 5 && (
-                  <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-gray-900 flex items-center justify-center text-gray-600 dark:text-gray-400 text-[9px] font-black">
-                    +{onlineUsers.length - 5}
+                {teamMembers.slice(0, 5).map((m) => {
+                  const isOnline = onlineUserIds.has(m.user_id);
+                  return (
+                    <div key={m.user_id} className="relative"
+                      title={`${m.profile?.username ?? "member"}${isOnline ? " · online" : ""}`}
+                    >
+                      <Avatar profile={m.profile} size={26} className="ring-2 ring-white dark:ring-gray-900" />
+                      {isOnline && (
+                        <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-full border border-white dark:border-gray-900" />
+                      )}
+                    </div>
+                  );
+                })}
+                {teamMembers.length > 5 && (
+                  <div className="w-[26px] h-[26px] rounded-full bg-gray-100 dark:bg-gray-800 ring-2 ring-white dark:ring-gray-900 flex items-center justify-center text-gray-500 dark:text-gray-400 text-[9px] font-black">
+                    +{teamMembers.length - 5}
                   </div>
                 )}
               </div>
-              <span className="text-[11px] text-gray-400 font-medium hidden sm:block">
-                {onlineUsers.length} here
-              </span>
+              {onlineUserIds.size > 0 && (
+                <span className="text-[11px] text-emerald-500 font-semibold hidden sm:block">
+                  {[...onlineUserIds].filter(id => teamMembers.some(m => m.user_id === id)).length} online
+                </span>
+              )}
             </div>
           )}
           <div className={`flex items-center gap-1 text-[11px] font-medium ${connected ? "text-emerald-500" : "text-gray-400"}`}>
@@ -408,8 +469,9 @@ export default function ProjectWorkspace({ project, currentUser, onBack }) {
       {/* Tab bar */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1 mb-5 scrollbar-none">
         {TABS.map((tab) => {
-          const othersHere = onlineUsers.filter(
-            (u) => u.tab === tab.id && u.user_id !== (currentUser?.id ?? null)
+          // Show green dot on tab only if a different team member is viewing it
+          const othersOnTab = teamMembers.some(
+            (m) => m.user_id !== currentUser?.id && onlineUserIds.has(m.user_id)
           );
           return (
             <button
@@ -423,7 +485,7 @@ export default function ProjectWorkspace({ project, currentUser, onBack }) {
             >
               <tab.icon size={13} />
               {tab.label}
-              {othersHere.length > 0 && (
+              {othersOnTab && (
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-950 animate-pulse" />
               )}
             </button>

@@ -22,7 +22,18 @@ const SETUP_SQL = `create table if not exists project_merge_requests (
                  check (status in ('open','merged','rejected')),
   created_at   timestamptz default now()
 );
-alter table project_merge_requests enable row level security;`;
+alter table project_merge_requests enable row level security;
+drop policy if exists "Anyone can view MRs" on project_merge_requests;
+create policy "Anyone can view MRs" on project_merge_requests
+  for select using (auth.uid() is not null);
+drop policy if exists "Members can submit MRs" on project_merge_requests;
+create policy "Members can submit MRs" on project_merge_requests
+  for insert with check (auth.uid() = submitted_by);
+drop policy if exists "Owners can update MRs" on project_merge_requests;
+create policy "Owners can update MRs" on project_merge_requests
+  for update using (
+    project_id in (select id from projects where created_by = auth.uid())
+  );`;
 
 function Toast({ toast }) {
   if (!toast) return null;
@@ -120,39 +131,50 @@ export default function CodeMerge({ project, currentUser }) {
       .eq("project_id", project.id)
       .order("created_at", { ascending: false });
 
-    if (err?.code === "42P01") { setError("setup"); setLoading(false); return; }
-    if (err)                    { setError("fetch"); setLoading(false); return; }
+    if (err?.code === "42P01" || err?.code === "42501" || err?.message?.includes("row-level security")) {
+      setError("setup"); setLoading(false); return;
+    }
+    if (err) { setError("fetch"); setLoading(false); return; }
 
     setMrs(data || []);
 
     if (currentUser) {
-      const { data: m } = await supabase
-        .from("project_members")
-        .select("role")
-        .eq("project_id", project.id)
-        .eq("user_id", currentUser.id)
-        .maybeSingle();
-      setIsOwner(m?.role === "owner");
+      const isCreator = project.created_by === currentUser.id;
+      if (isCreator) {
+        setIsOwner(true);
+      } else {
+        const { data: m } = await supabase
+          .from("project_members")
+          .select("role")
+          .eq("project_id", project.id)
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+        setIsOwner(m?.role === "owner");
+      }
     }
     setLoading(false);
-  }, [project.id, currentUser]);
+  }, [project.id, project.created_by, currentUser]);
 
   useEffect(() => { fetchMRs(); }, [fetchMRs]);
+
+  const getToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  };
 
   const handleSubmit = async () => {
     if (!form.title.trim()) return;
     if (!currentUser) { showToast("Sign in to submit a merge request.", "error"); return; }
     setSubmitting(true);
-    const { error: err } = await supabase.from("project_merge_requests").insert({
-      project_id:   project.id,
-      submitted_by: currentUser.id,
-      title:        form.title.trim(),
-      description:  form.description.trim() || null,
-      code_content: form.code.trim() || null,
-      status:       "open",
+    const token = await getToken();
+    if (!token) { showToast("Session expired — please refresh.", "error"); setSubmitting(false); return; }
+    const res = await fetch("/api/merge-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ project_id: project.id, title: form.title.trim(), description: form.description.trim() || null, code_content: form.code.trim() || null }),
     });
     setSubmitting(false);
-    if (err) { showToast("Failed: " + err.message, "error"); return; }
+    if (!res.ok) { const b = await res.json().catch(() => ({})); showToast("Failed: " + (b.error || "Unknown error"), "error"); return; }
     showToast("Merge request submitted!", "success");
     setForm(EMPTY_FORM);
     setShowForm(false);
@@ -160,14 +182,26 @@ export default function CodeMerge({ project, currentUser }) {
   };
 
   const handleMerge = async (id) => {
-    const { error: err } = await supabase.from("project_merge_requests").update({ status: "merged" }).eq("id", id);
-    if (err) showToast("Failed: " + err.message, "error");
+    const token = await getToken();
+    if (!token) { showToast("Session expired — please refresh.", "error"); return; }
+    const res = await fetch(`/api/merge-requests/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: "merged" }),
+    });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); showToast("Failed: " + (b.error || "Unknown error"), "error"); }
     else { showToast("Merged!", "success"); fetchMRs(); }
   };
 
   const handleReject = async (id) => {
-    const { error: err } = await supabase.from("project_merge_requests").update({ status: "rejected" }).eq("id", id);
-    if (err) showToast("Failed: " + err.message, "error");
+    const token = await getToken();
+    if (!token) { showToast("Session expired — please refresh.", "error"); return; }
+    const res = await fetch(`/api/merge-requests/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: "rejected" }),
+    });
+    if (!res.ok) { const b = await res.json().catch(() => ({})); showToast("Failed: " + (b.error || "Unknown error"), "error"); }
     else { showToast("Rejected.", "success"); fetchMRs(); }
   };
 

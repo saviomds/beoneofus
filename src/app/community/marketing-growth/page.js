@@ -1,40 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
 import {
   Terminal, ArrowLeft, Users, TrendingUp, MessageSquare, Hash,
   BarChart3, Target, Globe, Megaphone, Mail, Star, ChevronRight,
   BookOpen, Briefcase, Award, Zap, DollarSign, Search, Share2,
-  Layers, Compass, Bell, ShoppingBag, Trophy,
+  Layers, Compass, Bell, ShoppingBag, Trophy, GitBranch,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 const FloatingAiAssistant = dynamic(() => import("../../components/FloatingAiAssistant"), { ssr: false });
 
-const STATS = [
-  { label: "Active Members", value: "11.3k", icon: Users },
-  { label: "Weekly Posts", value: "1.6k", icon: MessageSquare },
-  { label: "Campaigns Shared", value: "2.3k", icon: Share2 },
-  { label: "Jobs Posted", value: "97", icon: Briefcase },
-];
+function fmtCount(n) {
+  if (n == null) return "—";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return String(n);
+}
 
 const TOPICS = [
-  { icon: <Search size={18} />, label: "SEO & Content", posts: "4.2k", color: "amber", desc: "Organic growth, technical SEO, content strategy, link building", href: "/dash/groups" },
-  { icon: <BarChart3 size={18} />, label: "Growth Hacking", posts: "3.8k", color: "blue", desc: "Viral loops, product-led growth, A/B testing, conversion", href: "/dash/groups" },
-  { icon: <Mail size={18} />, label: "Email Marketing", posts: "2.9k", color: "emerald", desc: "Newsletters, automation, deliverability, list building", href: "/dash/groups" },
-  { icon: <Share2 size={18} />, label: "Social Media", posts: "3.4k", color: "rose", desc: "LinkedIn, Twitter/X, Instagram, TikTok, platform strategies", href: "/dash/groups" },
-  { icon: <Megaphone size={18} />, label: "Paid Advertising", posts: "2.1k", color: "orange", desc: "Google Ads, Meta Ads, attribution, ROAS optimization", href: "/dash/groups" },
-  { icon: <Globe size={18} />, label: "Community-Led Growth", posts: "1.7k", color: "violet", desc: "Building communities, ambassador programs, word-of-mouth", href: "/dash/groups" },
-  { icon: <Target size={18} />, label: "Brand Building", posts: "2.6k", color: "indigo", desc: "Positioning, messaging, storytelling, thought leadership", href: "/dash/groups" },
-  { icon: <Zap size={18} />, label: "Product Marketing", posts: "1.9k", color: "teal", desc: "GTM strategy, ICP, competitive intel, launch campaigns", href: "/dash/groups" },
-];
-
-const TRENDING = [
-  { title: "How we grew from 0 to 50k email subscribers in 6 months — full breakdown", author: "@emailgrowth", replies: 88, upvotes: 421, time: "3h ago", tag: "Email" },
-  { title: "SEO is not dead: this $0 content strategy tripled our organic traffic", author: "@seo_nerd", replies: 67, upvotes: 374, time: "6h ago", tag: "SEO" },
-  { title: "The exact LinkedIn strategy behind 10M impressions / month", author: "@linkedin_guru", replies: 112, upvotes: 538, time: "1d ago", tag: "LinkedIn" },
-  { title: "Why we killed our $30k/mo paid ads budget — and didn't lose revenue", author: "@ads_honesty", replies: 94, upvotes: 462, time: "1d ago", tag: "Paid Ads" },
-  { title: "Community-led growth outperformed every other channel for us — here's how", author: "@clg_founder", replies: 76, upvotes: 329, time: "2d ago", tag: "Community" },
+  { icon: <Search size={18} />, label: "SEO & Content", color: "amber", desc: "Organic growth, technical SEO, content strategy, link building", href: "/dash/groups" },
+  { icon: <BarChart3 size={18} />, label: "Growth Hacking", color: "blue", desc: "Viral loops, product-led growth, A/B testing, conversion", href: "/dash/groups" },
+  { icon: <Mail size={18} />, label: "Email Marketing", color: "emerald", desc: "Newsletters, automation, deliverability, list building", href: "/dash/groups" },
+  { icon: <Share2 size={18} />, label: "Social Media", color: "rose", desc: "LinkedIn, Twitter/X, Instagram, TikTok, platform strategies", href: "/dash/groups" },
+  { icon: <Megaphone size={18} />, label: "Paid Advertising", color: "orange", desc: "Google Ads, Meta Ads, attribution, ROAS optimization", href: "/dash/groups" },
+  { icon: <Globe size={18} />, label: "Community-Led Growth", color: "violet", desc: "Building communities, ambassador programs, word-of-mouth", href: "/dash/groups" },
+  { icon: <Target size={18} />, label: "Brand Building", color: "indigo", desc: "Positioning, messaging, storytelling, thought leadership", href: "/dash/groups" },
+  { icon: <Zap size={18} />, label: "Product Marketing", color: "teal", desc: "GTM strategy, ICP, competitive intel, launch campaigns", href: "/dash/groups" },
 ];
 
 const PLATFORM_FEATURES = [
@@ -77,11 +69,11 @@ const QUICK_ACTIONS = [
 ];
 
 const OTHER_HUBS = [
-  { label: "Tech & Engineering", href: "/community/tech-engineering", members: "31.5k", color: "blue" },
-  { label: "Design & Creativity", href: "/community/design-creativity", members: "19.7k", color: "violet" },
-  { label: "Founders & Startups", href: "/community/founders-startups", members: "14.2k", color: "emerald" },
-  { label: "Finance & Business", href: "/community/finance-business", members: "8.6k", color: "indigo" },
-  { label: "Education & Research", href: "/community/education-research", members: "6.4k", color: "rose" },
+  { label: "Tech & Engineering", href: "/community/tech-engineering", color: "blue" },
+  { label: "Design & Creativity", href: "/community/design-creativity", color: "violet" },
+  { label: "Founders & Startups", href: "/community/founders-startups", color: "emerald" },
+  { label: "Finance & Business", href: "/community/finance-business", color: "indigo" },
+  { label: "Education & Research", href: "/community/education-research", color: "rose" },
 ];
 
 const colorMap = {
@@ -97,6 +89,19 @@ const colorMap = {
 
 export default function MarketingGrowthCommunity() {
   const [activeTab, setActiveTab] = useState("trending");
+
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("groups").select("id", { count: "exact", head: true }),
+      supabase.from("projects").select("id", { count: "exact", head: true }),
+    ]).then(([profiles, groups, projects]) => {
+      setStats({ members: profiles.count ?? 0, groups: groups.count ?? 0, projects: projects.count ?? 0 });
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#00000006_1px,transparent_1px),linear-gradient(to_bottom,#00000006_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none" />
@@ -125,7 +130,7 @@ export default function MarketingGrowthCommunity() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-8">
               <div className="flex-1">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold uppercase tracking-widest mb-6">
-                  <span className="w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse" /> 11.3k Marketers Active
+                  <span className="w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse" /> {stats ? `${fmtCount(stats.members)} members` : "Growing community"} · Join Free
                 </div>
                 <h1 className="text-4xl sm:text-6xl font-black tracking-tight mb-4 leading-tight">Marketing &<br />Growth</h1>
                 <p className="text-amber-100 text-lg sm:text-xl max-w-2xl leading-relaxed">
@@ -137,10 +142,15 @@ export default function MarketingGrowthCommunity() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:w-72 shrink-0">
-                {STATS.map(({ label, value, icon: Icon }) => (
+                {[
+                  { label: "Members",  key: "members",  Icon: Users },
+                  { label: "Groups",   key: "groups",   Icon: Hash },
+                  { label: "Projects", key: "projects", Icon: GitBranch },
+                  { label: "Live Hub", key: null,       Icon: MessageSquare },
+                ].map(({ label, key, Icon }) => (
                   <div key={label} className="bg-white/10 border border-white/20 rounded-2xl p-4 backdrop-blur-sm">
                     <Icon size={18} className="text-amber-200 mb-2" />
-                    <p className="text-2xl font-black">{value}</p>
+                    <p className="text-2xl font-black">{key ? (stats ? fmtCount(stats[key]) : "—") : "Open"}</p>
                     <p className="text-[11px] text-amber-200 font-medium mt-0.5">{label}</p>
                   </div>
                 ))}
@@ -158,7 +168,7 @@ export default function MarketingGrowthCommunity() {
                 <h2 className="text-xl font-black tracking-tight mb-1 flex items-center gap-2"><Hash size={18} className="text-amber-500" /> Sub-Communities</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Join a focused group and go deep on your channel.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {TOPICS.map(({ icon, label, posts, color, desc, href }) => {
+                  {TOPICS.map(({ icon, label, color, desc, href }) => {
                     const c = colorMap[color] || colorMap.amber;
                     return (
                       <Link key={label} href={href} className={`flex items-start gap-4 p-4 rounded-2xl border ${c.border} bg-white dark:bg-gray-900 hover:shadow-md transition-all group`}>
@@ -166,7 +176,6 @@ export default function MarketingGrowthCommunity() {
                         <div className="min-w-0">
                           <p className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">{label}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed truncate">{desc}</p>
-                          <span className={`inline-block mt-2 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${c.badge}`}>{posts} posts</span>
                         </div>
                       </Link>
                     );
@@ -194,38 +203,15 @@ export default function MarketingGrowthCommunity() {
                 </div>
               </section>
 
-              {/* Discussions */}
+              {/* Live Community Hub CTA */}
               <section>
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-xl font-black tracking-tight flex items-center gap-2"><TrendingUp size={18} className="text-amber-500" /> Discussions</h2>
-                  <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-                    {["trending", "latest"].map(tab => (
-                      <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400"}`}>{tab}</button>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-5 italic">Sample of what's being discussed inside. Join to see live →</p>
-                <div className="space-y-3">
-                  {TRENDING.map((post, i) => (
-                    <Link key={i} href="/dash/more?tool=community" className="flex gap-4 p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:border-amber-200 dark:hover:border-amber-800/50 hover:shadow-md transition-all group">
-                      <div className="text-center shrink-0 w-10">
-                        <p className="text-lg font-black">{post.upvotes}</p>
-                        <p className="text-[9px] text-gray-400 font-bold uppercase">votes</p>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-gray-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors text-sm leading-snug">{post.title}</p>
-                        <div className="flex flex-wrap items-center gap-3 mt-2">
-                          <span className="text-[11px] text-gray-500">{post.author}</span>
-                          <span className="text-[11px] text-gray-400">·</span>
-                          <span className="text-[11px] text-gray-400">{post.time}</span>
-                          <span className="text-[11px] text-gray-400">·</span>
-                          <span className="text-[11px] text-gray-500">{post.replies} replies</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full">{post.tag}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                  <Link href="/dash/more?tool=community" className="flex items-center justify-center gap-2 py-3 text-sm font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 transition-colors">View all discussions <ChevronRight size={14} /></Link>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-6 text-center">
+                  <MessageSquare size={28} className="text-blue-500 mx-auto mb-3" />
+                  <h2 className="text-lg font-black text-gray-900 dark:text-white mb-2">Real discussions happen inside</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">Join the live community hub to see and participate in real conversations from real members.</p>
+                  <Link href="/dash/more?tool=community" className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm transition-colors">
+                    <MessageSquare size={14} /> Open Community Hub
+                  </Link>
                 </div>
               </section>
 
@@ -257,7 +243,7 @@ export default function MarketingGrowthCommunity() {
             {/* Sidebar */}
             <div className="space-y-6">
               <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white">
-                <h3 className="font-black text-lg mb-2">Join 11.3k Marketers</h3>
+                <h3 className="font-black text-lg mb-2">Join the Community</h3>
                 <p className="text-amber-100 text-sm mb-4 leading-relaxed">Campaign breakdowns, growth playbooks, live case studies, and a network that actually shares what works.</p>
                 <Link href="/dash/more?tool=community" className="block text-center py-2.5 bg-white text-amber-700 font-bold rounded-xl text-sm hover:bg-amber-50 transition-colors mb-2">Open Live Hub</Link>
                 <Link href="/auth" className="block text-center py-2.5 bg-white/10 border border-white/30 text-white font-bold rounded-xl text-sm hover:bg-white/20 transition-colors">Create Free Account</Link>
@@ -299,13 +285,12 @@ export default function MarketingGrowthCommunity() {
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
                 <h3 className="font-black text-sm uppercase tracking-widest text-gray-400 mb-4">Other Hubs</h3>
                 <div className="space-y-1.5">
-                  {OTHER_HUBS.map(({ label, href, members }) => (
-                    <Link key={label} href={href} className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+                  {OTHER_HUBS.map(({ label, href }) => (
+                    <Link key={label} href={href} className="flex items-center px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                       <div className="flex items-center gap-2.5">
                         <span className="w-2 h-2 rounded-full bg-amber-400" />
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{label}</span>
                       </div>
-                      <span className="text-xs text-gray-400 font-bold">{members}</span>
                     </Link>
                   ))}
                 </div>

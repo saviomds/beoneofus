@@ -134,103 +134,22 @@ const STEPS = [
 ];
 
 const COMMUNITIES = [
-  { name: "Founders & Startups", members: "14.2k", icon: <Zap size={20} />, desc: "Entrepreneurs, co-founders, and bootstrappers sharing growth, funding, and lessons learned.", color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
-  { name: "Design & Creativity", members: "19.7k", icon: <Sparkles size={20} />, desc: "UI/UX designers, brand strategists, illustrators, and visual creators from every industry.", color: "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400" },
-  { name: "Marketing & Growth", members: "11.3k", icon: <TrendingUp size={20} />, desc: "Performance marketers, content creators, SEO specialists, and growth hackers.", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" },
-  { name: "Tech & Engineering", members: "31.5k", icon: <Code2 size={20} />, desc: "Software engineers, data scientists, DevOps, and all things technology.", color: "bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400" },
-  { name: "Finance & Business", members: "8.6k", icon: <Briefcase size={20} />, desc: "Finance professionals, analysts, consultants, and business strategists.", color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
-  { name: "Education & Research", members: "6.4k", icon: <GraduationCap size={20} />, desc: "Academics, educators, researchers, and lifelong learners sharing knowledge globally.", color: "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400" },
+  { name: "Founders & Startups", icon: <Zap size={20} />, desc: "Entrepreneurs, co-founders, and bootstrappers sharing growth, funding, and lessons learned.", color: "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400" },
+  { name: "Design & Creativity", icon: <Sparkles size={20} />, desc: "UI/UX designers, brand strategists, illustrators, and visual creators from every industry.", color: "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400" },
+  { name: "Marketing & Growth", icon: <TrendingUp size={20} />, desc: "Performance marketers, content creators, SEO specialists, and growth hackers.", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" },
+  { name: "Tech & Engineering", icon: <Code2 size={20} />, desc: "Software engineers, data scientists, DevOps, and all things technology.", color: "bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400" },
+  { name: "Finance & Business", icon: <Briefcase size={20} />, desc: "Finance professionals, analysts, consultants, and business strategists.", color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
+  { name: "Education & Research", icon: <GraduationCap size={20} />, desc: "Academics, educators, researchers, and lifelong learners sharing knowledge globally.", color: "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400" },
 ];
 
 const FALLBACK_STATS = [
-  { label: "Professionals", value: 48200, suffix: "+" },
-  { label: "Jobs Posted", value: 3100, suffix: "+" },
-  { label: "Mentors", value: 420, suffix: "+" },
-  { label: "Courses", value: 280, suffix: "+" },
+  { label: "Professionals", value: 0, suffix: "" },
+  { label: "Jobs Posted",   value: 0, suffix: "" },
+  { label: "Mentors",       value: 0, suffix: "" },
+  { label: "Courses",       value: 0, suffix: "" },
 ];
 
-const FALLBACK_TESTIMONIALS = [
-  {
-    id: "1",
-    name: "Sarah Chen",
-    username: "sarah_chen",
-    role: "Senior Product Designer",
-    company: "Stripe",
-    content: "As a designer, I never felt at home on LinkedIn. beoneofus actually gets it — real skill endorsements, portfolio-first profiles, and a network that respects your craft.",
-    rating: 5,
-    avatar_url: null,
-  },
-  {
-    id: "2",
-    name: "Marcus Osei",
-    username: "m_osei",
-    role: "Growth Marketer",
-    company: "Remote",
-    content: "I found my last two clients through the freelance marketplace here. The order system is clean, payments are tracked, and there's no race to the bottom on price.",
-    rating: 5,
-    avatar_url: null,
-  },
-  {
-    id: "3",
-    name: "Priya Nair",
-    username: "priya_builds",
-    role: "Finance Analyst",
-    company: "Nubank",
-    content: "The AI career coach suggested skills I hadn't considered — financial modelling with Python and data storytelling. Three months later I got a promotion.",
-    rating: 5,
-    avatar_url: null,
-  },
-  {
-    id: "4",
-    name: "James Whitfield",
-    username: "jwhitfield",
-    role: "Founder & CEO",
-    company: "BuildFast",
-    content: "Found my co-founder and first designer through beoneofus. The mutual-consent system means everyone here actually wants to connect — no spam, no cold pitch bots.",
-    rating: 5,
-    avatar_url: null,
-  },
-  {
-    id: "5",
-    name: "Aisha Mwangi",
-    username: "aisha_mwangi",
-    role: "UX Researcher",
-    company: "Google",
-    content: "The mentorship feature connected me with a senior researcher who guided me through my Google interview process. Completely changed the outcome.",
-    rating: 5,
-    avatar_url: null,
-  },
-  {
-    id: "6",
-    name: "Diego Reyes",
-    username: "dreyes",
-    role: "Content Strategist",
-    company: "Freelance",
-    content: "I was worried this platform was only for engineers. It's not — there are writers, marketers, designers, and educators here. It's genuinely global and inclusive.",
-    rating: 5,
-    avatar_url: null,
-  },
-  {
-    id: "7",
-    name: "Fatima Al-Rashid",
-    username: "fatima_ar",
-    role: "Software Engineer",
-    company: "Careem",
-    content: "The AI courses are unlike anything else — each lesson is generated for my exact level. I completed a system design course in a week and passed my next interview.",
-    rating: 5,
-    avatar_url: null,
-  },
-  {
-    id: "8",
-    name: "Luca Ferretti",
-    username: "luca_f",
-    role: "Business Development",
-    company: "Seedstars",
-    content: "Partnerships section is underrated. I found three strategic partners for our Africa expansion through beoneofus. No other platform offers this kind of curated connection.",
-    rating: 5,
-    avatar_url: null,
-  },
-];
+const FALLBACK_TESTIMONIALS = [];
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 function authLink(session, dest) {
@@ -312,10 +231,10 @@ export default function LandingPage() {
       ]);
 
       setLiveStats([
-        { label: "Professionals", value: devCount ?? 48200, suffix: "+" },
-        { label: "Jobs Posted", value: jobCount ?? 3100, suffix: "+" },
-        { label: "Mentors", value: mentorCount ?? 420, suffix: "+" },
-        { label: "Courses", value: courseCount ?? 280, suffix: "+" },
+        { label: "Professionals", value: devCount ?? 0, suffix: "+" },
+        { label: "Jobs Posted", value: jobCount ?? 0, suffix: "+" },
+        { label: "Mentors", value: mentorCount ?? 0, suffix: "+" },
+        { label: "Courses", value: courseCount ?? 0, suffix: "+" },
       ]);
       if (viewData) setPageViews(viewData);
     };
@@ -867,20 +786,17 @@ export default function LandingPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">Community Hubs</p>
                       <div className="grid grid-cols-2 gap-2">
                         {[
-                          { label: "Tech & Engineering",    members: "31.5k", color: "blue",    href: "/community/tech-engineering"    },
-                          { label: "Design & Creativity",   members: "19.7k", color: "violet",  href: "/community/design-creativity"   },
-                          { label: "Founders & Startups",   members: "14.2k", color: "emerald", href: "/community/founders-startups"   },
-                          { label: "Marketing & Growth",    members: "11.3k", color: "amber",   href: "/community/marketing-growth"    },
-                          { label: "Finance & Business",    members: "8.6k",  color: "indigo",  href: "/community/finance-business"    },
-                          { label: "Education & Research",  members: "6.4k",  color: "rose",    href: "/community/education-research"  },
-                        ].map(({ label, members, href }) => (
+                          { label: "Tech & Engineering",   href: "/community/tech-engineering"    },
+                          { label: "Design & Creativity",  href: "/community/design-creativity"   },
+                          { label: "Founders & Startups",  href: "/community/founders-startups"   },
+                          { label: "Marketing & Growth",   href: "/community/marketing-growth"    },
+                          { label: "Finance & Business",   href: "/community/finance-business"    },
+                          { label: "Education & Research", href: "/community/education-research"  },
+                        ].map(({ label, href }) => (
                           <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                            className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-blue-200 dark:hover:border-blue-500/20 hover:bg-blue-50/40 dark:hover:bg-blue-500/5 transition-all group">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-2 h-2 rounded-full bg-blue-500/60 shrink-0" />
-                              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</span>
-                            </div>
-                            <span className="text-xs font-bold text-gray-400 dark:text-gray-500">{members}</span>
+                            className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-blue-200 dark:hover:border-blue-500/20 hover:bg-blue-50/40 dark:hover:bg-blue-500/5 transition-all group">
+                            <div className="w-2 h-2 rounded-full bg-blue-500/60 shrink-0" />
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</span>
                           </Link>
                         ))}
                       </div>
@@ -1146,7 +1062,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-900 dark:text-white">New connection</p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">@sarah_dev accepted</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Your invite was accepted</p>
                 </div>
               </div>
             </div>
@@ -1185,7 +1101,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-900 dark:text-white">Session booked</p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">w/ @alex_principal</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Mentor session confirmed</p>
                 </div>
               </div>
             </div>
@@ -1471,9 +1387,6 @@ function CommunitySection({ communities, session }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <h4 className="font-black text-gray-900 dark:text-white text-base truncate">{c.name}</h4>
-                  <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 rounded-full border border-blue-100 dark:border-blue-800/40">
-                    <Users size={10} />{c.members}
-                  </span>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{c.desc}</p>
               </div>
@@ -1562,7 +1475,7 @@ function FinalCTA({ session }) {
           Ready to be<br />one of us?
         </h2>
         <p className="text-gray-600 dark:text-gray-400 text-lg font-medium mb-10 max-w-xl mx-auto">
-          Join 48,000+ professionals from every field who are already building careers, not just profiles — regardless of industry or country.
+          Join professionals from every field who are already building careers, not just profiles — regardless of industry or country.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link href={authLink(session, "/dash")}
@@ -1703,34 +1616,46 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
       </div>
 
       {/* Marquee rows — full bleed */}
-      <div className="space-y-3 mb-16">
-        {/* Row 1 — scrolls left */}
-        <div className="relative marquee-track">
-          <div className="absolute left-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-r from-[#fafafa] dark:from-[#080c12] to-transparent pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-l from-[#fafafa] dark:from-[#080c12] to-transparent pointer-events-none" />
-          <div className="flex animate-marquee-left will-change-transform">
-            {[...rowA, ...rowA].map((t, i) => <MarqueeCard key={`a-${i}`} t={t} />)}
-          </div>
-        </div>
-        {/* Row 2 — scrolls right */}
-        {rowB.length > 0 && (
+      {items.length > 0 ? (
+        <div className="space-y-3 mb-16">
+          {/* Row 1 — scrolls left */}
           <div className="relative marquee-track">
             <div className="absolute left-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-r from-[#fafafa] dark:from-[#080c12] to-transparent pointer-events-none" />
             <div className="absolute right-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-l from-[#fafafa] dark:from-[#080c12] to-transparent pointer-events-none" />
-            <div className="flex animate-marquee-right will-change-transform">
-              {[...rowB, ...rowB].map((t, i) => <MarqueeCard key={`b-${i}`} t={t} />)}
+            <div className="flex animate-marquee-left will-change-transform">
+              {[...rowA, ...rowA].map((t, i) => <MarqueeCard key={`a-${i}`} t={t} />)}
             </div>
           </div>
-        )}
-      </div>
+          {/* Row 2 — scrolls right */}
+          {rowB.length > 0 && (
+            <div className="relative marquee-track">
+              <div className="absolute left-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-r from-[#fafafa] dark:from-[#080c12] to-transparent pointer-events-none" />
+              <div className="absolute right-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-l from-[#fafafa] dark:from-[#080c12] to-transparent pointer-events-none" />
+              <div className="flex animate-marquee-right will-change-transform">
+                {[...rowB, ...rowB].map((t, i) => <MarqueeCard key={`b-${i}`} t={t} />)}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 mb-16 text-center px-4">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-5">
+            <MessageSquare size={28} className="text-gray-400 dark:text-gray-600" />
+          </div>
+          <p className="text-lg font-black text-gray-900 dark:text-white mb-2">Be the first to share your story</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">Real experiences from real members will appear here. Sign in below to share yours.</p>
+        </div>
+      )}
 
       {/* Masonry grid */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4 mb-16">
-          {items.map((t, i) => (
-            <TestimonialCard key={t.id} testimonial={t} delay={i * 0.08} parentVisible={visible} session={session} onDelete={(id) => setItems((prev) => prev.filter((x) => x.id !== id))} onUpdate={(updated) => setItems((prev) => prev.map((x) => x.id === updated.id ? updated : x))} />
-          ))}
-        </div>
+        {items.length > 0 && (
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4 mb-16">
+            {items.map((t, i) => (
+              <TestimonialCard key={t.id} testimonial={t} delay={i * 0.08} parentVisible={visible} session={session} onDelete={(id) => setItems((prev) => prev.filter((x) => x.id !== id))} onUpdate={(updated) => setItems((prev) => prev.map((x) => x.id === updated.id ? updated : x))} />
+            ))}
+          </div>
+        )}
 
         {/* Submission form */}
         <div className={`reveal ${visible ? "visible" : ""} reveal-delay-3`}>

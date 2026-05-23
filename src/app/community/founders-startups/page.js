@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
 import {
   Terminal, ArrowLeft, Users, Zap, TrendingUp, BookOpen, Briefcase,
   Star, ChevronRight, MessageSquare, Hash, Rocket, DollarSign,
@@ -11,30 +12,21 @@ import {
 import dynamic from "next/dynamic";
 const FloatingAiAssistant = dynamic(() => import("../../components/FloatingAiAssistant"), { ssr: false });
 
-const STATS = [
-  { label: "Active Members",   value: "14.2k", icon: Users       },
-  { label: "Weekly Posts",     value: "1.9k",  icon: MessageSquare},
-  { label: "Funded Startups",  value: "312",   icon: DollarSign  },
-  { label: "Partnerships",     value: "89",    icon: Handshake   },
-];
+function fmtCount(n) {
+  if (n == null) return "—";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return String(n);
+}
 
 const TOPICS = [
-  { icon: <Rocket size={18} />,    label: "Idea Validation",     posts: "3.2k", color: "emerald", desc: "Early-stage validation, customer discovery, MVP scoping",        href: "/dash/groups" },
-  { icon: <DollarSign size={18} />,label: "Fundraising & VC",    posts: "4.1k", color: "amber",   desc: "Seed rounds, pitch decks, investor relations, cap tables",       href: "/dash/groups" },
-  { icon: <BarChart3 size={18} />, label: "Startup Growth",      posts: "5.8k", color: "blue",    desc: "Product-market fit, growth metrics, scaling strategies",         href: "/dash/groups" },
-  { icon: <Target size={18} />,    label: "Product Strategy",    posts: "3.6k", color: "violet",  desc: "Roadmapping, pricing, positioning, user research",               href: "/dash/groups" },
-  { icon: <Globe size={18} />,     label: "Go-To-Market",        posts: "2.9k", color: "rose",    desc: "Launch playbooks, channels, partnerships, distribution",         href: "/dash/groups" },
-  { icon: <Shield size={18} />,    label: "Legal & Operations",  posts: "1.8k", color: "indigo",  desc: "Incorporation, contracts, IP, team equity, compliance",          href: "/dash/groups" },
-  { icon: <Handshake size={18} />, label: "Co-founder Matching", posts: "2.4k", color: "orange",  desc: "Finding co-founders, roles, vesting, early team building",       href: "/dash/groups" },
-  { icon: <Lightbulb size={18} />, label: "SaaS & Bootstrapping",posts: "4.7k", color: "teal",    desc: "Profitable products, no-VC path, MRR milestones, churn",         href: "/dash/groups" },
-];
-
-const TRENDING = [
-  { title: "How I got to $50k MRR with zero VC funding in 18 months",           author: "@bootstrapking",  replies: 142, upvotes: 673, time: "2h ago",  tag: "Revenue",     href: "/dash/more?tool=community" },
-  { title: "The pitch deck that raised our $2.5M seed — annotated",              author: "@foundersgrind",  replies: 89,  upvotes: 512, time: "5h ago",  tag: "Fundraising", href: "/dash/more?tool=community" },
-  { title: "Lessons from killing a product with 400 users — hard truths",        author: "@honest_founder", replies: 101, upvotes: 449, time: "9h ago",  tag: "Lessons",     href: "/dash/more?tool=community" },
-  { title: "We launched 3 times and failed — 4th launch hit $10k MRR in a week", author: "@comeback_ceo",  replies: 78,  upvotes: 394, time: "1d ago",  tag: "Launch",      href: "/dash/more?tool=community" },
-  { title: "How to run a $1M ARR startup with 2 people using AI tools",          author: "@leansaas",       replies: 131, upvotes: 582, time: "2d ago",  tag: "AI Tools",    href: "/dash/more?tool=community" },
+  { icon: <Rocket size={18} />,    label: "Idea Validation",     color: "emerald", desc: "Early-stage validation, customer discovery, MVP scoping",        href: "/dash/groups" },
+  { icon: <DollarSign size={18} />,label: "Fundraising & VC",    color: "amber",   desc: "Seed rounds, pitch decks, investor relations, cap tables",       href: "/dash/groups" },
+  { icon: <BarChart3 size={18} />, label: "Startup Growth",      color: "blue",    desc: "Product-market fit, growth metrics, scaling strategies",         href: "/dash/groups" },
+  { icon: <Target size={18} />,    label: "Product Strategy",    color: "violet",  desc: "Roadmapping, pricing, positioning, user research",               href: "/dash/groups" },
+  { icon: <Globe size={18} />,     label: "Go-To-Market",        color: "rose",    desc: "Launch playbooks, channels, partnerships, distribution",         href: "/dash/groups" },
+  { icon: <Shield size={18} />,    label: "Legal & Operations",  color: "indigo",  desc: "Incorporation, contracts, IP, team equity, compliance",          href: "/dash/groups" },
+  { icon: <Handshake size={18} />, label: "Co-founder Matching", color: "orange",  desc: "Finding co-founders, roles, vesting, early team building",       href: "/dash/groups" },
+  { icon: <Lightbulb size={18} />, label: "SaaS & Bootstrapping",color: "teal",    desc: "Profitable products, no-VC path, MRR milestones, churn",         href: "/dash/groups" },
 ];
 
 const PLATFORM_FEATURES = [
@@ -66,11 +58,11 @@ const RESOURCES = [
 ];
 
 const OTHER_HUBS = [
-  { label: "Tech & Engineering",  href: "/community/tech-engineering",  members: "31.5k", color: "blue"   },
-  { label: "Design & Creativity", href: "/community/design-creativity", members: "19.7k", color: "violet" },
-  { label: "Marketing & Growth",  href: "/community/marketing-growth",  members: "11.3k", color: "amber"  },
-  { label: "Finance & Business",  href: "/community/finance-business",  members: "8.6k",  color: "indigo" },
-  { label: "Education & Research",href: "/community/education-research",members: "6.4k",  color: "rose"   },
+  { label: "Tech & Engineering",  href: "/community/tech-engineering",  color: "blue"   },
+  { label: "Design & Creativity", href: "/community/design-creativity", color: "violet" },
+  { label: "Marketing & Growth",  href: "/community/marketing-growth",  color: "amber"  },
+  { label: "Finance & Business",  href: "/community/finance-business",  color: "indigo" },
+  { label: "Education & Research",href: "/community/education-research",color: "rose"   },
 ];
 
 const colorMap = {
@@ -86,6 +78,19 @@ const colorMap = {
 
 export default function FoundersStartupsCommunity() {
   const [activeTab, setActiveTab] = useState("trending");
+
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("groups").select("id", { count: "exact", head: true }),
+      supabase.from("projects").select("id", { count: "exact", head: true }),
+    ]).then(([profiles, groups, projects]) => {
+      setStats({ members: profiles.count ?? 0, groups: groups.count ?? 0, projects: projects.count ?? 0 });
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#00000006_1px,transparent_1px),linear-gradient(to_bottom,#00000006_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none" />
@@ -111,7 +116,7 @@ export default function FoundersStartupsCommunity() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-8">
               <div className="flex-1">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold uppercase tracking-widest mb-6">
-                  <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" /> 14.2k Founders Active
+                  <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" /> {stats ? `${fmtCount(stats.members)} members` : "Growing community"} · Join Free
                 </div>
                 <h1 className="text-4xl sm:text-6xl font-black tracking-tight mb-4 leading-tight">Founders &<br />Startups</h1>
                 <p className="text-emerald-100 text-lg sm:text-xl max-w-2xl leading-relaxed">
@@ -123,10 +128,15 @@ export default function FoundersStartupsCommunity() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:w-72 shrink-0">
-                {STATS.map(({ label, value, icon: Icon }) => (
+                {[
+                  { label: "Members",  key: "members",  Icon: Users },
+                  { label: "Groups",   key: "groups",   Icon: Hash },
+                  { label: "Projects", key: "projects", Icon: GitBranch },
+                  { label: "Live Hub", key: null,       Icon: MessageSquare },
+                ].map(({ label, key, Icon }) => (
                   <div key={label} className="bg-white/10 border border-white/20 rounded-2xl p-4 backdrop-blur-sm">
                     <Icon size={18} className="text-emerald-200 mb-2" />
-                    <p className="text-2xl font-black">{value}</p>
+                    <p className="text-2xl font-black">{key ? (stats ? fmtCount(stats[key]) : "—") : "Open"}</p>
                     <p className="text-[11px] text-emerald-200 font-medium mt-0.5">{label}</p>
                   </div>
                 ))}
@@ -144,7 +154,7 @@ export default function FoundersStartupsCommunity() {
                   <Link href="/dash/groups" className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">All groups <ChevronRight size={12} /></Link>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {TOPICS.map(({ icon, label, posts, color, desc, href }) => {
+                  {TOPICS.map(({ icon, label, color, desc, href }) => {
                     const c = colorMap[color] || colorMap.emerald;
                     return (
                       <Link key={label} href={href} className={`flex items-start gap-4 p-4 rounded-2xl border ${c.border} bg-white dark:bg-gray-900 hover:shadow-md transition-all group`}>
@@ -152,7 +162,6 @@ export default function FoundersStartupsCommunity() {
                         <div className="min-w-0">
                           <p className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{label}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
-                          <span className={`inline-block mt-2 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${c.badge}`}>{posts} posts</span>
                         </div>
                       </Link>
                     );
@@ -160,33 +169,15 @@ export default function FoundersStartupsCommunity() {
                 </div>
               </section>
 
+              {/* Live Community Hub CTA */}
               <section>
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h2 className="text-xl font-black tracking-tight flex items-center gap-2"><TrendingUp size={18} className="text-emerald-500" /> Trending Discussions</h2>
-                    <p className="text-xs text-gray-400 mt-1">Sample of what's being discussed. <Link href="/dash/more?tool=community" className="text-emerald-500 hover:underline font-bold">Join to see live →</Link></p>
-                  </div>
-                  <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shrink-0">
-                    {["trending", "latest"].map(tab => (
-                      <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${activeTab === tab ? "bg-white dark:bg-gray-700 shadow-sm" : "text-gray-500"}`}>{tab}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {TRENDING.map((post, i) => (
-                    <Link key={i} href={post.href} className="flex gap-4 p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:border-emerald-200 dark:hover:border-emerald-800/50 hover:shadow-md transition-all group">
-                      <div className="text-center shrink-0 w-10"><p className="text-lg font-black">{post.upvotes}</p><p className="text-[9px] text-gray-400 font-bold uppercase">votes</p></div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors text-sm leading-snug">{post.title}</p>
-                        <div className="flex flex-wrap items-center gap-3 mt-2">
-                          <span className="text-[11px] text-gray-500">{post.author}</span>
-                          <span className="text-[11px] text-gray-400">· {post.time} · {post.replies} replies</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-full">{post.tag}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                  <Link href="/dash/more?tool=community" className="flex items-center justify-center gap-2 py-3 text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 transition-colors">See all live discussions <ChevronRight size={14} /></Link>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-6 text-center">
+                  <MessageSquare size={28} className="text-blue-500 mx-auto mb-3" />
+                  <h2 className="text-lg font-black text-gray-900 dark:text-white mb-2">Real discussions happen inside</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">Join the live community hub to see and participate in real conversations from real members.</p>
+                  <Link href="/dash/more?tool=community" className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm transition-colors">
+                    <MessageSquare size={14} /> Open Community Hub
+                  </Link>
                 </div>
               </section>
 
@@ -235,7 +226,7 @@ export default function FoundersStartupsCommunity() {
 
             <div className="space-y-6">
               <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-6 text-white">
-                <h3 className="font-black text-lg mb-2">Join 14.2k Founders</h3>
+                <h3 className="font-black text-lg mb-2">Join the Community</h3>
                 <p className="text-emerald-100 text-sm mb-4 leading-relaxed">Fundraising templates, pitch deck reviews, co-founder matching, investor network access.</p>
                 <Link href="/auth" className="block text-center py-2.5 bg-white text-emerald-700 font-bold rounded-xl text-sm hover:bg-emerald-50 transition-colors">Create Free Account</Link>
                 <Link href="/dash/more?tool=community" className="block text-center py-2 text-emerald-200 text-xs font-semibold mt-2 hover:text-white transition-colors">Already a member? Open hub →</Link>
@@ -279,13 +270,12 @@ export default function FoundersStartupsCommunity() {
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
                 <h3 className="font-black text-sm uppercase tracking-widest text-gray-400 mb-4">Other Hubs</h3>
                 <div className="space-y-1.5">
-                  {OTHER_HUBS.map(({ label, href, members }) => (
-                    <Link key={label} href={href} className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+                  {OTHER_HUBS.map(({ label, href }) => (
+                    <Link key={label} href={href} className="flex items-center px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                       <div className="flex items-center gap-2.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400" />
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{label}</span>
                       </div>
-                      <span className="text-xs text-gray-400 font-bold">{members}</span>
                     </Link>
                   ))}
                 </div>

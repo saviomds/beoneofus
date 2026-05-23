@@ -1,83 +1,71 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Terminal, ArrowLeft, Users, Globe, Cpu, Zap, Code2, MessageSquare,
   Palette, Rocket, TrendingUp, BookOpen, DollarSign, GraduationCap,
   ChevronRight, Star, Search, Hash, Briefcase, Award, ArrowUpRight,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { supabase } from "../supabaseClient";
 const FloatingAiAssistant = dynamic(() => import("../components/FloatingAiAssistant"), { ssr: false });
+
+function formatCount(n) {
+  if (n == null) return "—";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return String(n);
+}
 
 const HUBS = [
   {
     label: "Tech & Engineering",
     href: "/community/tech-engineering",
-    members: "31.5k",
     color: "blue",
     icon: <Code2 size={26} />,
     desc: "Web dev, systems, cloud, AI/ML, databases, mobile, DevOps, and everything in between.",
     tags: ["React", "Rust", "AI/ML", "DevOps", "Cloud"],
-    activity: "4.2k posts/week",
   },
   {
     label: "Design & Creativity",
     href: "/community/design-creativity",
-    members: "19.7k",
     color: "violet",
     icon: <Palette size={26} />,
     desc: "UI/UX, brand identity, motion design, illustration, 3D, and design-led product thinking.",
     tags: ["Figma", "UI/UX", "Branding", "Motion", "3D"],
-    activity: "2.8k posts/week",
   },
   {
     label: "Founders & Startups",
     href: "/community/founders-startups",
-    members: "14.2k",
     color: "emerald",
     icon: <Rocket size={26} />,
     desc: "Idea validation, fundraising, co-founder matching, growth, and the honest side of building.",
     tags: ["SaaS", "Fundraising", "MVP", "Co-founder", "Revenue"],
-    activity: "1.9k posts/week",
   },
   {
     label: "Marketing & Growth",
     href: "/community/marketing-growth",
-    members: "11.3k",
     color: "amber",
     icon: <TrendingUp size={26} />,
     desc: "SEO, growth hacking, email marketing, paid ads, brand building, and community-led growth.",
     tags: ["SEO", "Growth", "Email", "Social", "Paid Ads"],
-    activity: "1.6k posts/week",
   },
   {
     label: "Finance & Business",
     href: "/community/finance-business",
-    members: "8.6k",
     color: "indigo",
     icon: <DollarSign size={26} />,
     desc: "Investing, personal finance, financial modeling, FinTech, and serious business strategy.",
     tags: ["Investing", "FIRE", "FinTech", "Strategy", "M&A"],
-    activity: "1.2k posts/week",
   },
   {
     label: "Education & Research",
     href: "/community/education-research",
-    members: "6.4k",
     color: "rose",
     icon: <GraduationCap size={26} />,
     desc: "Lifelong learners, researchers, educators, and students sharing knowledge and opportunities.",
     tags: ["EdTech", "Research", "STEM", "Learning", "AI"],
-    activity: "890 posts/week",
   },
-];
-
-const PLATFORM_STATS = [
-  { label: "Total Members", value: "91.7k", icon: Users },
-  { label: "Weekly Posts", value: "12.6k", icon: MessageSquare },
-  { label: "Countries", value: "87", icon: Globe },
-  { label: "Active Jobs", value: "580+", icon: Briefcase },
 ];
 
 const colorMap = {
@@ -91,6 +79,23 @@ const colorMap = {
 
 export default function CommunityPage() {
   const [search, setSearch] = useState("");
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("groups").select("id", { count: "exact", head: true }),
+      supabase.from("community_messages").select("id", { count: "exact", head: true }),
+      supabase.from("projects").select("id", { count: "exact", head: true }),
+    ]).then(([profiles, groups, messages, projects]) => {
+      setStats({
+        members:  profiles.count  ?? 0,
+        groups:   groups.count    ?? 0,
+        messages: messages.count  ?? 0,
+        projects: projects.count  ?? 0,
+      });
+    }).catch(() => {});
+  }, []);
   const filtered = HUBS.filter(h =>
     h.label.toLowerCase().includes(search.toLowerCase()) ||
     h.tags.some(t => t.toLowerCase().includes(search.toLowerCase()))
@@ -129,7 +134,7 @@ export default function CommunityPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 sm:py-28 relative text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold uppercase tracking-widest mb-8">
               <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-              91.7k professionals worldwide
+              {stats ? `${formatCount(stats.members)} members` : "Growing community"} · Join Free
             </div>
             <h1 className="text-4xl sm:text-7xl font-black tracking-tight mb-5 leading-tight">
               6 Communities.<br />
@@ -141,11 +146,17 @@ export default function CommunityPage() {
               Find your professional home. Learn from peers, share what works, discover opportunities, and build a career on your terms.
             </p>
 
-            {/* Platform Stats */}
+            {/* Platform Stats — real data from DB */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto mb-10">
-              {PLATFORM_STATS.map(({ label, value, icon: Icon }) => (
+              {[
+                { label: "Members",   key: "members",  Icon: Users          },
+                { label: "Groups",    key: "groups",   Icon: Hash           },
+                { label: "Messages",  key: "messages", Icon: MessageSquare  },
+                { label: "Projects",  key: "projects", Icon: Briefcase      },
+              ].map(({ label, key, Icon }) => (
                 <div key={label} className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                  <p className="text-2xl font-black">{value}</p>
+                  <Icon size={16} className="text-gray-400 mb-2" />
+                  <p className="text-2xl font-black">{stats ? formatCount(stats[key]) : "—"}</p>
                   <p className="text-[11px] text-gray-400 font-medium mt-0.5">{label}</p>
                 </div>
               ))}
@@ -180,18 +191,14 @@ export default function CommunityPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {filtered.map(({ label, href, members, color, icon, desc, tags, activity }) => {
+              {filtered.map(({ label, href, color, icon, desc, tags }) => {
                 const c = colorMap[color] || colorMap.blue;
                 return (
                   <Link key={label} href={href}
                     className={`group relative flex flex-col bg-white dark:bg-gray-900 border ${c.border} rounded-3xl p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 overflow-hidden`}>
                     <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-30 ${c.bg} -translate-y-1/2 translate-x-1/2`} />
-                    <div className="flex items-start justify-between mb-5 relative">
+                    <div className="mb-5 relative">
                       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${c.bg} ${c.text} shrink-0`}>{icon}</div>
-                      <div className="text-right">
-                        <p className="text-xl font-black text-gray-900 dark:text-white">{members}</p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">members</p>
-                      </div>
                     </div>
                     <h3 className={`text-lg font-black mb-2 ${c.text} group-hover:opacity-90 transition-opacity`}>{label}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-4 flex-1">{desc}</p>
@@ -200,11 +207,7 @@ export default function CommunityPage() {
                         <span key={tag} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.badge}`}>{tag}</span>
                       ))}
                     </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${c.dot} animate-pulse`} />
-                        <span className="text-[11px] text-gray-400 font-medium">{activity}</span>
-                      </div>
+                    <div className="flex items-center justify-end pt-4 border-t border-gray-100 dark:border-gray-800">
                       <span className={`text-xs font-bold flex items-center gap-1 ${c.text}`}>
                         Explore <ArrowUpRight size={12} />
                       </span>

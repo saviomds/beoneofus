@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect } from "react";
 import {
   HelpCircle, Send, Loader2, Check, X, RefreshCw, ChevronRight,
-  MessageSquare, Bot, Zap, BookOpen, FileText,
+  MessageSquare, Bot, Zap, BookOpen, FileText, Clock, CheckCircle2,
+  Heart, UserPlus, Handshake, Users, Bell,
 } from "lucide-react";
 import { supabase } from "../../../supabaseClient";
 import { Toast, useToast } from "./shared";

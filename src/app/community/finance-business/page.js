@@ -1,40 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
 import {
   Terminal, ArrowLeft, Users, TrendingUp, MessageSquare, Hash,
   BarChart3, DollarSign, Globe, Briefcase, ChevronRight,
   BookOpen, Award, Shield, PieChart, Building2, CreditCard,
-  Target, Layers, Star, Bell, ShoppingBag, Trophy, Compass,
+  Target, Layers, Star, Bell, ShoppingBag, Trophy, Compass, GitBranch,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 const FloatingAiAssistant = dynamic(() => import("../../components/FloatingAiAssistant"), { ssr: false });
 
-const STATS = [
-  { label: "Active Members", value: "8.6k", icon: Users },
-  { label: "Weekly Posts", value: "1.2k", icon: MessageSquare },
-  { label: "Deals Shared", value: "847", icon: DollarSign },
-  { label: "Jobs Posted", value: "74", icon: Briefcase },
-];
+function fmtCount(n) {
+  if (n == null) return "—";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return String(n);
+}
 
 const TOPICS = [
-  { icon: <PieChart size={18} />, label: "Personal Finance", posts: "2.8k", color: "indigo", desc: "Budgeting, investing, FIRE movement, net worth tracking", href: "/dash/groups" },
-  { icon: <BarChart3 size={18} />, label: "Investing & Markets", posts: "3.4k", color: "blue", desc: "Stocks, ETFs, crypto, real estate, portfolio strategy", href: "/dash/groups" },
-  { icon: <Building2 size={18} />, label: "Corporate Finance", posts: "1.9k", color: "violet", desc: "Financial modeling, M&A, valuation, capital markets", href: "/dash/groups" },
-  { icon: <Globe size={18} />, label: "Global Economics", posts: "2.1k", color: "emerald", desc: "Macro trends, inflation, monetary policy, geopolitics", href: "/dash/groups" },
-  { icon: <CreditCard size={18} />, label: "FinTech & Banking", posts: "1.6k", color: "rose", desc: "Neobanks, open banking, payment rails, DeFi applications", href: "/dash/groups" },
-  { icon: <DollarSign size={18} />, label: "Business Strategy", posts: "2.4k", color: "amber", desc: "Revenue models, competitive strategy, unit economics", href: "/dash/groups" },
-  { icon: <Shield size={18} />, label: "Tax & Compliance", posts: "1.3k", color: "gray", desc: "Tax optimization, international business, regulatory", href: "/dash/groups" },
-  { icon: <Target size={18} />, label: "Accounting & CFO", posts: "1.1k", color: "teal", desc: "Management accounting, financial reporting, CFO skills", href: "/dash/groups" },
-];
-
-const TRENDING = [
-  { title: "Building a $500k portfolio by 35 — the exact allocation I use", author: "@wealth_path", replies: 156, upvotes: 712, time: "2h ago", tag: "Investing" },
-  { title: "How to read a financial statement in 20 minutes — practical guide", author: "@fin_analyst", replies: 83, upvotes: 498, time: "5h ago", tag: "Finance 101" },
-  { title: "The business model shift killing traditional banks (and what's replacing them)", author: "@fintech_watch", replies: 71, upvotes: 387, time: "8h ago", tag: "FinTech" },
-  { title: "I analyzed 200 startup pitch decks — here's how financials actually kill deals", author: "@vc_insider", replies: 94, upvotes: 541, time: "1d ago", tag: "Fundraising" },
-  { title: "FIRE at 40 on a $90k salary — detailed spreadsheet + lessons", author: "@early_retire", replies: 189, upvotes: 834, time: "2d ago", tag: "FIRE" },
+  { icon: <PieChart size={18} />, label: "Personal Finance", color: "indigo", desc: "Budgeting, investing, FIRE movement, net worth tracking", href: "/dash/groups" },
+  { icon: <BarChart3 size={18} />, label: "Investing & Markets", color: "blue", desc: "Stocks, ETFs, crypto, real estate, portfolio strategy", href: "/dash/groups" },
+  { icon: <Building2 size={18} />, label: "Corporate Finance", color: "violet", desc: "Financial modeling, M&A, valuation, capital markets", href: "/dash/groups" },
+  { icon: <Globe size={18} />, label: "Global Economics", color: "emerald", desc: "Macro trends, inflation, monetary policy, geopolitics", href: "/dash/groups" },
+  { icon: <CreditCard size={18} />, label: "FinTech & Banking", color: "rose", desc: "Neobanks, open banking, payment rails, DeFi applications", href: "/dash/groups" },
+  { icon: <DollarSign size={18} />, label: "Business Strategy", color: "amber", desc: "Revenue models, competitive strategy, unit economics", href: "/dash/groups" },
+  { icon: <Shield size={18} />, label: "Tax & Compliance", color: "gray", desc: "Tax optimization, international business, regulatory", href: "/dash/groups" },
+  { icon: <Target size={18} />, label: "Accounting & CFO", color: "teal", desc: "Management accounting, financial reporting, CFO skills", href: "/dash/groups" },
 ];
 
 const PLATFORM_FEATURES = [
@@ -77,11 +69,11 @@ const QUICK_ACTIONS = [
 ];
 
 const OTHER_HUBS = [
-  { label: "Tech & Engineering", href: "/community/tech-engineering", members: "31.5k" },
-  { label: "Design & Creativity", href: "/community/design-creativity", members: "19.7k" },
-  { label: "Founders & Startups", href: "/community/founders-startups", members: "14.2k" },
-  { label: "Marketing & Growth", href: "/community/marketing-growth", members: "11.3k" },
-  { label: "Education & Research", href: "/community/education-research", members: "6.4k" },
+  { label: "Tech & Engineering", href: "/community/tech-engineering" },
+  { label: "Design & Creativity", href: "/community/design-creativity" },
+  { label: "Founders & Startups", href: "/community/founders-startups" },
+  { label: "Marketing & Growth", href: "/community/marketing-growth" },
+  { label: "Education & Research", href: "/community/education-research" },
 ];
 
 const colorMap = {
@@ -98,6 +90,19 @@ const colorMap = {
 
 export default function FinanceBusinessCommunity() {
   const [activeTab, setActiveTab] = useState("trending");
+
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("groups").select("id", { count: "exact", head: true }),
+      supabase.from("projects").select("id", { count: "exact", head: true }),
+    ]).then(([profiles, groups, projects]) => {
+      setStats({ members: profiles.count ?? 0, groups: groups.count ?? 0, projects: projects.count ?? 0 });
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#00000006_1px,transparent_1px),linear-gradient(to_bottom,#00000006_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none" />
@@ -126,7 +131,7 @@ export default function FinanceBusinessCommunity() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-8">
               <div className="flex-1">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold uppercase tracking-widest mb-6">
-                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" /> 8.6k Finance Pros Active
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" /> {stats ? `${fmtCount(stats.members)} members` : "Growing community"} · Join Free
                 </div>
                 <h1 className="text-4xl sm:text-6xl font-black tracking-tight mb-4 leading-tight">Finance &<br />Business</h1>
                 <p className="text-indigo-200 text-lg sm:text-xl max-w-2xl leading-relaxed">
@@ -138,10 +143,15 @@ export default function FinanceBusinessCommunity() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:w-72 shrink-0">
-                {STATS.map(({ label, value, icon: Icon }) => (
+                {[
+                  { label: "Members",  key: "members",  Icon: Users },
+                  { label: "Groups",   key: "groups",   Icon: Hash },
+                  { label: "Projects", key: "projects", Icon: GitBranch },
+                  { label: "Live Hub", key: null,       Icon: MessageSquare },
+                ].map(({ label, key, Icon }) => (
                   <div key={label} className="bg-white/10 border border-white/20 rounded-2xl p-4 backdrop-blur-sm">
                     <Icon size={18} className="text-indigo-200 mb-2" />
-                    <p className="text-2xl font-black">{value}</p>
+                    <p className="text-2xl font-black">{key ? (stats ? fmtCount(stats[key]) : "—") : "Open"}</p>
                     <p className="text-[11px] text-indigo-200 font-medium mt-0.5">{label}</p>
                   </div>
                 ))}
@@ -159,7 +169,7 @@ export default function FinanceBusinessCommunity() {
                 <h2 className="text-xl font-black tracking-tight mb-1 flex items-center gap-2"><Hash size={18} className="text-indigo-500" /> Sub-Communities</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Go deep on a financial discipline or business domain.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {TOPICS.map(({ icon, label, posts, color, desc, href }) => {
+                  {TOPICS.map(({ icon, label, color, desc, href }) => {
                     const c = colorMap[color] || colorMap.indigo;
                     return (
                       <Link key={label} href={href} className={`flex items-start gap-4 p-4 rounded-2xl border ${c.border} bg-white dark:bg-gray-900 hover:shadow-md transition-all group`}>
@@ -167,7 +177,6 @@ export default function FinanceBusinessCommunity() {
                         <div className="min-w-0">
                           <p className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{label}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed truncate">{desc}</p>
-                          <span className={`inline-block mt-2 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${c.badge}`}>{posts} posts</span>
                         </div>
                       </Link>
                     );
@@ -195,38 +204,15 @@ export default function FinanceBusinessCommunity() {
                 </div>
               </section>
 
-              {/* Discussions */}
+              {/* Live Community Hub CTA */}
               <section>
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-xl font-black tracking-tight flex items-center gap-2"><TrendingUp size={18} className="text-indigo-500" /> Discussions</h2>
-                  <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-                    {["trending", "latest"].map(tab => (
-                      <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400"}`}>{tab}</button>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-5 italic">Sample of what's being discussed inside. Join to see live →</p>
-                <div className="space-y-3">
-                  {TRENDING.map((post, i) => (
-                    <Link key={i} href="/dash/more?tool=community" className="flex gap-4 p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:border-indigo-200 dark:hover:border-indigo-800/50 hover:shadow-md transition-all group">
-                      <div className="text-center shrink-0 w-10">
-                        <p className="text-lg font-black">{post.upvotes}</p>
-                        <p className="text-[9px] text-gray-400 font-bold uppercase">votes</p>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors text-sm leading-snug">{post.title}</p>
-                        <div className="flex flex-wrap items-center gap-3 mt-2">
-                          <span className="text-[11px] text-gray-500">{post.author}</span>
-                          <span className="text-[11px] text-gray-400">·</span>
-                          <span className="text-[11px] text-gray-400">{post.time}</span>
-                          <span className="text-[11px] text-gray-400">·</span>
-                          <span className="text-[11px] text-gray-500">{post.replies} replies</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-full">{post.tag}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                  <Link href="/dash/more?tool=community" className="flex items-center justify-center gap-2 py-3 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors">View all discussions <ChevronRight size={14} /></Link>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-6 text-center">
+                  <MessageSquare size={28} className="text-blue-500 mx-auto mb-3" />
+                  <h2 className="text-lg font-black text-gray-900 dark:text-white mb-2">Real discussions happen inside</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">Join the live community hub to see and participate in real conversations from real members.</p>
+                  <Link href="/dash/more?tool=community" className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm transition-colors">
+                    <MessageSquare size={14} /> Open Community Hub
+                  </Link>
                 </div>
               </section>
 
@@ -258,7 +244,7 @@ export default function FinanceBusinessCommunity() {
             {/* Sidebar */}
             <div className="space-y-6">
               <div className="bg-gradient-to-br from-indigo-700 to-slate-800 rounded-2xl p-6 text-white">
-                <h3 className="font-black text-lg mb-2">Join 8.6k Finance Pros</h3>
+                <h3 className="font-black text-lg mb-2">Join the Community</h3>
                 <p className="text-indigo-200 text-sm mb-4 leading-relaxed">Investment discussions, financial modeling resources, career paths, and a network of serious professionals.</p>
                 <Link href="/dash/more?tool=community" className="block text-center py-2.5 bg-white text-indigo-700 font-bold rounded-xl text-sm hover:bg-indigo-50 transition-colors mb-2">Open Live Hub</Link>
                 <Link href="/auth" className="block text-center py-2.5 bg-white/10 border border-white/30 text-white font-bold rounded-xl text-sm hover:bg-white/20 transition-colors">Create Free Account</Link>
@@ -300,13 +286,12 @@ export default function FinanceBusinessCommunity() {
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
                 <h3 className="font-black text-sm uppercase tracking-widest text-gray-400 mb-4">Other Hubs</h3>
                 <div className="space-y-1.5">
-                  {OTHER_HUBS.map(({ label, href, members }) => (
-                    <Link key={label} href={href} className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+                  {OTHER_HUBS.map(({ label, href }) => (
+                    <Link key={label} href={href} className="flex items-center px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                       <div className="flex items-center gap-2.5">
                         <span className="w-2 h-2 rounded-full bg-indigo-400" />
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{label}</span>
                       </div>
-                      <span className="text-xs text-gray-400 font-bold">{members}</span>
                     </Link>
                   ))}
                 </div>

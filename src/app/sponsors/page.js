@@ -6,6 +6,13 @@ import {
   Building2, Globe, Mail, ArrowRight, Loader2, Check,
   Users, BarChart3, Handshake, Sparkles, TrendingUp,
 } from "lucide-react";
+import { supabase } from "../supabaseClient";
+
+function fmtCount(n) {
+  if (n == null) return "—";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k+";
+  return String(n);
+}
 
 const TIERS = [
   {
@@ -68,6 +75,13 @@ export default function SponsorsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [platformStats, setPlatformStats] = useState(null);
+
+  useEffect(() => {
+    supabase.from("profiles").select("id", { count: "exact", head: true })
+      .then(({ count }) => setPlatformStats({ members: count ?? 0 }))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch("/api/sponsors")
@@ -141,12 +155,10 @@ export default function SponsorsPage() {
             </a>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto mt-16">
+          {/* Stats — real member count from DB */}
+          <div className="grid grid-cols-1 gap-6 max-w-xs mx-auto mt-16">
             {[
-              { label: "Professionals", value: "10k+" },
-              { label: "Certificates Issued", value: "500+" },
-              { label: "Industries", value: "30+" },
+              { label: "Platform Members", value: platformStats ? fmtCount(platformStats.members) : "—" },
             ].map(s => (
               <div key={s.label} className="text-center">
                 <p className="text-3xl font-black text-white mb-1">{s.value}</p>

@@ -27,7 +27,6 @@ const SEED_CONTENT = [
     duration: "2:14", tags: ["javascript", "web"], featured: true,
     level: "Beginner", published: "2023-09-12",
     description: "A lightning-fast overview of JavaScript — the world's most popular language.",
-    views: 4200, likes: 318,
   },
   {
     id: "seed_v2", type: "video", platform: "youtube", youtube_id: "Tn6-PIqc4UM",
@@ -35,7 +34,6 @@ const SEED_CONTENT = [
     duration: "2:54", tags: ["react", "frontend"], featured: false,
     level: "Beginner", published: "2023-11-20",
     description: "Everything you need to know about React in under 3 minutes.",
-    views: 3800, likes: 291,
   },
   {
     id: "seed_v3", type: "video", platform: "youtube", youtube_id: "uvU0tWlsE8s",
@@ -43,7 +41,6 @@ const SEED_CONTENT = [
     duration: "2:32", tags: ["ml", "ai"], featured: true,
     level: "Beginner", published: "2024-01-05",
     description: "Machine learning explained simply.",
-    views: 5100, likes: 407,
   },
   {
     id: "seed_v4", type: "video", platform: "youtube", youtube_id: "VqgUkExPvLY",
@@ -51,7 +48,6 @@ const SEED_CONTENT = [
     duration: "1:52", tags: ["css", "frontend"], featured: false,
     level: "Beginner", published: "2024-02-10",
     description: "The cascade, specificity and layout, fast.",
-    views: 2900, likes: 244,
   },
   {
     id: "seed_v5", type: "article", platform: null, youtube_id: null,
@@ -60,7 +56,6 @@ const SEED_CONTENT = [
     level: "Intermediate", published: "2024-03-01",
     description: "Why the notion of the 10x engineer is harmful and what really drives team performance.",
     read_time: "8 min", url: "https://overreacted.io", source: "Overreacted",
-    views: 1700, likes: 192,
   },
   {
     id: "seed_v6", type: "video", platform: "youtube", youtube_id: "I7ZT_KmY6Ck",
@@ -68,7 +63,6 @@ const SEED_CONTENT = [
     duration: "2:10", tags: ["docker", "containers"], featured: false,
     level: "Beginner", published: "2024-01-20",
     description: "Containers, images and the whole Docker ecosystem demystified.",
-    views: 3300, likes: 278,
   },
   {
     id: "seed_v7", type: "video", platform: "youtube", youtube_id: "eIrMbAQSU34",
@@ -76,7 +70,6 @@ const SEED_CONTENT = [
     duration: "7:14", tags: ["ui", "design"], featured: true,
     level: "Beginner", published: "2024-02-14",
     description: "Visual hierarchy, spacing, colour and typography in one tight sit-down.",
-    views: 2200, likes: 187,
   },
   {
     id: "seed_v8", type: "video", platform: "youtube", youtube_id: "x7cQ3mrcKaY",
@@ -84,7 +77,6 @@ const SEED_CONTENT = [
     duration: "14:22", tags: ["startup", "product"], featured: false,
     level: "Intermediate", published: "2024-03-05",
     description: "YC partners walk through the fastest way to find out if your idea is worth building.",
-    views: 4600, likes: 388,
   },
 ];
 

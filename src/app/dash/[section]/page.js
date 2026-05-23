@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { notFound } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { supabase } from '../../supabaseClient';
 import NewPost from '../../components/NewPost';
 import { useRouter } from 'next/navigation';
@@ -115,7 +115,9 @@ export default function DashSection() {
       )}
 
       <div key={section} className="w-full h-full animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
-        <Content />
+        <Suspense fallback={<TabSkeleton />}>
+          <Content />
+        </Suspense>
       </div>
     </div>
   );

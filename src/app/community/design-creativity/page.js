@@ -1,40 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
 import {
   Terminal, ArrowLeft, Users, Palette, Pen, Layers, Sparkles,
   Monitor, TrendingUp, BookOpen, Briefcase, Star, ChevronRight,
   MessageSquare, Hash, Play, Award, Zap, Globe, Image,
-  CheckCircle2, ArrowUpRight,
+  CheckCircle2, ArrowUpRight, GitBranch,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 const FloatingAiAssistant = dynamic(() => import("../../components/FloatingAiAssistant"), { ssr: false });
 
-const STATS = [
-  { label: "Active Members", value: "19.7k", icon: Users },
-  { label: "Weekly Posts",   value: "2.8k",  icon: MessageSquare },
-  { label: "Portfolios",     value: "5.1k",  icon: Image },
-  { label: "Jobs Posted",    value: "138",   icon: Briefcase },
-];
+function fmtCount(n) {
+  if (n == null) return "—";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return String(n);
+}
 
 const TOPICS = [
-  { icon: <Palette size={18} />,  label: "UI/UX Design",       posts: "8.2k", color: "violet", desc: "User research, wireframes, prototyping, Figma workflows",        href: "/dash/groups" },
-  { icon: <Monitor size={18} />,  label: "Web & App Design",    posts: "6.1k", color: "rose",   desc: "Responsive design, design systems, component libraries",         href: "/dash/groups" },
-  { icon: <Layers size={18} />,   label: "Brand & Identity",    posts: "3.9k", color: "amber",  desc: "Logos, visual identity, brand guidelines, typography",           href: "/dash/groups" },
-  { icon: <Sparkles size={18} />, label: "Motion & Animation",  posts: "2.7k", color: "pink",   desc: "CSS animations, Lottie, After Effects, micro-interactions",      href: "/dash/groups" },
-  { icon: <Image size={18} />,    label: "Illustration & Art",  posts: "4.3k", color: "emerald",desc: "Digital art, vector graphics, character design, concept art",    href: "/dash/groups" },
-  { icon: <Pen size={18} />,      label: "3D & Immersive",      posts: "1.8k", color: "blue",   desc: "Blender, Three.js, WebGL, AR/VR experiences, product viz",       href: "/dash/groups" },
-  { icon: <Globe size={18} />,    label: "Design Tools & AI",   posts: "3.4k", color: "indigo", desc: "Figma AI, Midjourney, Adobe Firefly, design automation",         href: "/dash/groups" },
-  { icon: <Star size={18} />,     label: "Design Critique",     posts: "2.2k", color: "orange", desc: "Portfolio reviews, feedback sessions, design challenges",        href: "/dash/groups" },
-];
-
-const TRENDING = [
-  { title: "How I redesigned a $10M fintech app in 6 weeks — full case study",               author: "@ux_maestro",    replies: 74,  upvotes: 412, time: "3h ago",  tag: "Case Study", href: "/dash/more?tool=community" },
-  { title: "Dark mode is dead? A data-driven look at user preferences in 2025",               author: "@design_data",  replies: 91,  upvotes: 348, time: "5h ago",  tag: "UI/UX",      href: "/dash/more?tool=community" },
-  { title: "My Figma to Framer workflow for production-ready prototypes",                      author: "@proto_pro",    replies: 56,  upvotes: 287, time: "8h ago",  tag: "Tools",      href: "/dash/more?tool=community" },
-  { title: "The typography choices that make or break a SaaS dashboard",                       author: "@typeface_dev", replies: 43,  upvotes: 263, time: "1d ago",  tag: "Typography", href: "/dash/more?tool=community" },
-  { title: "Using AI to generate UI variants — what actually works in production",             author: "@ai_designer",  replies: 108, upvotes: 489, time: "2d ago",  tag: "AI Design",  href: "/dash/more?tool=community" },
+  { icon: <Palette size={18} />,  label: "UI/UX Design",       color: "violet", desc: "User research, wireframes, prototyping, Figma workflows",        href: "/dash/groups" },
+  { icon: <Monitor size={18} />,  label: "Web & App Design",    color: "rose",   desc: "Responsive design, design systems, component libraries",         href: "/dash/groups" },
+  { icon: <Layers size={18} />,   label: "Brand & Identity",    color: "amber",  desc: "Logos, visual identity, brand guidelines, typography",           href: "/dash/groups" },
+  { icon: <Sparkles size={18} />, label: "Motion & Animation",  color: "pink",   desc: "CSS animations, Lottie, After Effects, micro-interactions",      href: "/dash/groups" },
+  { icon: <Image size={18} />,    label: "Illustration & Art",  color: "emerald",desc: "Digital art, vector graphics, character design, concept art",    href: "/dash/groups" },
+  { icon: <Pen size={18} />,      label: "3D & Immersive",      color: "blue",   desc: "Blender, Three.js, WebGL, AR/VR experiences, product viz",       href: "/dash/groups" },
+  { icon: <Globe size={18} />,    label: "Design Tools & AI",   color: "indigo", desc: "Figma AI, Midjourney, Adobe Firefly, design automation",         href: "/dash/groups" },
+  { icon: <Star size={18} />,     label: "Design Critique",     color: "orange", desc: "Portfolio reviews, feedback sessions, design challenges",        href: "/dash/groups" },
 ];
 
 const PLATFORM_FEATURES = [
@@ -66,11 +58,11 @@ const RESOURCES = [
 ];
 
 const OTHER_HUBS = [
-  { label: "Tech & Engineering",  href: "/community/tech-engineering",  members: "31.5k", color: "blue"   },
-  { label: "Founders & Startups", href: "/community/founders-startups", members: "14.2k", color: "emerald"},
-  { label: "Marketing & Growth",  href: "/community/marketing-growth",  members: "11.3k", color: "amber"  },
-  { label: "Finance & Business",  href: "/community/finance-business",  members: "8.6k",  color: "indigo" },
-  { label: "Education & Research",href: "/community/education-research",members: "6.4k",  color: "rose"   },
+  { label: "Tech & Engineering",  href: "/community/tech-engineering",  color: "blue"   },
+  { label: "Founders & Startups", href: "/community/founders-startups", color: "emerald"},
+  { label: "Marketing & Growth",  href: "/community/marketing-growth",  color: "amber"  },
+  { label: "Finance & Business",  href: "/community/finance-business",  color: "indigo" },
+  { label: "Education & Research",href: "/community/education-research",color: "rose"   },
 ];
 
 const colorMap = {
@@ -86,6 +78,19 @@ const colorMap = {
 
 export default function DesignCreativityCommunity() {
   const [activeTab, setActiveTab] = useState("trending");
+
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("groups").select("id", { count: "exact", head: true }),
+      supabase.from("projects").select("id", { count: "exact", head: true }),
+    ]).then(([profiles, groups, projects]) => {
+      setStats({ members: profiles.count ?? 0, groups: groups.count ?? 0, projects: projects.count ?? 0 });
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#00000006_1px,transparent_1px),linear-gradient(to_bottom,#00000006_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none" />
@@ -111,7 +116,7 @@ export default function DesignCreativityCommunity() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-8">
               <div className="flex-1">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold uppercase tracking-widest mb-6">
-                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" /> 19.7k Members Active
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" /> {stats ? `${fmtCount(stats.members)} members` : "Growing community"} · Join Free
                 </div>
                 <h1 className="text-4xl sm:text-6xl font-black tracking-tight mb-4 leading-tight">Design &<br />Creativity</h1>
                 <p className="text-violet-100 text-lg sm:text-xl max-w-2xl leading-relaxed">
@@ -123,10 +128,15 @@ export default function DesignCreativityCommunity() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:w-72 shrink-0">
-                {STATS.map(({ label, value, icon: Icon }) => (
+                {[
+                  { label: "Members",  key: "members",  Icon: Users },
+                  { label: "Groups",   key: "groups",   Icon: Hash },
+                  { label: "Projects", key: "projects", Icon: GitBranch },
+                  { label: "Live Hub", key: null,       Icon: MessageSquare },
+                ].map(({ label, key, Icon }) => (
                   <div key={label} className="bg-white/10 border border-white/20 rounded-2xl p-4 backdrop-blur-sm">
                     <Icon size={18} className="text-violet-200 mb-2" />
-                    <p className="text-2xl font-black">{value}</p>
+                    <p className="text-2xl font-black">{key ? (stats ? fmtCount(stats[key]) : "—") : "Open"}</p>
                     <p className="text-[11px] text-violet-200 font-medium mt-0.5">{label}</p>
                   </div>
                 ))}
@@ -145,7 +155,7 @@ export default function DesignCreativityCommunity() {
                   <Link href="/dash/groups" className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">All groups <ChevronRight size={12} /></Link>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {TOPICS.map(({ icon, label, posts, color, desc, href }) => {
+                  {TOPICS.map(({ icon, label, color, desc, href }) => {
                     const c = colorMap[color] || colorMap.violet;
                     return (
                       <Link key={label} href={href} className={`flex items-start gap-4 p-4 rounded-2xl border ${c.border} bg-white dark:bg-gray-900 hover:shadow-md transition-all group`}>
@@ -153,7 +163,6 @@ export default function DesignCreativityCommunity() {
                         <div className="min-w-0">
                           <p className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">{label}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
-                          <span className={`inline-block mt-2 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${c.badge}`}>{posts} posts</span>
                         </div>
                       </Link>
                     );
@@ -161,33 +170,15 @@ export default function DesignCreativityCommunity() {
                 </div>
               </section>
 
+              {/* Live Community Hub CTA */}
               <section>
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h2 className="text-xl font-black tracking-tight flex items-center gap-2"><TrendingUp size={18} className="text-violet-500" /> Trending Discussions</h2>
-                    <p className="text-xs text-gray-400 mt-1">Sample of what's being discussed. <Link href="/dash/more?tool=community" className="text-violet-500 hover:underline font-bold">Join to see live →</Link></p>
-                  </div>
-                  <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shrink-0">
-                    {["trending", "latest"].map(tab => (
-                      <button key={tab} onClick={() => setActiveTab(tab)} className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${activeTab === tab ? "bg-white dark:bg-gray-700 shadow-sm" : "text-gray-500"}`}>{tab}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {TRENDING.map((post, i) => (
-                    <Link key={i} href={post.href} className="flex gap-4 p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:border-violet-200 dark:hover:border-violet-800/50 hover:shadow-md transition-all group">
-                      <div className="text-center shrink-0 w-10"><p className="text-lg font-black">{post.upvotes}</p><p className="text-[9px] text-gray-400 font-bold uppercase">votes</p></div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-gray-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors text-sm leading-snug">{post.title}</p>
-                        <div className="flex flex-wrap items-center gap-3 mt-2">
-                          <span className="text-[11px] text-gray-500">{post.author}</span>
-                          <span className="text-[11px] text-gray-400">· {post.time} · {post.replies} replies</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 rounded-full">{post.tag}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                  <Link href="/dash/more?tool=community" className="flex items-center justify-center gap-2 py-3 text-sm font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 transition-colors">See all live discussions <ChevronRight size={14} /></Link>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-6 text-center">
+                  <MessageSquare size={28} className="text-blue-500 mx-auto mb-3" />
+                  <h2 className="text-lg font-black text-gray-900 dark:text-white mb-2">Real discussions happen inside</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">Join the live community hub to see and participate in real conversations from real members.</p>
+                  <Link href="/dash/more?tool=community" className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm transition-colors">
+                    <MessageSquare size={14} /> Open Community Hub
+                  </Link>
                 </div>
               </section>
 
@@ -236,7 +227,7 @@ export default function DesignCreativityCommunity() {
 
             <div className="space-y-6">
               <div className="bg-gradient-to-br from-violet-600 to-pink-700 rounded-2xl p-6 text-white">
-                <h3 className="font-black text-lg mb-2">Join 19.7k Creatives</h3>
+                <h3 className="font-black text-lg mb-2">Join the Community</h3>
                 <p className="text-violet-100 text-sm mb-4 leading-relaxed">Portfolio reviews, creative challenges, job board, mentorship, and community feedback.</p>
                 <Link href="/auth" className="block text-center py-2.5 bg-white text-violet-700 font-bold rounded-xl text-sm hover:bg-violet-50 transition-colors">Create Free Account</Link>
                 <Link href="/dash/more?tool=community" className="block text-center py-2 text-violet-200 text-xs font-semibold mt-2 hover:text-white transition-colors">Already a member? Open hub →</Link>
@@ -283,13 +274,12 @@ export default function DesignCreativityCommunity() {
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
                 <h3 className="font-black text-sm uppercase tracking-widest text-gray-400 mb-4">Other Hubs</h3>
                 <div className="space-y-1.5">
-                  {OTHER_HUBS.map(({ label, href, members }) => (
-                    <Link key={label} href={href} className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+                  {OTHER_HUBS.map(({ label, href }) => (
+                    <Link key={label} href={href} className="flex items-center px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                       <div className="flex items-center gap-2.5">
                         <span className="w-2 h-2 rounded-full bg-violet-400" />
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{label}</span>
                       </div>
-                      <span className="text-xs text-gray-400 font-bold">{members}</span>
                     </Link>
                   ))}
                 </div>

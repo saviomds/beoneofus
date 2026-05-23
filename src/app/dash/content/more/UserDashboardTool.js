@@ -1,13 +1,28 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   ClipboardList, Briefcase, Bell, RefreshCw, Loader2, Check, X,
   CheckCircle2, Clock, XCircle, ChevronRight, TrendingUp, User,
+  FileText, Zap, UserCog, ArrowUpRight, UserPlus, Search, Crown, Users, Circle,
 } from "lucide-react";
 import { supabase } from "../../../supabaseClient";
 import { Toast, useToast, Badge, statusColor } from "./shared";
 
+const TASK_STATUSES = ["All", "pending", "in_progress", "completed", "cancelled"];
+
+const PRIORITY_CONFIG = {
+  High:   { dot: "bg-red-500",    color: "text-red-600 dark:text-red-400",    bg: "bg-red-50 dark:bg-red-900/20",    border: "border-red-200 dark:border-red-700/40" },
+  Medium: { dot: "bg-amber-400",  color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-900/20", border: "border-amber-200 dark:border-amber-700/40" },
+  Low:    { dot: "bg-gray-300",   color: "text-gray-500 dark:text-gray-400",  bg: "bg-gray-50 dark:bg-gray-800/40",  border: "border-gray-200 dark:border-gray-700/40" },
+};
+
+const STATUS_CONFIG = {
+  pending:     { label: "To Do",      icon: <Circle size={10} />,        bg: "bg-gray-100 dark:bg-gray-800",      color: "text-gray-600 dark:text-gray-300" },
+  in_progress: { label: "In Progress", icon: <Clock size={10} />,        bg: "bg-blue-50 dark:bg-blue-900/20",    color: "text-blue-600 dark:text-blue-400" },
+  completed:   { label: "Done",       icon: <CheckCircle2 size={10} />, bg: "bg-emerald-50 dark:bg-emerald-900/20", color: "text-emerald-600 dark:text-emerald-400" },
+  cancelled:   { label: "Cancelled",  icon: <XCircle size={10} />,      bg: "bg-red-50 dark:bg-red-900/20",      color: "text-red-600 dark:text-red-400" },
+};
 
 const UserDashboardTool = ({ currentUserId }) => {
   const [activeTab, setActiveTab]               = useState("");

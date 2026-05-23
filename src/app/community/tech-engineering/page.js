@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
 import {
   Terminal, ArrowLeft, Users, Code2, Cpu, Zap, Globe, Server,
   TrendingUp, BookOpen, Briefcase, Star, ChevronRight, Shield,
@@ -11,31 +12,23 @@ import {
 import dynamic from "next/dynamic";
 const FloatingAiAssistant = dynamic(() => import("../../components/FloatingAiAssistant"), { ssr: false });
 
-const STATS = [
-  { label: "Active Members", value: "31.5k", icon: Users },
-  { label: "Weekly Posts", value: "4.2k", icon: MessageSquare },
-  { label: "Open Projects", value: "892", icon: GitBranch },
-  { label: "Jobs Posted", value: "214", icon: Briefcase },
-];
+function fmtCount(n) {
+  if (n == null) return "—";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return String(n);
+}
 
 const TOPICS = [
-  { icon: <Code2 size={18} />, label: "Web Development", posts: "12.4k", color: "blue", desc: "React, Next.js, Vue, full-stack architectures, APIs", href: "/dash/groups" },
-  { icon: <Cpu size={18} />, label: "Systems & Low-Level", posts: "6.8k", color: "gray", desc: "Rust, C++, OS internals, memory management, compilers", href: "/dash/groups" },
-  { icon: <Cloud size={18} />, label: "Cloud & DevOps", posts: "8.1k", color: "sky", desc: "AWS, GCP, Azure, Kubernetes, CI/CD, IaC", href: "/dash/groups" },
-  { icon: <Database size={18} />, label: "Databases & Storage", posts: "5.3k", color: "emerald", desc: "PostgreSQL, Redis, MongoDB, query optimization", href: "/dash/groups" },
-  { icon: <Globe size={18} />, label: "AI & Machine Learning", posts: "9.2k", color: "violet", desc: "LLMs, PyTorch, MLOps, prompt engineering, deployment", href: "/dash/groups" },
-  { icon: <Shield size={18} />, label: "Cybersecurity", posts: "3.7k", color: "red", desc: "AppSec, pentesting, threat modeling, secure coding", href: "/dash/groups" },
-  { icon: <Server size={18} />, label: "Backend Engineering", posts: "7.6k", color: "indigo", desc: "Microservices, gRPC, message queues, distributed systems", href: "/dash/groups" },
-  { icon: <Monitor size={18} />, label: "Mobile Development", posts: "4.9k", color: "rose", desc: "React Native, Flutter, Swift, Kotlin, cross-platform", href: "/dash/groups" },
+  { icon: <Code2 size={18} />, label: "Web Development",     color: "blue",    desc: "React, Next.js, Vue, full-stack architectures, APIs",              href: "/dash/groups" },
+  { icon: <Cpu size={18} />,   label: "Systems & Low-Level", color: "gray",    desc: "Rust, C++, OS internals, memory management, compilers",            href: "/dash/groups" },
+  { icon: <Cloud size={18} />, label: "Cloud & DevOps",      color: "sky",     desc: "AWS, GCP, Azure, Kubernetes, CI/CD, IaC",                          href: "/dash/groups" },
+  { icon: <Database size={18} />, label: "Databases & Storage", color: "emerald", desc: "PostgreSQL, Redis, MongoDB, query optimization",                href: "/dash/groups" },
+  { icon: <Globe size={18} />, label: "AI & Machine Learning", color: "violet", desc: "LLMs, PyTorch, MLOps, prompt engineering, deployment",            href: "/dash/groups" },
+  { icon: <Shield size={18} />, label: "Cybersecurity",       color: "red",    desc: "AppSec, pentesting, threat modeling, secure coding",               href: "/dash/groups" },
+  { icon: <Server size={18} />, label: "Backend Engineering", color: "indigo", desc: "Microservices, gRPC, message queues, distributed systems",          href: "/dash/groups" },
+  { icon: <Monitor size={18} />, label: "Mobile Development", color: "rose",   desc: "React Native, Flutter, Swift, Kotlin, cross-platform",             href: "/dash/groups" },
 ];
 
-const TRENDING = [
-  { title: "Why Rust is replacing C++ in safety-critical systems", author: "@rustacean_pro", replies: 87, upvotes: 342, time: "2h ago", tag: "Systems", href: "/dash/more?tool=community" },
-  { title: "Lessons from scaling a Postgres DB to 10 billion rows", author: "@db_wizard", replies: 64, upvotes: 289, time: "4h ago", tag: "Database", href: "/dash/more?tool=community" },
-  { title: "How we cut Kubernetes costs by 60% with Karpenter", author: "@cloudnative_io", replies: 51, upvotes: 274, time: "6h ago", tag: "DevOps", href: "/dash/more?tool=community" },
-  { title: "Definitive guide to RSC vs Client Components in Next.js 15", author: "@nextjs_expert", replies: 93, upvotes: 461, time: "1d ago", tag: "Web", href: "/dash/more?tool=community" },
-  { title: "Building a local LLM with Ollama + RAG in under 2 hours", author: "@ai_builder", replies: 118, upvotes: 532, time: "1d ago", tag: "AI/ML", href: "/dash/more?tool=community" },
-];
 
 const PLATFORM_FEATURES = [
   { icon: <MessageSquare size={16} />, label: "Live Community", desc: "Real-time discussions with 31k engineers", href: "/dash/more?tool=community", color: "blue" },
@@ -66,11 +59,11 @@ const RESOURCES = [
 ];
 
 const OTHER_HUBS = [
-  { label: "Design & Creativity",   href: "/community/design-creativity",  members: "19.7k", color: "violet" },
-  { label: "Founders & Startups",   href: "/community/founders-startups",  members: "14.2k", color: "emerald" },
-  { label: "Marketing & Growth",    href: "/community/marketing-growth",   members: "11.3k", color: "amber" },
-  { label: "Finance & Business",    href: "/community/finance-business",   members: "8.6k",  color: "indigo" },
-  { label: "Education & Research",  href: "/community/education-research", members: "6.4k",  color: "rose" },
+  { label: "Design & Creativity",   href: "/community/design-creativity",  color: "violet" },
+  { label: "Founders & Startups",   href: "/community/founders-startups",  color: "emerald" },
+  { label: "Marketing & Growth",    href: "/community/marketing-growth",   color: "amber" },
+  { label: "Finance & Business",    href: "/community/finance-business",   color: "indigo" },
+  { label: "Education & Research",  href: "/community/education-research", color: "rose" },
 ];
 
 const colorMap = {
@@ -87,6 +80,17 @@ const colorMap = {
 
 export default function TechEngineeringCommunity() {
   const [activeTab, setActiveTab] = useState("trending");
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("groups").select("id", { count: "exact", head: true }),
+      supabase.from("projects").select("id", { count: "exact", head: true }),
+    ]).then(([profiles, groups, projects]) => {
+      setStats({ members: profiles.count ?? 0, groups: groups.count ?? 0, projects: projects.count ?? 0 });
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
@@ -121,7 +125,8 @@ export default function TechEngineeringCommunity() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-8">
               <div className="flex-1">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold uppercase tracking-widest mb-6">
-                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" /> 31.5k Members · Largest Hub
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                  {stats ? `${fmtCount(stats.members)} members` : "Growing community"} · Join Free
                 </div>
                 <h1 className="text-4xl sm:text-6xl font-black tracking-tight mb-4 leading-tight">Tech &<br />Engineering</h1>
                 <p className="text-blue-100 text-lg sm:text-xl max-w-2xl leading-relaxed">
@@ -137,10 +142,15 @@ export default function TechEngineeringCommunity() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:w-72 shrink-0">
-                {STATS.map(({ label, value, icon: Icon }) => (
+                {[
+                  { label: "Members",  key: "members",  Icon: Users      },
+                  { label: "Groups",   key: "groups",   Icon: Hash       },
+                  { label: "Projects", key: "projects", Icon: GitBranch  },
+                  { label: "Live Hub", key: null,       Icon: MessageSquare },
+                ].map(({ label, key, Icon }) => (
                   <div key={label} className="bg-white/10 border border-white/20 rounded-2xl p-4 backdrop-blur-sm">
                     <Icon size={18} className="text-blue-200 mb-2" />
-                    <p className="text-2xl font-black">{value}</p>
+                    <p className="text-2xl font-black">{key ? (stats ? fmtCount(stats[key]) : "—") : "Open"}</p>
                     <p className="text-[11px] text-blue-200 font-medium mt-0.5">{label}</p>
                   </div>
                 ))}
@@ -160,7 +170,7 @@ export default function TechEngineeringCommunity() {
                   <Link href="/dash/groups" className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">All groups <ChevronRight size={12} /></Link>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {TOPICS.map(({ icon, label, posts, color, desc, href }) => {
+                  {TOPICS.map(({ icon, label, color, desc, href }) => {
                     const c = colorMap[color] || colorMap.blue;
                     return (
                       <Link key={label} href={href}
@@ -169,7 +179,6 @@ export default function TechEngineeringCommunity() {
                         <div className="min-w-0">
                           <p className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
-                          <span className={`inline-block mt-2 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${c.badge}`}>{posts} posts</span>
                         </div>
                       </Link>
                     );
@@ -177,45 +186,14 @@ export default function TechEngineeringCommunity() {
                 </div>
               </section>
 
-              {/* Trending discussions → /dash/more?tool=community */}
+              {/* Live Community Hub CTA */}
               <section>
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h2 className="text-xl font-black tracking-tight flex items-center gap-2"><TrendingUp size={18} className="text-blue-500" /> Trending Discussions</h2>
-                    <p className="text-xs text-gray-400 mt-1">Sample of what's being discussed inside. <Link href="/dash/more?tool=community" className="text-blue-500 hover:underline font-bold">Join to see live →</Link></p>
-                  </div>
-                  <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shrink-0">
-                    {["trending", "latest"].map(tab => (
-                      <button key={tab} onClick={() => setActiveTab(tab)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${activeTab === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400"}`}>
-                        {tab}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {TRENDING.map((post, i) => (
-                    <Link key={i} href={post.href}
-                      className="flex gap-4 p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:border-blue-200 dark:hover:border-blue-800/50 hover:shadow-md transition-all group">
-                      <div className="text-center shrink-0 w-10">
-                        <p className="text-lg font-black text-gray-900 dark:text-white">{post.upvotes}</p>
-                        <p className="text-[9px] text-gray-400 font-bold uppercase">votes</p>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-sm leading-snug">{post.title}</p>
-                        <div className="flex flex-wrap items-center gap-3 mt-2">
-                          <span className="text-[11px] text-gray-500 dark:text-gray-400">{post.author}</span>
-                          <span className="text-[11px] text-gray-400">·</span>
-                          <span className="text-[11px] text-gray-400">{post.time}</span>
-                          <span className="text-[11px] text-gray-400">·</span>
-                          <span className="text-[11px] text-gray-500 dark:text-gray-400">{post.replies} replies</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full">{post.tag}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                  <Link href="/dash/more?tool=community" className="flex items-center justify-center gap-2 py-3 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors">
-                    See all live discussions <ChevronRight size={14} />
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-6 text-center">
+                  <MessageSquare size={28} className="text-blue-500 mx-auto mb-3" />
+                  <h2 className="text-lg font-black text-gray-900 dark:text-white mb-2">Real discussions happen inside</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">Join the live community hub to see and participate in real conversations from real members.</p>
+                  <Link href="/dash/more?tool=community" className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm transition-colors">
+                    <MessageSquare size={14} /> Open Community Hub
                   </Link>
                 </div>
               </section>
@@ -274,7 +252,7 @@ export default function TechEngineeringCommunity() {
             {/* Sidebar */}
             <div className="space-y-6">
               <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
-                <h3 className="font-black text-lg mb-2">Join 31.5k Engineers</h3>
+                <h3 className="font-black text-lg mb-2">Join the Tech Community</h3>
                 <p className="text-blue-100 text-sm mb-4 leading-relaxed">Live discussions, job board, mentorship, code reviews, and a network that ships.</p>
                 <Link href="/auth" className="block text-center py-2.5 bg-white text-blue-700 font-bold rounded-xl text-sm hover:bg-blue-50 transition-colors">Create Free Account</Link>
                 <Link href="/dash/more?tool=community" className="block text-center py-2 text-blue-200 text-xs font-semibold mt-2 hover:text-white transition-colors">Already a member? Open hub →</Link>
@@ -325,16 +303,13 @@ export default function TechEngineeringCommunity() {
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
                 <h3 className="font-black text-sm uppercase tracking-widest text-gray-400 mb-4">Other Hubs</h3>
                 <div className="space-y-1.5">
-                  {OTHER_HUBS.map(({ label, href, members, color }) => {
+                  {OTHER_HUBS.map(({ label, href, color }) => {
                     const c = colorMap[color] || colorMap.blue;
                     return (
                       <Link key={label} href={href}
-                        className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
-                        <div className="flex items-center gap-2.5">
-                          <span className={`w-2 h-2 rounded-full ${c.text.split(" ")[0].replace("text-","bg-")}`} />
-                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{label}</span>
-                        </div>
-                        <span className="text-xs text-gray-400 font-bold">{members}</span>
+                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+                        <span className={`w-2 h-2 rounded-full ${c.text.split(" ")[0].replace("text-","bg-")}`} />
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{label}</span>
                       </Link>
                     );
                   })}

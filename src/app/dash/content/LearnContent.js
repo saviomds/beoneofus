@@ -640,6 +640,7 @@ function AddContentModal({ onClose, onAdd, userProfile, isPremium }) {
       published: new Date().toISOString().split("T")[0],
       tags: tags.split(",").map(t => t.trim()).filter(Boolean),
       featured: false,
+      userId: userProfile?.id,
     });
     onClose();
   };
@@ -720,45 +721,159 @@ function AddContentModal({ onClose, onAdd, userProfile, isPremium }) {
   );
 }
 
+// ── EditContentModal ───────────────────────────────────────────────────────────
+function EditContentModal({ item, onClose, onUpdate }) {
+  const [title, setTitle] = useState(item.title || "");
+  const [desc,  setDesc]  = useState(item.description || "");
+  const [topic, setTopic] = useState(item.topic || "coding");
+  const [level, setLevel] = useState(item.level || "Beginner");
+  const [tags,  setTags]  = useState((item.tags || []).join(", "));
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState("");
+
+  const submit = async () => {
+    if (!title.trim()) { setError("Title is required."); return; }
+    setSaving(true);
+    await onUpdate(item.id, {
+      title: title.trim(),
+      description: desc.trim() || item.description,
+      topic, level,
+      tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+    });
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-base font-black text-gray-900 dark:text-gray-100">Edit Resource</h2>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">{item.title}</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0"><X size={16} /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">Title *</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Descriptive title"
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">Description</label>
+            <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="What will people learn?" rows={2}
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none" />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">Tags <span className="font-normal text-gray-400">(comma-separated)</span></label>
+            <input value={tags} onChange={e => setTags(e.target.value)} placeholder="react, hooks, tutorial"
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">Topic</label>
+              <select value={topic} onChange={e => setTopic(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                {TOPICS.filter(t => t.id !== "all").map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">Level</label>
+              <select value={level} onChange={e => setLevel(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
+              </select>
+            </div>
+          </div>
+          {error && <p className="text-xs text-red-500 font-medium flex items-center gap-1"><X size={11} />{error}</p>}
+        </div>
+        <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
+          <button onClick={submit} disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors active:scale-95">
+            <Check size={14} /> {saving ? "Saving…" : "Update Resource"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── VideoCard ──────────────────────────────────────────────────────────────────
-function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQueueToggle, queued }) {
+function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQueueToggle, queued, isOwner = false, onDelete, onEdit, onHide, isHidden = false }) {
   const topic = topicConfig(item.topic);
   const thumb = item.platform === "youtube" ? ytThumb(item.youtube_id) : null;
 
+  const [confirmDel, setConfirmDel] = useState(false);
+
   if (layout === "list") {
     return (
-      <div className="group flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-md transition-all duration-200">
-        <button onClick={() => onOpen(item)} className="relative w-24 sm:w-28 h-14 sm:h-16 rounded-xl overflow-hidden shrink-0 bg-gray-100 dark:bg-gray-800">
+      <div className={`group relative flex items-center gap-3 p-2.5 bg-white dark:bg-gray-900 border rounded-2xl hover:shadow-md transition-all duration-200 ${isHidden ? "opacity-50 border-dashed border-gray-300 dark:border-gray-700" : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"}`}>
+        {isHidden && (
+          <span className="absolute top-1.5 left-1.5 flex items-center gap-0.5 bg-gray-500/80 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full z-10">
+            <EyeOff size={7} /> Hidden
+          </span>
+        )}
+        {/* Owner actions — hover overlay top-right */}
+        {isOwner && (
+          <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            {confirmDel ? (
+              <div className="flex items-center gap-1">
+                <button onClick={() => { onDelete?.(item.id); setConfirmDel(false); }}
+                  className="px-2 py-1 text-[9px] font-bold bg-red-500 text-white rounded-lg shadow-md">Delete</button>
+                <button onClick={() => setConfirmDel(false)}
+                  className="px-2 py-1 text-[9px] font-bold bg-gray-800 text-gray-200 rounded-lg shadow-md">No</button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <button onClick={() => onHide?.(item.id)} title={isHidden ? "Show" : "Hide"}
+                  className={`w-6 h-6 bg-white dark:bg-gray-800 border rounded-lg flex items-center justify-center shadow-sm transition-colors ${isHidden ? "border-emerald-300 dark:border-emerald-700 text-emerald-500 hover:bg-emerald-50" : "border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                  {isHidden ? <Eye size={10} /> : <EyeOff size={10} />}
+                </button>
+                <button onClick={() => onEdit?.(item)}
+                  className="w-6 h-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-blue-500 rounded-lg flex items-center justify-center shadow-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                  <Edit2 size={10} />
+                </button>
+                <button onClick={() => setConfirmDel(true)}
+                  className="w-6 h-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-red-500 rounded-lg flex items-center justify-center shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        <button onClick={() => onOpen(item)} className="relative w-20 sm:w-24 h-12 sm:h-14 rounded-xl overflow-hidden shrink-0 bg-gray-100 dark:bg-gray-800">
           {thumb
             ? <img src={thumb} alt={item.title} className="w-full h-full object-cover" />
-            : <div className="w-full h-full flex items-center justify-center bg-gray-900"><Video size={20} className="text-gray-600" /></div>}
+            : <div className="w-full h-full flex items-center justify-center bg-gray-900"><Video size={18} className="text-gray-600" /></div>}
           <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <Play size={18} className="text-white fill-white" />
+            <Play size={16} className="text-white fill-white" />
           </div>
-          {item.duration && <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">{item.duration}</span>}
-          {watched && <div className="absolute top-1 left-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center"><Check size={9} className="text-white" /></div>}
+          {item.duration && <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-bold px-1 py-0.5 rounded">{item.duration}</span>}
+          {watched && <div className="absolute top-1 left-1 w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center"><Check size={8} className="text-white" /></div>}
         </button>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5 sm:mb-1 flex-wrap">
-            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>
-              <topic.icon size={9} /> {topic.label}
+          <div className="flex items-center gap-1 mb-0.5">
+            <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>
+              <topic.icon size={8} /> {topic.label}
             </span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
           </div>
-          <p className={`text-xs sm:text-sm font-bold truncate ${watched ? "text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-gray-100"}`}>{item.title}</p>
-          <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 truncate">{item.author}</p>
+          <p className={`text-xs font-bold truncate ${watched ? "text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-gray-100"}`}>{item.title}</p>
+          <p className="text-[10px] text-gray-500 mt-0.5 truncate">{item.author}</p>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <button onClick={() => onQueueToggle(item.id)}
             className={`p-1.5 rounded-lg transition-colors ${queued ? "text-blue-500" : "text-gray-300 dark:text-gray-600 hover:text-blue-400"}`}>
-            <Plus size={14} />
+            <Plus size={13} />
           </button>
           <button onClick={() => onBookmark(item.id)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-amber-500 transition-colors">
-            {bookmarked ? <BookmarkCheck size={15} className="text-amber-500 fill-current" /> : <Bookmark size={15} />}
+            {bookmarked ? <BookmarkCheck size={14} className="text-amber-500 fill-current" /> : <Bookmark size={14} />}
           </button>
           <button onClick={() => onOpen(item)}
-            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs font-bold rounded-xl transition-colors shrink-0">
-            <Play size={10} className="fill-white" /> Watch
+            className="p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-colors shrink-0">
+            <Play size={12} className="fill-white" />
           </button>
         </div>
       </div>
@@ -767,60 +882,87 @@ function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQu
 
   // Grid card
   return (
-    <div className={`group flex flex-col bg-white dark:bg-gray-900 border rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 ${watched ? "border-gray-100 dark:border-gray-800/60 opacity-80" : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"}`}>
-      <button onClick={() => onOpen(item)} className="relative aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden block w-full">
-        {thumb
-          ? <img src={thumb} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-          : <div className="w-full h-full flex items-center justify-center bg-gray-900"><Video size={32} className="text-gray-700" /></div>}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/50 transition-colors">
-          <div className="w-11 h-11 bg-white/90 dark:bg-white/80 rounded-full flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-            <Play size={17} className="text-gray-900 fill-gray-900 ml-0.5" />
+    <div className={`group relative flex flex-col bg-white dark:bg-gray-900 border rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 ${isHidden ? "opacity-50 border-dashed border-gray-300 dark:border-gray-700" : watched ? "border-gray-100 dark:border-gray-800/60 opacity-80" : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"}`}>
+      {/* Thumbnail */}
+      <div className="relative w-full rounded-t-2xl overflow-hidden bg-gray-100 dark:bg-gray-800" style={{ paddingBottom: "56.25%" }}>
+        <button onClick={() => onOpen(item)} className="absolute inset-0 w-full h-full">
+          {thumb
+            ? <img src={thumb} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            : <div className="w-full h-full flex items-center justify-center bg-gray-900"><Video size={28} className="text-gray-700" /></div>}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/50 transition-colors">
+            <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <Play size={14} className="text-gray-900 fill-gray-900 ml-0.5" />
+            </div>
           </div>
-        </div>
-        {item.duration && <span className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">{item.duration}</span>}
-        {item.featured && (
-          <span className="absolute top-2 left-2 flex items-center gap-1 bg-amber-400 text-gray-900 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-            <Flame size={9} /> Featured
+          {item.duration && <span className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">{item.duration}</span>}
+          {item.featured && (
+            <span className="absolute top-1.5 left-1.5 flex items-center gap-0.5 bg-amber-400 text-gray-900 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase">
+              <Flame size={7} /> Featured
+            </span>
+          )}
+          {watched && (
+            <span className="absolute top-1.5 right-1.5 flex items-center gap-0.5 bg-emerald-500/90 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">
+              <CheckCircle2 size={7} /> Watched
+            </span>
+          )}
+        </button>
+        {/* Hidden badge */}
+        {isHidden && (
+          <span className="absolute top-1.5 left-1.5 flex items-center gap-0.5 bg-gray-600/90 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full z-10 pointer-events-none">
+            <EyeOff size={7} /> Hidden
           </span>
         )}
-        {watched && (
-          <span className="absolute top-2 right-2 flex items-center gap-1 bg-emerald-500/90 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
-            <CheckCircle2 size={9} /> Watched
-          </span>
-        )}
-        {item.platform === "tiktok" && <span className="absolute top-2 left-2 text-[9px] font-black bg-black text-white px-2 py-0.5 rounded-full">TikTok</span>}
-      </button>
-      <div className="flex flex-col flex-1 p-4">
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>
-            <topic.icon size={9} /> {topic.label}
-          </span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
-        </div>
-        <h3 className={`text-sm font-black leading-snug mb-1 line-clamp-2 ${watched ? "text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-gray-100"}`}>{item.title}</h3>
-        <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 flex-1 mb-3">{item.description}</p>
-        <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50 dark:border-gray-800">
-          <div>
-            <span className="text-xs text-gray-500 font-medium truncate max-w-[100px] block">{item.author}</span>
-            {(item.views || item.likes) && (
-              <div className="flex items-center gap-2 mt-0.5">
-                {item.views && <span className="text-[10px] text-gray-400 flex items-center gap-0.5"><Eye size={9} />{formatCount(item.views)}</span>}
-                {item.likes && <span className="text-[10px] text-gray-400 flex items-center gap-0.5"><ThumbsUp size={9} />{formatCount(item.likes)}</span>}
+        {/* Owner controls — bottom-left hover overlay on thumbnail */}
+        {isOwner && (
+          <div className="absolute bottom-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            {confirmDel ? (
+              <div className="flex items-center gap-1">
+                <button onClick={() => { onDelete?.(item.id); setConfirmDel(false); }}
+                  className="px-2 py-0.5 text-[9px] font-bold bg-red-500 text-white rounded-lg shadow">Delete</button>
+                <button onClick={() => setConfirmDel(false)}
+                  className="px-2 py-0.5 text-[9px] font-bold bg-gray-800 text-gray-100 rounded-lg shadow">No</button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <button onClick={() => onHide?.(item.id)} title={isHidden ? "Show" : "Hide"}
+                  className={`w-6 h-6 rounded-lg flex items-center justify-center shadow transition-colors ${isHidden ? "bg-emerald-500/90 text-white hover:bg-emerald-500" : "bg-white/90 text-gray-600 hover:bg-white"}`}>
+                  {isHidden ? <Eye size={10} /> : <EyeOff size={10} />}
+                </button>
+                <button onClick={() => onEdit?.(item)}
+                  className="w-6 h-6 bg-white/90 text-blue-500 rounded-lg flex items-center justify-center shadow hover:bg-white transition-colors">
+                  <Edit2 size={10} />
+                </button>
+                <button onClick={() => setConfirmDel(true)}
+                  className="w-6 h-6 bg-white/90 text-red-500 rounded-lg flex items-center justify-center shadow hover:bg-white transition-colors">
+                  <Trash2 size={10} />
+                </button>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
+        )}
+      </div>
+      {/* Card body — no description to avoid repeated text and overflow */}
+      <div className="p-3">
+        <div className="flex items-center gap-1 mb-1.5">
+          <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>
+            <topic.icon size={8} /> {topic.label}
+          </span>
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
+        </div>
+        <h3 className={`text-[13px] font-black leading-snug line-clamp-2 mb-3 ${watched ? "text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-gray-100"}`}>{item.title}</h3>
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+          <span className="text-[10px] text-gray-500 font-medium truncate min-w-0 pr-2">{item.author}</span>
+          <div className="flex items-center gap-1 shrink-0">
             <button onClick={() => onQueueToggle(item.id)}
-              className={`p-1.5 rounded-lg transition-colors ${queued ? "text-blue-500" : "text-gray-300 dark:text-gray-600 hover:text-blue-400"}`}
-              title={queued ? "Remove from queue" : "Add to queue"}>
-              <Plus size={13} />
+              className={`p-1 rounded-lg transition-colors ${queued ? "text-blue-500" : "text-gray-300 dark:text-gray-600 hover:text-blue-400"}`}>
+              <Plus size={12} />
             </button>
-            <button onClick={() => onBookmark(item.id)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-amber-500 transition-colors rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20">
-              {bookmarked ? <BookmarkCheck size={14} className="text-amber-500 fill-current" /> : <Bookmark size={14} />}
+            <button onClick={() => onBookmark(item.id)} className="p-1 text-gray-300 dark:text-gray-600 hover:text-amber-500 transition-colors rounded-lg">
+              {bookmarked ? <BookmarkCheck size={12} className="text-amber-500 fill-current" /> : <Bookmark size={12} />}
             </button>
             <button onClick={() => onOpen(item)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold rounded-xl transition-colors active:scale-95">
-              <Play size={10} className="fill-white" /> Watch
+              className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-lg transition-colors active:scale-95">
+              <Play size={8} className="fill-white" /> Watch
             </button>
           </div>
         </div>
@@ -830,31 +972,65 @@ function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQu
 }
 
 // ── ArticleCard ────────────────────────────────────────────────────────────────
-function ArticleCard({ item, layout, bookmarked, onBookmark }) {
+function ArticleCard({ item, layout, bookmarked, onBookmark, isOwner = false, onDelete, onEdit, onHide, isHidden = false }) {
   const topic = topicConfig(item.topic);
+  const [confirmDel, setConfirmDel] = useState(false);
 
   if (layout === "list") {
     return (
-      <div className="group flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-md transition-all duration-200">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${TOPIC_COLORS[topic.color]}`}>
-          <topic.icon size={20} />
+      <div className={`group relative flex items-center gap-3 p-2.5 bg-white dark:bg-gray-900 border rounded-2xl hover:shadow-md transition-all duration-200 ${isHidden ? "opacity-50 border-dashed border-gray-300 dark:border-gray-700" : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"}`}>
+        {isHidden && (
+          <span className="absolute top-1.5 left-1.5 flex items-center gap-0.5 bg-gray-500/80 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full z-10">
+            <EyeOff size={7} /> Hidden
+          </span>
+        )}
+        {/* Owner controls — top-right hover overlay */}
+        {isOwner && (
+          <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            {confirmDel ? (
+              <div className="flex items-center gap-1">
+                <button onClick={() => { onDelete?.(item.id); setConfirmDel(false); }}
+                  className="px-2 py-1 text-[9px] font-bold bg-red-500 text-white rounded-lg shadow-md">Delete</button>
+                <button onClick={() => setConfirmDel(false)}
+                  className="px-2 py-1 text-[9px] font-bold bg-gray-800 text-gray-200 rounded-lg shadow-md">No</button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <button onClick={() => onHide?.(item.id)} title={isHidden ? "Show" : "Hide"}
+                  className={`w-6 h-6 bg-white dark:bg-gray-800 border rounded-lg flex items-center justify-center shadow-sm transition-colors ${isHidden ? "border-emerald-300 dark:border-emerald-700 text-emerald-500 hover:bg-emerald-50" : "border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                  {isHidden ? <Eye size={10} /> : <EyeOff size={10} />}
+                </button>
+                <button onClick={() => onEdit?.(item)}
+                  className="w-6 h-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-blue-500 rounded-lg flex items-center justify-center shadow-sm hover:bg-blue-50 transition-colors">
+                  <Edit2 size={10} />
+                </button>
+                <button onClick={() => setConfirmDel(true)}
+                  className="w-6 h-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-red-500 rounded-lg flex items-center justify-center shadow-sm hover:bg-red-50 transition-colors">
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${TOPIC_COLORS[topic.color]}`}>
+          <topic.icon size={16} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5 sm:mb-1 flex-wrap">
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>{topic.label}</span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
+          <div className="flex items-center gap-1 mb-0.5">
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>{topic.label}</span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
           </div>
-          <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{item.title}</p>
-          <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 truncate">{item.author}{item.read_time ? ` · ${item.read_time}` : ""}</p>
+          <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{item.title}</p>
+          <p className="text-[10px] text-gray-500 mt-0.5 truncate">{item.author}{item.read_time ? ` · ${item.read_time}` : ""}</p>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <button onClick={() => onBookmark(item.id)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-amber-500 transition-colors">
-            {bookmarked ? <BookmarkCheck size={15} className="text-amber-500 fill-current" /> : <Bookmark size={15} />}
+            {bookmarked ? <BookmarkCheck size={14} className="text-amber-500 fill-current" /> : <Bookmark size={14} />}
           </button>
           {item.url && (
             <a href={item.url} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 dark:border-gray-700 hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 text-xs font-bold rounded-xl transition-colors">
-              Read <ExternalLink size={10} />
+              className="p-1.5 border border-gray-200 dark:border-gray-700 hover:border-blue-400 text-gray-500 dark:text-gray-400 hover:text-blue-600 rounded-xl transition-colors">
+              <ExternalLink size={13} />
             </a>
           )}
         </div>
@@ -863,43 +1039,74 @@ function ArticleCard({ item, layout, bookmarked, onBookmark }) {
   }
 
   return (
-    <div className="group flex flex-col bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${TOPIC_COLORS[topic.color]}`}>
-          <topic.icon size={18} />
-        </div>
-        {item.featured && (
-          <span className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-[9px] font-black px-2 py-0.5 rounded-full uppercase border border-amber-200 dark:border-amber-800/50">
-            <Flame size={9} /> Featured
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>
-          <topic.icon size={9} /> {topic.label}
+    <div className={`group relative flex flex-col bg-white dark:bg-gray-900 border rounded-2xl p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 ${isHidden ? "opacity-50 border-dashed border-gray-300 dark:border-gray-700" : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"}`}>
+      {isHidden && (
+        <span className="absolute top-2.5 left-3 flex items-center gap-0.5 bg-gray-500/80 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full z-10">
+          <EyeOff size={7} /> Hidden
         </span>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
-      </div>
-      <h3 className="text-sm font-black text-gray-900 dark:text-gray-100 leading-snug mb-2 line-clamp-2">{item.title}</h3>
-      <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 flex-1 mb-4">{item.description}</p>
-      <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50 dark:border-gray-800">
-        <div className="min-w-0">
-          <p className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate max-w-[120px]">{item.author}</p>
-          {item.read_time && (
-            <div className="flex items-center gap-1 text-gray-400 mt-0.5">
-              <Clock size={9} /><span className="text-[10px]">{item.read_time}</span>
-              {item.source && <span className="text-[10px]">· {item.source}</span>}
+      )}
+      {/* Owner controls — top-right hover overlay */}
+      {isOwner && (
+        <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+          {confirmDel ? (
+            <div className="flex items-center gap-1">
+              <button onClick={() => { onDelete?.(item.id); setConfirmDel(false); }}
+                className="px-2 py-1 text-[9px] font-bold bg-red-500 text-white rounded-lg shadow-md">Delete</button>
+              <button onClick={() => setConfirmDel(false)}
+                className="px-2 py-1 text-[9px] font-bold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg shadow-md">No</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <button onClick={() => onHide?.(item.id)} title={isHidden ? "Show" : "Hide"}
+                className={`w-6 h-6 bg-white dark:bg-gray-800 border rounded-lg flex items-center justify-center shadow-sm transition-colors ${isHidden ? "border-emerald-300 dark:border-emerald-700 text-emerald-500 hover:bg-emerald-50" : "border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                {isHidden ? <Eye size={10} /> : <EyeOff size={10} />}
+              </button>
+              <button onClick={() => onEdit?.(item)}
+                className="w-6 h-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-blue-500 rounded-lg flex items-center justify-center shadow-sm hover:bg-blue-50 transition-colors">
+                <Edit2 size={10} />
+              </button>
+              <button onClick={() => setConfirmDel(true)}
+                className="w-6 h-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-red-500 rounded-lg flex items-center justify-center shadow-sm hover:bg-red-50 transition-colors">
+                <Trash2 size={10} />
+              </button>
             </div>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
-          <button onClick={() => onBookmark(item.id)} className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-amber-500 transition-colors rounded-lg">
-            {bookmarked ? <BookmarkCheck size={14} className="text-amber-500 fill-current" /> : <Bookmark size={14} />}
+      )}
+      <div className="flex items-center gap-2 mb-2">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${TOPIC_COLORS[topic.color]}`}>
+          <topic.icon size={16} />
+        </div>
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>
+            <topic.icon size={8} /> {topic.label}
+          </span>
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
+          {item.featured && (
+            <span className="flex items-center gap-0.5 bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800/50">
+              <Flame size={8} /> Featured
+            </span>
+          )}
+        </div>
+      </div>
+      <h3 className="text-[13px] font-black text-gray-900 dark:text-gray-100 leading-snug line-clamp-2 mb-3">{item.title}</h3>
+      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800 mt-auto">
+        <div className="min-w-0 pr-2">
+          <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate">{item.author}</p>
+          {item.read_time && (
+            <span className="text-[9px] text-gray-400 flex items-center gap-0.5 mt-0.5">
+              <Clock size={8} /> {item.read_time}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button onClick={() => onBookmark(item.id)} className="p-1 text-gray-300 dark:text-gray-600 hover:text-amber-500 transition-colors rounded-lg">
+            {bookmarked ? <BookmarkCheck size={12} className="text-amber-500 fill-current" /> : <Bookmark size={12} />}
           </button>
           {item.url && (
             <a href={item.url} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 dark:border-gray-700 hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 text-[11px] font-bold rounded-xl transition-colors">
-              Read <ExternalLink size={10} />
+              className="flex items-center gap-1 px-2 py-1 border border-gray-200 dark:border-gray-700 hover:border-blue-400 text-gray-600 dark:text-gray-300 hover:text-blue-600 text-[10px] font-bold rounded-lg transition-colors">
+              Read <ExternalLink size={8} />
             </a>
           )}
         </div>
@@ -909,7 +1116,7 @@ function ArticleCard({ item, layout, bookmarked, onBookmark }) {
 }
 
 // ── ScrollRow ──────────────────────────────────────────────────────────────────
-function ScrollRow({ title, icon: Icon, color = "blue", items, bookmarks, onBookmark, onOpen, onSeeMore, watched, queue, onQueueToggle }) {
+function ScrollRow({ title, icon: Icon, color = "blue", items, bookmarks, onBookmark, onOpen, onSeeMore, watched, queue, onQueueToggle, currentUserId, onDelete, onEdit, onHide, hiddenIds = [] }) {
   const rowRef = useRef(null);
   const [canLeft,  setCanLeft]  = useState(false);
   const [canRight, setCanRight] = useState(true);
@@ -965,13 +1172,17 @@ function ScrollRow({ title, icon: Icon, color = "blue", items, bookmarks, onBook
         {canLeft  && <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-gray-50 dark:from-gray-950 to-transparent z-10 pointer-events-none" />}
         {canRight && <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-gray-50 dark:from-gray-950 to-transparent z-10 pointer-events-none" />}
         <div ref={rowRef} className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
-          {items.map(item => (
-            <div key={item.id} className="w-64 sm:w-72 shrink-0">
-              {item.type === "video"
-                ? <VideoCard item={item} layout="grid" bookmarked={bookmarks.includes(item.id)} onBookmark={onBookmark} onOpen={onOpen} watched={watched?.includes(item.id)} queue={queue} onQueueToggle={onQueueToggle} queued={queue?.includes(item.id)} />
-                : <ArticleCard item={item} layout="grid" bookmarked={bookmarks.includes(item.id)} onBookmark={onBookmark} />}
-            </div>
-          ))}
+          {items.map(item => {
+            const isOwner  = !!(currentUserId && (item.userId === currentUserId || item.user_id === currentUserId));
+            const isHidden = hiddenIds.includes(item.id);
+            return (
+              <div key={item.id} className="w-64 sm:w-72 shrink-0">
+                {item.type === "video"
+                  ? <VideoCard item={item} layout="grid" bookmarked={bookmarks.includes(item.id)} onBookmark={onBookmark} onOpen={onOpen} watched={watched?.includes(item.id)} queue={queue} onQueueToggle={onQueueToggle} queued={queue?.includes(item.id)} isOwner={isOwner} onDelete={onDelete} onEdit={onEdit} onHide={onHide} isHidden={isHidden} />
+                  : <ArticleCard item={item} layout="grid" bookmarked={bookmarks.includes(item.id)} onBookmark={onBookmark} isOwner={isOwner} onDelete={onDelete} onEdit={onEdit} onHide={onHide} isHidden={isHidden} />}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -1054,8 +1265,7 @@ function FeaturedSpotlight({ items, bookmarks, onBookmark, onOpen }) {
 }
 
 // ── MagazineLayout ─────────────────────────────────────────────────────────────
-// Proper responsive magazine: hero + sidebar + grid continuation
-function MagazineLayout({ filtered, bookmarks, onBookmark, onOpen, watched, queue, onQueueToggle }) {
+function MagazineLayout({ filtered, bookmarks, onBookmark, onOpen, watched, queue, onQueueToggle, currentUserId, onDelete, onEdit, onHide, hiddenIds = [] }) {
   if (filtered.length === 0) return null;
 
   const hero     = filtered[0];
@@ -1134,15 +1344,19 @@ function MagazineLayout({ filtered, bookmarks, onBookmark, onOpen, watched, queu
           {sidebar.length === 0 && (
             <div className="flex-1 flex items-center justify-center text-gray-600 text-xs p-6">No more items</div>
           )}
-          {sidebar.map(item =>
-            item.type === "video"
+          {sidebar.map(item => {
+            const isOwner  = !!(currentUserId && (item.userId === currentUserId || item.user_id === currentUserId));
+            const isHidden = hiddenIds.includes(item.id);
+            return item.type === "video"
               ? <VideoCard key={item.id} item={item} layout="list"
                   bookmarked={bookmarks.includes(item.id)} onBookmark={onBookmark}
                   onOpen={onOpen} watched={watched.includes(item.id)}
-                  queue={queue} onQueueToggle={onQueueToggle} queued={queue.includes(item.id)} />
+                  queue={queue} onQueueToggle={onQueueToggle} queued={queue.includes(item.id)}
+                  isOwner={isOwner} onDelete={onDelete} onEdit={onEdit} onHide={onHide} isHidden={isHidden} />
               : <ArticleCard key={item.id} item={item} layout="list"
-                  bookmarked={bookmarks.includes(item.id)} onBookmark={onBookmark} />
-          )}
+                  bookmarked={bookmarks.includes(item.id)} onBookmark={onBookmark}
+                  isOwner={isOwner} onDelete={onDelete} onEdit={onEdit} onHide={onHide} isHidden={isHidden} />;
+          })}
         </div>
       </div>
 
@@ -1158,15 +1372,19 @@ function MagazineLayout({ filtered, bookmarks, onBookmark, onOpen, watched, queu
       {/* ── Continuation grid – masonry-like 3-col ────────────────────── */}
       {rest.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rest.map(item =>
-            item.type === "video"
+          {rest.map(item => {
+            const isOwner  = !!(currentUserId && (item.userId === currentUserId || item.user_id === currentUserId));
+            const isHidden = hiddenIds.includes(item.id);
+            return item.type === "video"
               ? <VideoCard key={item.id} item={item} layout="grid"
                   bookmarked={bookmarks.includes(item.id)} onBookmark={onBookmark}
                   onOpen={onOpen} watched={watched.includes(item.id)}
-                  queue={queue} onQueueToggle={onQueueToggle} queued={queue.includes(item.id)} />
+                  queue={queue} onQueueToggle={onQueueToggle} queued={queue.includes(item.id)}
+                  isOwner={isOwner} onDelete={onDelete} onEdit={onEdit} onHide={onHide} isHidden={isHidden} />
               : <ArticleCard key={item.id} item={item} layout="grid"
-                  bookmarked={bookmarks.includes(item.id)} onBookmark={onBookmark} />
-          )}
+                  bookmarked={bookmarks.includes(item.id)} onBookmark={onBookmark}
+                  isOwner={isOwner} onDelete={onDelete} onEdit={onEdit} onHide={onHide} isHidden={isHidden} />;
+          })}
         </div>
       )}
     </div>
@@ -1221,9 +1439,12 @@ export default function LearnContent() {
   const [viewCounts,   setViewCounts]   = useLocalState("learn_views", {});
   const [showSaved,    setShowSaved]    = useState(false);
   const [showWatched,  setShowWatched]  = useState(false); // filter unwatched only
+  const [showHidden,   setShowHidden]   = useState(false); // show only owner-hidden items
+  const [hiddenIds,    setHiddenIds]    = useLocalState("learn_hidden_ids", []);
   const [openItem,     setOpenItem]     = useState(null);
   const [showAdd,      setShowAdd]      = useState(false);
   const [showStats,    setShowStats]    = useState(false);
+  const [editingItem,  setEditingItem]  = useState(null);
   const [userProfile,  setUserProfile]  = useState(null);
   const [dbContent,    setDbContent]    = useState([]);
   const [userContent,  setUserContent]  = useLocalState("learn_user_content", []);
@@ -1274,8 +1495,36 @@ export default function LearnContent() {
     setQueue(prev => prev.includes(id) ? prev.filter(q => q !== id) : [...prev, id]);
   }, [setQueue]);
 
+  const toggleHide = useCallback((id) => {
+    setHiddenIds(prev => prev.includes(id) ? prev.filter(h => h !== id) : [...prev, id]);
+  }, [setHiddenIds]);
+
   const addUserContent = useCallback((item) => {
     setUserContent(prev => [item, ...prev]);
+  }, [setUserContent]);
+
+  const deleteContent = useCallback(async (id) => {
+    const idStr = String(id);
+    if (idStr.startsWith("user_")) {
+      setUserContent(prev => prev.filter(i => i.id !== id));
+    } else {
+      try {
+        await supabase.from("learn_content").delete().eq("id", id);
+        setDbContent(prev => prev.filter(i => i.id !== id));
+      } catch {}
+    }
+  }, [setUserContent]);
+
+  const updateContent = useCallback(async (id, updates) => {
+    const idStr = String(id);
+    if (idStr.startsWith("user_")) {
+      setUserContent(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+    } else {
+      try {
+        await supabase.from("learn_content").update(updates).eq("id", id);
+        setDbContent(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+      } catch {}
+    }
   }, [setUserContent]);
 
   // Track view + open modal
@@ -1297,6 +1546,9 @@ export default function LearnContent() {
       if (levelFilter !== "all" && item.level !== levelFilter) return false;
       if (showSaved && !bookmarks.includes(item.id)) return false;
       if (showWatched && watched.includes(item.id)) return false; // hide watched
+      // hidden mode: show ONLY hidden items when toggled; otherwise exclude hidden items
+      if (showHidden && !hiddenIds.includes(item.id)) return false;
+      if (!showHidden && hiddenIds.includes(item.id)) return false;
       if (dSearch) {
         const q = dSearch.toLowerCase();
         return item.title.toLowerCase().includes(q)
@@ -1331,7 +1583,10 @@ export default function LearnContent() {
   const articleCount  = filtered.filter(i => i.type === "article").length;
   const watchedCount  = allContent.filter(i => watched.includes(i.id)).length;
 
-  const isFiltered = dSearch || showSaved || showWatched || topic !== "all" || typeFilter !== "all" || levelFilter !== "all";
+  const isFiltered = dSearch || showSaved || showWatched || showHidden || topic !== "all" || typeFilter !== "all" || levelFilter !== "all";
+
+  const ownerCheck = (item) =>
+    !!(userProfile?.id && (item.userId === userProfile.id || item.user_id === userProfile.id));
 
   const cardProps = (item) => ({
     item,
@@ -1342,6 +1597,11 @@ export default function LearnContent() {
     queue,
     onQueueToggle: toggleQueue,
     queued: queue.includes(item.id),
+    isOwner: ownerCheck(item),
+    onDelete: deleteContent,
+    onEdit: setEditingItem,
+    onHide: toggleHide,
+    isHidden: hiddenIds.includes(item.id),
   });
 
   return (
@@ -1372,46 +1632,63 @@ export default function LearnContent() {
         />
       )}
 
+      {/* Edit Modal */}
+      {editingItem && (
+        <EditContentModal
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onUpdate={updateContent}
+        />
+      )}
+
       <div className="w-full max-w-7xl mx-auto pb-16">
 
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
+        <div className="mb-6">
+          <div className="mb-3">
             <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Discover &amp; Learn</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5 font-medium">Curated videos &amp; articles — all watched right here.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5 font-medium">Curated videos &amp; articles — all right here.</p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Stats toggle */}
             <button onClick={() => setShowStats(s => !s)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all ${showStats ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/40" : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-500 hover:border-gray-300"}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${showStats ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/40" : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-500 hover:border-gray-300"}`}>
               <BarChart2 size={12} /> Stats
             </button>
             {/* Queue badge */}
             {queue.length > 0 && (
-              <span className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-bold rounded-xl border border-blue-200 dark:border-blue-800/30">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-bold rounded-xl border border-blue-200 dark:border-blue-800/30">
                 <ListVideo size={12} /> {queue.length} queued
               </span>
             )}
             {/* Watched badge */}
             {watchedCount > 0 && (
-              <span className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-xl border border-emerald-200 dark:border-emerald-800/30">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-xl border border-emerald-200 dark:border-emerald-800/30">
                 <Eye size={12} /> {watchedCount} watched
               </span>
+            )}
+            {/* Hidden items toggle — only visible to the owner when they have hidden content */}
+            {hiddenIds.length > 0 && userProfile && (
+              <button onClick={() => setShowHidden(p => !p)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${showHidden ? "bg-gray-800 dark:bg-gray-700 text-white border-gray-600" : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-500 hover:border-gray-300"}`}>
+                {showHidden ? <Eye size={12} /> : <EyeOff size={12} />}
+                {hiddenIds.length} hidden
+              </button>
             )}
             {/* Add resource */}
             {canAdd ? (
               <button onClick={() => setShowAdd(true)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-colors active:scale-95 shadow-sm">
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-colors active:scale-95 shadow-sm">
                 <Plus size={13} /> Add Resource
               </button>
             ) : userProfile ? (
               <span title="Requires verified or premium account"
-                className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 text-xs font-bold rounded-xl border border-gray-200 dark:border-gray-700 cursor-not-allowed">
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-400 text-xs font-bold rounded-xl border border-gray-200 dark:border-gray-700 cursor-not-allowed">
                 <Lock size={11} /> Verified to Add
               </span>
             ) : null}
-            {/* Layout switcher */}
-            <div className="flex items-center bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl p-1 gap-0.5">
+            {/* Layout switcher — pushed to end */}
+            <div className="ml-auto flex items-center bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl p-1 gap-0.5">
               {LAYOUTS.map(({ id, icon: Icon, label }) => (
                 <button key={id} onClick={() => setLayout(id)} title={label}
                   className={`p-1.5 rounded-lg transition-all ${layout === id ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
@@ -1456,54 +1733,54 @@ export default function LearnContent() {
         </div>
 
         {/* ── Sub-filters + Sort ───────────────────────────────────────── */}
-        <div className="flex items-center gap-2 mb-6 flex-wrap">
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 no-scrollbar">
           {/* Type */}
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1 gap-0.5 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1 gap-0.5 border border-gray-200 dark:border-gray-700 shrink-0">
             {[
               { id: "all",     label: "All" },
-              { id: "video",   label: `Videos (${videoCount})` },
-              { id: "article", label: `Articles (${articleCount})` },
+              { id: "video",   label: `Videos` },
+              { id: "article", label: `Articles` },
             ].map(({ id, label }) => (
               <button key={id} onClick={() => setTypeFilter(id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${typeFilter === id ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${typeFilter === id ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                 {label}
               </button>
             ))}
           </div>
 
           {/* Level */}
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1 gap-0.5 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-1 gap-0.5 border border-gray-200 dark:border-gray-700 shrink-0">
             {["all", "Beginner", "Intermediate", "Advanced"].map(l => (
               <button key={l} onClick={() => setLevelFilter(l)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${levelFilter === l ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
-                {l === "all" ? "All Levels" : l}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${levelFilter === l ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                {l === "all" ? "Level" : l}
               </button>
             ))}
           </div>
 
           {/* Saved toggle */}
           <button onClick={() => setShowSaved(p => !p)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${showSaved ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50" : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:border-gray-300"}`}>
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 whitespace-nowrap ${showSaved ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50" : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:border-gray-300"}`}>
             {showSaved ? <BookmarkCheck size={12} className="fill-current" /> : <Bookmark size={12} />}
             Saved {bookmarks.length > 0 && `(${bookmarks.length})`}
           </button>
 
           {/* Unwatched toggle */}
           <button onClick={() => setShowWatched(p => !p)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${showWatched ? "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800/50" : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:border-gray-300"}`}>
-            <EyeOff size={12} /> Unwatched only
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 whitespace-nowrap ${showWatched ? "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800/50" : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:border-gray-300"}`}>
+            <EyeOff size={12} /> Unwatched
           </button>
 
           {/* Sort */}
-          <div className="ml-auto">
+          <div className="shrink-0">
             <SortDropdown value={sortBy} onChange={setSortBy} />
           </div>
 
           {/* Clear */}
           {isFiltered && (
-            <button onClick={() => { setTopic("all"); setTypeFilter("all"); setLevelFilter("all"); setSearch(""); setShowSaved(false); setShowWatched(false); }}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
-              <X size={11} /> Clear all
+            <button onClick={() => { setTopic("all"); setTypeFilter("all"); setLevelFilter("all"); setSearch(""); setShowSaved(false); setShowWatched(false); setShowHidden(false); }}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0 whitespace-nowrap">
+              <X size={11} /> Clear
             </button>
           )}
         </div>
@@ -1539,7 +1816,7 @@ export default function LearnContent() {
               </div>
               <h3 className="text-lg font-black text-gray-900 dark:text-gray-100 mb-1">No results</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-xs">Try a different search, topic, or remove filters.</p>
-              <button onClick={() => { setTopic("all"); setTypeFilter("all"); setLevelFilter("all"); setSearch(""); setShowSaved(false); setShowWatched(false); }}
+              <button onClick={() => { setTopic("all"); setTypeFilter("all"); setLevelFilter("all"); setSearch(""); setShowSaved(false); setShowWatched(false); setShowHidden(false); }}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm">
                 <RefreshCw size={13} /> Reset
               </button>
@@ -1549,7 +1826,7 @@ export default function LearnContent() {
               {filtered.map(item =>
                 item.type === "video"
                   ? <VideoCard key={item.id} layout="list" {...cardProps(item)} />
-                  : <ArticleCard key={item.id} layout="list" item={item} bookmarked={bookmarks.includes(item.id)} onBookmark={toggleBookmark} />
+                  : <ArticleCard key={item.id} layout="list" item={item} bookmarked={bookmarks.includes(item.id)} onBookmark={toggleBookmark} isOwner={ownerCheck(item)} onDelete={deleteContent} onEdit={setEditingItem} onHide={toggleHide} isHidden={hiddenIds.includes(item.id)} />
               )}
             </div>
           ) : layout === "magazine" ? (
@@ -1561,6 +1838,11 @@ export default function LearnContent() {
               watched={watched}
               queue={queue}
               onQueueToggle={toggleQueue}
+              currentUserId={userProfile?.id}
+              onDelete={deleteContent}
+              onEdit={setEditingItem}
+              onHide={toggleHide}
+              hiddenIds={hiddenIds}
             />
           ) : (
             /* Grid — scroll rows when browsing, flat grid when filtering */
@@ -1569,7 +1851,7 @@ export default function LearnContent() {
                 {filtered.map(item =>
                   item.type === "video"
                     ? <VideoCard key={item.id} layout="grid" {...cardProps(item)} />
-                    : <ArticleCard key={item.id} layout="grid" item={item} bookmarked={bookmarks.includes(item.id)} onBookmark={toggleBookmark} />
+                    : <ArticleCard key={item.id} layout="grid" item={item} bookmarked={bookmarks.includes(item.id)} onBookmark={toggleBookmark} isOwner={ownerCheck(item)} onDelete={deleteContent} onEdit={setEditingItem} onHide={toggleHide} isHidden={hiddenIds.includes(item.id)} />
                 )}
               </div>
             ) : (
@@ -1580,7 +1862,7 @@ export default function LearnContent() {
                     title={`${t.label} Videos`}
                     icon={t.icon}
                     color={t.color}
-                    items={allContent.filter(i => i.topic === t.id && i.type === "video")}
+                    items={allContent.filter(i => i.topic === t.id && i.type === "video" && !hiddenIds.includes(i.id))}
                     bookmarks={bookmarks}
                     onBookmark={toggleBookmark}
                     onOpen={openVideo}
@@ -1588,13 +1870,18 @@ export default function LearnContent() {
                     watched={watched}
                     queue={queue}
                     onQueueToggle={toggleQueue}
+                    currentUserId={userProfile?.id}
+                    onDelete={deleteContent}
+                    onEdit={setEditingItem}
+                    onHide={toggleHide}
+                    hiddenIds={hiddenIds}
                   />
                 ))}
                 <ScrollRow
                   title="Articles"
                   icon={BookOpen}
                   color="gray"
-                  items={allContent.filter(i => i.type === "article")}
+                  items={allContent.filter(i => i.type === "article" && !hiddenIds.includes(i.id))}
                   bookmarks={bookmarks}
                   onBookmark={toggleBookmark}
                   onOpen={openVideo}
@@ -1602,6 +1889,11 @@ export default function LearnContent() {
                   watched={watched}
                   queue={queue}
                   onQueueToggle={toggleQueue}
+                  currentUserId={userProfile?.id}
+                  onDelete={deleteContent}
+                  onEdit={setEditingItem}
+                  onHide={toggleHide}
+                  hiddenIds={hiddenIds}
                 />
                 {/* Blog CTA */}
                 <div className="mt-4 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50 dark:bg-gray-900/30">

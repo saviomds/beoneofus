@@ -7,6 +7,7 @@ import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
 import RightSidebar from '../components/RightSidebar'
 import { DashboardProvider } from './content/DashboardContext'
+import AiFloatingChat from '../components/AiFloatingChat'
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../supabaseClient';
 
@@ -187,6 +188,9 @@ function DashLayoutContent({ children }) {
 
       {/* ══ BOTTOM NAVIGATION (mobile only) ══ */}
       <BottomNav pathname={pathname} />
+
+      {/* ══ AI FLOATING CHAT ══ */}
+      <AiFloatingChat />
     </div>
   );
 }

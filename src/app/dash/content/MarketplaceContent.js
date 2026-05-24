@@ -6,8 +6,9 @@ import {
   ShoppingBag, Award, Shield, Copy, Check, Share2, Plus, Search,
   Loader2, AlertTriangle, Crown, BadgeCheck, X,
   Tag, CheckCircle2, Library, ArrowRight, BookOpen, Sparkles,
-  CreditCard, ExternalLink, Eye, EyeOff, Pencil, Trash2, Store,
+  ExternalLink, Eye, EyeOff, Pencil, Trash2, Store,
   Handshake, TrendingUp, Zap, Users, ChevronRight, Package,
+  MessageCircle, Send, SlidersHorizontal, List, Star, LayoutGrid,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import PartnershipsContent from "./PartnershipsContent";
@@ -172,63 +173,120 @@ function CredentialCard({ cred, onShare, onListTrade, showActions = true }) {
   );
 }
 
-/* ── Listing Detail Modal ─────────────────────────── */
-function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLibrary, onClose, onAddToLibrary, paystackReady }) {
-  const [paying, setPaying] = useState(false);
-  const [payError, setPayError] = useState('');
+/* ── Contact Owner Modal ──────────────────────────── */
+function ContactOwnerModal({ listing, currentUserId, onClose }) {
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
 
-  const isPremiumFree = isPremium && listing.category === 'Course' && listing.price > 0;
-  const effectivePrice = isPremiumFree ? 0 : (listing.price || 0);
-  const isFree = effectivePrice === 0;
+  const sellerId = listing.profiles?.id;
+
+  const handleSend = async () => {
+    if (!message.trim() || !sellerId) return;
+    setSending(true); setError('');
+    try {
+      const { error: err } = await supabase
+        .from('messages')
+        .insert({ sender_id: currentUserId, receiver_id: sellerId, text: message.trim(), is_read: false });
+      if (err) throw err;
+      setSent(true);
+    } catch (err) {
+      setError(err.message || 'Failed to send message.');
+    } finally { setSending(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="relative w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0">
+              {listing.profiles?.avatar_url
+                ? <Image src={listing.profiles.avatar_url} alt="seller" fill sizes="36px" className="object-cover" />
+                : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400 uppercase">{listing.profiles?.username?.[0]}</div>
+              }
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">@{listing.profiles?.username}</p>
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate max-w-[200px]">{listing.title}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-5">
+          {sent ? (
+            <div className="flex flex-col items-center text-center gap-3 py-6">
+              <div className="w-14 h-14 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 flex items-center justify-center">
+                <CheckCircle2 size={26} className="text-green-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">Message sent!</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">@{listing.profiles?.username} will see your message in their inbox.</p>
+              </div>
+              <button onClick={onClose} className="mt-2 px-5 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-bold text-sm rounded-xl hover:bg-blue-600 transition-all">
+                Done
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Send a note about this listing</p>
+              <textarea
+                autoFocus
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                placeholder={`Hi @${listing.profiles?.username}, I'm interested in "${listing.title}"…`}
+                rows={4}
+                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all resize-none placeholder-gray-400 dark:placeholder-gray-500"
+              />
+              {error && (
+                <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl px-3 py-2">
+                  <AlertTriangle size={12} className="shrink-0" /> {error}
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSend}
+                  disabled={!message.trim() || sending}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-bold text-sm rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all disabled:opacity-50 active:scale-95"
+                >
+                  {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  {sending ? 'Sending…' : 'Send Message'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Listing Detail Modal ─────────────────────────── */
+function ListingDetailModal({ listing, currentUserId, inLibrary, onClose, onAddToLibrary }) {
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState('');
+  const [showContact, setShowContact] = useState(false);
+
+  const isOwner = currentUserId && listing.profiles?.id && listing.profiles.id === currentUserId;
 
   const handleGet = async () => {
-    if (!currentUserId) { setPayError('Sign in to continue.'); return; }
+    if (!currentUserId) { setAddError('Sign in to continue.'); return; }
     if (inLibrary) return;
-    setPayError('');
-    if (isFree) {
-      setPaying(true);
-      try {
-        const { error } = await supabase.from('user_library').insert({ user_id: currentUserId, listing_id: listing.id });
-        if (!error) { onAddToLibrary(listing); onClose(); }
-        else setPayError(error.message);
-      } finally { setPaying(false); }
-      return;
-    }
-    setPaying(true);
+    setAdding(true);
+    setAddError('');
     try {
-      const initRes = await fetch('/api/paystack/marketplace/initiate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUserId, email: userEmail, listingId: listing.id, priceUsd: effectivePrice }),
-      });
-      const initData = await initRes.json();
-      if (!initRes.ok) throw new Error(initData.error || 'Failed to start payment');
-      const handler = window.PaystackPop.setup({
-        key:      process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-        email:    userEmail,
-        amount:   initData.amount,
-        currency: initData.currency,
-        ref:      initData.reference,
-        label:    listing.title,
-        callback: (response) => {
-          (async () => {
-            try {
-              const verifyRes = await fetch('/api/paystack/marketplace/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reference: response.reference, userId: currentUserId, listingId: listing.id }),
-              });
-              const verifyData = await verifyRes.json();
-              if (verifyRes.ok) { onAddToLibrary(listing); onClose(); }
-              else setPayError(verifyData.error || 'Verification failed. Contact support.');
-            } catch { setPayError('Verification failed. Contact support.'); }
-            finally { setPaying(false); }
-          })();
-        },
-        onClose: () => setPaying(false),
-      });
-      handler.openIframe();
-    } catch (err) { setPayError(err.message); setPaying(false); }
+      const { error } = await supabase.from('user_library').insert({ user_id: currentUserId, listing_id: listing.id });
+      if (!error) { onAddToLibrary(listing); onClose(); }
+      else setAddError(error.message);
+    } finally { setAdding(false); }
   };
 
   return (
@@ -254,28 +312,7 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="font-black text-gray-900 dark:text-gray-100 text-xl leading-tight flex-1">{listing.title}</h2>
-            <div className="text-right shrink-0">
-              {inLibrary ? (
-                <span className="text-sm font-black text-green-600 dark:text-green-400">In Library</span>
-              ) : isPremiumFree ? (
-                <div>
-                  <span className="text-sm font-black text-amber-600 dark:text-amber-400">Free</span>
-                  <p className="text-[10px] text-amber-500/80">with Premium</p>
-                </div>
-              ) : isFree ? (
-                <span className="text-sm font-black text-green-600 dark:text-green-400">Free</span>
-              ) : (
-                <div>
-                  <span className="text-xl font-black text-gray-900 dark:text-gray-100">${listing.price}</span>
-                  {listing.category === 'Course' && !isPremium && (
-                    <p className="text-[10px] text-amber-500">Premium: Free</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          <h2 className="font-black text-gray-900 dark:text-gray-100 text-xl leading-tight">{listing.title}</h2>
 
           {listing.profiles && (
             <div className="flex items-center gap-2">
@@ -294,7 +331,7 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
               </span>
               {listing.purchases > 0 && (
                 <span className="ml-auto text-[10px] text-gray-400 dark:text-gray-500">
-                  {listing.purchases} {listing.category === 'Course' ? 'enrolled' : 'sold'}
+                  {listing.purchases} {listing.category === 'Course' ? 'enrolled' : 'saved'}
                 </span>
               )}
             </div>
@@ -315,48 +352,42 @@ function ListingDetailModal({ listing, currentUserId, userEmail, isPremium, inLi
             </div>
           )}
 
-          {!isPremium && listing.category === 'Course' && listing.price > 0 && (
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3 flex items-start gap-2.5">
-              <Crown size={14} className="text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Get every course free with Premium</p>
-                <p className="text-[10px] text-amber-600/80 dark:text-amber-500/70">All courses are included in a Premium subscription at $9.99/mo.</p>
-              </div>
-            </div>
-          )}
-
-          {payError && (
+          {addError && (
             <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl px-3 py-2">
-              <AlertTriangle size={13} /> {payError}
+              <AlertTriangle size={13} /> {addError}
             </div>
           )}
         </div>
 
-        <div className="shrink-0 p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="shrink-0 p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 space-y-2">
           {inLibrary ? (
-            <button onClick={onClose} className="w-full flex items-center justify-center gap-2 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50 font-black text-sm rounded-xl">
-              <Check size={16} /> Already in your library
+            <button onClick={onClose} className="w-full flex items-center justify-center gap-2 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50 font-semibold text-sm rounded-xl">
+              <Check size={15} /> Already in your library
             </button>
           ) : !currentUserId ? (
             <p className="text-center text-sm text-gray-400 py-1">Sign in to get this item.</p>
           ) : (
             <button
               onClick={handleGet}
-              disabled={paying || (!isFree && !isPremiumFree && !paystackReady)}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all active:scale-95 disabled:opacity-60"
+              disabled={adding}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold text-sm rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all active:scale-95 disabled:opacity-60"
             >
-              {paying
-                ? <><Loader2 size={16} className="animate-spin" /> Processing...</>
-                : isFree || isPremiumFree
-                  ? <><BookOpen size={16} /> Get Free</>
-                  : !paystackReady
-                    ? <><Loader2 size={16} className="animate-spin" /> Loading payment…</>
-                    : <><CreditCard size={16} /> Pay ${effectivePrice} via Paystack</>
-              }
+              {adding ? <><Loader2 size={15} className="animate-spin" /> Adding…</> : <><BookOpen size={15} /> Get Free</>}
+            </button>
+          )}
+          {currentUserId && !isOwner && listing.profiles?.id && (
+            <button
+              onClick={() => setShowContact(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-600 dark:hover:text-blue-400 transition-all"
+            >
+              <MessageCircle size={15} /> Message Owner
             </button>
           )}
         </div>
       </div>
+      {showContact && (
+        <ContactOwnerModal listing={listing} currentUserId={currentUserId} onClose={() => setShowContact(false)} />
+      )}
     </div>
   );
 }
@@ -456,12 +487,14 @@ function CredentialDetailModal({ cred, onClose }) {
 }
 
 /* ── Browse Tab ───────────────────────────────────── */
-function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSelectListing }) {
+function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing }) {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [authError, setAuthError] = useState(false);
+  const [sortBy, setSortBy] = useState("popular");
+  const [viewMode, setViewMode] = useState("grid");
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -495,15 +528,22 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
     return () => { supabase.removeChannel(ch); };
   }, [fetchListings]);
 
-  const filtered = listings.filter(l => {
-    const matchesCat = activeFilter === "All" || l.category === activeFilter;
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = !q ||
-      l.title.toLowerCase().includes(q) ||
-      l.description?.toLowerCase().includes(q) ||
-      l.tags?.some(t => t.toLowerCase().includes(q));
-    return matchesCat && matchesSearch;
-  });
+  const filtered = listings
+    .filter(l => {
+      const matchesCat = activeFilter === "All" || l.category === activeFilter;
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !q ||
+        l.title.toLowerCase().includes(q) ||
+        l.description?.toLowerCase().includes(q) ||
+        l.tags?.some(t => t.toLowerCase().includes(q));
+      return matchesCat && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.created_at) - new Date(a.created_at);
+      if (sortBy === 'popular') return (b.purchases || 0) - (a.purchases || 0);
+      if (sortBy === 'alpha') return a.title.localeCompare(b.title);
+      return 0;
+    });
 
   const featuredListing = !searchQuery && activeFilter === "All" && listings.length > 0 ? listings[0] : null;
 
@@ -516,160 +556,226 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
   };
 
   return (
-    <div className="space-y-5">
-      {/* Search */}
-      <div className="relative">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-        <input
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search courses, templates, services…"
-          className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl pl-11 pr-10 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 shadow-sm transition-all"
-        />
-        {searchQuery && (
-          <button onClick={() => setSearchQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-            <X size={15} />
+    <div className="space-y-6">
+
+      {/* ── Search + Controls bar ── */}
+      <div className="flex gap-2 items-center">
+        <div className="relative flex-1">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search courses, templates, services…"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-9 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Sort */}
+        <div className="relative">
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            className="appearance-none bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-3 pr-7 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer transition-all"
+          >
+            <option value="popular">Most Popular</option>
+            <option value="newest">Newest First</option>
+            <option value="alpha">A → Z</option>
+          </select>
+          <SlidersHorizontal size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
+
+        {/* View toggle */}
+        <div className="flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+          <button onClick={() => setViewMode('grid')} className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
+            <LayoutGrid size={14} />
           </button>
-        )}
+          <button onClick={() => setViewMode('list')} className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}>
+            <List size={14} />
+          </button>
+        </div>
       </div>
 
-      {/* Category filters */}
-      <div className="flex gap-2 flex-wrap">
+      {/* ── Category chips ── */}
+      <div className="flex gap-1.5 flex-wrap">
         {CATEGORIES.map(cat => (
           <button
             key={cat}
             onClick={() => setActiveFilter(cat)}
-            className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-3.5 py-2 rounded-xl border transition-all ${
+            className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
               activeFilter === cat
-                ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 border-transparent shadow-md shadow-black/10"
-                : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-sm"
+                ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-transparent"
+                : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500"
             }`}
           >
-            {CATEGORY_ICON[cat] || ''} {cat}
+            {cat !== "All" && <span className="text-[11px]">{CATEGORY_ICON[cat]}</span>} {cat}
           </button>
         ))}
       </div>
 
       {authError && (
-        <div className="flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl px-4 py-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl px-4 py-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
           <AlertTriangle size={14} className="shrink-0" /> Sign in to add items to your library.
         </div>
       )}
 
-      {/* Featured hero banner */}
+      {/* ── Featured editorial banner ── */}
       {!loading && featuredListing && (
         <div
           onClick={() => onSelectListing(featuredListing)}
-          className="relative w-full h-52 sm:h-60 rounded-2xl overflow-hidden cursor-pointer group shadow-xl shadow-black/10"
+          className="relative w-full rounded-2xl overflow-hidden cursor-pointer group border border-gray-200 dark:border-gray-800 shadow-lg shadow-black/5"
+          style={{ aspectRatio: '21/8' }}
         >
           <Image
-            src={featuredListing.image_url || `https://picsum.photos/seed/${featuredListing.id}/1200/500`}
+            src={featuredListing.image_url || `https://picsum.photos/seed/${featuredListing.id}/1400/540`}
             alt={featuredListing.title} fill sizes="100vw"
-            className="object-cover group-hover:scale-105 transition-transform duration-700"
+            className="object-cover group-hover:scale-[1.03] transition-transform duration-700 ease-out"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-          <div className="absolute top-4 left-4 flex gap-2">
-            <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-amber-400 text-black px-2.5 py-1 rounded-lg">
-              <TrendingUp size={10} /> Featured
-            </span>
-            <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg backdrop-blur-sm ${CATEGORY_BADGE[featuredListing.category] || CATEGORY_BADGE.Asset}`}>
-              {CATEGORY_ICON[featuredListing.category]} {featuredListing.category}
-            </span>
-          </div>
-          <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-black text-white text-xl sm:text-2xl leading-tight line-clamp-2 drop-shadow">{featuredListing.title}</h3>
-              {featuredListing.description && (
-                <p className="text-sm text-white/70 mt-1 line-clamp-1">{featuredListing.description}</p>
-              )}
-              {featuredListing.profiles && (
-                <div className="flex items-center gap-1.5 mt-2">
-                  <div className="relative w-5 h-5 rounded-md overflow-hidden border border-white/30">
-                    {featuredListing.profiles.avatar_url
-                      ? <Image src={featuredListing.profiles.avatar_url} alt="seller" fill sizes="20px" className="object-cover" />
-                      : <div className="w-full h-full bg-white/20 flex items-center justify-center text-[8px] font-bold text-white uppercase">{featuredListing.profiles.username?.[0]}</div>
-                    }
-                  </div>
-                  <span className="text-[11px] text-white/80 font-medium">@{featuredListing.profiles.username}</span>
-                  {featuredListing.purchases > 0 && (
-                    <span className="text-[10px] text-white/60 flex items-center gap-1 ml-2">
-                      <Users size={9} /> {featuredListing.purchases} {featuredListing.category === 'Course' ? 'enrolled' : 'sold'}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="shrink-0 flex flex-col items-end gap-2">
-              <span className="font-black text-white text-xl">
-                {(featuredListing.price || 0) === 0
-                  ? <span className="text-emerald-300">Free</span>
-                  : isPremium && featuredListing.category === 'Course'
-                    ? <span className="text-amber-300">Free ★</span>
-                    : `$${featuredListing.price}`
-                }
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/10" />
+
+          <div className="absolute inset-0 flex flex-col justify-between p-5 sm:p-7">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1 text-[10px] font-semibold bg-white/15 border border-white/20 text-white backdrop-blur-sm px-2.5 py-1 rounded-full">
+                <Star size={9} fill="currentColor" /> Editor's Pick
               </span>
-              <span className="flex items-center gap-1.5 text-[11px] font-black uppercase bg-white/20 text-white backdrop-blur-sm px-3 py-2 rounded-xl group-hover:bg-white/30 transition-colors">
-                View Details <ChevronRight size={11} />
+              <span className={`text-[10px] font-medium px-2.5 py-1 rounded-full backdrop-blur-sm ${CATEGORY_BADGE[featuredListing.category] || CATEGORY_BADGE.Asset}`}>
+                {CATEGORY_ICON[featuredListing.category]} {featuredListing.category}
+              </span>
+            </div>
+
+            <div className="flex items-end justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-black text-white text-lg sm:text-2xl leading-tight line-clamp-2 mb-1">{featuredListing.title}</h3>
+                {featuredListing.description && (
+                  <p className="text-sm text-white/60 line-clamp-1 hidden sm:block">{featuredListing.description}</p>
+                )}
+                {featuredListing.profiles && (
+                  <div className="flex items-center gap-2 mt-2.5">
+                    <div className="relative w-5 h-5 rounded-full overflow-hidden border border-white/40">
+                      {featuredListing.profiles.avatar_url
+                        ? <Image src={featuredListing.profiles.avatar_url} alt="seller" fill sizes="20px" className="object-cover" />
+                        : <div className="w-full h-full bg-white/20 flex items-center justify-center text-[8px] font-bold text-white uppercase">{featuredListing.profiles.username?.[0]}</div>
+                      }
+                    </div>
+                    <span className="text-[11px] text-white/70">@{featuredListing.profiles.username}</span>
+                    {(featuredListing.purchases || 0) > 0 && (
+                      <span className="text-[10px] text-white/50 flex items-center gap-1">· <Users size={9} /> {featuredListing.purchases} {featuredListing.category === 'Course' ? 'enrolled' : 'saved'}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <span className="shrink-0 flex items-center gap-1.5 text-[11px] font-semibold bg-white text-gray-900 px-4 py-2 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
+                View <ChevronRight size={12} />
               </span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Results meta */}
+      {/* ── Results meta ── */}
       {!loading && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             {searchQuery
-              ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${searchQuery}"`
-              : `${filtered.length} item${filtered.length !== 1 ? 's' : ''} ${activeFilter !== 'All' ? `in ${activeFilter}` : 'available'}`}
+              ? <><span className="font-semibold text-gray-900 dark:text-gray-100">{filtered.length}</span> result{filtered.length !== 1 ? 's' : ''} for "<em>{searchQuery}</em>"</>
+              : <><span className="font-semibold text-gray-900 dark:text-gray-100">{filtered.length}</span> item{filtered.length !== 1 ? 's' : ''}{activeFilter !== 'All' ? ` in ${activeFilter}` : ''}</>
+            }
           </p>
-          {filtered.length > 1 && (
-            <span className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
-              <TrendingUp size={10} /> Sorted by popularity
-            </span>
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
+              Clear
+            </button>
           )}
         </div>
       )}
 
+      {/* ── Listing grid / list ── */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1,2,3,4,5,6].map(i => (
-            <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 animate-pulse">
-              <div className="w-full h-44 bg-gray-100 dark:bg-gray-800 rounded-xl mb-4" />
-              <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded-lg w-3/4 mb-2" />
-              <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-lg w-1/2 mb-4" />
-              <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
-                <div className="h-7 bg-gray-100 dark:bg-gray-800 rounded-lg w-12" />
-                <div className="h-7 bg-gray-100 dark:bg-gray-800 rounded-lg w-24 ml-auto" />
+            <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-pulse">
+              <div className="w-full h-44 bg-gray-100 dark:bg-gray-800" />
+              <div className="p-4 space-y-2.5">
+                <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded-lg w-3/4" />
+                <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-lg w-full" />
+                <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-lg w-1/2" />
               </div>
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5 text-4xl shadow-inner">
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4 text-3xl">
             {searchQuery ? '🔍' : '🛒'}
           </div>
-          <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">
+          <h3 className="font-bold text-gray-800 dark:text-gray-200 text-base mb-1">
             {searchQuery ? 'No results found' : 'Nothing here yet'}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-            {searchQuery ? 'Try different keywords or browse all categories.' : 'Check back soon or be the first to list something.'}
+            {searchQuery ? 'Try different keywords or browse all categories.' : 'Be the first to list something.'}
           </p>
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="mt-4 text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
+            <button onClick={() => setSearchQuery('')} className="mt-4 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
               Clear search
             </button>
           )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      ) : viewMode === 'list' ? (
+        /* ── List view ── */
+        <div className="space-y-2">
           {filtered.map(listing => {
             const inLibrary = libraryIds.has(listing.id);
-            const isPremiumFree = isPremium && listing.category === 'Course' && listing.price > 0;
-            const effectivePrice = isPremiumFree ? 0 : (listing.price || 0);
-            const isFree = effectivePrice === 0;
+            const isTrending = (listing.purchases || 0) >= 5;
+            const isNew = listing.created_at && new Date(listing.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            return (
+              <div
+                key={listing.id}
+                onClick={() => onSelectListing(listing)}
+                className="flex items-center gap-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 hover:border-blue-200 dark:hover:border-blue-800/50 hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-gray-100 dark:bg-gray-800 border border-gray-100 dark:border-gray-800">
+                  <Image src={listing.image_url || `https://picsum.photos/seed/${listing.id}/56/56`} alt={listing.title} fill sizes="56px" className="object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{listing.title}</h3>
+                    {isTrending && <span className="shrink-0 text-[9px] font-bold bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded-md">Hot</span>}
+                    {!isTrending && isNew && <span className="shrink-0 text-[9px] font-bold bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 px-1.5 py-0.5 rounded-md">New</span>}
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
+                    <span className={`px-1.5 py-0.5 rounded-md font-medium ${CATEGORY_BADGE[listing.category] || CATEGORY_BADGE.Asset}`}>{listing.category}</span>
+                    {listing.profiles && <span>@{listing.profiles.username}</span>}
+                    {(listing.purchases || 0) > 0 && <span>· {listing.purchases} saved</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {inLibrary ? (
+                    <span className="flex items-center gap-1 text-[11px] font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-3 py-1.5 rounded-lg">
+                      <Check size={11} /> Owned
+                    </span>
+                  ) : (
+                    <button
+                      onClick={e => handleQuickGet(e, listing)}
+                      className="text-[11px] font-semibold text-white bg-gray-900 dark:bg-gray-100 dark:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all active:scale-95"
+                    >
+                      Get Free
+                    </button>
+                  )}
+                  <ChevronRight size={14} className="text-gray-300 dark:text-gray-600 group-hover:text-gray-500 transition-colors" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* ── Grid view ── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(listing => {
+            const inLibrary = libraryIds.has(listing.id);
             const isTrending = (listing.purchases || 0) >= 5;
             const isNew = listing.created_at && new Date(listing.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
@@ -677,112 +783,86 @@ function BrowseTab({ currentUserId, libraryIds, isPremium, onAddToLibrary, onSel
               <div
                 key={listing.id}
                 onClick={() => onSelectListing(listing)}
-                className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-blue-200 dark:hover:border-blue-800/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col overflow-hidden group cursor-pointer"
+                className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden group cursor-pointer"
               >
                 {/* Thumbnail */}
-                <div className="relative w-full h-44 bg-gray-100 dark:bg-gray-800 shrink-0 overflow-hidden">
+                <div className="relative w-full bg-gray-100 dark:bg-gray-800 shrink-0 overflow-hidden" style={{ aspectRatio: '16/9' }}>
                   <Image
-                    src={listing.image_url || `https://picsum.photos/seed/${listing.id}/400/200`}
+                    src={listing.image_url || `https://picsum.photos/seed/${listing.id}/400/225`}
                     alt={listing.title} fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                  {/* Left badges */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg backdrop-blur-sm shadow-sm ${CATEGORY_BADGE[listing.category] || CATEGORY_BADGE.Asset}`}>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full backdrop-blur-md shadow-sm ${CATEGORY_BADGE[listing.category] || CATEGORY_BADGE.Asset}`}>
                       {CATEGORY_ICON[listing.category]} {listing.category}
                     </span>
-                    {isTrending && !inLibrary && (
-                      <span className="flex items-center gap-1 text-[9px] font-black uppercase bg-rose-500 text-white px-2 py-1 rounded-lg shadow-sm">
+                  </div>
+                  <div className="absolute top-2.5 right-2.5 flex flex-col items-end gap-1">
+                    {inLibrary && (
+                      <span className="flex items-center gap-1 text-[9px] font-semibold bg-green-500 text-white px-2 py-0.5 rounded-full shadow">
+                        <Check size={8} /> Owned
+                      </span>
+                    )}
+                    {!inLibrary && isTrending && (
+                      <span className="flex items-center gap-1 text-[9px] font-semibold bg-rose-500 text-white px-2 py-0.5 rounded-full shadow">
                         <TrendingUp size={8} /> Hot
                       </span>
                     )}
-                    {!isTrending && isNew && !inLibrary && (
-                      <span className="flex items-center gap-1 text-[9px] font-black uppercase bg-violet-500 text-white px-2 py-1 rounded-lg shadow-sm">
+                    {!inLibrary && !isTrending && isNew && (
+                      <span className="flex items-center gap-1 text-[9px] font-semibold bg-violet-500 text-white px-2 py-0.5 rounded-full shadow">
                         <Zap size={8} /> New
                       </span>
                     )}
                   </div>
-
-                  {/* Right badge */}
-                  {inLibrary && (
-                    <div className="absolute top-3 right-3 bg-green-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg flex items-center gap-1 shadow-md">
-                      <Check size={9} /> Owned
-                    </div>
-                  )}
-                  {isPremiumFree && !inLibrary && (
-                    <div className="absolute top-3 right-3 bg-gradient-to-br from-amber-400 to-orange-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg flex items-center gap-1 shadow-md">
-                      <Crown size={9} /> Free
-                    </div>
-                  )}
                 </div>
 
                 {/* Body */}
-                <div className="p-4 flex flex-col flex-1">
-                  <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm leading-snug mb-1.5 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{listing.title}</h3>
+                <div className="p-4 flex flex-col flex-1 gap-2.5">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-snug line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{listing.title}</h3>
                   {listing.description && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3 flex-1 leading-relaxed">{listing.description}</p>
+                    <p className="text-[12px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed flex-1">{listing.description}</p>
                   )}
 
                   {/* Seller */}
                   {listing.profiles && (
-                    <div className="flex items-center gap-1.5 mb-3">
-                      <div className="relative w-5 h-5 rounded-md bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative w-4.5 h-4.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700" style={{ width: 18, height: 18 }}>
                         {listing.profiles.avatar_url
-                          ? <Image src={listing.profiles.avatar_url} alt="seller" fill sizes="20px" className="object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-gray-400 uppercase">{listing.profiles.username?.[0]}</div>
+                          ? <Image src={listing.profiles.avatar_url} alt="seller" fill sizes="18px" className="object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-[7px] font-bold text-gray-400 uppercase">{listing.profiles.username?.[0]}</div>
                         }
                       </div>
-                      <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate flex items-center gap-0.5">
+                      <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate flex items-center gap-0.5">
                         @{listing.profiles.username}
                         {listing.profiles.is_verified && <BadgeCheck size={10} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />}
-                        {listing.profiles.is_premium && !listing.profiles.is_trial_premium && listing.profiles.profile_visibility?.premium_badge !== false && <Crown size={10} className="text-amber-500 shrink-0" />}
-                        {listing.profiles.is_premium && listing.profiles.is_trial_premium && listing.profiles.profile_visibility?.premium_badge !== false && <Sparkles size={10} className="text-blue-500 shrink-0" />}
+                        {listing.profiles.is_premium && !listing.profiles.is_trial_premium && <Crown size={9} className="text-amber-500 shrink-0" />}
+                        {listing.profiles.is_premium && listing.profiles.is_trial_premium && <Sparkles size={9} className="text-blue-500 shrink-0" />}
                       </span>
                       {(listing.purchases || 0) > 0 && (
-                        <span className="ml-auto text-[9px] text-gray-400 dark:text-gray-500 shrink-0 flex items-center gap-0.5">
+                        <span className="ml-auto text-[10px] text-gray-400 dark:text-gray-500 shrink-0 flex items-center gap-0.5">
                           <Users size={9} /> {listing.purchases}
                         </span>
                       )}
                     </div>
                   )}
 
-                  {/* Price row */}
-                  <div className="flex items-center justify-between gap-2 mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
-                    <div>
-                      <span className="font-black text-sm">
-                        {isFree || isPremiumFree
-                          ? <span className="text-emerald-600 dark:text-emerald-400">{isPremiumFree ? '★ Free' : 'Free'}</span>
-                          : <span className="text-gray-900 dark:text-gray-100">${listing.price}</span>
-                        }
-                      </span>
-                      {!isPremium && listing.category === 'Course' && (listing.price || 0) > 0 && (
-                        <p className="text-[9px] text-amber-500 font-bold leading-none mt-0.5">Premium: Free</p>
-                      )}
-                    </div>
+                  {/* Action */}
+                  <div className="pt-2.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                      <BookOpen size={10} /> Free
+                    </span>
                     <button
-                      onClick={e => {
-                        if (inLibrary) return;
-                        if (isFree) { handleQuickGet(e, listing); }
-                        else { e.stopPropagation(); onSelectListing(listing); }
-                      }}
+                      onClick={e => { if (inLibrary) return; handleQuickGet(e, listing); }}
                       disabled={inLibrary}
-                      className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-3.5 py-2 rounded-xl transition-all active:scale-95 ${
+                      className={`flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95 ${
                         inLibrary
                           ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800 cursor-default'
-                          : isFree || isPremiumFree
-                            ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 dark:hover:bg-blue-500 dark:hover:text-white shadow-md hover:shadow-lg'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white border border-gray-200 dark:border-gray-700'
+                          : 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 dark:hover:bg-blue-500 dark:hover:text-white'
                       }`}
                     >
-                      {inLibrary
-                        ? <><Check size={12} /> Owned</>
-                        : isFree || isPremiumFree
-                          ? 'Get Free'
-                          : <><CreditCard size={11} /> ${listing.price}</>
-                      }
+                      {inLibrary ? <><Check size={11} /> Owned</> : <><Plus size={11} /> Get Free</>}
                     </button>
                   </div>
                 </div>
@@ -1431,37 +1511,18 @@ export default function MarketplaceContent() {
   const [activeTab, setActiveTab] = useState('browse');
   const [currentUserId, setCurrentUserId] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null);
-  const [userEmail, setUserEmail] = useState('');
   const [libraryIds, setLibraryIds] = useState(new Set());
   const [toast, setToast] = useState(null);
-  const [paystackReady, setPaystackReady] = useState(false);
 
   const [selectedListing, setSelectedListing] = useState(null);
   const [selectedLibItem, setSelectedLibItem] = useState(null);
   const [selectedCred, setSelectedCred] = useState(null);
 
   useEffect(() => {
-    if (window.PaystackPop) { setPaystackReady(true); return; }
-    const existing = document.getElementById('paystack-mkt-script');
-    if (existing) {
-      const onload = () => setPaystackReady(true);
-      existing.addEventListener('load', onload);
-      return () => existing.removeEventListener('load', onload);
-    }
-    const s = document.createElement('script');
-    s.id = 'paystack-mkt-script';
-    s.src = 'https://js.paystack.co/v1/inline.js';
-    s.async = true;
-    s.onload = () => setPaystackReady(true);
-    document.head.appendChild(s);
-  }, []);
-
-  useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
       setCurrentUserId(session.user.id);
-      setUserEmail(session.user.email || '');
       const [profileRes, libraryRes] = await Promise.all([
         supabase.from('profiles').select('id, username, role, is_admin, is_premium, is_verified').eq('id', session.user.id).single(),
         supabase.from('user_library').select('listing_id').eq('user_id', session.user.id),
@@ -1483,93 +1544,85 @@ export default function MarketplaceContent() {
     <div className="w-full space-y-0">
 
       {/* ── Hero Header ── */}
-      <div className="relative rounded-2xl overflow-hidden mb-5 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-6 sm:p-8">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-600/20 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent pointer-events-none" />
-
-        <div className="relative">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
-                  <ShoppingBag size={18} className="text-white" />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Community Marketplace</span>
+      <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                <ShoppingBag size={15} className="text-white" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
-                Discover & Share
-              </h1>
-              <p className="text-gray-400 text-sm mt-1 max-w-md">
-                Courses, credentials, templates, and more from the beoneofus community.
-              </p>
+              <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 tracking-wide uppercase">Community Marketplace</span>
             </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
+              Discover &amp; Share
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 max-w-lg leading-relaxed">
+              Courses, credentials, templates, and services — all free from the beoneofus community.
+            </p>
           </div>
+          {isPremium && (
+            <div className="shrink-0 hidden sm:flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl px-3.5 py-2">
+              <Crown size={13} className="text-amber-500" />
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">Premium Member</span>
+            </div>
+          )}
+        </div>
 
-          {/* Stats strip */}
-          <div className="flex items-center gap-4 sm:gap-6 mt-5 pt-5 border-t border-white/10">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <Package size={13} className="text-blue-400" />
-              </div>
-              <div>
-                <p className="text-white font-black text-sm leading-none">Items</p>
-                <p className="text-gray-500 text-[10px]">across 5 types</p>
-              </div>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-green-500/20 flex items-center justify-center">
-                <Award size={13} className="text-green-400" />
-              </div>
-              <div>
-                <p className="text-white font-black text-sm leading-none">Credentials</p>
-                <p className="text-gray-500 text-[10px]">blockchain verified</p>
-              </div>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <Users size={13} className="text-purple-400" />
-              </div>
-              <div>
-                <p className="text-white font-black text-sm leading-none">Community</p>
-                <p className="text-gray-500 text-[10px]">creators & learners</p>
-              </div>
-            </div>
+        <div className="flex items-center gap-6 mt-5 pt-5 border-t border-gray-100 dark:border-gray-800">
+          <div>
+            <p className="text-lg font-black text-gray-900 dark:text-white leading-none">5</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Categories</p>
+          </div>
+          <div className="w-px h-8 bg-gray-200 dark:bg-gray-800" />
+          <div>
+            <p className="text-lg font-black text-gray-900 dark:text-white leading-none">Free</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">All items</p>
+          </div>
+          <div className="w-px h-8 bg-gray-200 dark:bg-gray-800" />
+          <div>
+            <p className="text-lg font-black text-gray-900 dark:text-white leading-none flex items-center gap-1"><Shield size={14} className="text-green-500" /></p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Verified creds</p>
+          </div>
+          <div className="w-px h-8 bg-gray-200 dark:bg-gray-800" />
+          <div>
+            <p className="text-lg font-black text-gray-900 dark:text-white leading-none">Open</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Anyone can list</p>
           </div>
         </div>
       </div>
 
-      {/* ── Tab Navigation (pill style) ── */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 flex-nowrap custom-scrollbar mb-5">
-        {TABS.map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center shrink-0 gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-                isActive
-                  ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-md shadow-black/10"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
-            >
-              <Icon size={13} />
-              {tab.label}
-              {tab.key === 'library' && libraryIds.size > 0 && (
-                <span className={`text-[9px] font-black rounded-full px-1.5 py-0.5 leading-none ${isActive ? 'bg-white/20 text-white' : 'bg-blue-600 text-white'}`}>
-                  {libraryIds.size}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* ── Tab Navigation (classic underline) ── */}
+      <div className="border-b border-gray-200 dark:border-gray-800 mb-6">
+        <div className="flex overflow-x-auto no-scrollbar -mb-px">
+          {TABS.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-1.5 px-4 py-3 text-xs font-semibold whitespace-nowrap border-b-2 shrink-0 transition-all ${
+                  isActive
+                    ? "border-gray-900 dark:border-white text-gray-900 dark:text-white"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                <Icon size={13} />
+                {tab.label}
+                {tab.key === 'library' && libraryIds.size > 0 && (
+                  <span className="ml-0.5 text-[9px] font-bold bg-blue-600 text-white rounded-full px-1.5 py-0.5 leading-none">
+                    {libraryIds.size}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Tab Content ── */}
-      <div className="max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden custom-scrollbar pr-1">
-        {activeTab === 'browse'       && <BrowseTab currentUserId={currentUserId} libraryIds={libraryIds} isPremium={isPremium} onAddToLibrary={handleAddToLibrary} onSelectListing={setSelectedListing} />}
+      <div className="max-h-[calc(100vh-300px)] sm:max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden custom-scrollbar pr-1">
+        {activeTab === 'browse'       && <BrowseTab currentUserId={currentUserId} libraryIds={libraryIds} onAddToLibrary={handleAddToLibrary} onSelectListing={setSelectedListing} />}
         {activeTab === 'library'      && <MyLibraryTab currentUserId={currentUserId} onSelectItem={setSelectedLibItem} />}
         {activeTab === 'credentials'  && <MyCredentialsTab currentUserId={currentUserId} onSelectCred={setSelectedCred} />}
         {activeTab === 'sell'         && <SellTab currentUserId={currentUserId} isPremium={isPremium} isAdmin={currentProfile?.is_admin === true || currentProfile?.role === 'founder'} />}
@@ -1592,12 +1645,9 @@ export default function MarketplaceContent() {
         <ListingDetailModal
           listing={selectedListing}
           currentUserId={currentUserId}
-          userEmail={userEmail}
-          isPremium={isPremium}
           inLibrary={libraryIds.has(selectedListing.id)}
           onClose={() => setSelectedListing(null)}
           onAddToLibrary={(listing) => { handleAddToLibrary(listing); setSelectedListing(null); }}
-          paystackReady={paystackReady}
         />
       )}
 

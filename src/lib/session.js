@@ -2,15 +2,12 @@
 
 const SESSION_KEY = "bou_sid";
 
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-
 export function getSessionId() {
   if (typeof window === "undefined") return null;
   let sid = sessionStorage.getItem(SESSION_KEY);
   if (!sid) {
-    sid = generateId();
+    // crypto.randomUUID() is cryptographically secure and available in all modern browsers
+    sid = crypto.randomUUID();
     sessionStorage.setItem(SESSION_KEY, sid);
   }
   return sid;

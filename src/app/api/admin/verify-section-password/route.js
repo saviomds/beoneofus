@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { timingSafeEqual } from 'crypto';
 
 export async function POST(request) {
   const supabaseAdmin = createClient(
@@ -36,7 +37,10 @@ export async function POST(request) {
     const { password } = await request.json();
     if (!password) return NextResponse.json({ error: 'Password required' }, { status: 400 });
 
-    const correct = password === sectionPassword;
+    // Use constant-time comparison to prevent timing attacks
+    const a = Buffer.from(password);
+    const b = Buffer.from(sectionPassword);
+    const correct = a.length === b.length && timingSafeEqual(a, b);
     if (!correct) {
       return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
     }

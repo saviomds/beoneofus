@@ -8,6 +8,18 @@ const PUBLIC_API_ROUTES = [
   '/api/otp-email',
 ];
 
+// Page routes that require a valid session (redirect to /auth if missing)
+const PROTECTED_PAGES = [
+  '/dash',
+  '/member-dashboard',
+  '/founder-dashboard',
+];
+
+// Page routes that additionally require admin/founder role
+const ADMIN_PAGES = [
+  '/founder-dashboard',
+];
+
 const SECURITY_HEADERS = [
   ['X-Content-Type-Options',  'nosniff'],
   ['X-Frame-Options',         'SAMEORIGIN'],
@@ -26,7 +38,54 @@ function addSecurityHeaders(response) {
 export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
-  // ── Non-API routes: just add security headers and continue ──────────────
+  // ── Protected page routes: require a valid session ───────────────────────
+  if (PROTECTED_PAGES.some((p) => pathname.startsWith(p))) {
+    const token = request.cookies.get('sb-at')?.value;
+
+    if (!token) {
+      const loginUrl = new URL('/auth', request.url);
+      loginUrl.searchParams.set('next', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false } },
+      );
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+
+      if (error || !user) {
+        const resp = NextResponse.redirect(new URL('/auth', request.url));
+        resp.cookies.delete('sb-at');
+        return resp;
+      }
+
+      // Admin-only pages: check role
+      if (ADMIN_PAGES.some((p) => pathname.startsWith(p))) {
+        const supabaseAdmin = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.SUPABASE_SERVICE_ROLE_KEY,
+        );
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('role, is_admin')
+          .eq('id', user.id)
+          .single();
+
+        if (!profile?.is_admin && !['admin', 'founder'].includes(profile?.role)) {
+          return NextResponse.redirect(new URL('/dash/home', request.url));
+        }
+      }
+
+      return addSecurityHeaders(NextResponse.next());
+    } catch {
+      return NextResponse.redirect(new URL('/auth', request.url));
+    }
+  }
+
+  // ── Non-API, non-protected routes: just add security headers ─────────────
   if (!pathname.startsWith('/api/')) {
     return addSecurityHeaders(NextResponse.next());
   }

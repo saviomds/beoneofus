@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import Groq from 'groq-sdk';
 import OpenAI from 'openai';
 
+export const runtime = 'edge';
+
 const groq   = process.env.GROQ_API_KEY   ? new Groq({ apiKey: process.env.GROQ_API_KEY })   : null;
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 

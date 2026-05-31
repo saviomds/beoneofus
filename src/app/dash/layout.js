@@ -8,6 +8,7 @@ import Header from '../components/Header'
 import RightSidebar from '../components/RightSidebar'
 import { DashboardProvider } from './content/DashboardContext'
 import AiFloatingChat from '../components/AiFloatingChat'
+import NotificationPopup from '../components/NotificationPopup'
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../supabaseClient';
 
@@ -191,6 +192,9 @@ function DashLayoutContent({ children }) {
 
       {/* ══ AI FLOATING CHAT ══ */}
       <AiFloatingChat />
+
+      {/* ══ NOTIFICATION POPUP (mobile banner / desktop toast) ══ */}
+      <NotificationPopup />
     </div>
   );
 }
@@ -290,10 +294,16 @@ function PickUsernameModal({ onDone }) {
   );
 }
 
-// Returns true if Supabase has a cached session in localStorage (synchronous).
+// Returns true if Supabase has a cached session (synchronous).
+// @supabase/ssr's createBrowserClient stores sessions in cookies, not localStorage.
 function hasCachedSession() {
   if (typeof window === 'undefined') return false;
   try {
+    // Cookie storage (createBrowserClient from @supabase/ssr)
+    if (document.cookie.split(';').some(
+      c => c.trim().match(/^sb-.+-auth-token/)
+    )) return true;
+    // localStorage fallback (legacy createClient storage)
     return Object.keys(localStorage).some(
       k => k.startsWith('sb-') && k.endsWith('-auth-token') && !!localStorage.getItem(k)
     );

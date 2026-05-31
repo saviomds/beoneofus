@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import Groq from 'groq-sdk';
 import { sendNotificationEmail } from '../../../../lib/sendNotificationEmail';
 
+export const runtime = 'edge';
+
 const groq = process.env.GROQ_API_KEY
   ? new Groq({ apiKey: process.env.GROQ_API_KEY })
   : null;

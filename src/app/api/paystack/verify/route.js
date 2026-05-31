@@ -17,6 +17,14 @@ export async function POST(req) {
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
+
+    // Authenticate the caller — only the subscription owner can verify their payment
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { data: { user: caller }, error: callerErr } = await supabase.auth.getUser(token);
+    if (callerErr || !caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { reference } = await req.json();
     if (!reference) {
       return NextResponse.json({ error: 'Missing reference' }, { status: 400 });
@@ -31,8 +39,6 @@ export async function POST(req) {
     const paystackData = await paystackRes.json();
 
     if (!paystackData.status || paystackData.data?.status !== 'success') {
-      // Log the upstream detail server-side; never echo it to the client
-      // to avoid leaking Paystack-internal messages or transaction metadata.
       console.error('[paystack/verify] Payment not confirmed:', paystackData.message);
       return NextResponse.json(
         { error: 'Payment could not be verified. Please try again or contact support.' },
@@ -40,15 +46,19 @@ export async function POST(req) {
       );
     }
 
-    /* Update subscription to pending_review */
+    /* Update subscription — must belong to the authenticated caller (ownership check) */
     const { data: sub, error: subErr } = await supabase
       .from('premium_subscriptions')
       .update({ status: 'pending_review', updated_at: new Date().toISOString() })
       .eq('payment_reference', reference)
+      .eq('user_id', caller.id)          // ownership enforced here
       .select('id, user_id, plan, amount, currency')
       .single();
 
     if (subErr) throw subErr;
+    if (!sub) {
+      return NextResponse.json({ error: 'Payment reference not found or does not belong to your account.' }, { status: 403 });
+    }
 
     /* Fetch username for notification message */
     const { data: profile } = await supabase
@@ -80,6 +90,6 @@ export async function POST(req) {
     return NextResponse.json({ success: true, subscriptionId: sub.id });
   } catch (err) {
     console.error('Paystack verify error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Payment verification failed. Please contact support.' }, { status: 500 });
   }
 }

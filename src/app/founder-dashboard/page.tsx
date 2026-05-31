@@ -10,6 +10,7 @@ import {
   ScrollText, FileText, Send, DollarSign, PenLine, XCircle, Eye,
   Printer, History, Trash2, Ban, ExternalLink, AlertOctagon,
   ChevronRight, Mail, CalendarDays, Star, BookOpen, Lock, Unlock,
+  Package, Truck, ShoppingBag,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -65,12 +66,13 @@ const TABS = [
   { id: 'overview',     label: 'Overview',     icon: BarChart3,    protected: false },
   { id: 'applications', label: 'Applications', icon: Crown,        protected: true  },
   { id: 'users',        label: 'Users',        icon: Users,        protected: true  },
+  { id: 'orders',       label: 'Orders',       icon: Package,      protected: true  },
   { id: 'tasks',        label: 'Tasks',        icon: ClipboardList, protected: false },
   { id: 'contracts',    label: 'Contracts',    icon: ScrollText,   protected: true  },
   { id: 'platform',     label: 'Platform',     icon: Zap,          protected: true  },
 ];
 
-const PROTECTED_TABS = new Set(['applications', 'users', 'contracts', 'platform']);
+const PROTECTED_TABS = new Set(['applications', 'users', 'orders', 'contracts', 'platform']);
 
 export default function FounderDashboard() {
   const router = useRouter();
@@ -127,6 +129,12 @@ export default function FounderDashboard() {
   const [userFilter, setUserFilter] = useState('all');
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [userActionLoading, setUserActionLoading] = useState<string | null>(null);
+
+  // Orders tab
+  const [shopOrders, setShopOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [orderActionLoading, setOrderActionLoading] = useState<string | null>(null);
 
   // Dashboard preview (per-user lazy-loaded data)
   const [userDashPreviews, setUserDashPreviews] = useState<Record<string, { tasks: any[]; notifications: any[]; loading: boolean }>>({});
@@ -320,16 +328,21 @@ export default function FounderDashboard() {
     }
   };
 
-  // ── Users ─────────────────────────────────────────────────────────────────
+  // ── Users — fetched via admin API (service role key bypasses RLS) ──────────
   const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, username, email, avatar_url, status, is_verified, is_admin, is_premium, role, created_at')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    setUsers(data || []);
-    setAllUsers(data || []);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/users?limit=200', {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      const json = await res.json();
+      const data = json.users || [];
+      setUsers(data);
+      setAllUsers(data);
+    } catch {
+      // silently fall back to empty
+    }
     setUsersLoading(false);
   }, []);
 
@@ -417,6 +430,47 @@ export default function FounderDashboard() {
   const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
     const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
     if (!error) setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+  };
+
+  // ── Orders ────────────────────────────────────────────────────────────────
+  const fetchShopOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/orders?limit=200', {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      const json = await res.json();
+      setShopOrders(json.orders || []);
+    } catch {
+      // silently fall back to empty
+    }
+    setOrdersLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (hasAccess && activeTab === 'orders') fetchShopOrders();
+  }, [hasAccess, activeTab, fetchShopOrders]);
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    setOrderActionLoading(orderId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ orderId, status: newStatus }),
+      });
+      if (res.ok) {
+        setShopOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+        showToast(`Order status updated to ${newStatus}.`);
+      } else {
+        showToast('Failed to update order.', 'error');
+      }
+    } catch {
+      showToast('Failed to update order.', 'error');
+    }
+    setOrderActionLoading(null);
   };
 
   // ── Contracts ─────────────────────────────────────────────────────────────
@@ -1489,6 +1543,150 @@ export default function FounderDashboard() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── ORDERS ───────────────────────────────────────────────────────────── */}
+        {activeTab === 'orders' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <Package size={20} className="text-violet-500" /> Shop Orders
+                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({shopOrders.length})</span>
+              </h2>
+              <button onClick={fetchShopOrders} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-all">
+                <RefreshCw size={12} /> Refresh
+              </button>
+            </div>
+
+            {/* Status filter */}
+            <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl w-fit overflow-x-auto">
+              {['all','processing','dispatched','out_delivery','delivered','cancelled'].map(s => (
+                <button key={s} onClick={() => setOrderStatusFilter(s)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${orderStatusFilter === s ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}>
+                  {s === 'all' ? 'All' : s === 'out_delivery' ? 'En Route' : s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {ordersLoading ? (
+              <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-violet-500" size={24} /></div>
+            ) : shopOrders.filter(o => orderStatusFilter === 'all' || o.status === orderStatusFilter).length === 0 ? (
+              <div className="py-16 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+                <Package size={40} className="mx-auto mb-4 opacity-20" />
+                <p className="font-bold">No orders found</p>
+                <p className="text-xs text-gray-400 mt-1">Orders will appear here once customers checkout from the shop.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {shopOrders
+                  .filter(o => orderStatusFilter === 'all' || o.status === orderStatusFilter)
+                  .map(order => {
+                    const isActioning = orderActionLoading === order.id;
+                    const statusColors: Record<string, string> = {
+                      processing:   'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+                      dispatched:   'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
+                      out_delivery: 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-500/20',
+                      delivered:    'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+                      cancelled:    'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20',
+                    };
+                    const statusLabel: Record<string, string> = {
+                      processing: 'Processing', dispatched: 'Dispatched', out_delivery: 'En Route',
+                      delivered: 'Delivered', cancelled: 'Cancelled',
+                    };
+                    return (
+                      <div key={order.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 hover:border-gray-300 dark:hover:border-gray-700 transition-all">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 rounded-xl flex items-center justify-center shrink-0">
+                              <Package size={16} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-black text-gray-900 dark:text-white font-mono">#{order.id?.slice(0, 8)}</p>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${statusColors[order.status] || statusColors.processing}`}>
+                                  {statusLabel[order.status] || order.status}
+                                </span>
+                                {order.discreet && (
+                                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">🔒 Discreet</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                                {order.buyer?.username && (
+                                  <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
+                                    <Users size={9} /> @{order.buyer.username}
+                                  </p>
+                                )}
+                                {order.buyer?.email && (
+                                  <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                                    <Mail size={9} /> {order.buyer.email}
+                                  </p>
+                                )}
+                                <p className="text-[10px] text-gray-400">
+                                  {new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                            <p className="text-lg font-black text-gray-900 dark:text-white">${Number(order.total || 0).toFixed(2)}</p>
+                            {/* Status update actions */}
+                            {order.status === 'processing' && (
+                              <button onClick={() => handleUpdateOrderStatus(order.id, 'dispatched')} disabled={isActioning}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 rounded-xl text-[11px] font-bold border border-blue-200 dark:border-blue-500/20 transition-all disabled:opacity-50">
+                                {isActioning ? <Loader2 size={10} className="animate-spin" /> : <Truck size={10} />} Dispatch
+                              </button>
+                            )}
+                            {order.status === 'dispatched' && (
+                              <button onClick={() => handleUpdateOrderStatus(order.id, 'out_delivery')} disabled={isActioning}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 hover:bg-violet-100 rounded-xl text-[11px] font-bold border border-violet-200 dark:border-violet-500/20 transition-all disabled:opacity-50">
+                                {isActioning ? <Loader2 size={10} className="animate-spin" /> : <Truck size={10} />} Out for Delivery
+                              </button>
+                            )}
+                            {order.status === 'out_delivery' && (
+                              <button onClick={() => handleUpdateOrderStatus(order.id, 'delivered')} disabled={isActioning}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 rounded-xl text-[11px] font-bold border border-emerald-200 dark:border-emerald-500/20 transition-all disabled:opacity-50">
+                                {isActioning ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />} Mark Delivered
+                              </button>
+                            )}
+                            {!['delivered','cancelled'].includes(order.status) && (
+                              <button onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')} disabled={isActioning}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 rounded-xl text-[11px] font-bold border border-red-200 dark:border-red-500/20 transition-all disabled:opacity-50">
+                                {isActioning ? <Loader2 size={10} className="animate-spin" /> : <XCircle size={10} />} Cancel
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Items */}
+                        {order.items?.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Items</p>
+                            <div className="flex flex-wrap gap-2">
+                              {order.items.map((item: any, i: number) => (
+                                <span key={i} className="text-[11px] font-bold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700">
+                                  {item.name} ×{item.qty}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {order.address && (
+                          <p className="mt-2 text-[11px] text-gray-400 flex items-center gap-1">
+                            <span>📍</span> {order.address}
+                          </p>
+                        )}
+                        {order.tracking && (
+                          <p className="mt-1 text-[11px] text-gray-400 font-mono">
+                            Tracking: {order.tracking}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>

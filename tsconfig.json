@@ -1,6 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
+    "baseUrl": ".", // Base URL for path mapping, relative to tsconfig.json
+    "paths": {
+      "@/*": ["./mobile/src/*"], // Alias for the mobile/src directory
+      "@/services/*": ["./mobile/services/*"] // Alias for the mobile/services directory
+    },
     "lib": [
       "dom",
       "dom.iterable",

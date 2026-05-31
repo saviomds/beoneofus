@@ -38,6 +38,10 @@ export async function POST(request) {
     if (password.length < 8) {
       return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
     }
+    const cleanUsername = username.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 32);
+    if (cleanUsername.length < 2) {
+      return NextResponse.json({ error: 'Username must be at least 2 valid characters (a-z, 0-9, _)' }, { status: 400 });
+    }
 
     // Create auth user — email pre-confirmed so they can sign in immediately
     const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
@@ -52,7 +56,7 @@ export async function POST(request) {
     // Upsert profile — auto-verified, role set, marked as admin-invited
     const { error: profileErr } = await supabaseAdmin.from('profiles').upsert({
       id: userId,
-      username: username.toLowerCase().replace(/[^a-z0-9_]/g, ''),
+      username: cleanUsername,
       email,
       role,
       is_verified: true,
@@ -60,22 +64,32 @@ export async function POST(request) {
     }, { onConflict: 'id' });
 
     if (profileErr) {
-      // Roll back the auth user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => {});
+      // Roll back the auth user if profile creation fails; log if rollback itself fails
+      const { error: rollbackErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (rollbackErr) {
+        console.error('create-user rollback failed — orphaned auth user:', userId, rollbackErr.message);
+      }
       throw profileErr;
     }
 
-    // Send invitation email if requested
+    // Send invitation email with a secure password-reset link (no plaintext password in email)
+    let emailSent = false;
     if (sendInvite && process.env.RESEND_API_KEY) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://beoneofus.work';
-      const safeUsername = escapeHtml(username);
+      const safeUsername = escapeHtml(cleanUsername);
       const safeEmail = escapeHtml(email);
-      const safeRole = escapeHtml(role);
-
       const roleLabel = role === 'admin' ? 'Administrator' : 'Member';
       const roleBadgeColor = role === 'admin' ? '#f59e0b' : '#3b82f6';
 
-      await fetch('https://api.resend.com/emails', {
+      // Generate a one-time password-setup link instead of exposing the raw password
+      const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: { redirectTo: `${siteUrl}/reset-password` },
+      });
+      const setupLink = linkData?.properties?.action_link || `${siteUrl}/auth`;
+
+      const emailRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -103,8 +117,8 @@ export async function POST(request) {
           <tr><td style="padding:36px 40px;">
             <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${safeUsername}</strong>,</p>
             <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
-              Your <strong style="color:#111827;">beoneofus</strong> account has been set up by an administrator.
-              Sign in with the credentials below to get started.
+              Your <strong style="color:#111827;">beoneofus</strong> account has been created by an administrator.
+              Click the button below to set up your password and get started.
             </p>
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:24px;">
               <tr><td style="padding:20px 24px;">
@@ -113,12 +127,6 @@ export async function POST(request) {
                     <td style="padding-bottom:10px;">
                       <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Email</p>
                       <p style="margin:4px 0 0;font-size:14px;color:#0f172a;font-weight:600;">${safeEmail}</p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding-bottom:10px;border-top:1px solid #e2e8f0;padding-top:10px;">
-                      <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Temporary Password</p>
-                      <p style="margin:4px 0 0;font-size:14px;color:#0f172a;font-family:'Courier New',monospace;font-weight:700;letter-spacing:0.05em;">${password}</p>
                     </td>
                   </tr>
                   <tr>
@@ -134,13 +142,13 @@ export async function POST(request) {
             </table>
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
               <tr><td align="center">
-                <a href="${siteUrl}/auth" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:12px;">Sign In to Your Account</a>
+                <a href="${setupLink}" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:12px;">Set Up Your Password →</a>
               </td></tr>
             </table>
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;">
               <tr><td style="padding:14px 18px;">
                 <p style="margin:0;font-size:12px;color:#92400e;line-height:1.6;">
-                  <strong>Important:</strong> Please change your password after your first sign-in for security purposes.
+                  <strong>This link expires in 1 hour.</strong> If you didn't expect this invitation, you can safely ignore this email.
                 </p>
               </td></tr>
             </table>
@@ -152,12 +160,17 @@ export async function POST(request) {
 </table>
 </body></html>`,
         }),
-      }).catch(() => {}); // Don't fail user creation if email fails
+      }).catch(e => { console.error('create-user invite email failed:', e); return null; });
+
+      emailSent = emailRes?.ok === true;
+      if (!emailSent) {
+        console.warn('create-user: invite email failed to send for userId:', userId);
+      }
     }
 
-    return NextResponse.json({ success: true, userId });
+    return NextResponse.json({ success: true, userId, emailSent: sendInvite ? emailSent : null });
   } catch (error) {
     console.error('create-user error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message?.includes('already registered') ? 'A user with that email already exists.' : 'Failed to create user. Please try again.' }, { status: 500 });
   }
 }

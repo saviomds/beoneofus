@@ -205,22 +205,25 @@ export default function MemberDashboard() {
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
     if (newStatus === 'completed') setCompletingId(taskId);
-    setTimeout(async () => {
-      const task = tasks.find(t => t.id === taskId);
-      const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
-      if (!error) {
-        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-        if (task?.assigner_id && task.assigner_id !== sessionUser?.id) {
-          await supabase.from('notifications').insert({
-            receiver_id: task.assigner_id, actor_id: sessionUser?.id, type: 'message',
-            content: newStatus === 'in_progress'
-              ? `started working on "${task.title}".`
-              : `completed "${task.title}".`,
-          });
-        }
+    // Capture task data synchronously before any async delay to avoid stale closure
+    const task = tasks.find(t => t.id === taskId);
+    const actorId = sessionUser?.id;
+    const delay = newStatus === 'completed' ? 300 : 0;
+    await new Promise(r => setTimeout(r, delay));
+    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+    if (!error) {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+      if (task?.assigner_id && task.assigner_id !== actorId) {
+        await supabase.from('notifications').insert({
+          receiver_id: task.assigner_id, actor_id: actorId, type: 'message',
+          content: newStatus === 'in_progress'
+            ? `started working on "${task.title}".`
+            : `completed "${task.title}".`,
+          unread: true,
+        });
       }
-      if (newStatus === 'completed') setCompletingId(null);
-    }, newStatus === 'completed' ? 300 : 0);
+    }
+    if (newStatus === 'completed') setCompletingId(null);
   };
 
   const handleAddTask = async (e: React.FormEvent) => {
@@ -260,10 +263,10 @@ export default function MemberDashboard() {
   };
 
   const handleMarkAllRead = async () => {
-    const ids = updates.filter(u => !u.read).map(u => u.id);
+    const ids = updates.filter(u => u.unread === true).map(u => u.id);
     if (!ids.length || !sessionUser) return;
-    await supabase.from('notifications').update({ read: true }).in('id', ids);
-    setUpdates(prev => prev.map(u => ({ ...u, read: true })));
+    await supabase.from('notifications').update({ unread: false }).in('id', ids);
+    setUpdates(prev => prev.map(u => ({ ...u, unread: false })));
   };
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -272,14 +275,14 @@ export default function MemberDashboard() {
   const highCount       = pendingTasks.filter(t => t.priority?.toLowerCase() === 'high' || isOverdue(t.due_date)).length;
   const todayCount      = tasks.filter(t => isDueToday(t.due_date) && t.status !== 'completed').length;
   const completionRatio = tasks.length ? completedTasks.length / tasks.length : 0;
-  const unreadCount     = updates.filter(u => !u.read).length;
+  const unreadCount     = updates.filter(u => u.unread === true).length;
 
   const filteredTasks = tasks.filter(t => {
     const matchFilter =
       filter === 'pending'   ? (t.status === 'pending' || t.status === 'in_progress') :
       filter === 'completed' ? t.status === 'completed' :
       filter === 'high'      ? ((t.priority?.toLowerCase() === 'high' || isOverdue(t.due_date)) && t.status !== 'completed') :
-      filter === 'today'     ? isDueToday(t.due_date) : true;
+      filter === 'today'     ? (isDueToday(t.due_date) && t.status !== 'completed') : true;
     const matchSearch = !searchQuery ||
       t.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -329,6 +332,9 @@ export default function MemberDashboard() {
         .thin-scroll::-webkit-scrollbar{width:3px;}
         .thin-scroll::-webkit-scrollbar-track{background:transparent;}
         .thin-scroll::-webkit-scrollbar-thumb{background:rgba(99,102,241,.18);border-radius:2px;}
+        .filter-scroll { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; padding-bottom:2px; }
+        .filter-scroll::-webkit-scrollbar { display:none; }
+        .filter-scroll button { flex-shrink:0; }
       ` }} />
 
       {/* ── STICKY NAV ── */}
@@ -412,7 +418,7 @@ export default function MemberDashboard() {
         </div>
 
         {/* ── STATS ROW ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
           {/* Active tasks */}
           <button onClick={() => setFilter('pending')}
             className="group text-left bg-white dark:bg-[#111113] border border-gray-200 dark:border-white/[0.05] rounded-2xl p-5 hover:border-amber-300/70 dark:hover:border-amber-500/25 hover:shadow-lg hover:shadow-amber-500/5 hover:-translate-y-0.5 transition-all duration-200">
@@ -456,9 +462,9 @@ export default function MemberDashboard() {
             </div>
           </button>
 
-          {/* Attention */}
+          {/* Attention — spans 2 cols on mobile to fill the row */}
           <button onClick={() => setFilter('high')}
-            className="group text-left bg-white dark:bg-[#111113] border border-gray-200 dark:border-white/[0.05] rounded-2xl p-5 hover:border-rose-300/70 dark:hover:border-rose-500/25 hover:shadow-lg hover:shadow-rose-500/5 hover:-translate-y-0.5 transition-all duration-200">
+            className="group col-span-2 sm:col-span-1 text-left bg-white dark:bg-[#111113] border border-gray-200 dark:border-white/[0.05] rounded-2xl p-5 hover:border-rose-300/70 dark:hover:border-rose-500/25 hover:shadow-lg hover:shadow-rose-500/5 hover:-translate-y-0.5 transition-all duration-200">
             <div className="flex items-center justify-between mb-4">
               <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center">
                 <AlertCircle size={17} className="text-rose-500" />
@@ -505,8 +511,8 @@ export default function MemberDashboard() {
                 )}
               </div>
 
-              {/* Filter tabs */}
-              <div className="flex gap-1.5 flex-wrap">
+              {/* Filter tabs — horizontally scrollable on mobile */}
+              <div className="filter-scroll">
                 {[
                   { key: 'all',       label: 'All',    count: tasks.length         },
                   { key: 'pending',   label: 'Active', count: pendingTasks.length  },
@@ -696,21 +702,22 @@ export default function MemberDashboard() {
                   <p className="text-xs font-bold text-gray-400">No updates yet</p>
                 </div>
               ) : updates.map((upd, i) => {
+                if (!upd?.id) return null;
                 const isWarn = upd.type === 'warning' || upd.type === 'alert' || upd.type === 'system_error'
                   || upd.content?.toLowerCase().includes('high priority')
                   || upd.content?.toLowerCase().includes('urgent');
-                const cfg = NOTIF_ICON[upd.type] || NOTIF_ICON.message;
+                const cfg = NOTIF_ICON[upd.type as keyof typeof NOTIF_ICON] || NOTIF_ICON.message;
                 const { Icon: NotifIcon } = cfg;
                 return (
                   <div key={upd.id}
                     className={`relative p-3.5 rounded-xl border transition-all anim-fade-up
-                      ${!upd.read
+                      ${upd.unread === true
                         ? isWarn
                           ? 'bg-rose-50/40 dark:bg-rose-500/5 border-rose-200 dark:border-rose-500/20 border-l-2 border-l-rose-500'
                           : 'bg-indigo-50/40 dark:bg-indigo-500/5 border-indigo-200 dark:border-indigo-500/20 border-l-2 border-l-indigo-500'
                         : 'bg-gray-50 dark:bg-white/[0.02] border-gray-100 dark:border-white/[0.04]'}`}
                     style={{ animationDelay: `${i * 30}ms` }}>
-                    {!upd.read && <span className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400" />}
+                    {upd.unread === true && <span className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400" />}
                     <div className="flex items-start gap-2.5">
                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${isWarn ? 'bg-rose-50 dark:bg-rose-500/10' : cfg.bg}`}>
                         <NotifIcon size={13} className={isWarn ? 'text-rose-500' : cfg.color} />
@@ -749,9 +756,9 @@ export default function MemberDashboard() {
         </div>
       </div>
 
-      {/* ── FAB ── */}
+      {/* ── FAB — visible only on mobile (desktop uses nav button) ── */}
       <button onClick={() => { setIsModalOpen(true); setSubmitError(''); }}
-        className="fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl shadow-xl shadow-indigo-600/25 font-black text-sm transition-all hover:scale-105 active:scale-95 z-40"
+        className="sm:hidden fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl shadow-xl shadow-indigo-600/25 font-black text-sm transition-all hover:scale-105 active:scale-95 z-40"
         title="Report Issue (N)">
         <Plus size={17} /> Report Issue
       </button>

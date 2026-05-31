@@ -477,6 +477,53 @@ export default function SettingsContent() {
     }
   };
 
+  // Sticker options — emoji + gradient background pairs
+  const STICKER_OPTIONS = [
+    { emoji: "🦊", bg: "#f97316,#ea580c" }, { emoji: "🐺", bg: "#8b5cf6,#7c3aed" },
+    { emoji: "🐱", bg: "#ec4899,#db2777" }, { emoji: "🐸", bg: "#22c55e,#16a34a" },
+    { emoji: "🦋", bg: "#3b82f6,#2563eb" }, { emoji: "🐼", bg: "#6b7280,#4b5563" },
+    { emoji: "🦄", bg: "#a855f7,#9333ea" }, { emoji: "🐯", bg: "#f59e0b,#d97706" },
+    { emoji: "🦁", bg: "#eab308,#ca8a04" }, { emoji: "🐧", bg: "#0ea5e9,#0284c7" },
+    { emoji: "🦊", bg: "#ef4444,#dc2626" }, { emoji: "🐙", bg: "#f43f5e,#e11d48" },
+    { emoji: "🦅", bg: "#78716c,#57534e" }, { emoji: "🐬", bg: "#06b6d4,#0891b2" },
+    { emoji: "🦖", bg: "#84cc16,#65a30d" }, { emoji: "🦉", bg: "#92400e,#78350f" },
+    { emoji: "🐉", bg: "#dc2626,#b91c1c" }, { emoji: "🦝", bg: "#64748b,#475569" },
+    { emoji: "🐨", bg: "#94a3b8,#64748b" }, { emoji: "🦭", bg: "#38bdf8,#0ea5e9" },
+  ];
+
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+
+  const handlePickSticker = async ({ emoji, bg }) => {
+    setAvatarUploading(true);
+    setShowStickerPicker(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated.");
+      const [c1, c2] = bg.split(",");
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+        <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/>
+        </linearGradient></defs>
+        <rect width="128" height="128" rx="28" fill="url(#g)"/>
+        <text x="64" y="90" font-size="68" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">${emoji}</text>
+      </svg>`;
+      const blob = new Blob([svg], { type: "image/svg+xml" });
+      const path = `${session.user.id}/avatar.svg`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/svg+xml" });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = urlData.publicUrl + `?t=${Date.now()}`;
+      const { error: updateErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", session.user.id);
+      if (updateErr) throw updateErr;
+      setAvatarUrl(url);
+      showToast("Avatar sticker applied!");
+    } catch (e) {
+      showToast(e.message || "Failed to apply sticker.", "error");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   // ── Handle profile verification status ──────────────────────────────────────
   const sendNotif = async (type, userId) => {
     const target = recentUsers.find(u => u.id === userId);
@@ -942,19 +989,53 @@ export default function SettingsContent() {
                           </div>
                         )}
                       </div>
-                      <div>
-                        <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 hover:bg-blue-500/20 transition-all">
-                          <Camera size={13} />
-                          {avatarUploading ? "Uploading…" : "Change Photo"}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 hover:bg-blue-500/20 transition-all">
+                            <Camera size={13} />
+                            {avatarUploading ? "Uploading…" : "Upload Photo"}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={avatarUploading}
+                              onChange={(e) => handleAvatarUpload(e.target.files?.[0])}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setShowStickerPicker(v => !v)}
                             disabled={avatarUploading}
-                            onChange={(e) => handleAvatarUpload(e.target.files?.[0])}
-                          />
-                        </label>
-                        <p className="text-[10px] text-gray-400 mt-1.5">JPG, PNG or GIF · Max 2 MB</p>
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/30 hover:bg-violet-500/20 transition-all disabled:opacity-50"
+                          >
+                            🎨 Pick Sticker
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400">Photo: JPG, PNG or GIF · Max 2 MB · Or pick a sticker avatar</p>
+
+                        {/* Sticker picker panel */}
+                        {showStickerPicker && (
+                          <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl">
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Choose your avatar sticker</p>
+                            <div className="grid grid-cols-10 gap-1.5">
+                              {STICKER_OPTIONS.map(({ emoji, bg }, i) => {
+                                const [c1, c2] = bg.split(",");
+                                return (
+                                  <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => handlePickSticker({ emoji, bg })}
+                                    title={emoji}
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-xl hover:scale-110 active:scale-95 transition-transform shadow-sm"
+                                    style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}
+                                  >
+                                    {emoji}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 

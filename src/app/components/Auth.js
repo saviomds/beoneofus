@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../supabaseClient';
-import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ShieldCheck,
@@ -101,8 +100,6 @@ function PasswordInput({ id, value, onChange, placeholder = '••••••�
 // ---------------------------------------------------------------------------
 
 export default function AuthForm() {
-  const router = useRouter();
-
   const [view, setView] = useState('sign-in');
   // ^ 'sign-in' | 'sign-up' | 'forgot-password' | 'update-password' | 'magic-link'
 
@@ -116,7 +113,6 @@ export default function AuthForm() {
   // 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
   const [usernameStatus, setUsernameStatus] = useState('idle');
   const usernameTimer = useRef(null);
-  const suppressRedirect = useRef(false); // suppresses SIGNED_IN redirect during 2FA credential check
   const isRecoveryFlow = useRef(false); // set when recovery link is detected; blocks SIGNED_IN redirect
 
   const [error, setError] = useState(null);
@@ -202,15 +198,8 @@ export default function AuthForm() {
         }
 
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
-          // Suppress redirect during 2FA credential verification step
-          if (suppressRedirect.current) {
-            suppressRedirect.current = false;
-            return;
-          }
-
           // If this is a recovery flow, stay on page so user can set new password.
           if (typeof window !== 'undefined') {
-            const sp = new URLSearchParams(window.location.search);
             if (
               isRecoveryFlow.current ||
               window.location.hash.includes('type=recovery') ||
@@ -234,7 +223,9 @@ export default function AuthForm() {
             return;
           }
 
-          const pendingUsername = localStorage.getItem('pending_username');
+          const pendingUsername =
+            localStorage.getItem('pending_username') ||
+            session.user.user_metadata?.username;
           const doRedirect = () => {
             const params = new URLSearchParams(window.location.search);
             const next = params.get('next');
@@ -243,12 +234,15 @@ export default function AuthForm() {
 
           if (pendingUsername) {
             localStorage.removeItem('pending_username');
+            // Upsert: creates the profile row if no DB trigger has done it yet,
+            // or updates the username if the row already exists.
             supabase.from('profiles')
-              .update({ username: pendingUsername })
-              .eq('id', session.user.id)
-              .is('username', null)
-              .then(({ error: updateErr }) => {
-                if (updateErr?.code === '23505') {
+              .upsert(
+                { id: session.user.id, email: session.user.email, username: pendingUsername },
+                { onConflict: 'id', ignoreDuplicates: false }
+              )
+              .then(({ error: upsertErr }) => {
+                if (upsertErr?.code === '23505') {
                   localStorage.setItem('pick_username', '1');
                 }
                 doRedirect();
@@ -461,25 +455,27 @@ export default function AuthForm() {
             // Step 1: collect email — advance to password
             setSignInStep('password');
           } else if (signInStep === 'password') {
-            // Step 2: verify credentials then send OTP
-            suppressRedirect.current = true;
-            const { error: credErr } = await supabase.auth.signInWithPassword({ email, password });
-            if (credErr) {
-              suppressRedirect.current = false;
-              if (credErr.message.toLowerCase().includes('email not confirmed')) {
+            // Step 2: verify credentials server-side (no browser session → no race condition),
+            // then send OTP.
+            const credRes = await fetch('/api/auth/check-credentials', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password }),
+            });
+            const credData = await credRes.json().catch(() => ({}));
+            if (!credRes.ok) {
+              if (credData.error === 'email_not_confirmed') {
                 setEmailNotConfirmed(email);
                 setLoading(false);
                 return;
               }
-              throw credErr;
+              throw new Error(credData.error || 'Invalid email or password');
             }
             const otpRes = await fetch('/api/auth/send-otp', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email }),
             });
-            await supabase.auth.signOut({ scope: 'local' });
-            suppressRedirect.current = false;
             if (!otpRes.ok) {
               const otpData = await otpRes.json().catch(() => ({}));
               throw new Error(otpData.error || 'Failed to send verification code');

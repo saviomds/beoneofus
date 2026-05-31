@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../../lib/escapeHtml';
+import { checkRateLimit } from '../../../../lib/rateLimit';
+import { randomInt } from 'crypto';
 
 export async function POST(request) {
+  // Rate-limit: max 3 resends per IP per 10 minutes
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
+  const rl = checkRateLimit(ip, '/api/auth/resend-otp', { max: 3, windowMs: 10 * 60_000 });
+  if (rl.limited) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait before requesting another code.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
+    );
+  }
+
   try {
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error('Server configuration error: missing Supabase env vars');
@@ -34,7 +46,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Too many requests', waitSeconds }, { status: 429 });
     }
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const code = String(randomInt(100000, 1000000));
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     await supabaseAdmin
@@ -100,6 +112,6 @@ export async function POST(request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('resend-otp error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to resend verification code. Please try again.' }, { status: 500 });
   }
 }

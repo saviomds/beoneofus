@@ -1090,8 +1090,8 @@ export default function LearnContent() {
 
   useEffect(()=>{const t=setTimeout(()=>setDSearch(search),250);return()=>clearTimeout(t);},[search]);
 
-  const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "").split(",").map(e=>e.trim()).filter(Boolean);
-  const isAdmin   = !!(userProfile?.is_admin || ["admin","founder"].includes(userProfile?.role) || ADMIN_EMAILS.includes(userProfile?._email));
+  // Admin check is based on server-side profile fields only — never client-side env vars
+  const isAdmin   = !!(userProfile?.is_admin || ["admin","founder"].includes(userProfile?.role));
   const canAdd    = userProfile?.is_verified || userProfile?.is_premium || isAdmin;
   const isPremium = userProfile?.is_premium || isAdmin;
 

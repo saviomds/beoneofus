@@ -35,7 +35,9 @@ export async function POST(req) {
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
-    const { plan, userId, email, callbackUrl } = await req.json();
+    const { plan, email, callbackUrl } = await req.json();
+    // Always use the authenticated user ID from the middleware header, never the body
+    const userId = req.headers.get('x-user-id');
 
     if (!plan || !userId || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

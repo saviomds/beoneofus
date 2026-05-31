@@ -62,7 +62,9 @@ export async function GET(req) {
 export async function POST(req) {
   const supabase = getSupabase();
   const body = await req.json();
-  const { userId, pathwayId, stageIndex } = body;
+  const { pathwayId, stageIndex } = body;
+  // Always use the authenticated user ID from the middleware header, never the body
+  const userId = req.headers.get('x-user-id');
   if (!userId || !pathwayId) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
   if (stageIndex !== undefined) {

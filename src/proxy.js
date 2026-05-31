@@ -35,6 +35,27 @@ function addSecurityHeaders(response) {
   return response;
 }
 
+// Decode JWT payload locally — no network call, no transient-failure risk.
+// Returns null if the token is malformed or expired.
+function decodeJwt(token) {
+  try {
+    const [, payloadB64] = token.split('.');
+    if (!payloadB64) return null;
+    const json = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function isValidJwt(token) {
+  const payload = decodeJwt(token);
+  if (!payload?.sub) return { valid: false, payload: null };
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp && payload.exp < now) return { valid: false, payload: null };
+  return { valid: true, payload };
+}
+
 export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
@@ -48,22 +69,20 @@ export async function proxy(request) {
       return NextResponse.redirect(loginUrl);
     }
 
-    try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        { auth: { persistSession: false } },
-      );
-      const { data: { user }, error } = await supabase.auth.getUser(token);
+    const { valid, payload } = isValidJwt(token);
 
-      if (error || !user) {
-        const resp = NextResponse.redirect(new URL('/auth', request.url));
-        resp.cookies.delete('sb-at');
-        return resp;
-      }
+    if (!valid) {
+      // Token is missing or expired — redirect to login but NEVER delete the
+      // cookie here. The client-side Supabase SDK will refresh the token and
+      // update the cookie on its own. Deleting it would break that recovery.
+      const loginUrl = new URL('/auth', request.url);
+      loginUrl.searchParams.set('next', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
 
-      // Admin-only pages: check role
-      if (ADMIN_PAGES.some((p) => pathname.startsWith(p))) {
+    // Admin-only pages: check role via service-role DB call
+    if (ADMIN_PAGES.some((p) => pathname.startsWith(p))) {
+      try {
         const supabaseAdmin = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL,
           process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -71,18 +90,19 @@ export async function proxy(request) {
         const { data: profile } = await supabaseAdmin
           .from('profiles')
           .select('role, is_admin')
-          .eq('id', user.id)
+          .eq('id', payload.sub)
           .single();
 
         if (!profile?.is_admin && !['admin', 'founder'].includes(profile?.role)) {
           return NextResponse.redirect(new URL('/dash/home', request.url));
         }
+      } catch {
+        // On DB error, deny access to admin page but don't log out
+        return NextResponse.redirect(new URL('/dash/home', request.url));
       }
-
-      return addSecurityHeaders(NextResponse.next());
-    } catch {
-      return NextResponse.redirect(new URL('/auth', request.url));
     }
+
+    return addSecurityHeaders(NextResponse.next());
   }
 
   // ── Non-API, non-protected routes: just add security headers ─────────────
@@ -95,29 +115,22 @@ export async function proxy(request) {
     return addSecurityHeaders(NextResponse.next());
   }
 
-  // ── Read token from the cookie set by supabaseClient.js ─────────────────
+  // ── Protected API routes: verify token locally ───────────────────────────
   const token = request.cookies.get('sb-at')?.value;
 
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // ── Verify the token against Supabase ───────────────────────────────────
-  try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      { auth: { persistSession: false } },
-    );
+  const { valid, payload } = isValidJwt(token);
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (!valid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    if (error || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // ── Admin-only API routes: additionally require is_admin ───────────────
-    if (pathname.startsWith('/api/admin/')) {
+  // Admin-only API routes: additionally require is_admin
+  if (pathname.startsWith('/api/admin/')) {
+    try {
       const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -125,24 +138,24 @@ export async function proxy(request) {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('is_admin')
-        .eq('id', user.id)
+        .eq('id', payload.sub)
         .single();
 
       if (!profile?.is_admin) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
+    } catch {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-
-    // Forward verified identity to the API route via request headers
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-user-id',    user.id);
-    requestHeaders.set('x-user-email', user.email ?? '');
-
-    const response = NextResponse.next({ request: { headers: requestHeaders } });
-    return addSecurityHeaders(response);
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Forward verified identity to the API route via request headers
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-user-id',    payload.sub);
+  requestHeaders.set('x-user-email', payload.email ?? '');
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  return addSecurityHeaders(response);
 }
 
 export const config = {

@@ -200,14 +200,17 @@ Make questions test real understanding of the subject, increasing in difficulty.
         return NextResponse.json({ error: 'AI grading failed. Please try again.' }, { status: 500 });
       }
 
+      // Always use the authenticated user ID from the middleware header, never the body
+      const verifiedUserId = request.headers.get('x-user-id') || null;
+
       // If passed and user info provided → persist to DB
-      if (result.passed && userId && courseId) {
+      if (result.passed && verifiedUserId && courseId) {
         try {
           const supabase = getSupabase();
 
           // Store exam submission record
           await supabase.from('exam_submissions').insert({
-            user_id: userId,
+            user_id: verifiedUserId,
             course_id: courseId,
             questions,
             answers,
@@ -221,7 +224,7 @@ Make questions test real understanding of the subject, increasing in difficulty.
             .from('user_certificates')
             .upsert(
               {
-                user_id: userId,
+                user_id: verifiedUserId,
                 course_id: courseId,
                 exam_passed: true,
                 exam_score: result.score,

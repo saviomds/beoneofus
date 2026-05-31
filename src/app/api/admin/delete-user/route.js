@@ -34,13 +34,25 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
     }
 
-    // Delete from auth (cascades to profiles via FK if set up, otherwise delete profile first)
-    await supabaseAdmin.from('profiles').delete().eq('id', userId);
+    // Delete auth user first — if this fails we stop before touching the profile,
+    // keeping the data consistent. Profile deletion comes second (or is cascaded via FK).
     const { error: deleteErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (deleteErr) throw deleteErr;
 
+    // Best-effort profile cleanup (may already be cascaded by FK on the DB side)
+    await supabaseAdmin.from('profiles').delete().eq('id', userId);
+
+    // Audit log: record which admin deleted which user
+    await supabaseAdmin.from('admin_audit_log').insert({
+      actor_id: caller.id,
+      action: 'delete_user',
+      target_user_id: userId,
+      created_at: new Date().toISOString(),
+    }).catch(e => console.warn('audit log insert failed:', e.message));
+
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json({ error: err.message || 'Failed to delete user' }, { status: 500 });
+    console.error('delete-user error:', err);
+    return NextResponse.json({ error: 'Failed to delete user. Please try again.' }, { status: 500 });
   }
 }

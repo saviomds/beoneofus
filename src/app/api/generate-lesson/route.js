@@ -4,6 +4,8 @@ import { stripDangerousHtml } from '../../../lib/sanitize';
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 
+export const runtime = 'edge';
+
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;

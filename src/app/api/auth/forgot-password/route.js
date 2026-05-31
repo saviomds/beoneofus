@@ -1,8 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../../lib/escapeHtml';
+import { checkRateLimit } from '../../../../lib/rateLimit';
 
 export async function POST(request) {
+  // Rate-limit: max 3 reset requests per IP per 15 minutes
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
+  const rl = checkRateLimit(ip, '/api/auth/forgot-password', { max: 3, windowMs: 15 * 60_000 });
+  if (rl.limited) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait before trying again.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
+    );
+  }
+
   try {
     const { email } = await request.json();
     if (!email || typeof email !== 'string') {
@@ -15,15 +26,24 @@ export async function POST(request) {
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
+    // Always return success to prevent email enumeration — even if user doesn't exist
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email,
       options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password` },
     });
-    if (error) throw error;
+
+    if (error) {
+      // Log internally but don't leak whether the email exists or not
+      console.warn('forgot-password generateLink:', error.message);
+      return NextResponse.json({ success: true });
+    }
 
     const resetLink = data?.properties?.action_link;
-    if (!resetLink) throw new Error('Could not generate reset link');
+    if (!resetLink) {
+      console.warn('forgot-password: no action_link returned');
+      return NextResponse.json({ success: true });
+    }
 
     const safeEmail = escapeHtml(email);
 
@@ -92,6 +112,7 @@ export async function POST(request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('forgot-password error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Return success even on unexpected errors to prevent enumeration
+    return NextResponse.json({ success: true });
   }
 }

@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../../lib/escapeHtml';
+import { checkRateLimit } from '../../../../lib/rateLimit';
+import { randomInt } from 'crypto';
 
 export async function POST(request) {
+  // Rate-limit: max 3 OTP sends per IP per 5 minutes
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
+  const rl = checkRateLimit(ip, '/api/auth/send-otp', { max: 3, windowMs: 5 * 60_000 });
+  if (rl.limited) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait before requesting another code.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
+    );
+  }
+
   try {
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error('Server configuration error: missing Supabase env vars');
@@ -12,17 +24,38 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
-    const { email } = await request.json();
+    const { email, purpose = 'signin' } = await request.json();
     if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    // Enforce 60-second cooldown even for fresh sends (prevents OTP spam)
+    const { data: existing } = await supabaseAdmin
+      .from('auth_otp')
+      .select('created_at')
+      .eq('email', email)
+      .eq('used', false)
+      .eq('purpose', purpose)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (existing) {
+      const secondsSinceLast = (Date.now() - new Date(existing.created_at).getTime()) / 1000;
+      if (secondsSinceLast < 60) {
+        return NextResponse.json(
+          { error: 'Too many requests', waitSeconds: Math.ceil(60 - secondsSinceLast) },
+          { status: 429 },
+        );
+      }
+    }
+
+    // Cryptographically secure 6-digit OTP
+    const code = String(randomInt(100000, 1000000));
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     const { error: dbErr } = await supabaseAdmin
       .from('auth_otp')
-      .upsert({ email, code, expires_at: expiresAt, used: false }, { onConflict: 'email' });
+      .upsert({ email, code, expires_at: expiresAt, used: false, purpose }, { onConflict: 'email' });
     if (dbErr) throw dbErr;
 
     if (!process.env.RESEND_API_KEY) throw new Error('Email service not configured');
@@ -96,6 +129,6 @@ export async function POST(request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('send-otp error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to send verification code. Please try again.' }, { status: 500 });
   }
 }

@@ -1,37 +1,53 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit } from '../../../../lib/rateLimit';
 
 export async function POST(request) {
+  // Rate-limit: max 5 attempts per IP per 10 minutes (brute-force protection)
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
+  const rl = checkRateLimit(ip, '/api/auth/verify-otp', { max: 5, windowMs: 10 * 60_000 });
+  if (rl.limited) {
+    return NextResponse.json(
+      { error: 'Too many attempts. Please wait before trying again.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
+    );
+  }
+
   const supabaseAdmin = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
   try {
-    const { email, code } = await request.json();
+    const { email, code, purpose } = await request.json();
 
     if (!email || !code || !/^\d{6}$/.test(String(code))) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const { data, error } = await supabaseAdmin
+    const query = supabaseAdmin
       .from('auth_otp')
       .select('*')
       .eq('email', email)
       .eq('code', String(code))
       .eq('used', false)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
+      .gt('expires_at', new Date().toISOString());
+
+    // If a purpose was provided, enforce it (prevents cross-purpose OTP reuse)
+    if (purpose) query.eq('purpose', purpose);
+
+    const { data, error } = await query.maybeSingle();
 
     if (error || !data) {
       return NextResponse.json({ error: 'Invalid or expired code' }, { status: 400 });
     }
 
-    await supabaseAdmin.from('auth_otp').update({ used: true }).eq('email', email);
+    // Mark only this specific OTP row as used (by id), not all OTPs for the email
+    await supabaseAdmin.from('auth_otp').update({ used: true }).eq('id', data.id);
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('verify-otp error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err) {
+    console.error('verify-otp error:', err);
+    return NextResponse.json({ error: 'Verification failed. Please try again.' }, { status: 500 });
   }
 }

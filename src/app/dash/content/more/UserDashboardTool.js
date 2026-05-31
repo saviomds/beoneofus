@@ -5,7 +5,29 @@ import {
   ClipboardList, Briefcase, Bell, RefreshCw, Loader2, Check, X,
   CheckCircle2, Clock, XCircle, ChevronRight, TrendingUp, User,
   FileText, Zap, UserCog, ArrowUpRight, UserPlus, Search, Crown, Users, Circle,
+  Trash2, Heart, MessageSquare, Handshake,
 } from "lucide-react";
+
+const NOTIF_ICONS = {
+  like:                    <Heart size={12} className="text-rose-400" />,
+  comment:                 <MessageSquare size={12} className="text-blue-400" />,
+  message:                 <MessageSquare size={12} className="text-blue-400" />,
+  handshake:               <Handshake size={12} className="text-emerald-400" />,
+  connection_request:      <UserPlus size={12} className="text-violet-400" />,
+  group_invite:            <Users size={12} className="text-amber-400" />,
+  group_join_request:      <Users size={12} className="text-amber-400" />,
+  partnership_update:      <TrendingUp size={12} className="text-cyan-400" />,
+  interview_answers_complete: <ClipboardList size={12} className="text-indigo-400" />,
+  blocked:                 <X size={12} className="text-red-400" />,
+};
+
+const CHANGELOG = [
+  { version: "v2.4", title: "Shop & Orders", tag: "Feature", desc: "Buy and sell digital products directly on the platform with Paystack checkout.", date: "May 2026" },
+  { version: "v2.3", title: "Notification Popups", tag: "UX", desc: "Real-time toast notifications for messages and activity — no more missing updates.", date: "May 2026" },
+  { version: "v2.2", title: "Interview Suite", tag: "Feature", desc: "AI-evaluated interview rooms with coding challenges for verified opportunities.", date: "Apr 2026" },
+  { version: "v2.1", title: "Premium Tier", tag: "Feature", desc: "Unlock advanced AI tools, analytics, and priority visibility with Premium.", date: "Mar 2026" },
+  { version: "v2.0", title: "Public Profiles", tag: "Design", desc: "Every member now has a shareable profile at beoneofus.work/u/username.", date: "Feb 2026" },
+];
 import { supabase } from "../../../supabaseClient";
 import { Toast, useToast, Badge, statusColor } from "./shared";
 

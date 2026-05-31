@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { autoRefreshToken: false, persistSession: false } },
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+}
 
 async function getCallerProfile(request) {
+  const supabaseAdmin = getSupabaseAdmin();
   const userId = request.headers.get('x-user-id');
   if (!userId) return null;
   const { data } = await supabaseAdmin
@@ -26,7 +29,7 @@ export async function DELETE(request, { params }) {
   }
 
   const { id } = await params;
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from('learn_content')
     .delete()
     .eq('id', id);
@@ -47,7 +50,7 @@ export async function PATCH(request, { params }) {
   const allowed = ['title', 'description', 'topic', 'level', 'tags', 'featured'];
   const updates = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
 
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from('learn_content')
     .update(updates)
     .eq('id', id);

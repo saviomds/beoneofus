@@ -141,3 +141,5 @@
   @media (min-width: 1200px) { .bs-container { max-width: 1140px; } }
   @media (min-width: 1400px) { .bs-container { max-width: 1320px; } }
 }
+
+@keyframes shrink-bar { from { width: 100%; } to { width: 0%; } }

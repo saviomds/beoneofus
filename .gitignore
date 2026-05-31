@@ -45,3 +45,4 @@ CLAUDE.md
 AGENTS.md
 .supabase
 .claude
+.env*.local

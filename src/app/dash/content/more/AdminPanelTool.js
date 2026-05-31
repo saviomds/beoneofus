@@ -4,14 +4,15 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
   Terminal, Activity, Database, AlertTriangle, AlertCircle, Loader2,
-  RefreshCw, CheckCircle2, ChevronDown, XCircle, Check, X, Search,
+  RefreshCw, CheckCircle2, ChevronDown, ChevronRight, XCircle, Check, X, Search,
   Filter, Eye, EyeOff, Trash2, UserPlus, Briefcase, BarChart3, Crown,
   Users, Award, TrendingUp, BadgeCheck, ArrowUpRight, Shield, Handshake,
   BookOpen, Mail, Hash, MessageSquare, FileText, ClipboardList, User,
   ShieldCheck, ShieldAlert, UserCog, Bot, Layers, Bell, Plus, Copy,
-  Clock, MoreHorizontal, Video, Sparkles, Heart, Zap,
+  Clock, MoreHorizontal, Video, Sparkles, Heart, Zap, Code2,
 } from "lucide-react";
 import { supabase } from "../../../supabaseClient";
+import SponsorsAdminContent from "../../SponsorsAdminContent";
 import VerifiedBadge from "../../../components/VerifiedBadge";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";

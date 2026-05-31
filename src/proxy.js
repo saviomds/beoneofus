@@ -115,14 +115,17 @@ export async function proxy(request) {
     return addSecurityHeaders(NextResponse.next());
   }
 
-  // ── Protected API routes: verify token locally ───────────────────────────
-  const token = request.cookies.get('sb-at')?.value;
+  // ── Protected API routes: verify token (Bearer header or cookie) ─────────
+  const authHeader = request.headers.get('authorization');
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+  const cookieToken = request.cookies.get('sb-at')?.value;
+  const rawToken = bearerToken ?? cookieToken;
 
-  if (!token) {
+  if (!rawToken) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { valid, payload } = isValidJwt(token);
+  const { valid, payload } = isValidJwt(rawToken);
 
   if (!valid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

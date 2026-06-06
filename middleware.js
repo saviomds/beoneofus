@@ -69,24 +69,30 @@ export async function middleware(request) {
       return response;
     }
 
-    // Fetch platform settings (maintenance mode, registration status)
-    let maintenanceMode = false;
-    let maintenanceMessage = "We're doing a quick upgrade. Be back shortly!";
+    // ── MAINTENANCE OVERRIDE ──────────────────────────────────────────────
+    // Set FORCE_MAINTENANCE = false and redeploy when the site is ready again.
+    const FORCE_MAINTENANCE = true;
+    // ─────────────────────────────────────────────────────────────────────
+
+    let maintenanceMode = FORCE_MAINTENANCE;
+    let maintenanceMessage = "We're fixing an issue and will be back very soon. Thank you for your patience!";
     let registrationOpen = true;
 
-    try {
-      const origin = request.nextUrl.origin;
-      const statusRes = await fetch(`${origin}/api/public-settings`, {
-        signal: AbortSignal.timeout(2000),
-      });
-      if (statusRes.ok) {
-        const data = await statusRes.json();
-        maintenanceMode    = data.maintenanceMode    ?? false;
-        maintenanceMessage = data.maintenanceMessage ?? maintenanceMessage;
-        registrationOpen   = data.registrationOpen   ?? true;
+    if (!FORCE_MAINTENANCE) {
+      try {
+        const origin = request.nextUrl.origin;
+        const statusRes = await fetch(`${origin}/api/public-settings`, {
+          signal: AbortSignal.timeout(2000),
+        });
+        if (statusRes.ok) {
+          const data = await statusRes.json();
+          maintenanceMode    = data.maintenanceMode    ?? false;
+          maintenanceMessage = data.maintenanceMessage ?? maintenanceMessage;
+          registrationOpen   = data.registrationOpen   ?? true;
+        }
+      } catch {
+        // On any failure let the request through
       }
-    } catch {
-      // On any failure let the request through
     }
 
     if (maintenanceMode) {

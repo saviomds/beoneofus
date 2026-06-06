@@ -535,9 +535,7 @@ export default function AuthForm() {
       const { error: err } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          // BUG FIX: was redirecting back to /auth which could loop.
-          // Redirect to /dash; Supabase will call the onAuthStateChange listener.
-          redirectTo: `${window.location.origin}/dash`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (err) throw err;

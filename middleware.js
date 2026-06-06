@@ -5,6 +5,7 @@ const ALWAYS_ALLOW = [
   '/maintenance',
   '/api/public-settings',
   '/api/auth/',
+  '/auth/callback',
   '/_next/',
   '/favicon',
   '/logo',

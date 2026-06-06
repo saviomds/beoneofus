@@ -37,6 +37,19 @@ export async function middleware(request) {
       return NextResponse.next();
     }
 
+    // ── MAINTENANCE OVERRIDE ──────────────────────────────────────────────
+    // Set FORCE_MAINTENANCE = false and redeploy when the site is ready again.
+    const FORCE_MAINTENANCE = true;
+    // ─────────────────────────────────────────────────────────────────────
+
+    // Hard redirect everything (including /auth) to /maintenance page.
+    // Runs before any auth or settings logic so nothing can bypass it.
+    if (FORCE_MAINTENANCE && pathname !== '/maintenance') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/maintenance';
+      return NextResponse.redirect(url);
+    }
+
     let response = NextResponse.next({
       request: { headers: request.headers },
     });
@@ -69,30 +82,23 @@ export async function middleware(request) {
       return response;
     }
 
-    // ── MAINTENANCE OVERRIDE ──────────────────────────────────────────────
-    // Set FORCE_MAINTENANCE = false and redeploy when the site is ready again.
-    const FORCE_MAINTENANCE = true;
-    // ─────────────────────────────────────────────────────────────────────
-
-    let maintenanceMode = FORCE_MAINTENANCE;
-    let maintenanceMessage = "We're fixing an issue and will be back very soon. Thank you for your patience!";
+    let maintenanceMode = false;
+    let maintenanceMessage = "We're doing a quick upgrade. Be back shortly!";
     let registrationOpen = true;
 
-    if (!FORCE_MAINTENANCE) {
-      try {
-        const origin = request.nextUrl.origin;
-        const statusRes = await fetch(`${origin}/api/public-settings`, {
-          signal: AbortSignal.timeout(2000),
-        });
-        if (statusRes.ok) {
-          const data = await statusRes.json();
-          maintenanceMode    = data.maintenanceMode    ?? false;
-          maintenanceMessage = data.maintenanceMessage ?? maintenanceMessage;
-          registrationOpen   = data.registrationOpen   ?? true;
-        }
-      } catch {
-        // On any failure let the request through
+    try {
+      const origin = request.nextUrl.origin;
+      const statusRes = await fetch(`${origin}/api/public-settings`, {
+        signal: AbortSignal.timeout(2000),
+      });
+      if (statusRes.ok) {
+        const data = await statusRes.json();
+        maintenanceMode    = data.maintenanceMode    ?? false;
+        maintenanceMessage = data.maintenanceMessage ?? maintenanceMessage;
+        registrationOpen   = data.registrationOpen   ?? true;
       }
+    } catch {
+      // On any failure let the request through
     }
 
     if (maintenanceMode) {

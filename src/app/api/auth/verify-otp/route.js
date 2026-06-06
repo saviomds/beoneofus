@@ -26,7 +26,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const query = supabaseAdmin
+    let query = supabaseAdmin
       .from('auth_otp')
       .select('*')
       .eq('email', email)
@@ -34,8 +34,7 @@ export async function POST(request) {
       .eq('used', false)
       .gt('expires_at', new Date().toISOString());
 
-    // If a purpose was provided, enforce it (prevents cross-purpose OTP reuse)
-    if (purpose) query.eq('purpose', purpose);
+    if (purpose) query = query.eq('purpose', purpose);
 
     const { data, error } = await query.maybeSingle();
 

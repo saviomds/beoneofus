@@ -19,6 +19,14 @@ function isAlwaysAllowed(pathname) {
 
 export async function middleware(request) {
   try {
+    // Redirect bare domain → www
+    const host = request.headers.get('host') ?? '';
+    if (host === 'beoneofus.work') {
+      const url = request.nextUrl.clone();
+      url.host = 'www.beoneofus.work';
+      return NextResponse.redirect(url, 301);
+    }
+
     const { pathname } = request.nextUrl;
 
     if (

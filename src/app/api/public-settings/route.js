@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Public endpoint — returns ONLY non-sensitive platform flags.
-// No auth required. Cached aggressively so middleware overhead is minimal.
-export const revalidate = 60; // Next.js route-level cache: 60 s
+// Public endpoint — returns ONLY non-sensitive platform flags. No auth required.
+export const dynamic = 'force-dynamic';
 
 const PUBLIC_KEYS = [
   'maintenance_mode',

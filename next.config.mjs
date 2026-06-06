@@ -7,12 +7,12 @@ const nextConfig = {
       "default-src 'self'",
       // 'unsafe-inline' required: Next.js injects inline hydration scripts.
       // 'unsafe-eval' required in dev: Turbopack + React DevTools use eval() for source maps.
-      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''} https://js.paystack.co`,
+      `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''} https://js.paystack.co https://static.cloudflareinsights.com`,
       // Tailwind inlines styles at runtime — tighten once you move to static CSS
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self'",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.groq.com https://api.resend.com https://api.paystack.co https://open.er-api.com https://api.github.com https://ghchart.rshah.org",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.groq.com https://api.resend.com https://api.paystack.co https://open.er-api.com https://api.github.com https://ghchart.rshah.org https://cloudflareinsights.com",
       "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.tiktok.com https://player.vimeo.com",
       "worker-src 'self' blob:",
       "object-src 'none'",

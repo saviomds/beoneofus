@@ -80,6 +80,51 @@ export default function PremiumContent() {
   const [plan, setPlan]                 = useState("monthly");
   const [toast, setToast]               = useState({ msg: "", ok: true });
 
+  // Dynamic settings from admin panel
+  const [platformSettings, setPlatformSettings] = useState({
+    premiumEnabled:     true,
+    monthlyLabel:       "Monthly",
+    annualLabel:        "Annual",
+    monthlyPrice:       "9.99",
+    annualPrice:        "99.00",
+    featureLines:       null, // null = use static FEATURES
+  });
+
+  useEffect(() => {
+    fetch('/api/public-settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return;
+        setPlatformSettings(prev => ({ ...prev, premiumEnabled: d.premiumEnabled ?? true }));
+      })
+      .catch(() => {});
+
+    // Fetch plan details from admin settings (requires auth — loaded lazily)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return;
+      fetch('/api/admin/settings', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (!d?.settings) return;
+          const s = d.settings;
+          const val = (key, def) => (s[key]?.value !== undefined && s[key]?.value !== null) ? String(s[key].value) : def;
+          const bval = (key, def) => s[key]?.value !== undefined ? Boolean(s[key].value) : def;
+          setPlatformSettings(prev => ({
+            ...prev,
+            premiumEnabled: bval('premium_enabled', prev.premiumEnabled),
+            monthlyLabel:   val('premium_monthly_label', 'Monthly'),
+            annualLabel:    val('premium_annual_label', 'Annual'),
+            monthlyPrice:   val('premium_monthly_price_usd', '9.99'),
+            annualPrice:    val('premium_annual_price_usd', '99.00'),
+            featureLines:   val('premium_features', null),
+          }));
+        })
+        .catch(() => {});
+    });
+  }, []);
+
   const showToast = useCallback((msg, ok = true) => {
     setToast({ msg, ok });
     setTimeout(() => setToast({ msg: "", ok: true }), 4000);
@@ -212,8 +257,16 @@ export default function PremiumContent() {
   const hasActive  = subStatus === "active";
   const hadDecline = subStatus === "declined";
 
-  const PRICE = plan === "monthly" ? "$9.99" : "$99";
+  const { premiumEnabled, monthlyLabel, annualLabel, monthlyPrice, annualPrice, featureLines } = platformSettings;
+  const PRICE  = plan === "monthly" ? `$${monthlyPrice}` : `$${annualPrice}`;
   const PERIOD = plan === "monthly" ? "/mo" : "/yr";
+
+  // Dynamic feature list: parse admin's newline-separated list if set
+  const DYNAMIC_FEATURES = featureLines
+    ? featureLines.split('\n').filter(Boolean).map(line => ({
+        label: line.trim(), free: false, premium: true,
+      }))
+    : FEATURES;
 
   return (
     <>
@@ -327,8 +380,8 @@ export default function PremiumContent() {
             <span className="text-center">Free</span>
             <span className="text-center text-amber-500">Premium</span>
           </div>
-          {FEATURES.map((f, i) => (
-            <div key={i} className={`grid grid-cols-[1fr_72px_88px] items-center px-4 py-3 ${i < FEATURES.length - 1 ? "border-b border-gray-100 dark:border-gray-800/60" : ""}`}>
+          {DYNAMIC_FEATURES.map((f, i) => (
+            <div key={i} className={`grid grid-cols-[1fr_72px_88px] items-center px-4 py-3 ${i < DYNAMIC_FEATURES.length - 1 ? "border-b border-gray-100 dark:border-gray-800/60" : ""}`}>
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{f.label}</span>
               <div className="flex justify-center">
                 {f.free ? <CheckCircle2 size={16} className="text-emerald-500" /> : <XCircle size={16} className="text-gray-200 dark:text-gray-700" />}
@@ -342,6 +395,7 @@ export default function PremiumContent() {
 
         {/* ── Payment CTA ─────────────────────────────────────────────────── */}
         {!isPremium && !hasPending && !hasActive && (
+          premiumEnabled ? (
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
             <h3 className="font-black text-gray-900 dark:text-white mb-1 flex items-center gap-2">
               <Sparkles size={15} className="text-amber-500" />
@@ -354,8 +408,8 @@ export default function PremiumContent() {
             {/* Plan toggle */}
             <div className="grid grid-cols-2 gap-2.5 mb-4">
               {[
-                { id: "monthly", label: "Monthly", price: "$9.99", period: "/mo",  badge: null       },
-                { id: "annual",  label: "Annual",  price: "$99",   period: "/yr",  badge: "SAVE 17%" },
+                { id: "monthly", label: monthlyLabel, price: `$${monthlyPrice}`, period: "/mo", badge: null },
+                { id: "annual",  label: annualLabel,  price: `$${annualPrice}`,  period: "/yr", badge: "SAVE 17%" },
               ].map(p => (
                 <button
                   key={p.id}
@@ -392,6 +446,13 @@ export default function PremiumContent() {
               <ShieldCheck size={11} /> Secured by Paystack · PCI-DSS Level 1 · Cancel anytime
             </p>
           </div>
+          ) : (
+          <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl p-5 text-center">
+            <AlertTriangle size={20} className="mx-auto text-amber-500 mb-2" />
+            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">Premium Unavailable</p>
+            <p className="text-xs text-amber-600/80 dark:text-amber-500/70 mt-1">Premium subscriptions are currently paused. Check back soon.</p>
+          </div>
+          )
         )}
 
         {/* ── Perks grid ──────────────────────────────────────────────────── */}

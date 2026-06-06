@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit } from '../../../../lib/rateLimit';
+import { getSettingOr } from '../../../../lib/platformSettings';
 
 export async function POST(request) {
-  // Rate-limit: max 5 attempts per IP per 10 minutes (brute-force protection)
+  const maxAttempts = Number(await getSettingOr('max_otp_attempts', 5)) || 5;
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
-  const rl = checkRateLimit(ip, '/api/auth/verify-otp', { max: 5, windowMs: 10 * 60_000 });
+  const rl = checkRateLimit(ip, '/api/auth/verify-otp', { max: maxAttempts, windowMs: 10 * 60_000 });
   if (rl.limited) {
     return NextResponse.json(
       { error: 'Too many attempts. Please wait before trying again.' },

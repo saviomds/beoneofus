@@ -25,7 +25,6 @@ export const metadata = {
     capable: true,
     title: 'beoneofus',
     statusBarStyle: 'default',
-    startupImage: '/appIcon.png',
   },
   openGraph: {
     title: 'beoneofus',

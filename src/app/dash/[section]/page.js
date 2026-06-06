@@ -83,7 +83,7 @@ export default function DashSection() {
   if (!Content) notFound();
 
   /* messages takes full height without page-level padding */
-  const isFullHeight = section === 'messages';
+  const isFullHeight = section === 'messages' || section === 'ai';
   const outerCls = isFullHeight
     ? 'w-full h-full overflow-hidden'
     : `w-full h-full overflow-x-hidden ${section === 'docs' ? 'p-3 md:p-5' : section === 'home' ? 'p-3 sm:p-4 md:p-5 lg:p-6' : 'p-3 sm:p-4 md:p-5 lg:p-6'}`;

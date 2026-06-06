@@ -9,7 +9,7 @@ import {
   Crown, GraduationCap, Handshake, Newspaper, HeartHandshake,
   ShoppingBag, UserPlus, Briefcase, Compass, Home,
   ChevronRight, CalendarDays, TrendingUp, Zap, Star,
-  LayoutDashboard, Sparkles, RefreshCw, BarChart2,
+  LayoutDashboard, RefreshCw, BarChart2,
   CheckCircle2, Circle, ArrowRight, Flame, Map, Trophy,
 } from 'lucide-react';
 import VerifiedBadge from '../../components/VerifiedBadge';
@@ -549,8 +549,8 @@ export default function HomeDashContent() {
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-violet-600 rounded-lg flex items-center justify-center">
-                <Sparkles size={14} className="text-white" />
+              <div className="w-7 h-7 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 shrink-0">
+                <img src="/ai.gif" alt="beoneofus AI" className="w-full h-full object-cover" />
               </div>
               <p className="text-sm font-black text-gray-900 dark:text-gray-100">AI Skill Suggestions</p>
             </div>
@@ -589,7 +589,7 @@ export default function HomeDashContent() {
                   title={s.reason}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all hover:-translate-y-0.5 hover:shadow-sm active:scale-95 ${PRIORITY_STYLE[s.priority] || PRIORITY_STYLE.medium}`}
                 >
-                  <Sparkles size={9} />
+                  <img src="/ai.gif" alt="AI" className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />
                   {s.skill}
                 </button>
               ))}

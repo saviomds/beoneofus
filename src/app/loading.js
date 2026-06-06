@@ -9,7 +9,6 @@ export default function Loading() {
           alt="beoneofus"
           width={72}
           height={72}
-          priority
           className="rounded-2xl shadow-md"
         />
         <span className="text-lg font-semibold tracking-wide text-gray-800 dark:text-gray-100">

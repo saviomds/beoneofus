@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '../../../../lib/rateLimit';
 import { createClient } from '@supabase/supabase-js';
+import { getSettingOr } from '../../../../lib/platformSettings';
 
-/* USD prices — displayed to users; charged in KES at live rate */
-const PLANS = {
-  monthly: { usdCents: 999,  label: 'Premium Monthly' },
-  annual:  { usdCents: 9900, label: 'Premium Annual'  },
-};
+/* USD prices — overridable via platform_settings */
+async function getPlans() {
+  const [monthlyUsd, annualUsd] = await Promise.all([
+    getSettingOr('premium_monthly_price_usd', 9.99),
+    getSettingOr('premium_annual_price_usd', 99.00),
+  ]);
+  return {
+    monthly: { usdCents: Math.round(Number(monthlyUsd) * 100), label: 'Premium Monthly' },
+    annual:  { usdCents: Math.round(Number(annualUsd)  * 100), label: 'Premium Annual'  },
+  };
+}
 
 async function getKesRate() {
   try {
@@ -36,16 +43,30 @@ export async function POST(req) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
     const { plan, email, callbackUrl } = await req.json();
-    // Always use the authenticated user ID from the middleware header, never the body
     const userId = req.headers.get('x-user-id');
 
     if (!plan || !userId || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Block checkout if admin has disabled premium subscriptions
+    const premiumEnabled = await getSettingOr('premium_enabled', true);
+    if (premiumEnabled === false || premiumEnabled === 'false') {
+      return NextResponse.json(
+        { error: 'Premium subscriptions are currently unavailable. Please check back soon.' },
+        { status: 503 }
+      );
+    }
+
+    const PLANS = await getPlans();
     const planData = PLANS[plan];
     if (!planData) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    }
+
+    const paystackKey = await getSettingOr('paystack_secret_key', process.env.PAYSTACK_SECRET_KEY);
+    if (!paystackKey) {
+      return NextResponse.json({ error: 'Payment not configured. Contact support.' }, { status: 503 });
     }
 
     /* Convert USD → KES at live rate (Paystack expects smallest unit: 1 KES = 100 cents) */
@@ -81,7 +102,7 @@ export async function POST(req) {
     const psRes = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        Authorization: `Bearer ${paystackKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

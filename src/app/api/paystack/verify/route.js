@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '../../../../lib/rateLimit';
 import { createClient } from '@supabase/supabase-js';
+import { getSettingOr } from '../../../../lib/platformSettings';
 
 export async function POST(req) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
@@ -30,10 +31,12 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing reference' }, { status: 400 });
     }
 
+    const paystackKey = await getSettingOr('paystack_secret_key', process.env.PAYSTACK_SECRET_KEY);
+
     /* Verify with Paystack */
     const paystackRes = await fetch(
       `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+      { headers: { Authorization: `Bearer ${paystackKey}` } }
     );
 
     const paystackData = await paystackRes.json();

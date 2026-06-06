@@ -8,7 +8,7 @@ import {
   ChevronRight, BarChart3, Zap, Lock, Globe, RefreshCw, Eye, EyeOff,
   UserPlus, ShieldCheck, Award, Smartphone, Copy, KeyRound,
   LogOut, Fingerprint, Clock, CheckCircle2, XCircle,
-  Camera, User, Link2, AtSign, Mail, Send, ChevronDown,
+  Camera, User, Link2, AtSign, Mail, Send, ChevronDown, Mic,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../supabaseClient";
@@ -266,6 +266,10 @@ export default function SettingsContent() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
+  // Microphone permission
+  const [micStatus,  setMicStatus]  = useState("unknown"); // unknown | granted | denied | prompt
+  const [micTesting, setMicTesting] = useState(false);
+
   // Toast
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
@@ -297,6 +301,14 @@ export default function SettingsContent() {
     setMounted(true);
     const raw = typeof window !== "undefined" ? localStorage.getItem("beoneofus_muted") : null;
     setIsMuted(raw === "true");
+
+    /* Check mic permission live */
+    if (typeof navigator !== "undefined" && navigator.permissions) {
+      navigator.permissions.query({ name: "microphone" }).then((result) => {
+        setMicStatus(result.state);
+        result.onchange = () => setMicStatus(result.state);
+      }).catch(() => setMicStatus("unknown"));
+    }
 
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -778,6 +790,21 @@ export default function SettingsContent() {
     showToast(next ? "Notification sounds muted" : "Notification sounds enabled");
   };
 
+  const requestMicPermission = async () => {
+    setMicTesting(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      setMicStatus("granted");
+      showToast("Microphone access granted!");
+    } catch {
+      setMicStatus("denied");
+      showToast("Microphone access was blocked.", "error");
+    } finally {
+      setMicTesting(false);
+    }
+  };
+
   const handleOpen2FA = async () => {
     if (mfaEnabled) { setShowMFAModal(true); setMfaStep("enabled"); return; }
     setShowMFAModal(true);
@@ -862,6 +889,7 @@ export default function SettingsContent() {
     { id: "profile",       label: "Profile",       icon: User      },
     { id: "appearance",    label: "Appearance",    icon: Palette   },
     { id: "notifications", label: "Notifications", icon: Bell      },
+    { id: "microphone",    label: "Microphone",    icon: Mic       },
     { id: "security",      label: "Security",      icon: Lock      },
     { id: "verification",  label: "Verification",  icon: BadgeCheck},
     { id: "account",       label: "Account",       icon: Settings  },
@@ -1174,6 +1202,125 @@ export default function SettingsContent() {
                       </button>
                     </RowItem>
                   </Card>
+                )}
+
+                {/* ── MICROPHONE ── */}
+                {settingsSection === "microphone" && (
+                  <div className="space-y-4">
+                    <Card>
+                      <SectionHeader icon={Mic} title="Microphone" subtitle="Allow mic access for AI voice chat features." accent="blue" />
+
+                      {/* Live status badge */}
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 mb-5">
+                        <div>
+                          <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Microphone Permission</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {micStatus === "granted" && "Microphone is allowed — AI voice chat is ready to use."}
+                            {micStatus === "denied"  && "Microphone is blocked. Follow the steps below to enable it."}
+                            {micStatus === "prompt"  && "Permission not yet requested. Click the button below to allow."}
+                            {micStatus === "unknown" && "Checking permission status…"}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border ${
+                          micStatus === "granted"
+                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                            : micStatus === "denied"
+                              ? "bg-red-500/10 text-red-400 border-red-500/20"
+                              : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                        }`}>
+                          {micStatus === "granted"
+                            ? <><CheckCircle2 size={13} /> Allowed</>
+                            : micStatus === "denied"
+                              ? <><XCircle size={13} /> Blocked</>
+                              : <><AlertTriangle size={13} /> {micStatus === "prompt" ? "Not set" : "Unknown"}</>}
+                        </span>
+                      </div>
+
+                      {/* Allow button — only show when not yet granted */}
+                      {micStatus !== "granted" && (
+                        <button
+                          onClick={requestMicPermission}
+                          disabled={micTesting}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white transition-all shadow-sm shadow-blue-500/20 active:scale-95 mb-5"
+                        >
+                          {micTesting
+                            ? <><Loader2 size={14} className="animate-spin" /> Testing…</>
+                            : <><Mic size={14} /> Allow Microphone Access</>}
+                        </button>
+                      )}
+
+                      {micStatus === "granted" && (
+                        <button
+                          onClick={requestMicPermission}
+                          disabled={micTesting}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 disabled:opacity-50 transition-all active:scale-95 mb-5"
+                        >
+                          {micTesting
+                            ? <><Loader2 size={14} className="animate-spin" /> Testing…</>
+                            : <><CheckCircle2 size={14} /> Test Microphone</>}
+                        </button>
+                      )}
+
+                      {/* Step-by-step Chrome guide */}
+                      <div className="border-t border-gray-100 dark:border-gray-800 pt-5">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[2px] mb-4">
+                          How to allow microphone in Chrome / Edge
+                        </p>
+
+                        <div className="space-y-3">
+                          {[
+                            {
+                              step: "1",
+                              title: "Click the lock icon in the address bar",
+                              desc: "Look for the 🔒 padlock (or ⓘ info icon) on the left side of the URL bar at the top of your browser.",
+                              color: "blue",
+                            },
+                            {
+                              step: "2",
+                              title: 'Select "Site settings" or "Permissions"',
+                              desc: 'A dropdown appears. Click "Site settings" (Chrome) or "Permissions for this site" (Edge).',
+                              color: "indigo",
+                            },
+                            {
+                              step: "3",
+                              title: 'Find "Microphone" and set it to "Allow"',
+                              desc: 'Scroll to the Microphone row. Change the dropdown from "Block" or "Ask" to "Allow".',
+                              color: "purple",
+                            },
+                            {
+                              step: "4",
+                              title: "Reload the page",
+                              desc: "Press F5 or click the reload button. The microphone will now be available for AI voice chat.",
+                              color: "emerald",
+                            },
+                          ].map(({ step, title, desc, color }) => (
+                            <div key={step} className={`flex gap-4 p-4 rounded-xl bg-${color}-500/5 border border-${color}-500/10`}>
+                              <div className={`w-7 h-7 rounded-lg bg-${color}-500/15 text-${color}-400 flex items-center justify-center text-xs font-black shrink-0`}>
+                                {step}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{title}</p>
+                                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{desc}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Blocked at OS level */}
+                    <Card>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-[2px] mb-4">
+                        Still blocked? Check OS-level permissions
+                      </p>
+                      <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                        <p className="font-semibold text-gray-800 dark:text-gray-200">Windows 10 / 11</p>
+                        <p className="text-xs leading-relaxed">Start → Settings → Privacy &amp; security → Microphone → turn on "Let apps access your microphone" and make sure your browser is listed and enabled.</p>
+                        <p className="font-semibold text-gray-800 dark:text-gray-200 pt-2">macOS</p>
+                        <p className="text-xs leading-relaxed">Apple menu → System Settings → Privacy &amp; Security → Microphone → enable the checkbox next to your browser (Chrome / Edge / Safari).</p>
+                      </div>
+                    </Card>
+                  </div>
                 )}
 
                 {/* ── SECURITY ── */}

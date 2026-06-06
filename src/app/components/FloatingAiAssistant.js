@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bot, Send, User, Loader2, X, Sparkles } from "lucide-react";
+import { Send, User, Loader2, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -177,8 +177,8 @@ export default function FloatingAiAssistant() {
           {/* Header */}
           <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-md z-10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gray-900 dark:bg-gray-700 flex items-center justify-center text-white shadow-sm border border-gray-800 dark:border-gray-600">
-                <Bot size={20} />
+              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-600">
+                <img src="/ai.gif" alt="beoneofus AI" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">beoneofus AI</h3>
@@ -201,8 +201,10 @@ export default function FloatingAiAssistant() {
               <>
                 {messages.map((msg, index) => (
                   <div key={index} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${msg.role === "user" ? "bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" : "bg-gray-900 dark:bg-gray-700 text-white"}`}>
-                      {msg.role === "user" ? <User size={14} /> : <Bot size={14} />}
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+                      {msg.role === "user"
+                        ? <div className="w-full h-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center"><User size={14} className="text-blue-600 dark:text-blue-400" /></div>
+                        : <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />}
                     </div>
                     <div className={`max-w-[80%] rounded-2xl p-3.5 text-xs ${msg.role === "user" ? "bg-blue-600 text-white shadow-md shadow-blue-500/20 whitespace-pre-wrap" : msg.isError ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 font-medium" : "bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200"}`}>
                       {msg.role === "user" ? (
@@ -217,8 +219,8 @@ export default function FloatingAiAssistant() {
                 ))}
                 {isLoading && (
                   <div className="flex gap-3 flex-row">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-gray-900 dark:bg-gray-700 text-white shadow-sm">
-                      <Bot size={14} />
+                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-sm">
+                      <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />
                     </div>
                     <div className="rounded-2xl p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200 flex items-center gap-2">
                       <Loader2 size={14} className="animate-spin text-gray-900 dark:text-gray-100" /> <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Thinking...</span>
@@ -256,9 +258,14 @@ export default function FloatingAiAssistant() {
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-105 active:scale-95 transition-all border-[3px] border-white dark:border-gray-800 ${isOpen ? 'bg-gray-900 dark:bg-gray-700' : 'bg-blue-600 hover:bg-blue-500'}`}
+        className="w-14 h-14 rounded-full overflow-hidden shadow-2xl hover:scale-105 active:scale-95 transition-all border-[3px] border-white dark:border-gray-800 relative"
       >
-        {isOpen ? <X size={24} /> : <Sparkles size={24} />}
+        <img src="/ai.gif" alt="beoneofus AI" className="w-full h-full object-cover" />
+        {isOpen && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <X size={22} className="text-white" />
+          </div>
+        )}
       </button>
     </div>
   );

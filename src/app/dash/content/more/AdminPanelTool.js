@@ -10,9 +10,11 @@ import {
   BookOpen, Mail, Hash, MessageSquare, FileText, ClipboardList, User,
   ShieldCheck, ShieldAlert, UserCog, Bot, Layers, Bell, Plus, Copy,
   Clock, MoreHorizontal, Video, Sparkles, Heart, Zap, Code2,
+  Settings, Key, Globe, CreditCard, DollarSign, Save, ToggleLeft, ToggleRight,
+  Webhook, Lock, Package, Star, Wrench, AlertOctagon, ExternalLink,
 } from "lucide-react";
 import { supabase } from "../../../supabaseClient";
-import SponsorsAdminContent from "../../SponsorsAdminContent";
+import SponsorsAdminContent from "../SponsorsAdminContent";
 import VerifiedBadge from "../../../components/VerifiedBadge";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -1137,6 +1139,7 @@ const AdminPanelTool = ({ currentUserId }) => {
     { id: "interviews",   label: "Interviews",   icon: Video         },
     { id: "sponsors",     label: "Sponsors",     icon: Handshake     },
     { id: "system_logs",  label: "System Logs",  icon: Terminal      },
+    { id: "settings",     label: "Settings",     icon: Shield        },
   ];
 
   if (loading) return <div className="p-16 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={24} /></div>;
@@ -2179,6 +2182,11 @@ const AdminPanelTool = ({ currentUserId }) => {
         {adminTab === "system_logs" && (
           <SystemLogsView />
         )}
+
+        {/* ── SETTINGS ── */}
+        {adminTab === "settings" && (
+          <AdminSettingsPanel showToast={showToast} currentUserId={currentUserId} />
+        )}
         </div>
       </div>
 
@@ -2837,6 +2845,526 @@ const AdminPanelTool = ({ currentUserId }) => {
     </div>
   );
 };
+
+// ─── Admin Settings Panel ──────────────────────────────────────────────────────
+
+function SettingsSection({ title, icon: Icon, iconColor = "text-blue-500", children }) {
+  return (
+    <div className="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-gray-900/60 overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/[0.05] bg-gray-50/80 dark:bg-white/[0.02]">
+        <div className={`w-8 h-8 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-white/[0.06] ${iconColor}`}>
+          <Icon size={15} />
+        </div>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white tracking-tight">{title}</h3>
+      </div>
+      <div className="p-5 space-y-4">{children}</div>
+    </div>
+  );
+}
+
+function FieldRow({ label, hint, children }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+      <div className="sm:w-44 shrink-0 pt-0.5">
+        <p className="text-[11px] font-bold text-gray-700 dark:text-gray-300">{label}</p>
+        {hint && <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5 leading-snug">{hint}</p>}
+      </div>
+      <div className="flex-1">{children}</div>
+    </div>
+  );
+}
+
+function TextInput({ value, onChange, placeholder, type = "text", masked, mono }) {
+  const [show, setShow] = useState(false);
+  // Always use type="text" — type="password" blocks paste in many browsers.
+  // When masked and not revealed, use -webkit-text-security to show bullets instead.
+  return (
+    <div className="relative">
+      <input
+        type={type === "email" ? "email" : type === "number" ? "number" : "text"}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoComplete="off"
+        spellCheck={false}
+        data-1p-ignore
+        style={masked && !show ? { WebkitTextSecurity: "disc" } : undefined}
+        className={`w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-all ${mono ? "font-mono text-xs" : ""} ${masked ? "pr-9" : ""}`}
+      />
+      {masked && (
+        <button type="button" onClick={() => setShow(s => !s)}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+          {show ? <EyeOff size={14} /> : <Eye size={14} />}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Toggle({ checked, onChange, label, description }) {
+  return (
+    <button type="button" onClick={() => onChange(!checked)}
+      className="flex items-center gap-3 w-full text-left p-3 rounded-xl border border-gray-100 dark:border-white/[0.06] hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-all group">
+      <div className={`w-9 h-5 rounded-full flex items-center transition-all duration-200 shrink-0 ${checked ? "bg-blue-500" : "bg-gray-200 dark:bg-gray-700"}`}>
+        <div className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-all duration-200 ml-0.5 ${checked ? "translate-x-4" : ""}`} />
+      </div>
+      <div>
+        <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{label}</p>
+        {description && <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5">{description}</p>}
+      </div>
+    </button>
+  );
+}
+
+function SaveButton({ loading, onClick, label = "Save Changes", saved }) {
+  return (
+    <button onClick={onClick} disabled={loading}
+      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 disabled:opacity-50
+        ${saved ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"}`}>
+      {loading ? <Loader2 size={13} className="animate-spin" /> : saved ? <Check size={13} /> : <Save size={13} />}
+      {loading ? "Saving…" : saved ? "Saved!" : label}
+    </button>
+  );
+}
+
+function AdminSettingsPanel({ showToast, currentUserId }) {
+  const [loading, setLoading] = useState(true);
+  const [settingsTab, setSettingsTab] = useState("payment");
+
+  // ── Paystack ──────────────────────────────────────────────────────
+  const [pk, setPk] = useState("");
+  const [sk, setSk] = useState("");
+  const [whSecret, setWhSecret] = useState("");
+  const [monthlyPrice, setMonthlyPrice] = useState("9.99");
+  const [annualPrice, setAnnualPrice] = useState("99.00");
+  const [paystackSaving, setPaystackSaving] = useState(false);
+  const [paystackSaved, setPaystackSaved] = useState(false);
+
+  // ── Premium Settings ──────────────────────────────────────────────
+  const [premiumEnabled, setPremiumEnabled] = useState(true);
+  const [premiumMonthlyLabel, setPremiumMonthlyLabel] = useState("Gold");
+  const [premiumAnnualLabel, setPremiumAnnualLabel] = useState("Gold Annual");
+  const [premiumFeatures, setPremiumFeatures] = useState("Advanced courses\n1-on-1 coaching\nVerified certificate\nEvent access");
+  const [premiumSaving, setPremiumSaving] = useState(false);
+  const [premiumSaved, setPremiumSaved] = useState(false);
+
+  // ── Verification ──────────────────────────────────────────────────
+  const [verifyEnabled, setVerifyEnabled] = useState(true);
+  const [verifyAutoApprove, setVerifyAutoApprove] = useState(false);
+  const [verifyRequireLinkedIn, setVerifyRequireLinkedIn] = useState(false);
+  const [verifyRequireResume, setVerifyRequireResume] = useState(true);
+  const [verifySaving, setVerifySaving] = useState(false);
+  const [verifySaved, setVerifySaved] = useState(false);
+
+  // ── Platform ──────────────────────────────────────────────────────
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMsg, setMaintenanceMsg] = useState("We're doing a quick upgrade. Be back shortly!");
+  const [registrationOpen, setRegistrationOpen] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [platformName, setPlatformName] = useState("BeOneOfUs");
+  const [supportEmail, setSupportEmail] = useState("");
+  const [platformSaving, setPlatformSaving] = useState(false);
+  const [platformSaved, setPlatformSaved] = useState(false);
+
+  // ── Security ──────────────────────────────────────────────────────
+  const [maxOtpAttempts, setMaxOtpAttempts] = useState("5");
+  const [sessionTimeoutHours, setSessionTimeoutHours] = useState("24");
+  const [requireEmailVerify, setRequireEmailVerify] = useState(true);
+  const [securitySaving, setSecuritySaving] = useState(false);
+  const [securitySaved, setSecuritySaved] = useState(false);
+
+  // ── Load all settings ─────────────────────────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch("/api/admin/settings", {
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error);
+        const s = json.settings || {};
+
+        const val = (key, def) => (s[key]?.value !== undefined && s[key]?.value !== null) ? String(s[key].value) : def;
+        const bval = (key, def) => s[key]?.value !== undefined ? Boolean(s[key].value) : def;
+
+        // Paystack
+        if (s["paystack_public_key"]?.is_set)  setPk(val("paystack_public_key", ""));
+        if (s["paystack_secret_key"]?.is_set)   setSk(val("paystack_secret_key", ""));
+        if (s["paystack_webhook_secret"]?.is_set) setWhSecret(val("paystack_webhook_secret", ""));
+        setMonthlyPrice(val("premium_monthly_price_usd", "9.99"));
+        setAnnualPrice(val("premium_annual_price_usd", "99.00"));
+
+        // Premium
+        setPremiumEnabled(bval("premium_enabled", true));
+        setPremiumMonthlyLabel(val("premium_monthly_label", "Gold"));
+        setPremiumAnnualLabel(val("premium_annual_label", "Gold Annual"));
+        setPremiumFeatures(val("premium_features", "Advanced courses\n1-on-1 coaching\nVerified certificate\nEvent access"));
+
+        // Verification
+        setVerifyEnabled(bval("verification_enabled", true));
+        setVerifyAutoApprove(bval("verification_auto_approve", false));
+        setVerifyRequireLinkedIn(bval("verification_require_linkedin", false));
+        setVerifyRequireResume(bval("verification_require_resume", true));
+
+        // Platform
+        setMaintenanceMode(bval("maintenance_mode", false));
+        setMaintenanceMsg(val("maintenance_message", "We're doing a quick upgrade. Be back shortly!"));
+        setRegistrationOpen(bval("registration_open", true));
+        setShowOnboarding(bval("show_onboarding", true));
+        setPlatformName(val("platform_name", "BeOneOfUs"));
+        setSupportEmail(val("support_email", ""));
+
+        // Security
+        setMaxOtpAttempts(val("max_otp_attempts", "5"));
+        setSessionTimeoutHours(val("session_timeout_hours", "24"));
+        setRequireEmailVerify(bval("require_email_verification", true));
+      } catch (err) {
+        showToast(err.message || "Failed to load settings", "error");
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const getToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token;
+  };
+
+  const saveBatch = async (batch, setSaving, setSaved) => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ batch }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setSaved(true);
+      showToast("Settings saved successfully.");
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      showToast(err.message || "Save failed", "error");
+    }
+    setSaving(false);
+  };
+
+  const savePaystack = async () => {
+    setPaystackSaving(true);
+    setPaystackSaved(false);
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/admin/settings/paystack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          public_key: pk,
+          secret_key: sk,
+          webhook_secret: whSecret,
+          plan_monthly_price_usd: parseFloat(monthlyPrice) || 9.99,
+          plan_annual_price_usd: parseFloat(annualPrice) || 99.00,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setPaystackSaved(true);
+      showToast("Paystack configuration saved & validated.");
+      setTimeout(() => setPaystackSaved(false), 3000);
+    } catch (err) {
+      showToast(err.message || "Save failed", "error");
+    }
+    setPaystackSaving(false);
+  };
+
+  const SETTINGS_TABS = [
+    { id: "payment",      label: "Payment",      icon: CreditCard  },
+    { id: "premium",      label: "Premium Plans", icon: Crown       },
+    { id: "verification", label: "Verification",  icon: BadgeCheck  },
+    { id: "platform",     label: "Platform",      icon: Globe       },
+    { id: "security",     label: "Security",      icon: Shield      },
+  ];
+
+  if (loading) {
+    return (
+      <div className="py-20 flex flex-col items-center gap-3">
+        <Loader2 size={24} className="animate-spin text-blue-500" />
+        <p className="text-xs text-gray-400">Loading configuration…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 to-gray-900 border border-white/[0.06] p-5 shadow-lg">
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "20px 20px" }} />
+        <div className="relative flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Settings size={14} className="text-gray-400" />
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-[2px]">Platform Configuration</span>
+            </div>
+            <h3 className="text-xl font-black text-white tracking-tight">Admin Settings</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Configure payment, premium, verification, and platform-wide controls</p>
+          </div>
+          {maintenanceMode && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/15 border border-amber-500/30 rounded-xl">
+              <AlertOctagon size={13} className="text-amber-400" />
+              <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Maintenance Active</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-1 flex-wrap">
+        {SETTINGS_TABS.map(tab => (
+          <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all
+              ${settingsTab === tab.id
+                ? "bg-blue-600 text-white shadow-sm shadow-blue-500/20"
+                : "bg-gray-100 dark:bg-white/[0.04] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/[0.08]"}`}>
+            <tab.icon size={13} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── PAYMENT TAB ── */}
+      {settingsTab === "payment" && (
+        <div className="space-y-4">
+          <SettingsSection title="Paystack API Keys" icon={Key} iconColor="text-emerald-500">
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/8 border border-emerald-200 dark:border-emerald-500/20 text-[11px] text-emerald-700 dark:text-emerald-400 flex items-start gap-2">
+              <CheckCircle2 size={13} className="mt-0.5 shrink-0" />
+              <span>Keys are validated against the Paystack API before saving. Secret keys are stored encrypted and only shown masked.</span>
+            </div>
+            <FieldRow label="Publishable Key" hint="Starts with pk_live_ or pk_test_">
+              <TextInput value={pk} onChange={setPk} placeholder="pk_live_xxxxxxxxxxxxxxxxxxxxxxxx" mono />
+            </FieldRow>
+            <FieldRow label="Secret Key" hint="Starts with sk_live_ or sk_test_">
+              <TextInput value={sk} onChange={setSk} placeholder="sk_live_xxxxxxxxxxxxxxxxxxxxxxxx" mono masked />
+            </FieldRow>
+            <FieldRow label="Webhook Secret" hint="From Paystack → Webhooks → Signing secret">
+              <TextInput value={whSecret} onChange={setWhSecret} placeholder="whsec_xxxxxxxxxxxxxxxxxxxxxxxx" mono masked />
+            </FieldRow>
+          </SettingsSection>
+
+          <SettingsSection title="Subscription Pricing" icon={DollarSign} iconColor="text-blue-500">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FieldRow label="Monthly Price (USD)" hint="Charged in local currency via live rate">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input value={monthlyPrice} onChange={e => setMonthlyPrice(e.target.value)} type="number" step="0.01" min="0"
+                    className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-white/[0.08] rounded-xl pl-7 pr-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all" />
+                </div>
+              </FieldRow>
+              <FieldRow label="Annual Price (USD)" hint="Charged in local currency via live rate">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input value={annualPrice} onChange={e => setAnnualPrice(e.target.value)} type="number" step="0.01" min="0"
+                    className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-white/[0.08] rounded-xl pl-7 pr-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all" />
+                </div>
+              </FieldRow>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-500/8 border border-blue-100 dark:border-blue-500/20 text-[11px] text-blue-600 dark:text-blue-400 flex items-start gap-2">
+              <Globe size={13} className="mt-0.5 shrink-0" />
+              <span>Prices are converted to KES at live exchange rates via open.er-api.com. Monthly: ${monthlyPrice}/mo · Annual: ${annualPrice}/yr</span>
+            </div>
+          </SettingsSection>
+
+          <SettingsSection title="Webhook Endpoint" icon={Webhook || Globe} iconColor="text-violet-500">
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-white/[0.06] font-mono text-xs text-gray-700 dark:text-gray-400 select-all break-all">
+              {typeof window !== "undefined" ? window.location.origin : "https://yourdomain.com"}/api/paystack/webhook
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-gray-500 dark:text-gray-600">
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.04]">
+                <Check size={11} className="text-emerald-500" /> checkout.session.completed
+              </div>
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.04]">
+                <Check size={11} className="text-emerald-500" /> charge.success
+              </div>
+            </div>
+          </SettingsSection>
+
+          <div className="flex justify-end">
+            <SaveButton loading={paystackSaving} saved={paystackSaved} onClick={savePaystack} label="Save & Validate" />
+          </div>
+        </div>
+      )}
+
+      {/* ── PREMIUM TAB ── */}
+      {settingsTab === "premium" && (
+        <div className="space-y-4">
+          <SettingsSection title="Premium Feature Toggle" icon={Star} iconColor="text-amber-500">
+            <Toggle
+              checked={premiumEnabled}
+              onChange={setPremiumEnabled}
+              label="Premium Subscriptions Active"
+              description="When disabled, users cannot upgrade to premium. Existing subscribers are unaffected."
+            />
+          </SettingsSection>
+
+          <SettingsSection title="Plan Labels" icon={Package} iconColor="text-blue-500">
+            <FieldRow label="Monthly Plan Name" hint="Displayed to users on the upgrade page">
+              <TextInput value={premiumMonthlyLabel} onChange={setPremiumMonthlyLabel} placeholder="Gold" />
+            </FieldRow>
+            <FieldRow label="Annual Plan Name" hint="Displayed on the annual upgrade option">
+              <TextInput value={premiumAnnualLabel} onChange={setPremiumAnnualLabel} placeholder="Gold Annual" />
+            </FieldRow>
+          </SettingsSection>
+
+          <SettingsSection title="Premium Features List" icon={CheckCircle2} iconColor="text-emerald-500">
+            <FieldRow label="Feature List" hint="One feature per line — shown on the upgrade page">
+              <textarea
+                value={premiumFeatures}
+                onChange={e => setPremiumFeatures(e.target.value)}
+                rows={6}
+                placeholder={"Advanced courses\n1-on-1 coaching\nVerified certificate"}
+                className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all resize-none"
+              />
+            </FieldRow>
+          </SettingsSection>
+
+          <div className="flex justify-end">
+            <SaveButton loading={premiumSaving} saved={premiumSaved}
+              onClick={() => saveBatch({
+                premium_enabled: premiumEnabled,
+                premium_monthly_label: premiumMonthlyLabel,
+                premium_annual_label: premiumAnnualLabel,
+                premium_features: premiumFeatures,
+              }, setPremiumSaving, setPremiumSaved)} />
+          </div>
+        </div>
+      )}
+
+      {/* ── VERIFICATION TAB ── */}
+      {settingsTab === "verification" && (
+        <div className="space-y-4">
+          <SettingsSection title="Verification Controls" icon={BadgeCheck} iconColor="text-violet-500">
+            <Toggle checked={verifyEnabled} onChange={setVerifyEnabled} label="Verification Requests Open" description="When disabled, users cannot submit new verification requests." />
+            <Toggle checked={verifyAutoApprove} onChange={setVerifyAutoApprove} label="Auto-Approve Verifications" description="Automatically approve all verification requests without admin review." />
+          </SettingsSection>
+
+          <SettingsSection title="Verification Requirements" icon={FileText} iconColor="text-blue-500">
+            <div className="space-y-2">
+              <Toggle checked={verifyRequireResume} onChange={setVerifyRequireResume} label="Resume Required" description="Users must upload a resume/CV to apply for verification." />
+              <Toggle checked={verifyRequireLinkedIn} onChange={setVerifyRequireLinkedIn} label="LinkedIn Profile Required" description="Users must provide a LinkedIn URL to apply for verification." />
+            </div>
+          </SettingsSection>
+
+          <div className="flex justify-end">
+            <SaveButton loading={verifySaving} saved={verifySaved}
+              onClick={() => saveBatch({
+                verification_enabled: verifyEnabled,
+                verification_auto_approve: verifyAutoApprove,
+                verification_require_resume: verifyRequireResume,
+                verification_require_linkedin: verifyRequireLinkedIn,
+              }, setVerifySaving, setVerifySaved)} />
+          </div>
+        </div>
+      )}
+
+      {/* ── PLATFORM TAB ── */}
+      {settingsTab === "platform" && (
+        <div className="space-y-4">
+          <SettingsSection title="Site Identity" icon={Globe} iconColor="text-blue-500">
+            <FieldRow label="Platform Name" hint="Displayed in emails, notifications, and the header">
+              <TextInput value={platformName} onChange={setPlatformName} placeholder="BeOneOfUs" />
+            </FieldRow>
+            <FieldRow label="Support Email" hint="Reply-to address for all system emails">
+              <TextInput value={supportEmail} onChange={setSupportEmail} placeholder="support@yourdomain.com" type="email" />
+            </FieldRow>
+          </SettingsSection>
+
+          <SettingsSection title="Access Controls" icon={Lock} iconColor="text-amber-500">
+            <Toggle checked={registrationOpen} onChange={setRegistrationOpen} label="Registration Open" description="When disabled, new users cannot create accounts." />
+            <Toggle checked={showOnboarding} onChange={setShowOnboarding} label="Show Onboarding Flow" description="Display the welcome/onboarding wizard to new users after signup." />
+          </SettingsSection>
+
+          <SettingsSection title="Maintenance Mode" icon={Wrench} iconColor="text-red-500">
+            <Toggle checked={maintenanceMode} onChange={setMaintenanceMode}
+              label="Enable Maintenance Mode"
+              description="Redirects all non-admin visitors to a maintenance page. Admins can still access the platform." />
+            {maintenanceMode && (
+              <FieldRow label="Maintenance Message" hint="Shown to visitors during maintenance">
+                <textarea
+                  value={maintenanceMsg}
+                  onChange={e => setMaintenanceMsg(e.target.value)}
+                  rows={3}
+                  className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all resize-none"
+                />
+              </FieldRow>
+            )}
+          </SettingsSection>
+
+          <div className="flex justify-end">
+            <SaveButton loading={platformSaving} saved={platformSaved}
+              onClick={() => saveBatch({
+                platform_name: platformName,
+                support_email: supportEmail,
+                registration_open: registrationOpen,
+                show_onboarding: showOnboarding,
+                maintenance_mode: maintenanceMode,
+                maintenance_message: maintenanceMsg,
+              }, setPlatformSaving, setPlatformSaved)} />
+          </div>
+        </div>
+      )}
+
+      {/* ── SECURITY TAB ── */}
+      {settingsTab === "security" && (
+        <div className="space-y-4">
+          <SettingsSection title="Authentication" icon={Shield} iconColor="text-red-500">
+            <Toggle checked={requireEmailVerify} onChange={setRequireEmailVerify} label="Require Email Verification" description="New users must verify their email before accessing the platform." />
+            <FieldRow label="Max OTP Attempts" hint="Lockout after this many failed OTP attempts per 10-min window">
+              <input value={maxOtpAttempts} onChange={e => setMaxOtpAttempts(e.target.value)} type="number" min="1" max="20"
+                className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all" />
+            </FieldRow>
+            <FieldRow label="Session Timeout (hours)" hint="Auto-sign out inactive sessions after this many hours">
+              <input value={sessionTimeoutHours} onChange={e => setSessionTimeoutHours(e.target.value)} type="number" min="1" max="720"
+                className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all" />
+            </FieldRow>
+          </SettingsSection>
+
+          <SettingsSection title="Platform Security Info" icon={ShieldCheck} iconColor="text-emerald-500">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { label: "CSP Headers",          status: "Active",   color: "emerald" },
+                { label: "HSTS",                  status: "Active",   color: "emerald" },
+                { label: "Rate Limiting",         status: "Active",   color: "emerald" },
+                { label: "Service Role Isolation",status: "Active",   color: "emerald" },
+                { label: "OTP Brute-force Guard", status: "Active",   color: "emerald" },
+                { label: "RLS Policies",          status: "Supabase", color: "blue"    },
+              ].map(({ label, status, color }) => (
+                <div key={label} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.05]">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</span>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg
+                    ${color === "emerald" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"}`}>
+                    {status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </SettingsSection>
+
+          <div className="flex justify-end">
+            <SaveButton loading={securitySaving} saved={securitySaved}
+              onClick={() => saveBatch({
+                require_email_verification: requireEmailVerify,
+                max_otp_attempts: parseInt(maxOtpAttempts) || 5,
+                session_timeout_hours: parseInt(sessionTimeoutHours) || 24,
+              }, setSecuritySaving, setSecuritySaved)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Support Tool ─────────────────────────────────────────────────────────────
 

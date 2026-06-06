@@ -122,6 +122,14 @@ export default function AuthForm() {
   const [otpCode, setOtpCode] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const [showPw, setShowPw] = useState(false);
+  const [registrationOpen, setRegistrationOpen] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/public-settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setRegistrationOpen(d.registrationOpen ?? true); })
+      .catch(() => {});
+  }, []);
 
   // -------------------------------------------------------------------------
   // Auth state bootstrap
@@ -842,13 +850,30 @@ export default function AuthForm() {
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Create Account</h1>
             <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Join the beoneofus community</p>
           </div>
-          {oauthBlock}
+
+          {!registrationOpen && (
+            <div className="mb-5 flex items-start gap-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25 rounded-2xl p-4 animate-in fade-in duration-200">
+              <span className="text-amber-500 mt-0.5 shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </span>
+              <div>
+                <p className="text-[13px] font-semibold text-amber-700 dark:text-amber-400">Registration is currently closed</p>
+                <p className="text-[12px] text-amber-600/80 dark:text-amber-500/70 mt-0.5">New accounts are not being accepted right now. Check back soon.</p>
+              </div>
+            </div>
+          )}
+
+          {registrationOpen && oauthBlock}
           <form onSubmit={handleAuth} className="space-y-3">
             <input id="auth-email" type="email" required autoFocus value={email}
               onChange={(e) => setEmail(e.target.value)} className={iCls}
-              placeholder="Email" autoComplete="email" />
+              placeholder="Email" autoComplete="email"
+              disabled={!registrationOpen} />
             {errBanner}
-            <PrimaryBtn label="Continue" />
+            <button type="submit" disabled={loading || !registrationOpen}
+              className="w-full bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-full py-3.5 text-[15px] font-medium transition-all duration-150 disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.98] shadow-sm shadow-[#0071e3]/20">
+              {loading ? <><Loader2 size={16} className="animate-spin" /> Please wait…</> : 'Continue'}
+            </button>
           </form>
           <div className="mt-6 text-center">
             <p className="text-[13px] text-gray-500 dark:text-gray-400">

@@ -20,23 +20,20 @@ export async function POST(request) {
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
   try {
-    const { email, code, purpose } = await request.json();
+    const { email, code } = await request.json();
 
     if (!email || !code || !/^\d{6}$/.test(String(code))) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    let query = supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('auth_otp')
       .select('*')
       .eq('email', email)
       .eq('code', String(code))
       .eq('used', false)
-      .gt('expires_at', new Date().toISOString());
-
-    if (purpose) query = query.eq('purpose', purpose);
-
-    const { data, error } = await query.maybeSingle();
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
 
     if (error || !data) {
       return NextResponse.json({ error: 'Invalid or expired code' }, { status: 400 });

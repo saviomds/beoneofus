@@ -25,7 +25,7 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
-    const { email, purpose = 'signin' } = await request.json();
+    const { email } = await request.json();
     if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
@@ -47,7 +47,6 @@ export async function POST(request) {
       .select('created_at')
       .eq('email', email)
       .eq('used', false)
-      .eq('purpose', purpose)
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
@@ -67,7 +66,7 @@ export async function POST(request) {
 
     const { error: dbErr } = await supabaseAdmin
       .from('auth_otp')
-      .upsert({ email, code, expires_at: expiresAt, used: false, purpose }, { onConflict: 'email' });
+      .upsert({ email, code, expires_at: expiresAt, used: false }, { onConflict: 'email' });
     if (dbErr) throw dbErr;
 
     if (!process.env.RESEND_API_KEY) throw new Error('Email service not configured');

@@ -3,8 +3,12 @@
     "target": "ES2017",
     "baseUrl": ".", // Base URL for path mapping, relative to tsconfig.json
     "paths": {
-      "@/*": ["./mobile/src/*"], // Alias for the mobile/src directory
-      "@/services/*": ["./mobile/services/*"] // Alias for the mobile/services directory
+      "@/*": [
+        "./mobile/src/*"
+      ], // Alias for the mobile/src directory
+      "@/services/*": [
+        "./mobile/services/*"
+      ] // Alias for the mobile/services directory
     },
     "lib": [
       "dom",
@@ -31,11 +35,11 @@
   "include": [
     "next-env.d.ts",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
     "**/*.mts",
     "**/*.ts",
     "**/*.tsx",
-    "src/app/LearnPage/page.js"
+    "src/app/LearnPage/page.js",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

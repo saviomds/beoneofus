@@ -5,7 +5,7 @@ const ALWAYS_ALLOW = [
   '/maintenance',
   '/api/public-settings',
   '/api/auth/',
-  '/auth/callback',
+  '/auth',
   '/_next/',
   '/favicon',
   '/logo',
@@ -38,13 +38,12 @@ export async function middleware(request) {
     }
 
     // ── MAINTENANCE OVERRIDE ──────────────────────────────────────────────
-    // Set FORCE_MAINTENANCE = false and redeploy when the site is ready again.
-    const FORCE_MAINTENANCE = true;
+    // Set FORCE_MAINTENANCE = true and redeploy for hard maintenance.
+    // /auth and /api/auth/ are always allowed so admins can sign in.
+    const FORCE_MAINTENANCE = false;
     // ─────────────────────────────────────────────────────────────────────
 
-    // Hard redirect everything (including /auth) to /maintenance page.
-    // Runs before any auth or settings logic so nothing can bypass it.
-    if (FORCE_MAINTENANCE && pathname !== '/maintenance') {
+    if (FORCE_MAINTENANCE && !isAlwaysAllowed(pathname)) {
       const url = request.nextUrl.clone();
       url.pathname = '/maintenance';
       return NextResponse.redirect(url);

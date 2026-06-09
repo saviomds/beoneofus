@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../../lib/escapeHtml';
 import { checkRateLimit } from '../../../../lib/rateLimit';
-import { getSettingOr } from '../../../../lib/platformSettings';
 import { randomInt } from 'crypto';
 
 export async function POST(request) {
@@ -28,17 +27,6 @@ export async function POST(request) {
     const { email } = await request.json();
     if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-    }
-
-    // Block new registrations if admin has closed sign-ups
-    if (purpose === 'signup' || purpose === 'register') {
-      const registrationOpen = await getSettingOr('registration_open', true);
-      if (registrationOpen === false || registrationOpen === 'false') {
-        return NextResponse.json(
-          { error: 'Registration is currently closed. Check back soon.' },
-          { status: 403 }
-        );
-      }
     }
 
     // Enforce 60-second cooldown even for fresh sends (prevents OTP spam)

@@ -2,6 +2,19 @@ import withSerwist from "@serwist/next";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      // /dashboard was a renamed route that only exists in the deployed branch;
+      // the local codebase still uses /dash. Forward all /dashboard/* hits so
+      // bookmarks and auth ?next= params from the old code still resolve.
+      {
+        source: '/dashboard/:path*',
+        destination: '/dash/:path*',
+        permanent: false,
+      },
+    ];
+  },
+
   async headers() {
     const csp = [
       "default-src 'self'",

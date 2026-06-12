@@ -36,20 +36,28 @@ function addSecurityHeaders(response) {
   return response;
 }
 
-// Extract the Supabase access_token from the SSR session cookie.
-// Supabase SSR stores the session in sb-[project]-auth-token.0 as
-// base64-encoded JSON: { access_token, refresh_token, expires_at, ... }
+// Extract the Supabase access_token from SSR session cookies.
+// @supabase/ssr splits the session JSON into chunks stored as:
+//   sb-[project]-auth-token.0, sb-[project]-auth-token.1, ...
+// Each chunk value is prefixed "base64-" followed by a segment of the
+// base64-encoded session JSON. Reading only .0 breaks for larger sessions
+// (e.g. GitHub OAuth with full user metadata that spans multiple chunks).
 function getSupabaseToken(request) {
-  const sessionCookie = request.cookies.getAll()
-    .find(c => /^sb-.+-auth-token\.0$/.test(c.name));
-  if (!sessionCookie) return null;
+  const chunks = request.cookies.getAll()
+    .filter(c => /^sb-.+-auth-token\.\d+$/.test(c.name))
+    .sort((a, b) => {
+      const ai = parseInt(a.name.split('.').pop(), 10);
+      const bi = parseInt(b.name.split('.').pop(), 10);
+      return ai - bi;
+    });
+  if (chunks.length === 0) return null;
   try {
-    const raw = sessionCookie.value.startsWith('base64-')
-      ? sessionCookie.value.slice(7)
-      : sessionCookie.value;
-    const data = JSON.parse(
-      Buffer.from(raw, 'base64').toString('utf-8')
-    );
+    const combined = chunks
+      .map(c => c.value.startsWith('base64-') ? c.value.slice(7) : c.value)
+      .join('');
+    // Normalise to standard base64 in case any chunk used URL-safe chars
+    const b64 = combined.replace(/-/g, '+').replace(/_/g, '/');
+    const data = JSON.parse(Buffer.from(b64, 'base64').toString('utf-8'));
     return data?.access_token ?? null;
   } catch {
     return null;

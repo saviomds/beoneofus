@@ -11,6 +11,7 @@ const PUBLIC_API_ROUTES = [
 // Page routes that require a valid session (redirect to /auth if missing)
 const PROTECTED_PAGES = [
   '/dash',
+  '/dashboard',
   '/member-dashboard',
   '/founder-dashboard',
 ];
@@ -33,6 +34,26 @@ function addSecurityHeaders(response) {
     response.headers.set(key, value);
   }
   return response;
+}
+
+// Extract the Supabase access_token from the SSR session cookie.
+// Supabase SSR stores the session in sb-[project]-auth-token.0 as
+// base64-encoded JSON: { access_token, refresh_token, expires_at, ... }
+function getSupabaseToken(request) {
+  const sessionCookie = request.cookies.getAll()
+    .find(c => /^sb-.+-auth-token\.0$/.test(c.name));
+  if (!sessionCookie) return null;
+  try {
+    const raw = sessionCookie.value.startsWith('base64-')
+      ? sessionCookie.value.slice(7)
+      : sessionCookie.value;
+    const data = JSON.parse(
+      Buffer.from(raw, 'base64').toString('utf-8')
+    );
+    return data?.access_token ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // Decode JWT payload locally — no network call, no transient-failure risk.
@@ -61,7 +82,7 @@ export async function proxy(request) {
 
   // ── Protected page routes: require a valid session ───────────────────────
   if (PROTECTED_PAGES.some((p) => pathname.startsWith(p))) {
-    const token = request.cookies.get('sb-at')?.value;
+    const token = getSupabaseToken(request);
 
     if (!token) {
       const loginUrl = new URL('/auth', request.url);
@@ -118,7 +139,7 @@ export async function proxy(request) {
   // ── Protected API routes: verify token (Bearer header or cookie) ─────────
   const authHeader = request.headers.get('authorization');
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-  const cookieToken = request.cookies.get('sb-at')?.value;
+  const cookieToken = getSupabaseToken(request);
   const rawToken = bearerToken ?? cookieToken;
 
   if (!rawToken) {

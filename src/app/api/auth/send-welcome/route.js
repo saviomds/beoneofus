@@ -99,11 +99,14 @@ export async function POST(request) {
     });
 
     const resData = await res.json();
-    if (!res.ok) throw new Error(resData.message || 'Failed to send email');
+    if (!res.ok) {
+      console.warn('send-welcome: Resend rejected email —', resData.message || resData.name || res.status);
+      return NextResponse.json({ success: false, reason: 'email_skipped' });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('send-welcome error:', error);
-    return NextResponse.json({ error: 'Failed to send welcome email.' }, { status: 500 });
+    console.warn('send-welcome: email skipped —', error?.message);
+    return NextResponse.json({ success: false, reason: 'email_skipped' });
   }
 }

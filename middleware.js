@@ -19,12 +19,14 @@ function isAlwaysAllowed(pathname) {
 
 export async function middleware(request) {
   try {
-    // Redirect bare domain → www
+    // Redirect bare domain → www.
+    // 308 (not 301) preserves the HTTP method so POST requests (e.g. Supabase
+    // auth hooks calling beoneofus.work/api/...) arrive at www intact.
     const host = request.headers.get('host') ?? '';
     if (host === 'beoneofus.work') {
       const url = request.nextUrl.clone();
       url.host = 'www.beoneofus.work';
-      return NextResponse.redirect(url, 301);
+      return NextResponse.redirect(url, 308);
     }
 
     const { pathname } = request.nextUrl;

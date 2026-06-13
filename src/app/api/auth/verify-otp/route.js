@@ -4,8 +4,9 @@ import { checkRateLimit } from '../../../../lib/rateLimit';
 import { getSettingOr } from '../../../../lib/platformSettings';
 
 export async function POST(request) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+
   const maxAttempts = Number(await getSettingOr('max_otp_attempts', 5)) || 5;
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
   const rl = checkRateLimit(ip, '/api/auth/verify-otp', { max: maxAttempts, windowMs: 10 * 60_000 });
   if (rl.limited) {
     return NextResponse.json(
@@ -14,37 +15,45 @@ export async function POST(request) {
     );
   }
 
-  const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
   try {
-    const { email, code } = await request.json();
+    const body = await request.json().catch(() => null);
+    const { email, code } = body ?? {};
 
-    if (!email || !code || !/^\d{6}$/.test(String(code))) {
+    if (!email || typeof email !== 'string' || !code || !/^\d{6}$/.test(String(code))) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const { data, error } = await supabaseAdmin
+    const addr = email.trim().toLowerCase();
+
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Server configuration error');
+    }
+
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+
+    const { data, error } = await supabase
       .from('auth_otp')
-      .select('*')
-      .eq('email', email)
+      .select('id')
+      .eq('email', addr)
       .eq('code', String(code))
       .eq('used', false)
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
     if (error || !data) {
-      return NextResponse.json({ error: 'Invalid or expired code' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid or expired code.' }, { status: 400 });
     }
 
-    // Mark only this specific OTP row as used (by id), not all OTPs for the email
-    await supabaseAdmin.from('auth_otp').update({ used: true }).eq('id', data.id);
+    // Mark this exact OTP row used (not all OTPs for the email)
+    await supabase.from('auth_otp').update({ used: true }).eq('id', data.id);
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('verify-otp error:', err);
+    console.error('[verify-otp]', err.message);
     return NextResponse.json({ error: 'Verification failed. Please try again.' }, { status: 500 });
   }
 }

@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { escapeHtml } from '../../../../lib/escapeHtml';
 import { checkRateLimit } from '../../../../lib/rateLimit';
+import { escapeHtml } from '../../../../lib/escapeHtml';
 import { randomInt } from 'crypto';
 
+const OTP_TTL_MS = 10 * 60 * 1000;
+const COOLDOWN_SECS = 60;
+
 export async function POST(request) {
-  // Rate-limit: max 3 resends per IP per 10 minutes
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
   const rl = checkRateLimit(ip, '/api/auth/resend-otp', { max: 3, windowMs: 10 * 60_000 });
   if (rl.limited) {
     return NextResponse.json(
@@ -16,44 +18,56 @@ export async function POST(request) {
   }
 
   try {
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Server configuration error: missing Supabase env vars');
+    const body = await request.json().catch(() => null);
+    const email = body?.email;
+
+    if (!email || typeof email !== 'string') {
+      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
-    const supabaseAdmin = createClient(
+
+    const addr = email.trim().toLowerCase();
+
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Server configuration error');
+    }
+
+    const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
-    const { email } = await request.json();
-    if (!email) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
 
-    // Only allow resend if an OTP session exists (proves prior password verification)
-    const { data: existing } = await supabaseAdmin
+    // Require an active OTP — proves the user already passed password verification (step 2)
+    const { data: active } = await supabase
       .from('auth_otp')
       .select('created_at')
-      .eq('email', email)
+      .eq('email', addr)
       .eq('used', false)
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
-    if (!existing) {
+    if (!active) {
       return NextResponse.json({ error: 'No active session. Please sign in again.' }, { status: 400 });
     }
 
-    const secondsSinceLast = (Date.now() - new Date(existing.created_at).getTime()) / 1000;
-    if (secondsSinceLast < 60) {
-      const waitSeconds = Math.ceil(60 - secondsSinceLast);
-      return NextResponse.json({ error: 'Too many requests', waitSeconds }, { status: 429 });
+    const elapsedSecs = (Date.now() - new Date(active.created_at).getTime()) / 1000;
+    if (elapsedSecs < COOLDOWN_SECS) {
+      return NextResponse.json(
+        { error: 'Too many requests', waitSeconds: Math.ceil(COOLDOWN_SECS - elapsedSecs) },
+        { status: 429 },
+      );
     }
 
-    const code = String(randomInt(100000, 1000000));
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const code = String(randomInt(100_000, 1_000_000));
+    const expiresAt = new Date(Date.now() + OTP_TTL_MS).toISOString();
 
-    await supabaseAdmin
+    await supabase
       .from('auth_otp')
-      .upsert({ email, code, expires_at: expiresAt, used: false }, { onConflict: 'email' });
+      .upsert({ email: addr, code, expires_at: expiresAt, used: false }, { onConflict: 'email' });
 
-    const safeEmail = escapeHtml(email);
+    const safeEmail = escapeHtml(addr);
+    if (!process.env.RESEND_API_KEY) throw new Error('Email service not configured');
+
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -62,8 +76,8 @@ export async function POST(request) {
       },
       body: JSON.stringify({
         from: `BeOneOfUs <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
-        to: email,
-        subject: 'Your new sign-in code',
+        to: addr,
+        subject: 'Your new beoneofus sign-in code',
         html: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px;">
@@ -76,6 +90,7 @@ export async function POST(request) {
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:36px 40px;text-align:center;">
             <h1 style="margin:0;font-size:22px;font-weight:900;color:#fff;">Your new sign-in code</h1>
+            <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.65);">This replaces your previous code</p>
           </td></tr>
           <tr><td style="background:linear-gradient(90deg,#2563eb,#3b82f6);height:3px;font-size:0;">&nbsp;</td></tr>
           <tr><td style="padding:36px 40px;">
@@ -89,8 +104,9 @@ export async function POST(request) {
                 </table>
               </td></tr>
             </table>
-            <p style="margin:0;font-size:12px;color:#475569;">
-              If you didn't request this, ignore this email. Sent to <strong>${safeEmail}</strong>.
+            <p style="margin:0;font-size:12px;color:#475569;line-height:1.6;">
+              Code expires in 10 minutes. If you didn't request this, ignore this email.
+              Sent to <strong>${safeEmail}</strong>.
             </p>
           </td></tr>
         </table>
@@ -103,15 +119,15 @@ export async function POST(request) {
     });
 
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      let msg = `Email service error (${res.status})`;
-      try { if (text) msg = JSON.parse(text).message || msg; } catch {}
+      const raw = await res.text().catch(() => '');
+      let msg = `Email delivery failed (${res.status})`;
+      try { msg = JSON.parse(raw).message || msg; } catch {}
       throw new Error(msg);
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('resend-otp error:', error);
+  } catch (err) {
+    console.error('[resend-otp]', err.message);
     return NextResponse.json({ error: 'Failed to resend verification code. Please try again.' }, { status: 500 });
   }
 }

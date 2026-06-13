@@ -114,7 +114,8 @@ const serwist = new Serwist({
   fallbacks: {
     entries: [
       {
-        url: "/offline",
+        // Static file in public/ — guaranteed to be precached by @serwist/next
+        url: "/offline.html",
         matcher({ request }: { request: Request }) {
           return request.destination === "document";
         },

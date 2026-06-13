@@ -18,6 +18,27 @@ import {
 // ---------------------------------------------------------------------------
 
 const USERNAME_RE = /^[a-z0-9_-]{3,20}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function mapAuthError(msg) {
+  if (!msg) return 'Something went wrong. Please try again.';
+  const m = msg.toLowerCase();
+  if (m.includes('invalid login credentials') || m.includes('invalid credentials'))
+    return 'Incorrect email or password.';
+  if (m.includes('email not confirmed'))
+    return 'Please verify your email address first.';
+  if (m.includes('user already registered') || m.includes('already been registered'))
+    return 'An account with this email already exists. Try signing in.';
+  if (m.includes('password should be') || m.includes('password is too short'))
+    return 'Password must be at least 6 characters.';
+  if (m.includes('rate limit') || m.includes('too many') || m.includes('security purposes'))
+    return 'Too many attempts. Please wait a moment before trying again.';
+  if (m.includes('network') || m.includes('fetch failed'))
+    return 'Connection error. Check your internet and try again.';
+  if (m.includes('user not found') || m.includes('no user found'))
+    return 'No account found with that email.';
+  return msg;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -381,6 +402,17 @@ export default function AuthForm() {
       }
     }
 
+    // Email format validation for all email-submission steps
+    const isEmailStep =
+      view === 'magic-link' ||
+      view === 'forgot-password' ||
+      (view === 'sign-up' && signInStep === 'email') ||
+      (view === 'sign-in' && signInStep === 'email');
+    if (isEmailStep && !EMAIL_RE.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -391,10 +423,10 @@ export default function AuthForm() {
           } else {
             localStorage.setItem('pending_username', username);
             const { error: err } = await supabase.auth.signUp({
-              email,
+              email: email.trim(),
               password,
               options: {
-                emailRedirectTo: `${window.location.origin}/auth`,
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
                 data: { username },
               },
             });
@@ -403,9 +435,8 @@ export default function AuthForm() {
               throw err;
             }
             setSuccessInfo({
-              title: 'Verify your email',
-              message:
-                'We sent a verification link to your email address. Please verify your account to continue.',
+              title: 'Check your inbox',
+              message: `We sent a confirmation link to ${email.trim()}. Click it to activate your account and get started.`,
             });
           }
           break;
@@ -413,13 +444,13 @@ export default function AuthForm() {
 
         case 'magic-link': {
           const { error: err } = await supabase.auth.signInWithOtp({
-            email,
-            options: { emailRedirectTo: `${window.location.origin}/auth` },
+            email: email.trim(),
+            options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
           });
           if (err) throw err;
           setSuccessInfo({
             title: 'Magic link sent',
-            message: 'Check your email for the magic link. Click it to securely sign in.',
+            message: `We sent a sign-in link to ${email.trim()}. Click it to securely sign in — no password needed.`,
           });
           break;
         }
@@ -468,21 +499,21 @@ export default function AuthForm() {
             const credRes = await fetch('/api/auth/check-credentials', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, password }),
+              body: JSON.stringify({ email: email.trim(), password }),
             });
             const credData = await credRes.json().catch(() => ({}));
             if (!credRes.ok) {
               if (credData.error === 'email_not_confirmed') {
-                setEmailNotConfirmed(email);
+                setEmailNotConfirmed(email.trim());
                 setLoading(false);
                 return;
               }
-              throw new Error(credData.error || 'Invalid email or password');
+              throw new Error(credData.error || 'Incorrect email or password.');
             }
             const otpRes = await fetch('/api/auth/send-otp', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email }),
+              body: JSON.stringify({ email: email.trim() }),
             });
             if (!otpRes.ok) {
               const otpData = await otpRes.json().catch(() => ({}));
@@ -498,7 +529,7 @@ export default function AuthForm() {
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || 'Invalid or expired code');
-            const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+            const { error: signInErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
             if (signInErr) throw signInErr;
           }
           break;
@@ -514,11 +545,9 @@ export default function AuthForm() {
       if (isRateLimit && view === 'forgot-password') {
         setSuccessInfo({ title: 'Reset link sent', message: 'Check your email for the password reset link.' });
       } else if (isRateLimit && view === 'magic-link') {
-        setSuccessInfo({ title: 'Magic link sent', message: 'Check your email for the magic link. Click it to securely sign in.' });
-      } else if (isRateLimit) {
-        // silently ignore for other views
+        setSuccessInfo({ title: 'Magic link sent', message: `We sent a sign-in link to ${email.trim()}. Click it to securely sign in.` });
       } else {
-        setError(msg || 'Something went wrong. Please try again.');
+        setError(mapAuthError(msg));
       }
     } finally {
       setLoading(false);
@@ -596,7 +625,7 @@ export default function AuthForm() {
         const { error: err } = await supabase.auth.resend({
           type: 'signup',
           email: emailNotConfirmed,
-          options: { emailRedirectTo: `${window.location.origin}/auth` },
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
         });
         if (err) throw err;
         setSuccessInfo({

@@ -92,12 +92,14 @@ const serwist = new Serwist({
         plugins: [new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 24 * 60 * 60 })],
       }),
     },
-    // HTML navigation — no timeout so slow cold-start dev builds don't trip the SW
+    // HTML navigation — auth routes are excluded so the SW never intercepts
+    // /auth or /auth/callback; those must always hit the network fresh.
     {
-      matcher: ({ request }: { request: Request }) =>
-        request.destination === "document",
+      matcher: ({ request, url: { pathname } }: { request: Request; url: URL }) =>
+        request.destination === "document" && !pathname.startsWith("/auth"),
       handler: new NetworkFirst({
         cacheName: "documents",
+        networkTimeoutSeconds: 5,
         plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
       }),
     },

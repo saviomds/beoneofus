@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Dell\\\\beoneofus\\\\src\\\\app\\\\api\\\\generate-lesson\")",
-      "Bash(Out-Null)"
+      "Bash(Out-Null)",
+      "PowerShell(cd C:\\\\Users\\\\Dell\\\\beoneofus; $body = '{\"email\":\"test@example.com\",\"code\":\"123456\"}'; $headers = @{\"Content-Type\"=\"application/json\"}; try { $r = Invoke-WebRequest -Uri \"http://localhost:3000/api/otp-email\" -Method POST -Body $body -Headers $headers -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; $r.Content } catch { \"Status: $\\($_.Exception.Response.StatusCode.value__\\)\"; $_.Exception.Message })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"https://beoneofus.work/api/otp-email\" -Method POST -Body '{\"email\":\"test@x.com\",\"code\":\"111111\"}' -ContentType \"application/json\" -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; $r.Content } catch { \"Status: $\\($_.Exception.Response.StatusCode.value__\\)\"; $_.Exception.Message })"
     ]
   }
 }

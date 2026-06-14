@@ -98,20 +98,50 @@ export default function AuthForm() {
   const [usernameStatus, setUsernameStatus] = useState('idle');
   const usernameTimer = useRef(null);
 
-  const [error,             setError]             = useState(null);
-  const [successInfo,       setSuccessInfo]       = useState(null); // { title, message }
-  const [emailNotConfirmed, setEmailNotConfirmed] = useState(null); // email string | null
-  const [resendCooldown,    setResendCooldown]    = useState(0);
-  const [registrationOpen,  setRegistrationOpen]  = useState(true);
+  const [error,                    setError]                    = useState(null);
+  const [successInfo,              setSuccessInfo]              = useState(null);
+  const [emailNotConfirmed,        setEmailNotConfirmed]        = useState(null);
+  const [resendCooldown,           setResendCooldown]           = useState(0);
+  const [registrationOpen,         setRegistrationOpen]         = useState(true);
+  const [requireEmailVerification, setRequireEmailVerification] = useState(true);
+  const requireEmailVerifyRef = useRef(true);
 
   const isRecoveryFlow = useRef(false);
 
-  // ── Fetch registration status ──────────────────────────────────────────────
+  // ── Fetch public platform settings ────────────────────────────────────────
   useEffect(() => {
     fetch('/api/public-settings')
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d) setRegistrationOpen(d.registrationOpen ?? true); })
+      .then((d) => {
+        if (d) {
+          setRegistrationOpen(d.registrationOpen ?? true);
+          const rev = d.requireEmailVerification ?? true;
+          setRequireEmailVerification(rev);
+          requireEmailVerifyRef.current = rev;
+        }
+      })
       .catch(() => {});
+  }, []);
+
+  // ── Read ?error= param set by middleware (session_expired, email_not_verified) ──
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const errCode = params.get('error');
+    if (errCode === 'session_expired') {
+      supabase.auth.signOut().catch(() => {});
+      setError('Your session has expired. Please sign in again.');
+    } else if (errCode === 'email_not_verified') {
+      setError('Please verify your email address before accessing the platform.');
+    } else if (errCode === 'auth_callback_failed') {
+      setError('Sign-in failed. Please try again.');
+    }
+    // Remove the error param from the URL so it doesn't persist on reload
+    if (errCode) {
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete('error');
+      window.history.replaceState(null, '', clean.pathname + (clean.search !== '?' ? clean.search : ''));
+    }
   }, []);
 
   // ── Auth bootstrap: check existing session + handle recovery URL ───────────
@@ -190,8 +220,8 @@ export default function AuthForm() {
             return;
           }
 
-          // Block access until email is confirmed
-          if (!session.user.email_confirmed_at) {
+          // Block access until email is confirmed (only when platform requires it)
+          if (requireEmailVerifyRef.current && !session.user.email_confirmed_at) {
             const unconfirmed = session.user.email;
             supabase.auth.signOut().then(() => {
               if (!mounted) return;

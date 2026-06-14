@@ -91,6 +91,8 @@ export async function middleware(request) {
     let maintenanceMessage = "We're doing a quick upgrade. Be back shortly!";
     let registrationOpen = true;
 
+    let requireEmailVerify = true;
+    let sessionTimeoutHours = 24;
     try {
       const adminSupa = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -100,11 +102,13 @@ export async function middleware(request) {
       const { data: rows } = await adminSupa
         .from('platform_settings')
         .select('key, value')
-        .in('key', ['maintenance_mode', 'maintenance_message', 'registration_open']);
+        .in('key', ['maintenance_mode', 'maintenance_message', 'registration_open', 'require_email_verification', 'session_timeout_hours']);
       const m = Object.fromEntries((rows || []).map(r => [r.key, r.value]));
-      maintenanceMode  = m.maintenance_mode    ?? false;
-      maintenanceMessage = m.maintenance_message ?? maintenanceMessage;
-      registrationOpen = m.registration_open   ?? true;
+      maintenanceMode      = m.maintenance_mode          ?? false;
+      maintenanceMessage   = m.maintenance_message       ?? maintenanceMessage;
+      registrationOpen     = m.registration_open         ?? true;
+      requireEmailVerify   = m.require_email_verification ?? true;
+      sessionTimeoutHours  = Number(m.session_timeout_hours ?? 24) || 24;
     } catch {
       // On any failure keep safe defaults and let the request through
     }
@@ -133,6 +137,29 @@ export async function middleware(request) {
 
     if (!registrationOpen) {
       response.headers.set('x-registration-closed', '1');
+    }
+
+    // ── Per-user auth enforcement ─────────────────────────────────────────────
+    // Only applies to protected routes where a logged-in user is expected.
+    if (user && (pathname.startsWith('/dash') || pathname.startsWith('/u/'))) {
+      // Email verification gate
+      if (requireEmailVerify && !user.email_confirmed_at) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/auth';
+        url.searchParams.set('error', 'email_not_verified');
+        return NextResponse.redirect(url);
+      }
+
+      // Session age timeout — kick out sessions older than the configured limit
+      if (sessionTimeoutHours > 0 && user.last_sign_in_at) {
+        const ageMs = Date.now() - new Date(user.last_sign_in_at).getTime();
+        if (ageMs > sessionTimeoutHours * 3_600_000) {
+          const url = request.nextUrl.clone();
+          url.pathname = '/auth';
+          url.searchParams.set('error', 'session_expired');
+          return NextResponse.redirect(url);
+        }
+      }
     }
 
     return response;

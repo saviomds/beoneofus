@@ -9,8 +9,10 @@ const PUBLIC_KEYS = [
   'maintenance_message',
   'registration_open',
   'platform_name',
+  'platform_version',
   'premium_enabled',
   'show_onboarding',
+  'require_email_verification',
 ];
 
 export async function GET() {
@@ -31,12 +33,14 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        maintenanceMode:    settings.maintenance_mode    ?? false,
-        maintenanceMessage: settings.maintenance_message ?? 'We\'ll be back shortly.',
-        registrationOpen:   settings.registration_open  ?? true,
-        premiumEnabled:     settings.premium_enabled     ?? true,
-        platformName:       settings.platform_name       ?? 'BeOneOfUs',
-        showOnboarding:     settings.show_onboarding     ?? true,
+        maintenanceMode:          settings.maintenance_mode           ?? false,
+        maintenanceMessage:       settings.maintenance_message        ?? 'We\'ll be back shortly.',
+        registrationOpen:         settings.registration_open         ?? true,
+        premiumEnabled:           settings.premium_enabled            ?? true,
+        platformName:             settings.platform_name              ?? 'BeOneOfUs',
+        platformVersion:          settings.platform_version           ?? '1.0.0',
+        showOnboarding:           settings.show_onboarding            ?? true,
+        requireEmailVerification: settings.require_email_verification ?? true,
       },
       {
         headers: {
@@ -47,12 +51,14 @@ export async function GET() {
   } catch {
     // On error return safe defaults so the platform keeps running
     return NextResponse.json({
-      maintenanceMode:    false,
-      maintenanceMessage: '',
-      registrationOpen:   true,
-      premiumEnabled:     true,
-      platformName:       'BeOneOfUs',
-      showOnboarding:     true,
+      maintenanceMode:          false,
+      maintenanceMessage:       '',
+      registrationOpen:         true,
+      premiumEnabled:           true,
+      platformName:             'BeOneOfUs',
+      platformVersion:          '1.0.0',
+      showOnboarding:           true,
+      requireEmailVerification: true,
     });
   }
 }

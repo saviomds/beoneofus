@@ -2962,6 +2962,7 @@ function AdminSettingsPanel({ showToast, currentUserId }) {
   const [registrationOpen, setRegistrationOpen] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [platformName, setPlatformName] = useState("BeOneOfUs");
+  const [platformVersion, setPlatformVersion] = useState("1.0.0");
   const [supportEmail, setSupportEmail] = useState("");
   const [platformSaving, setPlatformSaving] = useState(false);
   const [platformSaved, setPlatformSaved] = useState(false);
@@ -3014,6 +3015,7 @@ function AdminSettingsPanel({ showToast, currentUserId }) {
         setRegistrationOpen(bval("registration_open", true));
         setShowOnboarding(bval("show_onboarding", true));
         setPlatformName(val("platform_name", "BeOneOfUs"));
+        setPlatformVersion(val("platform_version", "1.0.0"));
         setSupportEmail(val("support_email", ""));
 
         // Security
@@ -3276,6 +3278,9 @@ function AdminSettingsPanel({ showToast, currentUserId }) {
             <FieldRow label="Platform Name" hint="Displayed in emails, notifications, and the header">
               <TextInput value={platformName} onChange={setPlatformName} placeholder="BeOneOfUs" />
             </FieldRow>
+            <FieldRow label="Platform Version" hint="Version label shown in the sidebar and footer (e.g. v1.0.0, v2.1, beta)">
+              <TextInput value={platformVersion} onChange={setPlatformVersion} placeholder="1.0.0" mono />
+            </FieldRow>
             <FieldRow label="Support Email" hint="Reply-to address for all system emails">
               <TextInput value={supportEmail} onChange={setSupportEmail} placeholder="support@yourdomain.com" type="email" />
             </FieldRow>
@@ -3306,6 +3311,7 @@ function AdminSettingsPanel({ showToast, currentUserId }) {
             <SaveButton loading={platformSaving} saved={platformSaved}
               onClick={() => saveBatch({
                 platform_name: platformName,
+                platform_version: platformVersion,
                 support_email: supportEmail,
                 registration_open: registrationOpen,
                 show_onboarding: showOnboarding,

@@ -2,9 +2,9 @@
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import {
   Serwist,
-  StaleWhileRevalidate,
-  CacheFirst,
   NetworkFirst,
+  CacheFirst,
+  StaleWhileRevalidate,
   ExpirationPlugin,
   RangeRequestsPlugin,
 } from "serwist";
@@ -17,24 +17,48 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+// On activate: wipe ALL runtime caches so a new deployment never serves
+// stale JS from a previous build. Precached assets are managed separately
+// by Serwist and are safe to keep.
+self.addEventListener("activate", (event: ExtendableEvent) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((k) => k !== "serwist-precache-v2-https://www.beoneofus.work/" && !k.startsWith("workbox-precache"))
+          .map((k) => caches.delete(k))
+      )
+    )
+  );
+});
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: false,
   runtimeCaching: [
-    // Static fonts
+    // Static fonts — safe to cache long-term (content-addressed)
     {
       matcher: /\.(?:eot|otf|ttc|ttf|woff|woff2|font\.css)$/i,
-      handler: new StaleWhileRevalidate({
+      handler: new CacheFirst({
         cacheName: "static-font-assets",
-        plugins: [new ExpirationPlugin({ maxEntries: 8, maxAgeSeconds: 7 * 24 * 60 * 60 })],
+        plugins: [new ExpirationPlugin({ maxEntries: 8, maxAgeSeconds: 30 * 24 * 60 * 60 })],
       }),
     },
-    // Images
+    // App icons and logos — StaleWhileRevalidate so new deploys are
+    // picked up on the next visit instead of being stuck for 24 h.
+    {
+      matcher: /\/(?:favicon\.ico|logo\.|appIcon\.|android-chrome|apple-touch-icon|cropped_circle|ai\.gif)/i,
+      handler: new StaleWhileRevalidate({
+        cacheName: "app-icons",
+        plugins: [new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 7 * 24 * 60 * 60 })],
+      }),
+    },
+    // Other images — CacheFirst is fine; user-uploaded content uses Supabase URLs
     {
       matcher: /\.(?:jpg|jpeg|gif|png|svg|ico|webp|avif)$/i,
-      handler: new StaleWhileRevalidate({
+      handler: new CacheFirst({
         cacheName: "static-image-assets",
         plugins: [new ExpirationPlugin({ maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 })],
       }),
@@ -42,7 +66,7 @@ const serwist = new Serwist({
     // Next.js image optimization
     {
       matcher: /\/_next\/image\?url=.+$/i,
-      handler: new StaleWhileRevalidate({
+      handler: new CacheFirst({
         cacheName: "next-image",
         plugins: [new ExpirationPlugin({ maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 })],
       }),
@@ -54,69 +78,53 @@ const serwist = new Serwist({
         cacheName: "static-audio-assets",
         plugins: [
           new RangeRequestsPlugin(),
-          new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 24 * 60 * 60 }),
+          new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 7 * 24 * 60 * 60 }),
         ],
       }),
     },
-    // JS chunks
+    // Next.js static chunks — content-hashed filenames, safe to cache forever
+    // (new deployments generate new filenames so old cache entries are harmless)
     {
-      matcher: /\.(?:js)$/i,
-      handler: new StaleWhileRevalidate({
-        cacheName: "static-js-assets",
-        plugins: [new ExpirationPlugin({ maxEntries: 48, maxAgeSeconds: 24 * 60 * 60 })],
-      }),
-    },
-    // CSS
-    {
-      matcher: /\.(?:css|less)$/i,
-      handler: new StaleWhileRevalidate({
-        cacheName: "static-style-assets",
-        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+      matcher: /\/_next\/static\/.+\.(?:js|css)$/i,
+      handler: new CacheFirst({
+        cacheName: "next-static-chunks",
+        plugins: [new ExpirationPlugin({ maxEntries: 128, maxAgeSeconds: 365 * 24 * 60 * 60 })],
       }),
     },
     // Next.js data routes
     {
       matcher: /\/_next\/data\/.+\/.+\.json$/i,
-      handler: new StaleWhileRevalidate({
+      handler: new NetworkFirst({
         cacheName: "next-data",
-        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+        networkTimeoutSeconds: 8,
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 })],
       }),
     },
-    // API routes — network-first, short timeout
+    // API routes — always network-first, short cache for offline fallback only
     {
       matcher: ({ url: { pathname } }: { url: URL }) =>
         pathname.startsWith("/api/"),
       handler: new NetworkFirst({
         cacheName: "apis",
         networkTimeoutSeconds: 10,
-        plugins: [new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 24 * 60 * 60 })],
+        plugins: [new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 5 * 60 })],
       }),
     },
-    // HTML navigation — auth routes are excluded so the SW never intercepts
-    // /auth or /auth/callback; those must always hit the network fresh.
+    // HTML navigation — always network-first so users always get fresh HTML
+    // with the correct chunk URLs. Auth routes excluded from interception.
     {
       matcher: ({ request, url: { pathname } }: { request: Request; url: URL }) =>
         request.destination === "document" && !pathname.startsWith("/auth"),
       handler: new NetworkFirst({
         cacheName: "documents",
-        networkTimeoutSeconds: 5,
-        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
-      }),
-    },
-    // Everything else
-    {
-      matcher: ({ request, url: { pathname } }: { request: Request; url: URL }) =>
-        request.destination !== "document" || pathname.startsWith("/_next/"),
-      handler: new NetworkFirst({
-        cacheName: "others",
-        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 })],
+        networkTimeoutSeconds: 4,
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 })],
       }),
     },
   ],
   fallbacks: {
     entries: [
       {
-        // Static file in public/ — guaranteed to be precached by @serwist/next
         url: "/offline.html",
         matcher({ request }: { request: Request }) {
           return request.destination === "document";

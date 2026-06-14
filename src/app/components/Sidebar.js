@@ -442,6 +442,7 @@ export default function Sidebar({ onClose }) {
         { id: 'ai',          icon: Sparkles,  label: t('nav.items.ai'),   isNew: true },
         { id: 'analytics',   icon: BarChart2, label: 'Analytics',        isNew: true },
         { id: 'leaderboard', icon: Trophy,    label: 'Leaderboard',      isNew: true },
+        { id: 'resume',      icon: FileText,  label: 'Resume Builder',   isNew: true },
       ],
     },
     {
@@ -477,7 +478,9 @@ export default function Sidebar({ onClose }) {
         {/* Logo Area */}
         <div className="flex items-center mb-6 px-3 shrink-0 w-full">
           <Link href="/" title="Go Home" className="font-black text-xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100 hover:opacity-80 transition-opacity select-none group min-w-0">
-            <Terminal className="text-blue-500 group-hover:scale-110 transition-transform duration-300 shrink-0" size={22} />
+            <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-300 shrink-0">
+              <Terminal size={15} className="text-white" />
+            </div>
             <span className="truncate">beone<span className="text-blue-600">of</span>us</span>
           </Link>
         </div>

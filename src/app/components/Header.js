@@ -36,7 +36,7 @@ export default function Header({ setActiveTab }) {
   const [showQuickView, setShowQuickView] = useState(null); // 'discuss' or 'discover'
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState({ posts: [], groups: [], users: [], courses: [] });
+  const [searchResults, setSearchResults] = useState({ posts: [], groups: [], users: [], courses: [], events: [], jobs: [], pathways: [] });
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -211,7 +211,7 @@ export default function Header({ setActiveTab }) {
   useEffect(() => {
     setFocusedIndex(-1);
     if (!searchQuery.trim()) {
-      setSearchResults({ posts: [], groups: [], users: [], courses: [] });
+      setSearchResults({ posts: [], groups: [], users: [], courses: [], events: [], jobs: [], pathways: [] });
       setIsSearching(false);
       return;
     }
@@ -220,11 +220,14 @@ export default function Header({ setActiveTab }) {
 
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const [postsRes, groupsRes, usersRes, coursesRes] = await Promise.all([
+        const [postsRes, groupsRes, usersRes, coursesRes, eventsRes, jobsRes, pathwaysRes] = await Promise.all([
           supabase.from('posts').select('id, title, content').ilike('title', `%${searchQuery}%`).limit(3),
           supabase.from('groups').select('id, name, description').ilike('name', `%${searchQuery}%`).eq('is_private', false).limit(3),
           supabase.from('profiles').select('id, username, status, avatar_url, is_verified, work_status').or(`username.ilike.%${searchQuery}%,status.ilike.%${searchQuery}%,work_status.ilike.%${searchQuery}%`).limit(3),
           supabase.from('courses').select('id, title, category, level').or(`title.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`).limit(3),
+          supabase.from('events').select('id, title, event_date, is_online').ilike('title', `%${searchQuery}%`).order('event_date', { ascending: true }).limit(2),
+          supabase.from('jobs').select('id, title, company, type').ilike('title', `%${searchQuery}%`).limit(2),
+          supabase.from('pathways').select('id, title, target_role').ilike('title', `%${searchQuery}%`).limit(2),
         ]);
 
         setSearchResults({
@@ -232,6 +235,9 @@ export default function Header({ setActiveTab }) {
           groups: groupsRes.data || [],
           users: usersRes.data || [],
           courses: coursesRes.data || [],
+          events: eventsRes.data || [],
+          jobs: jobsRes.data || [],
+          pathways: pathwaysRes.data || [],
         });
       } catch (error) {
         console.error("Search error:", error);
@@ -248,7 +254,10 @@ export default function Header({ setActiveTab }) {
       ...searchResults.posts.map(p => ({ ...p, _type: 'post' })),
       ...searchResults.groups.map(g => ({ ...g, _type: 'group' })),
       ...searchResults.users.map(u => ({ ...u, _type: 'user' })),
-      ...searchResults.courses.map(c => ({ ...c, _type: 'course' }))
+      ...searchResults.courses.map(c => ({ ...c, _type: 'course' })),
+      ...searchResults.events.map(e => ({ ...e, _type: 'event' })),
+      ...searchResults.jobs.map(j => ({ ...j, _type: 'job' })),
+      ...searchResults.pathways.map(p => ({ ...p, _type: 'pathway' })),
     ];
   }, [searchResults]);
 
@@ -264,15 +273,21 @@ export default function Header({ setActiveTab }) {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (flattenedResults.length === 0 || focusedIndex === -1) {
+        const q = searchQuery.trim();
         setSearchQuery('');
         setIsMobileSearchOpen(false);
-        handleNavigate('feed');
+        router.push(`/dash/search?q=${encodeURIComponent(q)}`);
       } else {
         const item = flattenedResults[focusedIndex];
         setSearchQuery('');
+        setIsMobileSearchOpen(false);
         if (item._type === 'post') handleNavigate('feed');
         else if (item._type === 'group') handleNavigate('groups');
         else if (item._type === 'user') setSelectedUserId(item.id);
+        else if (item._type === 'course') handleNavigate('learn');
+        else if (item._type === 'event') handleNavigate('events');
+        else if (item._type === 'job') window.dispatchEvent(new CustomEvent('open-header-modal', { detail: 'jobs' }));
+        else if (item._type === 'pathway') handleNavigate('pathways');
       }
     } else if (e.key === 'Escape') {
       setSearchQuery('');
@@ -542,7 +557,7 @@ export default function Header({ setActiveTab }) {
                     </div>
                   ))}
                 </div>
-              ) : (searchResults.posts.length === 0 && searchResults.groups.length === 0 && searchResults.users.length === 0 && searchResults.courses.length === 0) ? (
+              ) : (searchResults.posts.length === 0 && searchResults.groups.length === 0 && searchResults.users.length === 0 && searchResults.courses.length === 0 && searchResults.events.length === 0 && searchResults.jobs.length === 0 && searchResults.pathways.length === 0) ? (
                 <div 
                   onClick={() => { setSearchQuery(''); setIsMobileSearchOpen(false); handleNavigate('feed'); }}
                   className="p-6 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all group"
@@ -554,6 +569,7 @@ export default function Header({ setActiveTab }) {
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('header.press_enter')}</p>
                 </div>
               ) : (
+                <>
                 <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
                   {/* Posts Results */}
                   {searchResults.posts.length > 0 && (
@@ -638,7 +654,72 @@ export default function Header({ setActiveTab }) {
                       ))}
                     </div>
                   )}
+
+                  {/* Events Results */}
+                  {searchResults.events.length > 0 && (
+                    <div className="p-2 border-t border-gray-100 dark:border-gray-800">
+                      <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">Events</div>
+                      {searchResults.events.map((event) => (
+                        <div key={`event-${event.id}`} onClick={() => { setSearchQuery(''); handleNavigate('events'); }} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group">
+                          <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
+                            <CalendarDays size={14} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={event.title} query={searchQuery} /></p>
+                            {event.event_date && <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">{new Date(event.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{event.is_online ? ' · Online' : ''}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Jobs Results */}
+                  {searchResults.jobs.length > 0 && (
+                    <div className="p-2 border-t border-gray-100 dark:border-gray-800">
+                      <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">Jobs</div>
+                      {searchResults.jobs.map((job) => (
+                        <div key={`job-${job.id}`} onClick={() => { setSearchQuery(''); window.dispatchEvent(new CustomEvent('open-header-modal', { detail: 'jobs' })); }} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                            <Briefcase size={14} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={job.title} query={searchQuery} /></p>
+                            {job.company && <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">{job.company}{job.type ? ` · ${job.type}` : ''}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Pathways Results */}
+                  {searchResults.pathways.length > 0 && (
+                    <div className="p-2 border-t border-gray-100 dark:border-gray-800">
+                      <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">Pathways</div>
+                      {searchResults.pathways.map((pathway) => (
+                        <div key={`pathway-${pathway.id}`} onClick={() => { setSearchQuery(''); handleNavigate('pathways'); }} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group">
+                          <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0 text-amber-600 dark:text-amber-400">
+                            <TrendingUp size={14} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={pathway.title} query={searchQuery} /></p>
+                            {pathway.target_role && <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold mt-0.5">{pathway.target_role}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+
+                {/* See all results footer */}
+                <div className="border-t border-gray-100 dark:border-gray-800 p-2">
+                  <button
+                    onClick={() => { const q = searchQuery.trim(); setSearchQuery(''); setIsMobileSearchOpen(false); router.push(`/dash/search?q=${encodeURIComponent(q)}`); }}
+                    className="w-full flex items-center justify-center gap-2 py-2 text-[11px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all"
+                  >
+                    <Search size={12} /> See all {flattenedResults.length > 0 ? `${flattenedResults.length}+ ` : ''}results for &quot;{searchQuery}&quot;
+                  </button>
+                </div>
+                </>
               )}
             </div>
           )}

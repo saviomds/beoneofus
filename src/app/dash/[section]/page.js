@@ -51,6 +51,8 @@ const contentMap = {
   pathways:      dynamic(() => import('../content/PathwaysContent'),      { loading: () => <TabSkeleton /> }),
   leaderboard:   dynamic(() => import('../content/LeaderboardContent'),   { loading: () => <TabSkeleton /> }),
   contracts:     dynamic(() => import('../content/ContractsContent'),     { loading: () => <TabSkeleton /> }),
+  search:        dynamic(() => import('../content/SearchContent'),        { loading: () => <TabSkeleton /> }),
+  resume:        dynamic(() => import('../content/ResumeContent'),        { loading: () => <TabSkeleton /> }),
 };
 
 export default function DashSection() {

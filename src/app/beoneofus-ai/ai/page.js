@@ -92,6 +92,33 @@ const stripMd = (t) =>
    .replace(/\n+/g, " ")
    .trim();
 
+/* ── Pick best TTS voice (module-level so greeting can use it) ── */
+function pickVoice(utt) {
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return;
+  const preferred = [
+    /google uk english female/i,
+    /google us english/i,
+    /microsoft aria online/i,
+    /microsoft jenny online/i,
+    /microsoft aria/i,
+    /microsoft jenny/i,
+    /microsoft zira/i,
+    /microsoft david/i,
+    /samantha/i,
+    /karen/i,
+    /moira/i,
+    /tessa/i,
+    /google english/i,
+  ];
+  for (const pat of preferred) {
+    const v = voices.find(vv => pat.test(vv.name));
+    if (v) { utt.voice = v; return; }
+  }
+  const eng = voices.find(vv => vv.lang === "en-US") || voices.find(vv => vv.lang.startsWith("en"));
+  if (eng) utt.voice = eng;
+}
+
 /* ── Animated waveform bars ─────────────────────────────────── */
 function WaveformBars({ active, color = "#3b82f6" }) {
   const heights = [0.55, 0.80, 1.00, 0.70, 0.90, 0.60, 0.85];
@@ -172,34 +199,6 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
   const stopRecog = () => {
     try { S.current.recog?.abort(); } catch {}
     S.current.recog = null;
-  };
-
-  /* ── Pick the best available TTS voice ── */
-  const pickVoice = (utt) => {
-    const voices = window.speechSynthesis.getVoices();
-    if (!voices.length) return;
-    const preferred = [
-      /google uk english female/i,
-      /google us english/i,
-      /microsoft aria online/i,
-      /microsoft jenny online/i,
-      /microsoft aria/i,
-      /microsoft jenny/i,
-      /microsoft zira/i,
-      /microsoft david/i,
-      /samantha/i,
-      /karen/i,
-      /moira/i,
-      /tessa/i,
-      /google english/i,
-    ];
-    for (const pat of preferred) {
-      const v = voices.find(vv => pat.test(vv.name));
-      if (v) { utt.voice = v; return; }
-    }
-    /* Fallback: any English voice */
-    const eng = voices.find(vv => vv.lang === "en-US") || voices.find(vv => vv.lang.startsWith("en"));
-    if (eng) utt.voice = eng;
   };
 
   /* ── speak(text, onDone): reliable TTS with voice selection and watchdog ── */
@@ -473,7 +472,16 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
               <p className="text-sm text-white/80 italic leading-relaxed">&ldquo;{liveText}&rdquo;</p>
             </div>
           ) : phase === "listening" ? (
-            <p className="text-xs text-gray-600 animate-pulse tracking-wider">Speak now…</p>
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-xs text-gray-600 animate-pulse tracking-wider">Speak now…</p>
+              <button
+                onClick={() => { stopRecog(); setTimeout(listen, 80); }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] text-emerald-400 text-xs font-semibold hover:bg-emerald-500/[0.14] hover:border-emerald-500/40 transition-all active:scale-95"
+              >
+                <Mic size={12} />
+                Tap to speak
+              </button>
+            </div>
           ) : (phase === "processing" || phase === "speaking") && caption ? (
             <div className="bg-white/[0.04] border border-white/[0.07] rounded-2xl px-4 py-3 max-w-[280px]">
               <p className="text-xs text-gray-400 leading-relaxed line-clamp-3">{caption}</p>
@@ -559,18 +567,37 @@ export default function BeoneofusAiPage() {
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [input]);
 
-  /* ── Activate talk mode (withGreeting must stay inside click handler for Chrome autoplay) ── */
-  const activateTalkMode = useCallback((withGreeting = true) => {
+  /* ── Activate talk mode ── */
+  const activateTalkMode = useCallback(async (withGreeting = true) => {
+    // Pre-warm mic permission inside the click-handler so SpeechRecognition
+    // never needs to show its own permission dialog from a timer later.
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+    } catch { /* denied — listen() will surface the error */ }
+
     if (withGreeting) {
       try {
         window.speechSynthesis.cancel();
         const greetText = messagesRef.current.length > 0
           ? "Welcome back! What would you like to discuss?"
           : "Hey! I'm beoneofus AI. How can I help you today?";
-        const utt   = new SpeechSynthesisUtterance(greetText);
-        utt.lang    = "en-US";
-        utt.rate    = 0.92;
-        utt.pitch   = 1.0;
+        const utt    = new SpeechSynthesisUtterance(greetText);
+        utt.lang     = "en-US";
+        utt.rate     = 0.92;
+        utt.pitch    = 1.0;
+        utt.volume   = 1.0;
+        // Load voices if available (may not be on first call)
+        pickVoice(utt);
+        if (!utt.voice) {
+          // voices not ready yet — wait briefly and try again
+          await new Promise(res => {
+            const h = () => { window.speechSynthesis.removeEventListener("voiceschanged", h); res(); };
+            window.speechSynthesis.addEventListener("voiceschanged", h);
+            setTimeout(res, 600);
+          });
+          pickVoice(utt);
+        }
         greetingRef.current = { utt, done: false };
         utt.onend   = () => { if (greetingRef.current) greetingRef.current.done = true; };
         utt.onerror = () => { if (greetingRef.current) greetingRef.current.done = true; };

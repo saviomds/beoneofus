@@ -8,7 +8,7 @@ import {
   Code, Trash2, Edit3, X, Save, AlertTriangle, Send, Copy, Check, Bookmark,
   GitBranch, Link as LinkIcon, ExternalLink, Sparkles, Loader2, ShieldAlert,
   List, LayoutGrid, TrendingUp, Star, Zap, ChevronDown, ChevronUp,
-  AlignJustify, Flame, Clock
+  AlignJustify, Flame, Clock, Flag
 } from 'lucide-react';
 import ProfileContent from "./ProfileContent";
 import VerifiedBadge from "../../components/VerifiedBadge";
@@ -302,6 +302,12 @@ export default function FeedContent() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [reportingPost, setReportingPost] = useState(null);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportDone, setReportDone] = useState(false);
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareLink, setShareLink] = useState("");
@@ -688,6 +694,36 @@ export default function FeedContent() {
     setPostToDelete(post);
     setShowDeleteConfirm(true);
     setActiveMenu(null);
+  };
+
+  const openReportModal = (post) => {
+    setReportingPost(post);
+    setReportReason('');
+    setReportDetails('');
+    setReportDone(false);
+    setActiveMenu(null);
+  };
+
+  const submitReport = async () => {
+    if (!reportReason || !reportingPost) return;
+    setReportLoading(true);
+    try {
+      await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content_type: 'post',
+          content_id: reportingPost.id,
+          reason: reportReason,
+          details: reportDetails.trim() || null,
+        }),
+      });
+      setReportDone(true);
+    } catch (_) {
+      // silent — the report either went through or didn't
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   const confirmDelete = async () => {
@@ -1086,15 +1122,21 @@ export default function FeedContent() {
                         <MessageSquare size={12} />
                         <span>{post.comments?.length || 0}</span>
                       </button>
-                      {currentUserId === post.user_id && (
+                      {currentUserId && (
                         <div className="relative">
                           <button onClick={() => setActiveMenu(activeMenu === post.id ? null : post.id)} className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-300 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
                             <MoreHorizontal size={13} />
                           </button>
                           {activeMenu === post.id && (
                             <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100">
-                              <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => openEditModal(post)}><Edit3 size={12} /> Edit</button>
-                              <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => openDeleteModal(post)}><Trash2 size={12} /> Delete</button>
+                              {currentUserId === post.user_id ? (
+                                <>
+                                  <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => openEditModal(post)}><Edit3 size={12} /> Edit</button>
+                                  <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => openDeleteModal(post)}><Trash2 size={12} /> Delete</button>
+                                </>
+                              ) : (
+                                <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20" onClick={() => openReportModal(post)}><Flag size={12} /> Report</button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1146,19 +1188,27 @@ export default function FeedContent() {
                         </div>
                       </div>
 
-                      {currentUserId === post.user_id && (
+                      {currentUserId && (
                         <div className="relative shrink-0">
                           <button onClick={() => setActiveMenu(activeMenu === post.id ? null : post.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
                             <MoreHorizontal size={17} />
                           </button>
                           {activeMenu === post.id && (
-                            <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100">
-                              <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onClick={() => openEditModal(post)}>
-                                <Edit3 size={13} /> Edit Post
-                              </button>
-                              <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" onClick={() => openDeleteModal(post)}>
-                                <Trash2 size={13} /> Delete
-                              </button>
+                            <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100">
+                              {currentUserId === post.user_id ? (
+                                <>
+                                  <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onClick={() => openEditModal(post)}>
+                                    <Edit3 size={13} /> Edit Post
+                                  </button>
+                                  <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" onClick={() => openDeleteModal(post)}>
+                                    <Trash2 size={13} /> Delete
+                                  </button>
+                                </>
+                              ) : (
+                                <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors" onClick={() => openReportModal(post)}>
+                                  <Flag size={13} /> Report Post
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1350,6 +1400,87 @@ export default function FeedContent() {
             <div className="p-2 sm:p-6">
               <ProfileContent viewUserId={selectedUserId} />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report modal */}
+      {reportingPost && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setReportingPost(null)} />
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-500 flex items-center justify-center">
+                  <Flag size={16} />
+                </div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Report Post</h2>
+              </div>
+              <button onClick={() => setReportingPost(null)} className="p-1.5 text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+                <X size={18} />
+              </button>
+            </div>
+
+            {reportDone ? (
+              <div className="p-8 flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-full bg-green-50 dark:bg-green-900/20 text-green-500 flex items-center justify-center mb-4">
+                  <Check size={28} />
+                </div>
+                <p className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">Report submitted</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Our team will review this content. Thank you for helping keep the community safe.</p>
+                <button onClick={() => setReportingPost(null)} className="px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                  Close
+                </button>
+              </div>
+            ) : (
+              <div className="p-5 space-y-4">
+                <div>
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Why are you reporting this?</p>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'spam', label: 'Spam or misleading' },
+                      { value: 'harassment', label: 'Harassment or bullying' },
+                      { value: 'misinformation', label: 'Misinformation' },
+                      { value: 'inappropriate', label: 'Inappropriate content' },
+                      { value: 'violence', label: 'Violence or threats' },
+                      { value: 'other', label: 'Other' },
+                    ].map(opt => (
+                      <label key={opt.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${reportReason === opt.value ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-orange-300 hover:bg-orange-50/50 dark:hover:bg-orange-900/10'}`}>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${reportReason === opt.value ? 'border-orange-500 bg-orange-500' : 'border-gray-300 dark:border-gray-600'}`}>
+                          {reportReason === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+                        <input type="radio" name="report_reason" value={opt.value} checked={reportReason === opt.value} onChange={e => setReportReason(e.target.value)} className="sr-only" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Additional details (optional)</label>
+                  <textarea
+                    value={reportDetails}
+                    onChange={e => setReportDetails(e.target.value)}
+                    placeholder="Describe the issue in more detail…"
+                    rows={3}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 resize-none transition"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-1">
+                  <button onClick={() => setReportingPost(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={submitReport}
+                    disabled={!reportReason || reportLoading}
+                    className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    {reportLoading ? <Loader2 size={16} className="animate-spin" /> : <><Flag size={14} /> Submit Report</>}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

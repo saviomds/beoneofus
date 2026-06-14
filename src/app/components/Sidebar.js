@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
-import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { supabase } from '../supabaseClient';
 import { useRouter, usePathname } from 'next/navigation';
@@ -83,7 +82,6 @@ function setCachedProfile(data) {
 export default function Sidebar({ onClose }) {
   const { t } = useLanguage();
   const { versionData } = usePlatformVersion();
-  const { setTheme } = useTheme();
   const [profile, setProfile] = useState(() => getCachedProfile());
   const [authSession, setAuthSession] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -221,7 +219,6 @@ export default function Sidebar({ onClose }) {
           if (profileData) {
             setProfile(profileData);
             setCachedProfile(profileData);
-            if (profileData.theme_preference) setTheme(profileData.theme_preference);
           }
 
           await fetchCounts(uid);

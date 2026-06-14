@@ -17,8 +17,9 @@ export default function ClientShell() {
     }
   }, []);
 
-  // Sync DB theme preference early so users see the correct theme on every
-  // device/browser without needing to visit Settings first.
+  // Sync DB theme preference once on mount so the theme follows users across
+  // devices. Empty deps is intentional — we must not re-run this when setTheme
+  // changes identity, otherwise it would override the user's in-session choice.
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return;
@@ -31,7 +32,8 @@ export default function ClientShell() {
           if (data?.theme_preference) setTheme(data.theme_preference);
         });
     });
-  }, [setTheme]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>

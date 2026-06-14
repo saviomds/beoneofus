@@ -371,7 +371,6 @@ export default function SettingsContent() {
         setProfile(p);
         setIsAdmin(p.role === "admin" || p.role === "founder");
         setAvatarUrl(p.avatar_url || "");
-        if (p.theme_preference) setTheme(p.theme_preference);
         if (p.referral_code) setReferralCode(p.referral_code);
         if (referralCountRes.count !== null) setReferralCount(referralCountRes.count);
         if (p.notification_prefs && typeof p.notification_prefs === "object") {

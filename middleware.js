@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
 const ALWAYS_ALLOW = [
   '/maintenance',
@@ -20,8 +21,7 @@ function isAlwaysAllowed(pathname) {
 export async function middleware(request) {
   try {
     // Redirect bare domain → www.
-    // 308 (not 301) preserves the HTTP method so POST requests (e.g. Supabase
-    // auth hooks calling beoneofus.work/api/...) arrive at www intact.
+    // 308 (not 301) preserves the HTTP method so POST requests arrive at www intact.
     const host = request.headers.get('host') ?? '';
     if (host === 'beoneofus.work') {
       const url = request.nextUrl.clone();
@@ -57,8 +57,9 @@ export async function middleware(request) {
 
     // Refresh session and keep auth cookies in sync
     let user = null;
+    let supabase;
     try {
-      const supabase = createServerClient(
+      supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         {
@@ -83,39 +84,35 @@ export async function middleware(request) {
       return response;
     }
 
+    // ── Dynamic maintenance check — query Supabase directly instead of
+    // self-fetching /api/public-settings. A self-HTTP-fetch from middleware
+    // to the same server doubles latency and causes recursive middleware runs.
     let maintenanceMode = false;
     let maintenanceMessage = "We're doing a quick upgrade. Be back shortly!";
     let registrationOpen = true;
 
     try {
-      const origin = request.nextUrl.origin;
-      const statusRes = await fetch(`${origin}/api/public-settings`, {
-        signal: AbortSignal.timeout(2000),
-      });
-      if (statusRes.ok) {
-        const data = await statusRes.json();
-        maintenanceMode    = data.maintenanceMode    ?? false;
-        maintenanceMessage = data.maintenanceMessage ?? maintenanceMessage;
-        registrationOpen   = data.registrationOpen   ?? true;
-      }
+      const adminSupa = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+      const { data: rows } = await adminSupa
+        .from('platform_settings')
+        .select('key, value')
+        .in('key', ['maintenance_mode', 'maintenance_message', 'registration_open']);
+      const m = Object.fromEntries((rows || []).map(r => [r.key, r.value]));
+      maintenanceMode  = m.maintenance_mode    ?? false;
+      maintenanceMessage = m.maintenance_message ?? maintenanceMessage;
+      registrationOpen = m.registration_open   ?? true;
     } catch {
-      // On any failure let the request through
+      // On any failure keep safe defaults and let the request through
     }
 
     if (maintenanceMode) {
       let isAdmin = false;
       if (user) {
         try {
-          const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-            {
-              cookies: {
-                getAll: () => request.cookies.getAll(),
-                setAll: () => {},
-              },
-            }
-          );
           const { data } = await supabase
             .from('profiles')
             .select('is_admin')

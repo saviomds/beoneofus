@@ -52,6 +52,9 @@ const nextConfig = {
     ];
   },
 
+  // Fix "multiple lockfiles" workspace root warning — pin tracing to this package
+  outputFileTracingRoot: new URL('.', import.meta.url).pathname.replace(/\/$/, ''),
+
   turbopack: {},
 
   experimental: {

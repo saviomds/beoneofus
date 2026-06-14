@@ -149,7 +149,7 @@ self.addEventListener("push", (event: PushEvent) => {
   }
 
   const title = data.title ?? "beoneofus";
-  const options: NotificationOptions = {
+  const options: NotificationOptions & { vibrate?: number[] } = {
     body:     data.body  ?? "",
     icon:     data.icon  ?? "/android-chrome-192x192.png",
     badge:    "/favicon-32x32.png",

@@ -1,4 +1,4 @@
-import { escapeHtml } from './escapeHtml';
+import { escapeHtml } from './escapeHtml.js';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://beoneofus.work';
 const FROM     = `BeOneOfUs <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`;
@@ -571,6 +571,27 @@ const templates = {
             </td></tr>
           </table>
           ${ctaButton('Visit Dashboard', SITE_URL + '/dash', color)}
+        </td></tr></table>`
+      ),
+    };
+  },
+
+  /* ── New DM message ─────────────────────────────────────────────────────── */
+  new_dm_message({ name, senderName, isFirst }) {
+    const n  = escapeHtml(name);
+    const sn = escapeHtml(senderName);
+    const subtitle = isFirst ? `${sn} started the conversation` : `${sn} messaged you after a couple of days`;
+    const body = isFirst
+      ? `<strong>${sn}</strong> sent you their <strong>first message</strong> on beoneofus. Say hi back!`
+      : `<strong>${sn}</strong> sent you a message after a few days away. Don't leave them hanging!`;
+    return {
+      subject: `${sn} sent you a message`,
+      html: baseShell(
+        header('linear-gradient(90deg,#7c3aed,#6366f1)', '💬 New Message', subtitle)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">${body}</p>
+          ${ctaButton('Open Messages →', SITE_URL + '/dash/messages', '#7c3aed')}
         </td></tr></table>`
       ),
     };

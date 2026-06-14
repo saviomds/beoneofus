@@ -5,7 +5,7 @@ import {
   Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
   GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
   ShoppingBag, User, BookOpen, Sparkles, Zap, Compass, BarChart2, Briefcase,
-  Map, Trophy, ScrollText,
+  Map, Trophy, ScrollText, Building2,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -411,7 +411,7 @@ export default function Sidebar({ onClose }) {
       items: [
         { id: 'connections', icon: UserPlus,      label: t('nav.items.connections') },
         { id: 'groups',      icon: Users,         label: t('nav.items.groups'),   badge: unreadGroups, onBadge: handleMarkAllGroupsRead, isRinging: isGroupRinging },
-        { id: 'pages',       icon: FileText,      label: t('nav.items.pages')       },
+        { id: 'pages',       icon: Building2,     label: t('nav.items.pages')       },
         { id: 'events',      icon: CalendarDays,  label: t('nav.items.events')      },
       ],
     },

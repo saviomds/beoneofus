@@ -15,7 +15,7 @@ const en = {
       notifications: "Notifications",
       connections: "Connections",
       groups: "Groups",
-      pages: "Pages",
+      pages: "Company Pages",
       events: "Events",
       marketplace: "Jobs & Market",
       coaching: "Coaching",

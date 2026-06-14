@@ -15,7 +15,7 @@ const fr = {
       notifications: "Notifications",
       connections: "Connexions",
       groups: "Groupes",
-      pages: "Pages",
+      pages: "Pages d'entreprise",
       events: "Événements",
       marketplace: "Emplois & Marché",
       coaching: "Coaching",

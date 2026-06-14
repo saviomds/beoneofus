@@ -2,11 +2,20 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY,
-);
+// VAPID is configured lazily so that importing this module at build time
+// (when env vars are not injected by Vercel) doesn't throw.
+let vapidReady = false;
+function ensureVapid() {
+  if (vapidReady) return;
+  const subject   = process.env.VAPID_EMAIL;
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  if (!subject || !publicKey || !privateKey) {
+    throw new Error('VAPID environment variables are not set');
+  }
+  webpush.setVapidDetails(subject, publicKey, privateKey);
+  vapidReady = true;
+}
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
@@ -27,6 +36,7 @@ export async function POST(request) {
   }
 
   try {
+    ensureVapid();
     const { user_id, title, body, url, icon, tag } = await request.json();
     if (!user_id || !title || !body) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

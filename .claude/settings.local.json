@@ -4,7 +4,29 @@
       "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Dell\\\\beoneofus\\\\src\\\\app\\\\api\\\\generate-lesson\")",
       "Bash(Out-Null)",
       "PowerShell(cd C:\\\\Users\\\\Dell\\\\beoneofus; $body = '{\"email\":\"test@example.com\",\"code\":\"123456\"}'; $headers = @{\"Content-Type\"=\"application/json\"}; try { $r = Invoke-WebRequest -Uri \"http://localhost:3000/api/otp-email\" -Method POST -Body $body -Headers $headers -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; $r.Content } catch { \"Status: $\\($_.Exception.Response.StatusCode.value__\\)\"; $_.Exception.Message })",
-      "PowerShell(try { $r = Invoke-WebRequest -Uri \"https://beoneofus.work/api/otp-email\" -Method POST -Body '{\"email\":\"test@x.com\",\"code\":\"111111\"}' -ContentType \"application/json\" -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; $r.Content } catch { \"Status: $\\($_.Exception.Response.StatusCode.value__\\)\"; $_.Exception.Message })"
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"https://beoneofus.work/api/otp-email\" -Method POST -Body '{\"email\":\"test@x.com\",\"code\":\"111111\"}' -ContentType \"application/json\" -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; $r.Content } catch { \"Status: $\\($_.Exception.Response.StatusCode.value__\\)\"; $_.Exception.Message })",
+      "Bash(claude mcp *)",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__get_logs",
+      "mcp__supabase__get_project",
+      "mcp__supabase__execute_sql",
+      "Bash(git commit -m ' *)",
+      "Bash(curl *)",
+      "Bash(git reset *)",
+      "Bash(git restore *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\('next:', p.dependencies.next, '\\\\n@supabase/ssr:', p.dependencies['@supabase/ssr']\\)\")",
+      "Bash(ping -n 6 127.0.0.1)",
+      "mcp__supabase__list_tables",
+      "Bash(grep \"\\\\\\\\\\\\\\\\\")",
+      "Bash(node *)",
+      "Bash(git commit *)",
+      "mcp__claude_ai_Vercel__deploy_to_vercel",
+      "Bash(vercel --prod --yes)",
+      "Bash(grep -v \"^//\")",
+      "Bash(supabase *)",
+      "PowerShell(supabase *)",
+      "PowerShell(cd \"C:\\\\Users\\\\Dell\\\\beoneofus\"; npx supabase db query --file \"supabase/migrations/_search_indexes.sql\" --linked -o table 2>&1; Write-Host \"EXIT:$LASTEXITCODE\")",
+      "Bash(powershell -c \"\\(Get-Content 'C:\\\\Users\\\\Dell\\\\beoneofus\\\\src\\\\app\\\\dash\\\\content\\\\SettingsContent.js'\\).Count\")"
     ]
   }
 }

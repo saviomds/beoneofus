@@ -9,6 +9,7 @@ import {
   ExternalLink, Eye, EyeOff, Pencil, Trash2, Store,
   Handshake, TrendingUp, Zap, Users, ChevronRight, Package,
   MessageCircle, Send, SlidersHorizontal, List, Star, LayoutGrid,
+  ArrowLeftRight,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import PartnershipsContent from "./PartnershipsContent";
@@ -451,14 +452,37 @@ function LibraryItemModal({ item, onClose }) {
 }
 
 /* ── Credential Detail Modal ──────────────────────── */
-function CredentialDetailModal({ cred, onClose }) {
-  const [urlCopied, setUrlCopied] = useState(false);
+function CredentialDetailModal({ cred, onClose, currentUserId }) {
+  const [urlCopied,   setUrlCopied]   = useState(false);
+  const [showTrade,   setShowTrade]   = useState(false);
+  const [tradePrice,  setTradePrice]  = useState(cred.price ? String(cred.price) : '');
+  const [tradeDesc,   setTradeDesc]   = useState('');
+  const [tradeSaving, setTradeSaving] = useState(false);
+  const [tradeDone,   setTradeDone]   = useState(false);
+  const [tradeError,  setTradeError]  = useState('');
+
   const handleShare = async (hash) => {
     const url = `${window.location.origin}/verify/${hash}`;
     await navigator.clipboard.writeText(url);
     setUrlCopied(true);
     setTimeout(() => setUrlCopied(false), 2000);
   };
+
+  const submitListing = async () => {
+    if (!currentUserId) return;
+    setTradeSaving(true); setTradeError('');
+    const { error } = await supabase.from('credential_trade_listings').upsert({
+      credential_id: cred.id,
+      seller_id: currentUserId,
+      asking_price: tradePrice ? parseFloat(tradePrice) : null,
+      description: tradeDesc || null,
+      status: 'active',
+    }, { onConflict: 'credential_id' });
+    if (error) { setTradeError(error.message); setTradeSaving(false); return; }
+    setTradeDone(true);
+    setTradeSaving(false);
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -472,7 +496,45 @@ function CredentialDetailModal({ cred, onClose }) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
-          <CredentialCard cred={cred} onShare={handleShare} onListTrade={() => alert('Trading coming soon!')} showActions />
+          <CredentialCard cred={cred} onShare={handleShare} onListTrade={cred.is_tradeable ? () => setShowTrade(true) : null} showActions />
+
+          {/* Trade listing form */}
+          {showTrade && !tradeDone && (
+            <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/10 p-4 space-y-3 animate-in fade-in duration-200">
+              <p className="text-sm font-black text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                <ArrowLeftRight size={14} /> List for Trade
+              </p>
+              <input
+                type="number" min="0" step="0.01"
+                placeholder="Asking price in USD (optional)"
+                value={tradePrice}
+                onChange={e => setTradePrice(e.target.value)}
+                className={inputCls}
+              />
+              <textarea
+                placeholder="What are you looking for in exchange? (optional)"
+                rows={2}
+                value={tradeDesc}
+                onChange={e => setTradeDesc(e.target.value)}
+                className={`${inputCls} resize-none`}
+              />
+              {tradeError && <p className="text-xs text-red-500">{tradeError}</p>}
+              <div className="flex gap-2">
+                <button onClick={() => setShowTrade(false)} className="flex-1 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                  Cancel
+                </button>
+                <button onClick={submitListing} disabled={tradeSaving} className="flex-1 py-2 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 rounded-lg transition-all disabled:opacity-50">
+                  {tradeSaving ? 'Listing…' : 'Confirm Listing'}
+                </button>
+              </div>
+            </div>
+          )}
+          {tradeDone && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl text-sm text-green-700 dark:text-green-400 font-bold">
+              <CheckCircle2 size={16} /> Listed in Trade Market! Others can now request it.
+            </div>
+          )}
+
           {cred.blockchain_hash && (
             <a href={`/verify/${cred.blockchain_hash}`} target="_blank" rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-xl transition-all">
@@ -1495,11 +1557,116 @@ function VerifyTab() {
   );
 }
 
+/* ── Trade Market Tab ─────────────────────────────── */
+function TradeMarketTab({ currentUserId }) {
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [requested, setRequested] = useState(new Set());
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      const { data, error } = await supabase
+        .from('credential_trade_listings')
+        .select('id, asking_price, description, created_at, credential:credential_id(id, title, description, credential_type, blockchain_hash, is_tradeable, price), seller:seller_id(id, username, avatar_url, is_verified)')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      if (!error && data) setListings(data.filter(l => l.seller?.id !== currentUserId));
+      setLoading(false);
+    };
+    fetchListings();
+  }, [currentUserId]);
+
+  const handleRequest = async (listing) => {
+    if (!currentUserId || requested.has(listing.id)) return;
+    await supabase.from('notifications').insert({
+      receiver_id: listing.seller.id,
+      sender_id: currentUserId,
+      type: 'trade_request',
+      content: `Someone is interested in trading for your "${listing.credential?.title || 'credential'}".`,
+      is_read: false,
+    }).catch(() => {});
+    setRequested(prev => new Set([...prev, listing.id]));
+  };
+
+  if (loading) return (
+    <div className="space-y-4">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="h-32 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+      ))}
+    </div>
+  );
+
+  if (!listings.length) return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-5 text-4xl">🔄</div>
+      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">No active trade listings</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">List a tradeable credential from the Credentials tab to appear here.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {listings.map(listing => (
+        <div key={listing.id} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+          {listing.credential && (
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                  <Award size={18} className="text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-sm text-gray-900 dark:text-gray-100 truncate">{listing.credential.title}</p>
+                  <span className={`inline-block mt-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${CRED_TYPE_BADGE[listing.credential.credential_type] || CRED_TYPE_BADGE.Certificate}`}>
+                    {listing.credential.credential_type}
+                  </span>
+                </div>
+                {listing.asking_price && (
+                  <p className="shrink-0 text-sm font-black text-emerald-600 dark:text-emerald-400">${listing.asking_price}</p>
+                )}
+              </div>
+              {listing.description && (
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{listing.description}</p>
+              )}
+            </div>
+          )}
+          <div className="px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              {listing.seller?.avatar_url ? (
+                <img src={listing.seller.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 text-[10px] font-bold text-gray-500">
+                  {listing.seller?.username?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                @{listing.seller?.username}
+                {listing.seller?.is_verified && <BadgeCheck size={10} className="inline ml-1 text-blue-500" fill="currentColor" stroke="white" />}
+              </p>
+            </div>
+            <button
+              onClick={() => handleRequest(listing)}
+              disabled={requested.has(listing.id)}
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                requested.has(listing.id)
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 cursor-default'
+                  : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50'
+              }`}
+            >
+              {requested.has(listing.id) ? <><Check size={11} /> Requested</> : <><ArrowLeftRight size={11} /> Request Trade</>}
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ── Tab definitions ──────────────────────────────── */
 const TABS = [
   { key: 'browse',       label: 'Browse',          icon: ShoppingBag },
   { key: 'library',      label: 'My Library',       icon: Library },
   { key: 'credentials',  label: 'Credentials',      icon: Award },
+  { key: 'trades',       label: 'Trade Market',     icon: ArrowLeftRight },
   { key: 'sell',         label: 'Sell',             icon: Store },
   { key: 'issue',        label: 'Issue',            icon: Plus },
   { key: 'verify',       label: 'Verify',           icon: Shield },
@@ -1625,6 +1792,7 @@ export default function MarketplaceContent() {
         {activeTab === 'browse'       && <BrowseTab currentUserId={currentUserId} libraryIds={libraryIds} onAddToLibrary={handleAddToLibrary} onSelectListing={setSelectedListing} />}
         {activeTab === 'library'      && <MyLibraryTab currentUserId={currentUserId} onSelectItem={setSelectedLibItem} />}
         {activeTab === 'credentials'  && <MyCredentialsTab currentUserId={currentUserId} onSelectCred={setSelectedCred} />}
+        {activeTab === 'trades'       && <TradeMarketTab currentUserId={currentUserId} />}
         {activeTab === 'sell'         && <SellTab currentUserId={currentUserId} isPremium={isPremium} isAdmin={currentProfile?.is_admin === true || currentProfile?.role === 'founder'} />}
         {activeTab === 'issue'        && <IssueCredentialTab currentUserId={currentUserId} currentProfile={currentProfile} />}
         {activeTab === 'verify'       && <VerifyTab />}
@@ -1658,7 +1826,7 @@ export default function MarketplaceContent() {
 
       {/* Credential detail modal */}
       {selectedCred && (
-        <CredentialDetailModal cred={selectedCred} onClose={() => setSelectedCred(null)} />
+        <CredentialDetailModal cred={selectedCred} currentUserId={currentUserId} onClose={() => setSelectedCred(null)} />
       )}
     </div>
   );

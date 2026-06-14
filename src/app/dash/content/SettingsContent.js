@@ -8,7 +8,7 @@ import {
   ChevronRight, BarChart3, Zap, Lock, Globe, RefreshCw, Eye, EyeOff,
   UserPlus, ShieldCheck, Award, Smartphone, Copy, KeyRound,
   LogOut, Fingerprint, Clock, CheckCircle2, XCircle,
-  Camera, User, Link2, AtSign, Mail, Send, ChevronDown, Mic,
+  Camera, User, Link2, AtSign, Mail, Send, ChevronDown, Mic, Gift,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../supabaseClient";
@@ -84,6 +84,31 @@ function RowItem({ title, desc, children }) {
     </div>
   );
 }
+
+function Toggle({ enabled, onChange, label }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={enabled}
+      aria-label={label}
+      onClick={onChange}
+      className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${enabled ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"}`}
+    >
+      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${enabled ? "translate-x-5" : "translate-x-0"}`} />
+    </button>
+  );
+}
+
+const DEFAULT_NOTIF_PREFS = {
+  sound_muted:   false,
+  likes:         true,
+  comments:      true,
+  connections:   true,
+  messages:      true,
+  group_posts:   true,
+  mentions:      true,
+  email_digest:  "never",
+};
 
 function Toast({ message, type }) {
   if (!message) return null;
@@ -208,6 +233,18 @@ export default function SettingsContent() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [requestingVerification, setRequestingVerification] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [notifPrefs, setNotifPrefs] = useState({ ...DEFAULT_NOTIF_PREFS });
+  const [notifSaving, setNotifSaving] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushEnabled, setPushEnabled]   = useState(false);
+  const [pushLoading, setPushLoading]   = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [referralCount, setReferralCount] = useState(0);
+  const [inviteEmail, setInviteEmail]   = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteSent, setInviteSent]     = useState(false);
+  const [codeCopied, setCodeCopied]     = useState(false);
 
   // 2FA state
   const [mfaEnabled, setMfaEnabled]       = useState(false);
@@ -310,18 +347,38 @@ export default function SettingsContent() {
       }).catch(() => setMicStatus("unknown"));
     }
 
+    /* Check push notification support + current subscription */
+    if (typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window) {
+      setPushSupported(true);
+      navigator.serviceWorker.ready.then(reg => {
+        reg.pushManager.getSubscription().then(sub => {
+          setPushEnabled(!!sub);
+        });
+      }).catch(() => {});
+    }
+
     const fetchProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       setUserEmail(session.user.email || "");
-      const [profileRes] = await Promise.all([
-        supabase.from("profiles").select("username, status, website, github, work_status, avatar_url, is_verified, verification_status, role").eq("id", session.user.id).single(),
+      setUserId(session.user.id);
+      const [profileRes, referralCountRes] = await Promise.all([
+        supabase.from("profiles").select("username, status, website, github, work_status, avatar_url, is_verified, verification_status, role, theme_preference, notification_prefs, referral_code").eq("id", session.user.id).single(),
+        supabase.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", session.user.id),
       ]);
       if (profileRes.data) {
         const p = profileRes.data;
         setProfile(p);
         setIsAdmin(p.role === "admin" || p.role === "founder");
         setAvatarUrl(p.avatar_url || "");
+        if (p.theme_preference) setTheme(p.theme_preference);
+        if (p.referral_code) setReferralCode(p.referral_code);
+        if (referralCountRes.count !== null) setReferralCount(referralCountRes.count);
+        if (p.notification_prefs && typeof p.notification_prefs === "object") {
+          const merged = { ...DEFAULT_NOTIF_PREFS, ...p.notification_prefs };
+          setNotifPrefs(merged);
+          setIsMuted(merged.sound_muted ?? false);
+        }
         setEditProfile({
           username:    p.username    || "",
           status:      p.status      || "",
@@ -790,6 +847,106 @@ export default function SettingsContent() {
     showToast(next ? "Notification sounds muted" : "Notification sounds enabled");
   };
 
+  const saveTheme = async (id) => {
+    setTheme(id);
+    showToast(`Theme set to ${id}`);
+    if (!userId) return;
+    await supabase.from("profiles").update({ theme_preference: id }).eq("id", userId);
+  };
+
+  const saveNotifPrefs = async (next) => {
+    setNotifPrefs(next);
+    setIsMuted(next.sound_muted ?? false);
+    if (typeof window !== "undefined") localStorage.setItem("beoneofus_muted", (next.sound_muted ?? false).toString());
+    if (!userId) return;
+    setNotifSaving(true);
+    await supabase.from("profiles").update({ notification_prefs: next }).eq("id", userId);
+    setNotifSaving(false);
+  };
+
+  const toggleNotifPref = (key) => {
+    const next = { ...notifPrefs, [key]: !notifPrefs[key] };
+    saveNotifPrefs(next);
+  };
+
+  const setEmailDigest = (val) => {
+    saveNotifPrefs({ ...notifPrefs, email_digest: val });
+  };
+
+  const enablePush = async () => {
+    if (!pushSupported || pushLoading) return;
+    setPushLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      });
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub.toJSON()),
+      });
+      setPushEnabled(true);
+      showToast("Push notifications enabled", "success");
+    } catch (err) {
+      console.error('[push enable]', err);
+      showToast("Could not enable push notifications", "error");
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const disablePush = async () => {
+    if (!pushSupported || pushLoading) return;
+    setPushLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch('/api/push/subscribe', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+      setPushEnabled(false);
+      showToast("Push notifications disabled", "success");
+    } catch (err) {
+      console.error('[push disable]', err);
+      showToast("Could not disable push notifications", "error");
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handleCopyRefLink = async () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://beoneofus.work';
+    await navigator.clipboard.writeText(`${origin}/auth?ref=${referralCode}`);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+
+  const handleSendInvite = async () => {
+    if (!inviteEmail.trim() || inviteLoading) return;
+    setInviteLoading(true);
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://beoneofus.work';
+    await fetch('/api/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: inviteEmail.trim(),
+        inviteLink: `${origin}/auth`,
+        referralCode,
+      }),
+    }).catch(() => {});
+    setInviteLoading(false);
+    setInviteSent(true);
+    setInviteEmail('');
+    setTimeout(() => setInviteSent(false), 3000);
+  };
+
   const requestMicPermission = async () => {
     setMicTesting(true);
     try {
@@ -887,6 +1044,7 @@ export default function SettingsContent() {
 
   const SETTINGS_NAV = [
     { id: "profile",       label: "Profile",       icon: User      },
+    { id: "referrals",     label: "Referrals",     icon: Gift      },
     { id: "appearance",    label: "Appearance",    icon: Palette   },
     { id: "notifications", label: "Notifications", icon: Bell      },
     { id: "microphone",    label: "Microphone",    icon: Mic       },
@@ -1151,6 +1309,65 @@ export default function SettingsContent() {
                   </Card>
                 )}
 
+                {/* ── REFERRALS ── */}
+                {settingsSection === "referrals" && (
+                  <div className="space-y-4">
+                    {/* Stats */}
+                    <Card>
+                      <SectionHeader icon={Gift} title="Invite Friends" subtitle="Share beoneofus with people you know." accent="blue" />
+                      <div className="grid grid-cols-2 gap-3 mb-5">
+                        <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 text-center">
+                          <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{referralCount}</p>
+                          <p className="text-[11px] text-blue-500 dark:text-blue-400/70 mt-0.5 font-semibold">Friends joined</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 text-center">
+                          <p className="text-2xl font-black text-gray-800 dark:text-gray-200">{referralCode || '—'}</p>
+                          <p className="text-[11px] text-gray-500 mt-0.5 font-semibold">Your code</p>
+                        </div>
+                      </div>
+
+                      {/* Copy referral link */}
+                      <div className="space-y-2 mb-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Your referral link</p>
+                        <div className="flex gap-2">
+                          <div className="flex-1 px-3 py-2.5 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/50 rounded-xl text-xs text-gray-500 dark:text-gray-400 truncate font-mono select-all">
+                            {typeof window !== 'undefined' ? `${window.location.origin}/auth?ref=${referralCode}` : `beoneofus.work/auth?ref=${referralCode}`}
+                          </div>
+                          <button
+                            onClick={handleCopyRefLink}
+                            disabled={!referralCode}
+                            className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-40"
+                          >
+                            {codeCopied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Email invite */}
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Send email invite</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          placeholder="friend@example.com"
+                          value={inviteEmail}
+                          onChange={e => setInviteEmail(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleSendInvite()}
+                          className="flex-1 px-3 py-2.5 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 transition-all"
+                        />
+                        <button
+                          onClick={handleSendInvite}
+                          disabled={!inviteEmail.trim() || inviteLoading}
+                          className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-40"
+                        >
+                          {inviteLoading ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                          {inviteSent ? 'Sent!' : 'Invite'}
+                        </button>
+                      </div>
+                      {inviteSent && <p className="text-xs text-green-600 dark:text-green-400 font-semibold mt-2">Invite sent successfully!</p>}
+                    </Card>
+                  </div>
+                )}
+
                 {/* ── APPEARANCE ── */}
                 {settingsSection === "appearance" && (
                   <Card>
@@ -1162,7 +1379,7 @@ export default function SettingsContent() {
                         return (
                           <button
                             key={t.id}
-                            onClick={() => { setTheme(t.id); showToast(`Theme set to ${t.label}`); }}
+                            onClick={() => saveTheme(t.id)}
                             className={`relative flex flex-col items-center gap-3 p-5 rounded-xl border transition-all duration-200
                               ${active
                                 ? "bg-blue-50 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/50 text-blue-600 dark:text-blue-300"
@@ -1187,21 +1404,81 @@ export default function SettingsContent() {
 
                 {/* ── NOTIFICATIONS ── */}
                 {settingsSection === "notifications" && (
-                  <Card>
-                    <SectionHeader icon={Bell} title="Notifications" subtitle="Control alerts and sounds." accent="purple" />
-                    <RowItem title="Notification Sounds" desc="Play audio alerts for messages and calls.">
-                      <button
-                        onClick={toggleMute}
-                        className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all
-                          ${isMuted
-                            ? "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700"
-                            : "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20"}`}
-                      >
-                        {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                        {isMuted ? "Muted" : "Enabled"}
-                      </button>
-                    </RowItem>
-                  </Card>
+                  <div className="space-y-4">
+                    {/* Sounds */}
+                    <Card>
+                      <SectionHeader icon={Bell} title="Notifications" subtitle="Control which alerts you receive and how." accent="purple" />
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Sounds</p>
+                        <RowItem title="Notification Sounds" desc="Play audio alerts for messages and activity.">
+                          <Toggle enabled={!notifPrefs.sound_muted} onChange={() => toggleNotifPref("sound_muted")} label="Toggle notification sounds" />
+                        </RowItem>
+                      </div>
+                    </Card>
+
+                    {/* In-app alerts */}
+                    <Card>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">In-App Alerts</p>
+                      <div className="space-y-3">
+                        {[
+                          { key: "likes",       label: "Likes",              desc: "When someone likes your post." },
+                          { key: "comments",    label: "Comments",           desc: "When someone comments on your post." },
+                          { key: "mentions",    label: "Mentions",           desc: "When someone @mentions you." },
+                          { key: "connections", label: "Connection requests", desc: "New connection requests and acceptances." },
+                          { key: "messages",    label: "Messages",           desc: "Direct messages from other users." },
+                          { key: "group_posts", label: "Group activity",     desc: "New posts in groups you belong to." },
+                        ].map(({ key, label, desc }) => (
+                          <RowItem key={key} title={label} desc={desc}>
+                            <Toggle enabled={!!notifPrefs[key]} onChange={() => toggleNotifPref(key)} label={`Toggle ${label}`} />
+                          </RowItem>
+                        ))}
+                      </div>
+                    </Card>
+
+                    {/* Push notifications */}
+                    {pushSupported && (
+                      <Card>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Browser Push</p>
+                        <RowItem
+                          title="Push Notifications"
+                          desc="Get alerts even when the app is closed, right in your browser or on your device."
+                        >
+                          {pushLoading
+                            ? <Loader2 size={18} className="animate-spin text-gray-400" />
+                            : <Toggle enabled={pushEnabled} onChange={pushEnabled ? disablePush : enablePush} label="Toggle push notifications" />
+                          }
+                        </RowItem>
+                        {!pushEnabled && (
+                          <p className="text-[10px] text-gray-400 mt-3">
+                            Your browser will ask for permission when you enable this.
+                          </p>
+                        )}
+                      </Card>
+                    )}
+
+                    {/* Email digest */}
+                    <Card>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Email Digest</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { val: "daily",   label: "Daily",   desc: "Every morning" },
+                          { val: "weekly",  label: "Weekly",  desc: "Every Monday" },
+                          { val: "never",   label: "Never",   desc: "Email off" },
+                        ].map(opt => (
+                          <button
+                            key={opt.val}
+                            onClick={() => setEmailDigest(opt.val)}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border text-center transition-all ${notifPrefs.email_digest === opt.val ? "bg-purple-50 dark:bg-purple-900/20 border-purple-400 dark:border-purple-500/50 text-purple-600 dark:text-purple-300" : "bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/50 text-gray-500 hover:border-gray-300 dark:hover:border-gray-600"}`}
+                          >
+                            {notifPrefs.email_digest === opt.val && <div className="w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center"><Check size={9} strokeWidth={3} className="text-white" /></div>}
+                            <p className="text-xs font-bold">{opt.label}</p>
+                            <p className="text-[10px] text-gray-500">{opt.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                      {notifSaving && <p className="text-[10px] text-gray-400 mt-3 text-right animate-pulse">Saving…</p>}
+                    </Card>
+                  </div>
                 )}
 
                 {/* ── MICROPHONE ── */}

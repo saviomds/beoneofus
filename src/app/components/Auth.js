@@ -89,6 +89,7 @@ export default function AuthForm() {
   const [username,        setUsername]        = useState('');
   const [otpCode,         setOtpCode]         = useState('');
   const [showPw,          setShowPw]          = useState(false);
+  const [referralCode,    setReferralCode]    = useState('');
 
   // sign-in steps: 'email' | 'password' | 'otp'
   // sign-up steps: 'email' | 'details'
@@ -142,6 +143,13 @@ export default function AuthForm() {
       clean.searchParams.delete('error');
       window.history.replaceState(null, '', clean.pathname + (clean.search !== '?' ? clean.search : ''));
     }
+  }, []);
+
+  // ── Pre-fill referral code from ?ref= URL param ────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref) setReferralCode(ref.toUpperCase());
   }, []);
 
   // ── Auth bootstrap: check existing session + handle recovery URL ───────────
@@ -242,7 +250,9 @@ export default function AuthForm() {
           };
 
           if (pendingUsername) {
+            const pendingRefCode = localStorage.getItem('pending_referral_code') ?? '';
             localStorage.removeItem('pending_username');
+            if (pendingRefCode) localStorage.removeItem('pending_referral_code');
             supabase
               .from('profiles')
               .upsert(
@@ -251,6 +261,16 @@ export default function AuthForm() {
               )
               .then(({ error: upsertErr }) => {
                 if (upsertErr?.code === '23505') localStorage.setItem('pick_username', '1');
+                if (pendingRefCode) {
+                  fetch('/api/referral/redeem', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ code: pendingRefCode }),
+                  }).catch(() => {});
+                }
                 redirect();
               });
           } else {
@@ -303,6 +323,7 @@ export default function AuthForm() {
     setPassword('');
     setConfirmPassword('');
     setUsername('');
+    setReferralCode('');
     setUsernameStatus('idle');
     setOtpCode('');
     setError(null);
@@ -377,6 +398,7 @@ export default function AuthForm() {
           setSignInStep('details');
         } else {
           localStorage.setItem('pending_username', username);
+          if (referralCode.trim()) localStorage.setItem('pending_referral_code', referralCode.trim().toUpperCase());
           const { error: err } = await supabase.auth.signUp({
             email: email.trim(),
             password,
@@ -1008,6 +1030,16 @@ export default function AuthForm() {
               <PasswordStrength password={password} />
             </div>
             <PwField id="confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" />
+            <input
+              id="referral-code"
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              maxLength={8}
+              placeholder="Referral code (optional)"
+              autoComplete="off"
+              className={iCls}
+            />
             <ErrBanner />
             <div className="pt-1"><PrimaryBtn label="Create Account" /></div>
           </form>

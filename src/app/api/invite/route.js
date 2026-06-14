@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const { email, inviteLink } = await request.json();
+    const { email, inviteLink, referralCode } = await request.json();
+    const finalLink = referralCode ? `${inviteLink}${inviteLink.includes('?') ? '&' : '?'}ref=${encodeURIComponent(referralCode)}` : inviteLink;
 
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json({ error: 'Email service not configured' }, { status: 503 });
@@ -67,7 +68,7 @@ export async function POST(request) {
                           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
                             <tr>
                               <td align="center">
-                                <a href="${inviteLink}" style="display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;font-weight:800;font-size:15px;padding:15px 40px;border-radius:12px;letter-spacing:0.2px;box-shadow:0 4px 14px rgba(37,99,235,0.40);">Join the Network &rarr;</a>
+                                <a href="${finalLink}" style="display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;font-weight:800;font-size:15px;padding:15px 40px;border-radius:12px;letter-spacing:0.2px;box-shadow:0 4px 14px rgba(37,99,235,0.40);">Join the Network &rarr;</a>
                               </td>
                             </tr>
                           </table>

@@ -5,7 +5,8 @@ export default function Loading() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-gray-950">
       <div className="flex flex-col items-center gap-8">
         <Image
-          src="/appIcon.png"
+          src="/logo.svg"
+          unoptimized
           alt="beoneofus"
           width={72}
           height={72}

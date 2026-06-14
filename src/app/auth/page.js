@@ -26,7 +26,7 @@ export default function AuthPage() {
         {/* Logo */}
         <Link href="/" className="relative z-10 inline-flex items-center gap-3 group w-fit">
           <div className="w-10 h-10 rounded-2xl overflow-hidden bg-white ring-[3px] ring-white/70 shadow-lg">
-            <Image src="/logo.png" alt="beoneofus logo" width={40} height={40} />
+            <Image src="/logo.svg" alt="beoneofus logo" width={40} height={40} unoptimized />
           </div>
           <span className="text-xl font-black tracking-tight text-white">
             beone<span className="text-blue-200">of</span>us
@@ -71,7 +71,7 @@ export default function AuthPage() {
         <div className="lg:hidden w-full flex items-center justify-between mb-6 max-w-[420px]">
           <Link href="/" className="inline-flex items-center gap-2.5">
             <div className="w-9 h-9 flex items-center justify-center">
-              <Image src="/logo.png" alt="beoneofus logo" width={36} height={36} />
+              <Image src="/logo.svg" alt="beoneofus logo" width={36} height={36} unoptimized />
             </div>
             <span className="text-lg font-black tracking-tight text-gray-900 dark:text-gray-100">
               beone<span className="text-blue-500">of</span>us

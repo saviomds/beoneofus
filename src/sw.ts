@@ -135,3 +135,44 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+// ── Web Push ─────────────────────────────────────────────────────────────────
+// Serwist handles install/activate/fetch. Push notifications are a separate
+// concern — added here so they survive Serwist's own listener registration.
+
+self.addEventListener("push", (event: PushEvent) => {
+  let data: { title?: string; body?: string; icon?: string; tag?: string; url?: string } = {};
+  try {
+    data = event.data?.json() ?? {};
+  } catch {
+    data = { body: event.data?.text() ?? "" };
+  }
+
+  const title = data.title ?? "beoneofus";
+  const options: NotificationOptions = {
+    body:     data.body  ?? "",
+    icon:     data.icon  ?? "/android-chrome-192x192.png",
+    badge:    "/favicon-32x32.png",
+    tag:      data.tag   ?? "bou-notification",
+    data:     { url: data.url ?? "/" },
+    vibrate:  [100, 50, 100],
+    renotify: true,
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event: NotificationEvent) => {
+  event.notification.close();
+  const target = (event.notification.data?.url as string) ?? "/";
+
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((cs) => {
+        const existing = cs.find((c) => c.url.includes(target) && "focus" in c);
+        if (existing) return (existing as WindowClient).focus();
+        return clients.openWindow(target);
+      })
+  );
+});

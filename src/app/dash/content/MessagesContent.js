@@ -9,7 +9,7 @@ import {
   ChevronLeft, MessageSquare, BadgeCheck, Sparkles, Loader2,
   ThumbsUp, Camera, Smile, Star, Pin, Copy, Reply,
   ZoomIn, Download, Clock, Users, Filter, Bell, BellOff,
-  ChevronDown, CornerUpLeft
+  ChevronDown, CornerUpLeft, Code2
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
@@ -19,6 +19,34 @@ import { useDashboard } from "./DashboardContext";
    HELPERS
 ───────────────────────────────────────────────────────────── */
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
+const SNIPPET_LANGS = ["text","javascript","typescript","python","rust","go","bash","sql","json","html","css","java","cpp","ruby","swift","kotlin"];
+
+function parseSnippet(text) {
+  if (!text || !text.startsWith('{')) return null;
+  try { const p = JSON.parse(text); if (p.__snippet) return p; } catch {}
+  return null;
+}
+
+function SnippetBlock({ snippet, isMine }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(snippet.code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  };
+  return (
+    <div className={`rounded-2xl overflow-hidden border text-left w-full max-w-[320px] sm:max-w-[400px] ${isMine ? 'border-blue-400/20' : 'border-gray-200 dark:border-gray-700'}`}>
+      <div className={`flex items-center justify-between px-3 py-1.5 ${isMine ? 'bg-blue-700' : 'bg-gray-800 dark:bg-gray-900'}`}>
+        <div className="flex items-center gap-1.5">
+          <Code2 size={11} className="text-gray-400" />
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{snippet.lang}</span>
+        </div>
+        <button onClick={copy} className="text-[10px] font-bold text-gray-400 hover:text-white flex items-center gap-1 transition-colors">
+          {copied ? <><Check size={9} className="text-emerald-400" /> Copied</> : <><Copy size={9} /> Copy</>}
+        </button>
+      </div>
+      <pre className="bg-gray-900 text-gray-100 text-[11px] font-mono px-3 py-2.5 overflow-x-auto leading-5 whitespace-pre max-h-60">{snippet.code}</pre>
+    </div>
+  );
+}
 
 /* ─────────────────────────────────────────────────────────────
    MAIN COMPONENT
@@ -53,6 +81,9 @@ export default function MessagesContent() {
   const [emojiPickerMsgId, setEmojiPickerMsgId] = useState(null);
   const [hoveredMsgId, setHoveredMsgId] = useState(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [showSnippetPanel, setShowSnippetPanel] = useState(false);
+  const [snippetCode, setSnippetCode] = useState("");
+  const [snippetLang, setSnippetLang] = useState("javascript");
   const [messageSendError, setMessageSendError] = useState(null);
   const forceScrollRef = useRef(false);
 
@@ -864,6 +895,7 @@ export default function MessagesContent() {
             : msgText
           : "Sent an image",
       });
+      notifyRecipient();
     } catch (err) {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
       setMessageSendError(err.message);
@@ -902,6 +934,68 @@ export default function MessagesContent() {
       .writeText(text)
       .then(() => showToast("Copied to clipboard"));
   };
+
+  /* ── Notify recipient if first message or after 2-day gap ── */
+  const notifyRecipient = useCallback(async () => {
+    if (!activeChat || !currentUserId) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    fetch('/api/messages/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ receiver_id: activeChat.id }),
+    }).catch(() => {});
+  }, [activeChat, currentUserId]);
+
+  /* ── Send snippet ── */
+  const sendSnippet = useCallback(async () => {
+    if (!snippetCode.trim() || connectionStatus !== "accepted" || !currentUserId || !activeChat) return;
+    const encoded = JSON.stringify({ __snippet: true, lang: snippetLang, code: snippetCode });
+    setShowSnippetPanel(false);
+    setSnippetCode("");
+    setSnippetLang("javascript");
+
+    const optimisticId = `opt-${Date.now()}`;
+    forceScrollRef.current = true;
+    setMessages((prev) => [...prev, {
+      id: optimisticId,
+      sender_id: currentUserId,
+      receiver_id: activeChat.id,
+      text: encoded,
+      image_url: null,
+      replied_message: null,
+      created_at: new Date().toISOString(),
+      isSending: true,
+      message_reactions: [],
+    }]);
+
+    try {
+      const { data: inserted, error } = await supabase
+        .from('messages')
+        .insert({ sender_id: currentUserId, receiver_id: activeChat.id, text: encoded })
+        .select().single();
+      if (error) throw error;
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === inserted.id && !m.isSending))
+          return prev.filter((m) => m.id !== optimisticId);
+        return prev.map((m) => m.id === optimisticId ? { ...m, ...inserted, isSending: false } : m);
+      });
+      notifyRecipient();
+    } catch (err) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      showToast("Failed to send snippet: " + err.message, "error");
+    }
+  }, [snippetCode, snippetLang, connectionStatus, currentUserId, activeChat, notifyRecipient, showToast]);
+
+  /* ── Auto-paste long text → snippet panel ── */
+  const handlePaste = useCallback((e) => {
+    const pasted = e.clipboardData?.getData('text') || '';
+    if (pasted.length > 500 && connectionStatus === "accepted") {
+      e.preventDefault();
+      setSnippetCode(pasted);
+      setShowSnippetPanel(true);
+    }
+  }, [connectionStatus]);
 
   /* ── Filtered contacts ── */
   const filteredContacts = contacts.filter((c) => {
@@ -1513,7 +1607,7 @@ export default function MessagesContent() {
                               className={`relative inline-block text-[14px] break-words rounded-2xl shadow-sm transition-all ${
                                 msg.isSending ? "opacity-60" : ""
                               } ${
-                                !msg.text && msg.image_url
+                                (!msg.text && msg.image_url) || parseSnippet(msg.text)
                                   ? "bg-transparent shadow-none"
                                   : isMine
                                   ? "bg-blue-600 text-white rounded-br-md"
@@ -1544,11 +1638,11 @@ export default function MessagesContent() {
                                   </div>
                                 </div>
                               )}
-                              {msg.text && (
-                                <p className="px-4 py-3 whitespace-pre-wrap leading-relaxed">
-                                  {msg.text}
-                                </p>
-                              )}
+                              {msg.text && (() => {
+                                const snip = parseSnippet(msg.text);
+                                if (snip) return <SnippetBlock snippet={snip} isMine={isMine} />;
+                                return <p className="px-4 py-3 whitespace-pre-wrap leading-relaxed">{msg.text}</p>;
+                              })()}
 
                               {/* FIX: single floating action bar — removed duplicate */}
                               <div
@@ -1614,7 +1708,7 @@ export default function MessagesContent() {
                                 </button>
                                 {msg.text && (
                                   <button
-                                    onClick={() => copyMessage(msg.text)}
+                                    onClick={() => { const s = parseSnippet(msg.text); copyMessage(s ? s.code : msg.text); }}
                                     className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
                                     title="Copy"
                                   >
@@ -1951,6 +2045,7 @@ export default function MessagesContent() {
                       value={inputValue}
                       onChange={handleInputChange}
                       onKeyDown={handleKeyDown}
+                      onPaste={handlePaste}
                       placeholder="Type a message…"
                       rows={2}
                       className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 resize-none max-h-[140px] leading-relaxed placeholder:text-gray-400 dark:placeholder:text-gray-500 py-1"
@@ -1987,6 +2082,19 @@ export default function MessagesContent() {
                         : <Sparkles size={15} />}
                       <span className="hidden sm:inline">{isSuggesting ? "Thinking…" : "AI Reply"}</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowSnippetPanel((p) => !p)}
+                      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all min-h-[36px] ${
+                        showSnippetPanel
+                          ? "text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20"
+                          : "text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20"
+                      }`}
+                      title="Send code snippet"
+                    >
+                      <Code2 size={15} />
+                      <span className="hidden sm:inline">Snippet</span>
+                    </button>
                     <div className="flex-1" />
                     {inputValue.length > 0 && (
                       <span className={`text-[10px] font-mono px-2 ${inputValue.length > 500 ? "text-red-400" : "text-gray-300 dark:text-gray-600"}`}>
@@ -1998,6 +2106,50 @@ export default function MessagesContent() {
                     </span>
                   </div>
                 </form>
+
+                {/* Snippet panel */}
+                {showSnippetPanel && (
+                  <div className="mt-2 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150">
+                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <Code2 size={13} className="text-violet-500" />
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Code / Long Text</span>
+                      </div>
+                      <select
+                        value={snippetLang}
+                        onChange={(e) => setSnippetLang(e.target.value)}
+                        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-[11px] text-gray-700 dark:text-gray-300 font-bold focus:outline-none"
+                      >
+                        {SNIPPET_LANGS.map((l) => <option key={l} value={l}>{l}</option>)}
+                      </select>
+                    </div>
+                    <textarea
+                      value={snippetCode}
+                      onChange={(e) => setSnippetCode(e.target.value)}
+                      autoFocus
+                      rows={6}
+                      placeholder="// paste or type code here…"
+                      className="w-full bg-gray-900 text-gray-100 text-[12px] font-mono px-3 py-2.5 resize-y focus:outline-none placeholder:text-gray-600 min-h-[120px] max-h-[300px]"
+                    />
+                    <div className="flex gap-2 p-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                      <button
+                        type="button"
+                        onClick={sendSnippet}
+                        disabled={!snippetCode.trim()}
+                        className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all disabled:opacity-40 active:scale-95"
+                      >
+                        <Send size={12} /> Send
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowSnippetPanel(false); setSnippetCode(""); }}
+                        className="px-4 py-2 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl font-medium transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           ) : (

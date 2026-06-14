@@ -50,7 +50,7 @@ export default async function MaintenancePage() {
         {/* Logo */}
         <div className="flex justify-center">
           <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-white/10 shadow-2xl bg-white/5">
-            <Image src="/logo.png" alt={name} width={56} height={56} />
+            <Image src="/logo.svg" alt={name} width={56} height={56} unoptimized />
           </div>
         </div>
 

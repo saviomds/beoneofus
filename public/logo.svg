@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- > chevron (terminal prompt arrow) -->
+  <polyline points="148,172 300,256 148,340" fill="none" stroke="white" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- _ underscore cursor -->
+  <line x1="308" y1="348" x2="416" y2="348" stroke="white" stroke-width="52" stroke-linecap="round"/>
+</svg>

@@ -17,10 +17,13 @@ export default function ClientShell() {
     }
   }, []);
 
-  // Sync DB theme preference once on mount so the theme follows users across
-  // devices. Empty deps is intentional — we must not re-run this when setTheme
-  // changes identity, otherwise it would override the user's in-session choice.
+  // Sync DB theme only if this device has no saved theme preference.
+  // If localStorage already has a value the user set it explicitly — trust it.
+  // This prevents the async DB response from overriding an in-session toggle.
   useEffect(() => {
+    const stored = localStorage.getItem('theme');
+    if (stored) return; // device already has an explicit preference
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return;
       supabase

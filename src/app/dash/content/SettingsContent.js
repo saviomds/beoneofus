@@ -220,7 +220,7 @@ function RecentUsersTable({ users, loading }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function SettingsContent() {
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState("settings");
   const [settingsSection, setSettingsSection] = useState("profile");
@@ -1374,7 +1374,7 @@ export default function SettingsContent() {
                     <div className="grid grid-cols-3 gap-3">
                       {themeOptions.map((t) => {
                         const Icon = t.icon;
-                        const active = theme === t.id;
+                        const active = theme === t.id || (t.id !== 'system' && resolvedTheme === t.id && theme === 'system');
                         return (
                           <button
                             key={t.id}

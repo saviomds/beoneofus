@@ -161,12 +161,13 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
   const [caption,  setCaption]  = useState("");
   const [errMsg,   setErrMsg]   = useState("");
 
-  const S = useRef({ active: true, recog: null, resumeInt: null, watchdog: null, greetDog: null });
+  const S = useRef({ active: true, recog: null, resumeInt: null, watchdog: null, greetDog: null, silenceTimer: null });
 
   const clearTimers = () => {
     clearInterval(S.current.resumeInt);
     clearTimeout(S.current.watchdog);
     clearTimeout(S.current.greetDog);
+    clearTimeout(S.current.silenceTimer);
   };
   const stopRecog = () => {
     try { S.current.recog?.abort(); } catch {}
@@ -176,6 +177,7 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
   /* ── Pick the best available TTS voice ── */
   const pickVoice = (utt) => {
     const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return;
     const preferred = [
       /google uk english female/i,
       /google us english/i,
@@ -187,12 +189,16 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
       /microsoft david/i,
       /samantha/i,
       /karen/i,
+      /moira/i,
+      /tessa/i,
+      /google english/i,
     ];
     for (const pat of preferred) {
       const v = voices.find(vv => pat.test(vv.name));
       if (v) { utt.voice = v; return; }
     }
-    const eng = voices.find(vv => vv.lang.startsWith("en"));
+    /* Fallback: any English voice */
+    const eng = voices.find(vv => vv.lang === "en-US") || voices.find(vv => vv.lang.startsWith("en"));
     if (eng) utt.voice = eng;
   };
 
@@ -267,57 +273,94 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
     }
   };
 
-  const listen = () => {
+  /* ── listen(): warm up mic permission, then run continuous recognition ── */
+  const listen = async () => {
     if (!S.current.active) return;
-    const SR = window.webkitSpeechRecognition || window["SpeechRecognition"];
-    if (!SR) {
-      setErrMsg("Voice recognition not supported. Please use Chrome or Edge.");
+
+    /* 1. Explicitly request mic so the browser permission prompt appears if needed */
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+    } catch (err) {
+      if (!S.current.active) return;
+      const denied = err.name === "NotAllowedError" || err.name === "PermissionDeniedError";
+      setErrMsg(denied
+        ? "Microphone access denied. Please allow microphone access in your browser settings, then refresh."
+        : `Microphone unavailable: ${err.message}`);
       setPhase("error");
       return;
     }
+
+    const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
+    if (!SR) {
+      setErrMsg("Voice recognition requires Chrome or Edge.");
+      setPhase("error");
+      return;
+    }
+
     stopRecog();
+    clearTimeout(S.current.silenceTimer);
     setPhase("listening");
     setLiveText("");
 
     let finalText = "";
-    let bestText  = "";
+    let interim   = "";
+
+    /* Auto-send after 1.5 s of silence following the last final word */
+    const scheduleSend = () => {
+      clearTimeout(S.current.silenceTimer);
+      S.current.silenceTimer = setTimeout(() => {
+        const text = finalText.trim();
+        if (text && S.current.active) {
+          stopRecog();
+          processText(text);
+        }
+      }, 1500);
+    };
+
     const r           = new SR();
     r.lang            = "en-US";
-    r.continuous      = false;
+    r.continuous      = true;   // keeps listening across natural pauses
     r.interimResults  = true;
     r.maxAlternatives = 1;
 
     r.onresult = (ev) => {
-      let interim = "";
-      for (const res of ev.results) {
-        if (res.isFinal) finalText += " " + res[0].transcript;
-        else interim += res[0].transcript;
+      interim = "";
+      for (const res of Array.from(ev.results)) {
+        if (res.isFinal) finalText += (finalText ? " " : "") + res[0].transcript.trim();
+        else interim = res[0].transcript;
       }
-      bestText = (finalText + " " + interim).trim();
-      setLiveText(bestText);
+      setLiveText((finalText + (interim ? " " + interim : "")).trim());
+      if (finalText.trim()) scheduleSend();
     };
 
     r.onerror = (ev) => {
+      clearTimeout(S.current.silenceTimer);
       setLiveText("");
       if (ev.error === "not-allowed") {
         setErrMsg("Microphone access was blocked. Allow the microphone in your browser settings and refresh.");
         setPhase("error");
+      } else if (ev.error === "no-speech" && S.current.active) {
+        /* Silence timeout — just restart quietly */
+        setTimeout(listen, 400);
       } else if (ev.error !== "aborted" && S.current.active) {
-        setTimeout(listen, 500);
+        setTimeout(listen, 600);
       }
     };
 
     r.onend = () => {
+      clearTimeout(S.current.silenceTimer);
       setLiveText("");
-      const text = finalText.trim() || bestText.trim();
-      if (text && S.current.active) processText(text);
-      else if (S.current.active) setTimeout(listen, 400);
+      if (!S.current.active) return;
+      const text = finalText.trim() || interim.trim();
+      if (text) processText(text);
+      else setTimeout(listen, 400);
     };
 
     S.current.recog = r;
     try { r.start(); } catch (e) {
       console.warn("STT start failed:", e);
-      if (S.current.active) setTimeout(listen, 600);
+      if (S.current.active) setTimeout(listen, 700);
     }
   };
 
@@ -326,7 +369,7 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
     s.active = true;
     const greet = greetingRef?.current;
     if (greet && !greet.done) {
-      S.current.greetDog = setTimeout(() => { if (s.active) listen(); }, 5000);
+      S.current.greetDog = setTimeout(() => { if (s.active) listen(); }, 2500);
       greet.utt.onend   = () => { clearTimeout(S.current.greetDog); greet.done = true; if (s.active) listen(); };
       greet.utt.onerror = () => { clearTimeout(S.current.greetDog); greet.done = true; if (s.active) listen(); };
     } else {
@@ -364,7 +407,7 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
     error:      { color: "#f87171", label: "Error",       labelCls: "text-red-400",     pillBorder: "border-red-500/20",     pillBg: "bg-red-500/[0.06]"     },
   };
   const pc     = PC[phase] ?? PC.greeting;
-  const isWave = phase === "listening" || phase === "speaking";
+  const isWave = phase === "listening" || phase === "speaking" || phase === "greeting";
 
   return (
     <div

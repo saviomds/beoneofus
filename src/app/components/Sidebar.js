@@ -103,7 +103,7 @@ export default function Sidebar({ onClose }) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      messagePopAudioRef.current = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
+      messagePopAudioRef.current = new Audio("/sounds/pop.ogg");
     }
   }, []);
 

@@ -3,12 +3,13 @@ import { checkRateLimit } from '../../../lib/rateLimit';
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 
+/* Fail fast: bail out well before Vercel's 10 s serverless limit */
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 20_000, maxRetries: 0 })
   : null;
 
 const groq = process.env.GROQ_API_KEY
-  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
+  ? new Groq({ apiKey: process.env.GROQ_API_KEY, timeout: 15_000, maxRetries: 0 })
   : null;
 
 const SYSTEM_PROMPT = `You are beoneofus AI, a highly skilled career assistant and software engineering mentor for the beoneofus developer network.
@@ -45,7 +46,7 @@ async function callOpenAI(messages) {
     model: 'gpt-4o-mini',
     messages,
     temperature: 0.7,
-    max_tokens: 2048,
+    max_tokens: 1024,
   });
   return completion.choices[0].message.content;
 }
@@ -57,8 +58,7 @@ async function callGroq(messages, withImages) {
     const lastIdx = [...messages].map((m, i) => m.role === 'user' ? i : -1).filter(i => i >= 0).at(-1);
     const prepared = messages.map((m, i) => {
       if (!Array.isArray(m.content)) return m;
-      if (i === lastIdx) return m; // keep image in last user message
-      // flatten earlier messages to text
+      if (i === lastIdx) return m;
       const text = m.content.map(p => p.type === "text" ? p.text : "[image]").join("\n");
       return { ...m, content: text };
     });
@@ -66,7 +66,7 @@ async function callGroq(messages, withImages) {
       model: 'llama-3.2-11b-vision-preview',
       messages: prepared,
       temperature: 0.7,
-      max_tokens: 2048,
+      max_tokens: 1024,
     });
     return completion.choices[0].message.content;
   }
@@ -75,9 +75,19 @@ async function callGroq(messages, withImages) {
     model: 'llama-3.3-70b-versatile',
     messages: flattenMessages(messages),
     temperature: 0.7,
-    max_tokens: 2048,
+    max_tokens: 1024,
   });
   return completion.choices[0].message.content;
+}
+
+/* ── Race a promise against a timeout ── */
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
+    ),
+  ]);
 }
 
 export async function POST(req) {
@@ -104,7 +114,7 @@ export async function POST(req) {
     /* Try OpenAI first (supports vision natively) */
     if (openai) {
       try {
-        content = await callOpenAI(fullMessages);
+        content = await withTimeout(callOpenAI(fullMessages), 18_000, 'OpenAI');
       } catch (err) {
         lastError = err;
         console.warn('OpenAI failed, falling back to Groq:', err.message);
@@ -114,7 +124,7 @@ export async function POST(req) {
     /* Groq fallback */
     if (!content && groq) {
       try {
-        content = await callGroq(fullMessages, withImages);
+        content = await withTimeout(callGroq(fullMessages, withImages), 13_000, 'Groq');
       } catch (err) {
         lastError = err;
         console.error('Groq failed:', err.message);

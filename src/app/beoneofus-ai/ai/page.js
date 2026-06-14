@@ -202,26 +202,7 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
     if (eng) utt.voice = eng;
   };
 
-  const doSpeak = (utt) => {
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      pickVoice(utt);
-      if (S.current.active) window.speechSynthesis.speak(utt);
-    } else {
-      if (S.current.active) window.speechSynthesis.speak(utt);
-      const handler = () => {
-        window.speechSynthesis.removeEventListener("voiceschanged", handler);
-        if (!window.speechSynthesis.speaking) {
-          window.speechSynthesis.cancel();
-          pickVoice(utt);
-          if (S.current.active) window.speechSynthesis.speak(utt);
-        }
-      };
-      window.speechSynthesis.addEventListener("voiceschanged", handler);
-    }
-  };
-
-  /* ── speak(text, onDone): natural-sounding TTS with watchdog ── */
+  /* ── speak(text, onDone): reliable TTS with voice selection and watchdog ── */
   const speak = (text, onDone) => {
     if (!S.current.active || !text) { onDone?.(); return; }
     setPhase("speaking");
@@ -230,33 +211,53 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
     clearTimers();
     window.speechSynthesis.cancel();
 
-    const utt   = new SpeechSynthesisUtterance(clean);
-    utt.lang    = "en-US";
-    utt.rate    = 0.92;   // slightly slower = clearer
-    utt.pitch   = 1.0;
-    utt.volume  = 1.0;
+    const doSpeak = () => {
+      if (!S.current.active) return;
+      const utt  = new SpeechSynthesisUtterance(clean);
+      utt.lang   = "en-US";
+      utt.rate   = 0.92;
+      utt.pitch  = 1.0;
+      utt.volume = 1.0;
+      pickVoice(utt);
 
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      clearTimers();
-      setCaption("");
-      if (S.current.active) onDone?.();
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimers();
+        setCaption("");
+        if (S.current.active) onDone?.();
+      };
+      utt.onend   = finish;
+      utt.onerror = (e) => { console.warn("TTS error:", e.error); finish(); };
+
+      /* Chrome stall fix: resume every 5 s if paused */
+      S.current.resumeInt = setInterval(() => {
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+      }, 5000);
+
+      /* Watchdog: 500 ms/word, min 3 s, max 30 s */
+      const words = clean.split(/\s+/).length;
+      S.current.watchdog = setTimeout(finish, Math.min(Math.max(words * 500, 3000), 30000));
+
+      window.speechSynthesis.speak(utt);
     };
-    utt.onend   = finish;
-    utt.onerror = (e) => { console.warn("TTS error:", e.error); finish(); };
 
-    /* Chrome 15-s stall fix */
-    S.current.resumeInt = setInterval(() => {
-      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-    }, 5000);
-
-    /* Watchdog: ~500 ms/word, min 3 s, max 30 s */
-    const words = clean.split(/\s+/).length;
-    S.current.watchdog = setTimeout(finish, Math.min(Math.max(words * 500, 3000), 30000));
-
-    doSpeak(utt);
+    /* Wait for voices to load if not yet available, then speak */
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      doSpeak();
+    } else {
+      const handler = () => {
+        window.speechSynthesis.removeEventListener("voiceschanged", handler);
+        doSpeak();
+      };
+      window.speechSynthesis.addEventListener("voiceschanged", handler);
+      /* Safety net: if voiceschanged never fires (some browsers), speak anyway after 800ms */
+      setTimeout(() => {
+        if (!window.speechSynthesis.speaking && S.current.active) doSpeak();
+      }, 800);
+    }
   };
 
   const processText = async (text) => {
@@ -273,23 +274,9 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
     }
   };
 
-  /* ── listen(): warm up mic permission, then run continuous recognition ── */
-  const listen = async () => {
+  /* ── listen(): continuous recognition with silence-based auto-send ── */
+  const listen = () => {
     if (!S.current.active) return;
-
-    /* 1. Explicitly request mic so the browser permission prompt appears if needed */
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(t => t.stop());
-    } catch (err) {
-      if (!S.current.active) return;
-      const denied = err.name === "NotAllowedError" || err.name === "PermissionDeniedError";
-      setErrMsg(denied
-        ? "Microphone access denied. Please allow microphone access in your browser settings, then refresh."
-        : `Microphone unavailable: ${err.message}`);
-      setPhase("error");
-      return;
-    }
 
     const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
     if (!SR) {
@@ -305,22 +292,19 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
 
     let finalText = "";
     let interim   = "";
+    let sent      = false; // prevents double-send when silenceTimer + onend both fire
 
-    /* Auto-send after 1.5 s of silence following the last final word */
-    const scheduleSend = () => {
+    const sendText = (text) => {
+      if (sent || !text.trim() || !S.current.active) return;
+      sent = true;
       clearTimeout(S.current.silenceTimer);
-      S.current.silenceTimer = setTimeout(() => {
-        const text = finalText.trim();
-        if (text && S.current.active) {
-          stopRecog();
-          processText(text);
-        }
-      }, 1500);
+      stopRecog();
+      processText(text.trim());
     };
 
     const r           = new SR();
     r.lang            = "en-US";
-    r.continuous      = true;   // keeps listening across natural pauses
+    r.continuous      = true;
     r.interimResults  = true;
     r.maxAlternatives = 1;
 
@@ -331,29 +315,32 @@ function VoiceMode({ greetingRef, onSend, onExit }) {
         else interim = res[0].transcript;
       }
       setLiveText((finalText + (interim ? " " + interim : "")).trim());
-      if (finalText.trim()) scheduleSend();
+
+      if (finalText.trim()) {
+        /* Send 1.5 s after the last finalized word */
+        clearTimeout(S.current.silenceTimer);
+        S.current.silenceTimer = setTimeout(() => sendText(finalText), 1500);
+      }
     };
 
     r.onerror = (ev) => {
       clearTimeout(S.current.silenceTimer);
       setLiveText("");
       if (ev.error === "not-allowed") {
-        setErrMsg("Microphone access was blocked. Allow the microphone in your browser settings and refresh.");
+        setErrMsg("Microphone access was blocked. Please allow microphone access in your browser settings and refresh.");
         setPhase("error");
-      } else if (ev.error === "no-speech" && S.current.active) {
-        /* Silence timeout — just restart quietly */
-        setTimeout(listen, 400);
       } else if (ev.error !== "aborted" && S.current.active) {
-        setTimeout(listen, 600);
+        /* no-speech / network / audio-capture — restart silently */
+        setTimeout(listen, 500);
       }
     };
 
     r.onend = () => {
       clearTimeout(S.current.silenceTimer);
       setLiveText("");
-      if (!S.current.active) return;
+      if (!S.current.active || sent) return; // already handled by silenceTimer
       const text = finalText.trim() || interim.trim();
-      if (text) processText(text);
+      if (text) sendText(text);
       else setTimeout(listen, 400);
     };
 

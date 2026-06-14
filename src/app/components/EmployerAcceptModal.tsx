@@ -288,12 +288,8 @@ export default function MessagesContent() {
   /* ── Audio setup ── */
   useEffect(() => {
     if (typeof window !== "undefined") {
-      ringAudioRef.current = new Audio(
-        "https://actions.google.com/sounds/v1/alarms/phone_ringing.ogg"
-      );
-      incomingRingAudioRef.current = new Audio(
-        "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
-      );
+      ringAudioRef.current = new Audio("/sounds/phone_ringing.ogg");
+      incomingRingAudioRef.current = new Audio("/sounds/alarm_clock.ogg");
     }
   }, []);
 

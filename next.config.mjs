@@ -52,13 +52,29 @@ const nextConfig = {
     ];
   },
 
+  compress: true,
+  poweredByHeader: false,
+
   turbopack: {},
 
   experimental: {
-    optimizePackageImports: ['lucide-react', 'react-markdown', 'react-syntax-highlighter'],
+    optimizePackageImports: [
+      'lucide-react',
+      'react-markdown',
+      'react-syntax-highlighter',
+      'react-syntax-highlighter/dist/esm/styles/prism',
+      '@supabase/supabase-js',
+      'groq-sdk',
+      'openai',
+      'jszip',
+    ],
   },
 
   images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60 * 60 * 24 * 7, // 7 days
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
     remotePatterns: [
       { protocol: 'https', hostname: 'jwjrogchwfzofpaczaah.supabase.co' },
       { protocol: 'https', hostname: '*.googleusercontent.com' },

@@ -5,7 +5,7 @@ import {
   Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
   GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
   ShoppingBag, User, BookOpen, Sparkles, Zap, Compass, BarChart2, Briefcase,
-  Map, Trophy, ScrollText, Building2,
+  Map, Trophy, ScrollText, Building2, Library, TrendingUp,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -419,24 +419,10 @@ export default function Sidebar({ onClose }) {
       ],
     },
     {
-      label: t('nav.groups.opportunities'),
+      label: 'Explore',
       items: [
-        { id: 'marketplace',  icon: ShoppingBag,    label: t('nav.items.marketplace')  },
-        { id: 'services',     icon: Briefcase,      label: 'Services',          isNew: true },
-        { id: 'contracts',    icon: ScrollText,     label: 'Contracts',         isNew: true },
-        { id: 'coaching',     icon: GraduationCap,  label: t('nav.items.coaching')     },
-        { id: 'mentorship',   icon: HeartHandshake, label: t('nav.items.mentorship')   },
-        { id: 'partnerships', icon: Handshake,      label: t('nav.items.partnerships') },
-      ],
-    },
-    {
-      label: t('nav.groups.content'),
-      items: [
-        { id: 'learn',     icon: Compass,   label: t('nav.items.learn'),     isNew: true },
-        { id: 'pathways',  icon: Map,       label: 'Pathways',               isNew: true },
-        { id: 'blog',      icon: Newspaper, label: t('nav.items.blog')       },
-        { id: 'bookmarks', icon: Bookmark,  label: t('nav.items.bookmarks')  },
-        { id: 'docs',      icon: BookOpen,  label: t('nav.items.docs')       },
+        { id: 'contents',      icon: Library,     label: 'Contents',      href: '/contents'      },
+        { id: 'opportunities', icon: TrendingUp,  label: 'Opportunities', href: '/opportunities' },
       ],
     },
     {
@@ -510,7 +496,10 @@ export default function Sidebar({ onClose }) {
                       label={item.label}
                       badge={item.badge}
                       active={activeSection === item.id}
-                      onClick={() => handleNavClick(item.id)}
+                      onClick={() => {
+                        if (item.href) { router.push(item.href); onClose?.(); }
+                        else handleNavClick(item.id);
+                      }}
                       onBadgeAction={item.onBadge}
                       isBouncing={item.isBouncing || false}
                       isRinging={item.isRinging || false}

@@ -25,111 +25,114 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.performance !== 'unde
   };
 }
 
-/* ── Bottom nav items shown on mobile ── */
+/* ── Mobile bottom nav ─────────────────────────────────────────── */
 const BOTTOM_NAV = [
-  { id: 'home',          icon: Home,          label: 'Home' },
-  { id: 'messages',      icon: MessageSquare, label: 'Msgs' },
-  { id: 'notifications', icon: Bell,          label: 'Alerts' },
-  { id: 'marketplace',   icon: ShoppingBag,   label: 'Market' },
+  { id: 'home',          icon: Home,          label: 'Home'    },
+  { id: 'messages',      icon: MessageSquare, label: 'Msgs'    },
+  { id: 'notifications', icon: Bell,          label: 'Alerts'  },
   { id: 'connections',   icon: Users,         label: 'Network' },
   { id: 'profile',       icon: User,          label: 'Profile' },
 ];
 
 function BottomNav({ pathname }) {
   const router = useRouter();
-  const active = pathname?.split('/')[2] || 'feed';
+  const active = pathname?.split('/')[2] || 'home';
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-stretch pb-safe">
-      {BOTTOM_NAV.map(({ id, icon: Icon, label }) => (
-        <button
-          key={id}
-          onClick={() => router.push('/dash/' + id)}
-          className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors ${
-            active === id
-              ? 'text-blue-600 dark:text-blue-400'
-              : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <Icon size={20} strokeWidth={active === id ? 2.5 : 1.8} />
-          <span className="text-[9px] font-bold uppercase tracking-wide">{label}</span>
-        </button>
-      ))}
+    <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+      <div className="flex items-center gap-1 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-gray-200/80 dark:border-zinc-700/60 rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/40 px-2 py-2">
+        {BOTTOM_NAV.map(({ id, icon: Icon, label }) => {
+          const isActive = active === id;
+          return (
+            <button
+              key={id}
+              onClick={() => router.push('/dash/' + id)}
+              className={`relative flex flex-col items-center justify-center gap-0.5 w-14 h-12 rounded-xl transition-all duration-200 ${
+                isActive
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+                  : 'text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
+              <span className="text-[8px] font-black uppercase tracking-wide leading-none">{label}</span>
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 }
 
+/* ── Main layout shell ──────────────────────────────────────────── */
 function DashLayoutContent({ children }) {
-  const [isLeftOpen, setIsLeftOpen] = useState(false);
+  const [isLeftOpen, setIsLeftOpen]   = useState(false);
   const [isRightOpen, setIsRightOpen] = useState(false);
   const pathname = usePathname();
 
-  /* Close drawers on route change */
-  useEffect(() => {
-    setIsLeftOpen(false);
-    setIsRightOpen(false);
-  }, [pathname]);
+  useEffect(() => { setIsLeftOpen(false); setIsRightOpen(false); }, [pathname]);
 
-  /* Lock body scroll when a drawer is open */
   useEffect(() => {
     document.body.style.overflow = (isLeftOpen || isRightOpen) ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isLeftOpen, isRightOpen]);
 
-  return (
-    <div className="flex w-full min-h-screen h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 relative overflow-hidden">
+  const isMessages = pathname?.endsWith('/messages') || pathname?.endsWith('/ai');
 
-      {/* ══ MOBILE TOP BAR ══ */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 border-b border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0">
+  return (
+    <div className="flex w-full min-h-screen h-screen bg-[#F2F3F5] dark:bg-[#09090B] text-gray-900 dark:text-gray-100 relative overflow-hidden">
+
+      {/* ══ MOBILE TOP BAR ═══════════════════════════════════════ */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4
+                      bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl
+                      border-b border-gray-200/70 dark:border-zinc-800/70">
         <button
           onClick={() => setIsLeftOpen(true)}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
           aria-label="Open menu"
         >
-          <Menu size={18} className="text-gray-700 dark:text-gray-300" />
+          <Menu size={18} className="text-gray-600 dark:text-zinc-400" />
         </button>
 
-        <span className="font-black text-lg tracking-tighter text-gray-900 dark:text-gray-100 select-none">
-          beone<span className="text-blue-600 dark:text-blue-400">of</span>us
+        <span className="font-black text-[17px] tracking-tighter text-gray-900 dark:text-gray-100 select-none">
+          beone<span className="text-blue-600">of</span>us
         </span>
 
         <button
           onClick={() => setIsRightOpen(true)}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          aria-label="Open panel"
+          className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+          aria-label="Network panel"
         >
-          <Users size={18} className="text-gray-700 dark:text-gray-300" />
+          <Users size={18} className="text-gray-600 dark:text-zinc-400" />
         </button>
       </div>
 
-      {/* ══ LEFT SIDEBAR OVERLAY (mobile) ══ */}
-      {isLeftOpen && (
+      {/* ══ OVERLAY ══════════════════════════════════════════════ */}
+      {(isLeftOpen || isRightOpen) && (
         <div
-          className="fixed inset-0 bg-black/50 z-[49] md:hidden backdrop-blur-sm"
-          onClick={() => setIsLeftOpen(false)}
+          className="fixed inset-0 bg-black/40 z-[49] md:hidden backdrop-blur-[2px]"
+          onClick={() => { setIsLeftOpen(false); setIsRightOpen(false); }}
         />
       )}
 
-      {/* ══ LEFT SIDEBAR ══ */}
-      <aside
-        className={`
-          fixed inset-y-0 left-0 z-50 flex flex-col
-          w-[280px] max-w-[85vw]
-          bg-white dark:bg-gray-900
-          border-r border-gray-200 dark:border-gray-800
-          shadow-2xl
-          transform transition-transform duration-300 ease-in-out
-          md:relative md:translate-x-0 md:flex md:flex-col md:flex-shrink-0 md:shadow-none md:w-64 xl:w-72
-          ${isLeftOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
-      >
-        {/* Mobile close row */}
-        <div className="md:hidden flex items-center justify-between px-4 h-14 border-b border-gray-200 dark:border-gray-800 shrink-0">
-          <span className="font-black text-base tracking-tighter text-gray-900 dark:text-gray-100">Menu</span>
+      {/* ══ LEFT SIDEBAR ═════════════════════════════════════════ */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 flex flex-col
+        w-[272px] max-w-[88vw]
+        bg-white dark:bg-[#111115]
+        border-r border-gray-200/80 dark:border-zinc-800/80
+        shadow-2xl shadow-black/5 dark:shadow-black/50
+        transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0 md:shadow-none
+        md:w-60 xl:w-64
+        ${isLeftOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Mobile drawer header */}
+        <div className="md:hidden flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+          <span className="font-black text-[15px] tracking-tighter text-gray-900 dark:text-gray-100">Menu</span>
           <button
             onClick={() => setIsLeftOpen(false)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-200 transition-colors"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto no-scrollbar">
@@ -137,49 +140,44 @@ function DashLayoutContent({ children }) {
         </div>
       </aside>
 
-      {/* ══ CENTER COLUMN ══ */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-50 dark:bg-gray-900">
+      {/* ══ CENTER COLUMN ════════════════════════════════════════ */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile top-bar spacer */}
         <div className="md:hidden h-14 shrink-0" />
+
         {/* Desktop header */}
-        <div className="hidden md:block shrink-0">
+        <div className="hidden md:block shrink-0 bg-white dark:bg-[#111115] border-b border-gray-200/80 dark:border-zinc-800/80">
           <Header />
         </div>
-        {/* Scrollable content — messages gets h-full/overflow-hidden; others scroll */}
-        <div className={`flex-1 min-h-0 ${pathname?.endsWith('/messages') ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar pb-16 md:pb-0'}`}>
-          {children}
+
+        {/* Scrollable content area */}
+        <div className={`flex-1 min-h-0 ${isMessages ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar pb-24 md:pb-0'}`}>
+          <div className={isMessages ? 'w-full h-full' : 'w-full h-full'}>
+            {children}
+          </div>
         </div>
       </main>
 
-      {/* ══ RIGHT SIDEBAR OVERLAY (mobile) ══ */}
-      {isRightOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-[49] lg:hidden backdrop-blur-sm"
-          onClick={() => setIsRightOpen(false)}
-        />
-      )}
-
-      {/* ══ RIGHT SIDEBAR ══ */}
-      <aside
-        className={`
-          fixed inset-y-0 right-0 z-50 flex flex-col
-          w-[300px] max-w-[90vw]
-          bg-white dark:bg-gray-900
-          border-l border-gray-200 dark:border-gray-800
-          shadow-2xl
-          transform transition-transform duration-300 ease-in-out
-          lg:relative lg:translate-x-0 lg:flex lg:flex-col lg:flex-shrink-0 lg:shadow-none lg:w-64 xl:w-80
-          ${isRightOpen ? 'translate-x-0' : 'translate-x-full'}
-        `}
-      >
-        {/* Mobile close row */}
-        <div className="lg:hidden flex items-center justify-between px-4 h-14 border-b border-gray-200 dark:border-gray-800 shrink-0">
-          <span className="font-black text-base tracking-tighter text-gray-900 dark:text-gray-100">Network</span>
+      {/* ══ RIGHT SIDEBAR ════════════════════════════════════════ */}
+      <aside className={`
+        fixed inset-y-0 right-0 z-50 flex flex-col
+        w-[288px] max-w-[90vw]
+        bg-white dark:bg-[#111115]
+        border-l border-gray-200/80 dark:border-zinc-800/80
+        shadow-2xl shadow-black/5 dark:shadow-black/50
+        transition-transform duration-300 ease-in-out
+        lg:relative lg:translate-x-0 lg:shadow-none
+        lg:w-64 xl:w-72
+        ${isRightOpen ? 'translate-x-0' : 'translate-x-full'}
+      `}>
+        {/* Mobile drawer header */}
+        <div className="lg:hidden flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+          <span className="font-black text-[15px] tracking-tighter text-gray-900 dark:text-gray-100">Network</span>
           <button
             onClick={() => setIsRightOpen(false)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-200 transition-colors"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto no-scrollbar">
@@ -187,13 +185,13 @@ function DashLayoutContent({ children }) {
         </div>
       </aside>
 
-      {/* ══ BOTTOM NAVIGATION (mobile only) ══ */}
+      {/* ══ FLOATING BOTTOM NAV (mobile) ═════════════════════════ */}
       <BottomNav pathname={pathname} />
 
-      {/* ══ AI FLOATING CHAT ══ */}
+      {/* ══ AI FLOATING CHAT ═════════════════════════════════════ */}
       <AiFloatingChat />
 
-      {/* ══ NOTIFICATION POPUP (mobile banner / desktop toast) ══ */}
+      {/* ══ NOTIFICATION POPUP ═══════════════════════════════════ */}
       <NotificationPopup />
     </div>
   );
@@ -346,9 +344,27 @@ export default function DashLayout({ children }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center gap-4">
-        <div className="w-7 h-7 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-400 dark:text-gray-500 font-mono uppercase text-xs tracking-widest">Loading…</p>
+      <div className="min-h-screen bg-[#F2F3F5] dark:bg-[#09090B] flex flex-col items-center justify-center gap-6">
+        {/* Wordmark */}
+        <div className="flex items-center gap-2.5 select-none">
+          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <span className="text-white font-black text-sm">b</span>
+          </div>
+          <span className="font-black text-xl tracking-tighter text-gray-900 dark:text-gray-100">
+            beone<span className="text-blue-600">of</span>us
+          </span>
+        </div>
+        {/* Progress bar */}
+        <div className="w-32 h-0.5 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-full bg-blue-600 rounded-full animate-[loading_1.2s_ease-in-out_infinite]" style={{ width: '40%' }} />
+        </div>
+        <style>{`
+          @keyframes loading {
+            0%   { transform: translateX(-100%); width: 40%; }
+            50%  { width: 60%; }
+            100% { transform: translateX(280%); width: 40%; }
+          }
+        `}</style>
       </div>
     );
   }
@@ -359,16 +375,18 @@ export default function DashLayout({ children }) {
         <PickUsernameModal onDone={() => setShowPickUsername(false)} />
       )}
       {!isAuthenticated && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-md text-white px-4 py-3 z-[100] flex flex-col sm:flex-row items-center justify-center gap-3 shadow-2xl border-t border-gray-700">
-          <span className="text-sm text-gray-300 text-center">
-            You're in guest mode. Join to post, follow, and interact.
-          </span>
-          <button
-            onClick={() => router.push('/auth')}
-            className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-5 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap shadow-lg shadow-blue-500/20"
-          >
-            Sign In / Join Free
-          </button>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-md">
+          <div className="flex items-center justify-between gap-4 bg-zinc-900 dark:bg-zinc-950 text-white pl-5 pr-2 py-2 rounded-2xl shadow-2xl shadow-black/30 border border-zinc-700/60 backdrop-blur-xl">
+            <span className="text-sm text-zinc-300 font-medium">
+              Guest mode — sign in to interact.
+            </span>
+            <button
+              onClick={() => router.push('/auth')}
+              className="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap shadow-lg shadow-blue-500/20 shrink-0"
+            >
+              Sign in free
+            </button>
+          </div>
         </div>
       )}
       <DashLayoutContent>{children}</DashLayoutContent>

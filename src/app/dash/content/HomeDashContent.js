@@ -1,222 +1,109 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../supabaseClient';
 import Image from 'next/image';
 import {
-  Users, MessageSquare, Bookmark, Bell, Settings,
-  Crown, GraduationCap, Handshake, Newspaper, HeartHandshake,
-  ShoppingBag, UserPlus, Briefcase, Compass, Home,
-  ChevronRight, CalendarDays, TrendingUp, Zap, Star,
-  LayoutDashboard, RefreshCw, BarChart2,
-  CheckCircle2, Circle, ArrowRight, Flame, Map, Trophy,
+  Users, MessageSquare, Bell, Settings,
+  Crown, UserPlus, Briefcase, Compass,
+  ChevronRight, CalendarDays, TrendingUp,
+  BarChart2, CheckCircle2, Circle, ArrowRight, Flame,
+  Bot, Award, Clock, FileText, Library,
+  CheckCheck,
 } from 'lucide-react';
 import VerifiedBadge from '../../components/VerifiedBadge';
 import PremiumBadge from '../../components/PremiumBadge';
 import { getAvatarSrc } from '../../../lib/avatar';
 
-const SECTIONS = [
-  {
-    id: 'connections',
-    label: 'Networking',
-    icon: UserPlus,
-    color: 'blue',
-    desc: 'Grow your professional network. Connect with developers and teams you trust.',
-    stat: null,
-  },
-  {
-    id: 'marketplace',
-    label: 'Jobs & Market',
-    icon: Briefcase,
-    color: 'emerald',
-    desc: 'Browse job opportunities and benchmark market rates in your tech stack.',
-    stat: null,
-  },
-  {
-    id: 'groups',
-    label: 'Discussions',
-    icon: Users,
-    color: 'violet',
-    desc: 'Join channels, group conversations, and collaborative threads.',
-    stat: 'groups',
-  },
-  {
-    id: 'feed',
-    label: 'Discovery',
-    icon: Compass,
-    color: 'cyan',
-    desc: 'Explore posts, trending ideas, and fresh perspectives from the network.',
-    stat: null,
-  },
-  {
-    id: 'messages',
-    label: 'Messaging',
-    icon: MessageSquare,
-    color: 'sky',
-    desc: 'Private conversations with your connections in real time.',
-    stat: 'messages',
-  },
-  {
-    id: 'bookmarks',
-    label: 'Bookmarks',
-    icon: Bookmark,
-    color: 'amber',
-    desc: 'Your saved posts, code snippets, and articles in one place.',
-    stat: null,
-  },
-  {
-    id: 'premium',
-    label: 'Premium',
-    icon: Crown,
-    color: 'yellow',
-    desc: 'Unlock advanced features, priority visibility, and exclusive content.',
-    stat: null,
-  },
-  {
-    id: 'coaching',
-    label: 'Coaching',
-    icon: GraduationCap,
-    color: 'indigo',
-    desc: 'Work with expert coaches to level up your technical career trajectory.',
-    stat: null,
-  },
-  {
-    id: 'mentorship',
-    label: 'Mentorship',
-    icon: HeartHandshake,
-    color: 'rose',
-    desc: 'Give or receive structured guidance from experienced engineers.',
-    stat: null,
-  },
-  {
-    id: 'partnerships',
-    label: 'Partnerships',
-    icon: Handshake,
-    color: 'teal',
-    desc: 'Collaborate on projects, co-found startups, and build ventures together.',
-    stat: null,
-  },
-  {
-    id: 'blog',
-    label: 'Blog',
-    icon: Newspaper,
-    color: 'orange',
-    desc: 'Read and publish in-depth articles, tutorials, and tech insights.',
-    stat: null,
-  },
-  {
-    id: 'events',
-    label: 'Events',
-    icon: CalendarDays,
-    color: 'purple',
-    desc: 'Discover hackathons, meetups, AMAs, and community gatherings.',
-    stat: null,
-  },
-  {
-    id: 'notifications',
-    label: 'Notifications',
-    icon: Bell,
-    color: 'red',
-    desc: 'Stay on top of likes, mentions, connection requests, and activity.',
-    stat: 'notifications',
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: Settings,
-    color: 'gray',
-    desc: 'Manage your profile, privacy preferences, and account security.',
-    stat: null,
-  },
-  {
-    id: 'more',
-    label: 'Resources',
-    icon: LayoutDashboard,
-    color: 'indigo',
-    desc: 'Access developer tools, API keys, system status, and community support.',
-    stat: null,
-  },
-];
-
-const COLORS = {
-  blue:    { bg: 'bg-blue-50 dark:bg-blue-900/20',       text: 'text-blue-600 dark:text-blue-400',       border: 'border-blue-200 dark:border-blue-800/50',       icon: 'bg-blue-600'    },
-  emerald: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-800/50', icon: 'bg-emerald-600' },
-  violet:  { bg: 'bg-violet-50 dark:bg-violet-900/20',   text: 'text-violet-600 dark:text-violet-400',   border: 'border-violet-200 dark:border-violet-800/50',   icon: 'bg-violet-600'  },
-  cyan:    { bg: 'bg-cyan-50 dark:bg-cyan-900/20',       text: 'text-cyan-600 dark:text-cyan-400',       border: 'border-cyan-200 dark:border-cyan-800/50',       icon: 'bg-cyan-600'    },
-  sky:     { bg: 'bg-sky-50 dark:bg-sky-900/20',         text: 'text-sky-600 dark:text-sky-400',         border: 'border-sky-200 dark:border-sky-800/50',         icon: 'bg-sky-600'     },
-  amber:   { bg: 'bg-amber-50 dark:bg-amber-900/20',     text: 'text-amber-600 dark:text-amber-400',     border: 'border-amber-200 dark:border-amber-800/50',     icon: 'bg-amber-500'   },
-  yellow:  { bg: 'bg-yellow-50 dark:bg-yellow-900/20',   text: 'text-yellow-700 dark:text-yellow-400',   border: 'border-yellow-300 dark:border-yellow-800/50',   icon: 'bg-yellow-500'  },
-  indigo:  { bg: 'bg-indigo-50 dark:bg-indigo-900/20',   text: 'text-indigo-600 dark:text-indigo-400',   border: 'border-indigo-200 dark:border-indigo-800/50',   icon: 'bg-indigo-600'  },
-  rose:    { bg: 'bg-rose-50 dark:bg-rose-900/20',       text: 'text-rose-600 dark:text-rose-400',       border: 'border-rose-200 dark:border-rose-800/50',       icon: 'bg-rose-600'    },
-  teal:    { bg: 'bg-teal-50 dark:bg-teal-900/20',       text: 'text-teal-600 dark:text-teal-400',       border: 'border-teal-200 dark:border-teal-800/50',       icon: 'bg-teal-600'    },
-  orange:  { bg: 'bg-orange-50 dark:bg-orange-900/20',   text: 'text-orange-600 dark:text-orange-400',   border: 'border-orange-200 dark:border-orange-800/50',   icon: 'bg-orange-600'  },
-  purple:  { bg: 'bg-purple-50 dark:bg-purple-900/20',   text: 'text-purple-600 dark:text-purple-400',   border: 'border-purple-200 dark:border-purple-800/50',   icon: 'bg-purple-600'  },
-  red:     { bg: 'bg-red-50 dark:bg-red-900/20',         text: 'text-red-600 dark:text-red-400',         border: 'border-red-200 dark:border-red-800/50',         icon: 'bg-red-600'     },
-  gray:    { bg: 'bg-gray-50 dark:bg-gray-800/50',       text: 'text-gray-600 dark:text-gray-400',       border: 'border-gray-200 dark:border-gray-700',          icon: 'bg-gray-600'    },
-};
-
-/* Deterministic daily shuffle — same order all day, new order next day */
-function getDailyFeatured(count = 3) {
-  const dayIndex = Math.floor(Date.now() / 86400000);
-  const arr = [...SECTIONS];
-  let seed = dayIndex;
-  for (let i = arr.length - 1; i > 0; i--) {
-    seed = (seed * 1664525 + 1013904223) & 0xffffffff;
-    const j = Math.abs(seed) % (i + 1);
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr.slice(0, count);
+/* ── Helpers ─────────────────────────────────────── */
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/* ── Profile completeness calculator ────────────────────── */
 function calcCompleteness(profile) {
   if (!profile) return { score: 0, missing: [] };
   const checks = [
-    { field: 'username',    label: 'Username',        done: !!profile.username },
-    { field: 'full_name',   label: 'Full name',       done: !!profile.full_name },
-    { field: 'avatar_url',  label: 'Profile photo',   done: !!profile.avatar_url },
-    { field: 'banner_url',  label: 'Cover banner',    done: !!profile.banner_url },
-    { field: 'status',      label: 'Bio / headline',  done: !!profile.status },
-    { field: 'location',    label: 'Location',         done: !!profile.location },
-    { field: 'work_status', label: 'Work status',      done: !!profile.work_status },
-    { field: 'github',      label: 'GitHub link',      done: !!profile.github },
-    { field: 'website',     label: 'Website / portfolio', done: !!profile.website },
-    { field: 'skills',      label: 'Skills list',      done: Array.isArray(profile.skills) && profile.skills.length > 0 },
+    { label: 'Full name',   done: !!profile.full_name },
+    { label: 'Photo',       done: !!profile.avatar_url },
+    { label: 'Bio',         done: !!profile.status },
+    { label: 'Location',    done: !!profile.location },
+    { label: 'Work status', done: !!profile.work_status },
+    { label: 'Skills',      done: Array.isArray(profile.skills) && profile.skills.length > 0 },
+    { label: 'GitHub',      done: !!profile.github },
+    { label: 'Website',     done: !!profile.website },
   ];
-  const done    = checks.filter(c => c.done).length;
-  const missing = checks.filter(c => !c.done).map(c => c.label);
-  return { score: Math.round((done / checks.length) * 100), missing };
+  const done = checks.filter(c => c.done).length;
+  return { score: Math.round((done / checks.length) * 100), missing: checks.filter(c => !c.done).map(c => c.label) };
 }
 
-/* ── Skill suggestion chip colours ──────────────────────── */
-const PRIORITY_STYLE = {
-  high:   'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/40',
-  medium: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/40',
-  low:    'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/40',
-};
+/* ── Hub cards ────────────────────────────────────── */
+const HUBS = [
+  {
+    href: '/contents',
+    label: 'Contents',
+    desc: 'Everything knowledge-related — courses, career roadmaps, articles, and your saved resources.',
+    icon: Library,
+    iconBg: 'bg-gradient-to-br from-amber-500 to-orange-500',
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    border: 'border-amber-200 dark:border-amber-800/40',
+    text: 'text-amber-600 dark:text-amber-400',
+    pills: ['Learn', 'Pathways', 'Blog', 'Bookmarks', 'Docs'],
+    pillStyle: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+  },
+  {
+    href: '/opportunities',
+    label: 'Opportunities',
+    desc: 'Find work, hire talent, manage contracts, and connect with mentors and co-founders.',
+    icon: TrendingUp,
+    iconBg: 'bg-gradient-to-br from-blue-600 to-indigo-600',
+    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    border: 'border-blue-200 dark:border-blue-800/40',
+    text: 'text-blue-600 dark:text-blue-400',
+    pills: ['Jobs', 'Services', 'Contracts', 'Mentorship', 'Partnership'],
+    pillStyle: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+  },
+];
+
+/* ── Quick-nav ────────────────────────────────────── */
+const NAV_TILES = [
+  { id: 'connections',   label: 'Network',    icon: UserPlus,      stat: null,            color: 'text-blue-500' },
+  { id: 'messages',      label: 'Messages',   icon: MessageSquare, stat: 'messages',      color: 'text-sky-500' },
+  { id: 'notifications', label: 'Alerts',     icon: Bell,          stat: 'notifications', color: 'text-red-500' },
+  { id: 'feed',          label: 'Discovery',  icon: Compass,       stat: null,            color: 'text-cyan-500' },
+  { id: 'ai',            label: 'AI',         icon: Bot,           stat: null,            color: 'text-violet-500' },
+  { id: 'coaching',      label: 'Coaching',   icon: Award,         stat: null,            color: 'text-indigo-500' },
+  { id: 'events',        label: 'Events',     icon: CalendarDays,  stat: null,            color: 'text-purple-500' },
+  { id: 'settings',      label: 'Settings',   icon: Settings,      stat: null,            color: 'text-gray-400' },
+];
+
+/* ── Onboarding steps ─────────────────────────────── */
+const STEPS = [
+  { n: 1, label: 'Build your profile',      desc: 'Add your skills, bio, and photo so others can find and trust you.',      key: 'profile' },
+  { n: 2, label: 'Choose a pathway',        desc: 'Pick a career roadmap that matches your goals and start progressing.',    key: 'pathways' },
+  { n: 3, label: 'Explore opportunities',   desc: 'Browse jobs, services, and partnerships in your field.',                 key: 'opportunities' },
+  { n: 4, label: 'Connect & grow',          desc: 'Send connection requests, join groups, and build your professional network.', key: 'connections' },
+];
 
 export default function HomeDashContent() {
   const router = useRouter();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile]         = useState(null);
   const [authSession, setAuthSession] = useState(null);
-  const [stats, setStats] = useState({ connections: 0, messages: 0, notifications: 0, groups: 0 });
-  const [loading, setLoading] = useState(true);
-  const [dailyFeatured] = useState(() => getDailyFeatured(3));
-  const [today] = useState(() =>
-    new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-  );
-
-  // Career widgets state
-  const [skillSuggestions, setSkillSuggestions] = useState([]);
-  const [skillsLoading, setSkillsLoading]       = useState(false);
-  const [skillsError, setSkillsError]           = useState(null);
-  const [session, setSession]                   = useState(null);
-  const [streak, setStreak]                     = useState(0);
-  const [pathwayCount, setPathwayCount]         = useState(0);
+  const [stats, setStats]             = useState({ connections: 0, messages: 0, notifications: 0 });
+  const [loading, setLoading]         = useState(true);
+  const [streak, setStreak]           = useState(0);
+  const [pathwayCount, setPathwayCount] = useState(0);
+  const [feedPosts, setFeedPosts]     = useState([]);
 
   const greetingHour = new Date().getHours();
   const greeting = greetingHour < 12 ? 'Good morning' : greetingHour < 17 ? 'Good afternoon' : 'Good evening';
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const go = (id) => router.push('/dash/' + id);
 
   useEffect(() => {
     const init = async () => {
@@ -224,54 +111,47 @@ export default function HomeDashContent() {
         const { data: { session: s } } = await supabase.auth.getSession();
         if (!s) { setLoading(false); return; }
         setAuthSession(s);
-        setSession(s);
         const uid = s.user.id;
 
-        const [profileRes, connRes, msgRes, notifRes, groupNotifRes] = await Promise.all([
-          supabase.from('profiles').select('username, avatar_url, banner_url, status, is_verified, is_premium, is_trial_premium, profile_visibility, is_admin, full_name, location, work_status, github, website, skills, role, field').eq('id', uid).single(),
+        const [profileRes, connRes, msgRes, notifRes] = await Promise.all([
+          supabase.from('profiles').select('username,avatar_url,status,is_verified,is_premium,is_trial_premium,profile_visibility,is_admin,full_name,location,work_status,github,website,skills,role').eq('id', uid).single(),
           supabase.from('connections').select('id', { count: 'exact', head: true }).or(`sender_id.eq.${uid},receiver_id.eq.${uid}`).eq('status', 'accepted'),
           supabase.from('messages').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('is_read', false),
           supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('unread', true),
-          supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('unread', true).in('type', ['group_invite', 'group_join_request']),
         ]);
 
         setProfile(profileRes.data || null);
-        setStats({
-          connections: connRes.count || 0,
-          messages: msgRes.count || 0,
-          notifications: (notifRes.count || 0) - (groupNotifRes.count || 0),
-          groups: groupNotifRes.count || 0,
-        });
+        setStats({ connections: connRes.count || 0, messages: msgRes.count || 0, notifications: notifRes.count || 0 });
 
-        // Streak computation from user_activity
-        const { data: activityRows } = await supabase
-          .from('user_activity')
-          .select('created_at')
-          .eq('user_id', uid)
-          .order('created_at', { ascending: false })
-          .limit(120);
-
+        // Streak
+        const { data: activityRows } = await supabase.from('user_activity').select('created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(90);
         if (activityRows?.length) {
           const days = new Set(activityRows.map(r => r.created_at?.slice(0, 10)));
-          let s = 0;
-          const today = new Date();
-          for (let i = 0; i < 120; i++) {
-            const d = new Date(today);
+          let sk = 0;
+          const now = new Date();
+          for (let i = 0; i < 90; i++) {
+            const d = new Date(now);
             d.setDate(d.getDate() - i);
-            if (days.has(d.toISOString().slice(0, 10))) s++;
+            if (days.has(d.toISOString().slice(0, 10))) sk++;
             else if (i > 0) break;
           }
-          setStreak(s);
+          setStreak(sk);
         }
 
-        // Pathway enrollment count
-        const { count: pc } = await supabase
-          .from('user_pathways')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', uid);
+        // Pathways
+        const { count: pc } = await supabase.from('user_pathways').select('id', { count: 'exact', head: true }).eq('user_id', uid);
         setPathwayCount(pc || 0);
+
+        // Blog feed
+        const { data: posts } = await supabase
+          .from('blog_posts')
+          .select('id,title,excerpt,tags,created_at,cover_url')
+          .eq('published', true)
+          .order('created_at', { ascending: false })
+          .limit(3);
+        if (posts) setFeedPosts(posts);
       } catch (e) {
-        console.error('HomeDash init error:', e);
+        console.error('HomeDash:', e);
       } finally {
         setLoading(false);
       }
@@ -279,413 +159,348 @@ export default function HomeDashContent() {
     init();
   }, []);
 
-  const fetchSkillSuggestions = useCallback(async (force = false) => {
-    if (!session) return;
-    setSkillsLoading(true);
-    setSkillsError(null);
-    try {
-      if (force) {
-        await fetch('/api/ai/skill-suggestions', {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-      }
-      const res  = await fetch('/api/ai/skill-suggestions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const data = await res.json();
-      if (data.suggestions) setSkillSuggestions(data.suggestions);
-      else setSkillsError(data.error || 'Failed to load suggestions');
-    } catch {
-      setSkillsError('Network error');
-    } finally {
-      setSkillsLoading(false);
-    }
-  }, [session]);
-
-  useEffect(() => {
-    if (session) fetchSkillSuggestions();
-  }, [session, fetchSkillSuggestions]);
-
-  const go = (id) => router.push('/dash/' + id);
-
-  const getBadge = (section) => {
-    if (section.stat === 'messages') return stats.messages;
-    if (section.stat === 'notifications') return stats.notifications;
-    if (section.stat === 'groups') return stats.groups;
+  const getBadge = (stat) => {
+    if (stat === 'messages') return stats.messages;
+    if (stat === 'notifications') return stats.notifications;
     return 0;
   };
 
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="h-40 bg-gray-200 dark:bg-gray-800 rounded-3xl" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <div key={i} className="h-36 bg-gray-100 dark:bg-gray-800 rounded-2xl" />)}
+        <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-3xl" />
+        <div className="grid grid-cols-2 gap-4">
+          {[1, 2].map(i => <div key={i} className="h-40 bg-gray-100 dark:bg-gray-800 rounded-2xl" />)}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-2xl" />)}
+        <div className="grid grid-cols-4 gap-3">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl" />)}
         </div>
       </div>
     );
   }
 
+  const { score, missing } = calcCompleteness(profile);
+  const barColor = score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500';
+
+  /* Derive which onboarding steps are done */
+  const stepsDone = [
+    score >= 60,           // profile built
+    pathwayCount > 0,      // pathway picked
+    stats.connections > 0, // explored/connected
+    stats.connections >= 3, // grown network
+  ];
+
   return (
-    <div className="space-y-7">
+    <div className="space-y-8 pb-6">
 
-      {/* ── HERO GREETING ── */}
+      {/* ── WELCOME BANNER ─────────────────────────── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900 p-6 sm:p-8 text-white shadow-xl">
-        {/* decorative glow */}
-        <div className="pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-0 w-48 h-32 rounded-full bg-indigo-600/20 blur-2xl" />
+        <div className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl" />
 
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4">
-          {/* Avatar */}
-          {getAvatarSrc(profile, authSession) && (
-            <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border-2 border-white/20 shrink-0 shadow-lg">
-              <Image src={getAvatarSrc(profile, authSession)} alt="avatar" fill sizes="64px" className="object-cover" referrerPolicy="no-referrer" />
+        <div className="relative z-10 flex items-center gap-4">
+          {getAvatarSrc(profile, authSession) ? (
+            <div className="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/20 shrink-0">
+              <Image src={getAvatarSrc(profile, authSession)} alt="avatar" fill sizes="56px" className="object-cover" referrerPolicy="no-referrer" />
+            </div>
+          ) : (
+            <div className="w-14 h-14 rounded-2xl bg-white/10 border-2 border-white/20 shrink-0 flex items-center justify-center text-xl font-black text-white/60">
+              {profile?.full_name?.[0] || profile?.username?.[0] || '?'}
             </div>
           )}
 
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-300 mb-0.5">{today}</p>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-              {greeting}{profile?.username ? (
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight">
+              {greeting}
+              {profile?.username && (
                 <span className="flex items-center gap-2 flex-wrap mt-0.5">
                   <span className="text-blue-300">@{profile.username}</span>
                   {profile.is_verified && <VerifiedBadge size={16} />}
-                  {(profile.is_premium || profile.is_admin) && profile.profile_visibility?.premium_badge !== false && <PremiumBadge size={16} isTrial={!!profile.is_trial_premium} />}
+                  {(profile.is_premium || profile.is_admin) && profile.profile_visibility?.premium_badge !== false && (
+                    <PremiumBadge size={16} isTrial={!!profile.is_trial_premium} />
+                  )}
                 </span>
-              ) : ''}
+              )}
             </h1>
-            <p className="text-sm text-slate-300 font-medium mt-1">
-              {profile?.status || 'Your network is active — here\'s what\'s waiting for you.'}
-            </p>
           </div>
         </div>
 
-        {/* Quick stat pills */}
-        <div className="relative z-10 flex flex-wrap gap-2.5 mt-5">
-          <button
-            onClick={() => go('connections')}
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 active:scale-95 transition-all px-3 py-1.5 rounded-xl text-xs font-bold backdrop-blur-sm border border-white/10"
-          >
-            <Users size={12} className="text-blue-300 shrink-0" />
-            <span>{stats.connections} connection{stats.connections !== 1 ? 's' : ''}</span>
-          </button>
-
-          <button
-            onClick={() => go('messages')}
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 active:scale-95 transition-all px-3 py-1.5 rounded-xl text-xs font-bold backdrop-blur-sm border border-white/10"
-          >
-            <MessageSquare size={12} className="text-sky-300 shrink-0" />
-            <span>{stats.messages > 0 ? `${stats.messages} unread` : 'Messages'}</span>
-            {stats.messages > 0 && (
-              <span className="bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full shrink-0">
-                {stats.messages > 99 ? '99+' : stats.messages}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => go('notifications')}
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 active:scale-95 transition-all px-3 py-1.5 rounded-xl text-xs font-bold backdrop-blur-sm border border-white/10"
-          >
-            <Bell size={12} className="text-yellow-300 shrink-0" />
-            <span>{stats.notifications > 0 ? `${stats.notifications} alert${stats.notifications !== 1 ? 's' : ''}` : 'Alerts'}</span>
-            {stats.notifications > 0 && (
-              <span className="bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full shrink-0">
-                {stats.notifications > 99 ? '99+' : stats.notifications}
-              </span>
-            )}
-          </button>
+        {/* Three stat pills */}
+        <div className="relative z-10 flex flex-wrap gap-2 mt-5">
+          {[
+            { label: `${stats.connections} connection${stats.connections !== 1 ? 's' : ''}`, id: 'connections', icon: Users, badge: 0, iconColor: 'text-blue-300' },
+            { label: stats.messages > 0 ? `${stats.messages} unread` : 'Messages', id: 'messages', icon: MessageSquare, badge: stats.messages, iconColor: 'text-sky-300' },
+            { label: stats.notifications > 0 ? `${stats.notifications} alert${stats.notifications !== 1 ? 's' : ''}` : 'Alerts', id: 'notifications', icon: Bell, badge: stats.notifications, iconColor: 'text-yellow-300' },
+          ].map(({ label, id, icon: Icon, badge, iconColor }) => (
+            <button
+              key={id}
+              onClick={() => go(id)}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 active:scale-95 transition-all px-3 py-1.5 rounded-xl text-xs font-bold backdrop-blur-sm border border-white/10"
+            >
+              <Icon size={12} className={`${iconColor} shrink-0`} />
+              <span>{label}</span>
+              {badge > 0 && (
+                <span className="bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full shrink-0">
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── TODAY'S SPOTLIGHT ── */}
+      {/* ── HUB CARDS ──────────────────────────────── */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[3px] text-gray-400 dark:text-gray-500">Today&apos;s Spotlight</p>
-            <h2 className="text-base font-black text-gray-900 dark:text-gray-100 mt-0.5">Sections to explore today</h2>
-          </div>
-          <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800/50 shrink-0">
-            <Zap size={9} /> Refreshes daily
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {dailyFeatured.map((section) => {
-            const c = COLORS[section.color];
-            const Icon = section.icon;
-            const badge = getBadge(section);
-            return (
-              <button
-                key={section.id}
-                onClick={() => go(section.id)}
-                className={`group relative text-left p-5 rounded-2xl border ${c.bg} ${c.border} transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]`}
-              >
-                {badge > 0 && (
-                  <span className="absolute top-3.5 right-3.5 bg-red-500 text-white text-[9px] font-black min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
-                    {badge > 99 ? '99+' : badge}
-                  </span>
-                )}
-                <div className={`w-10 h-10 ${c.icon} rounded-xl flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform duration-200`}>
-                  <Icon size={18} className="text-white" />
-                </div>
-                <h3 className={`text-sm font-black ${c.text} mb-1.5`}>{section.label}</h3>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 mb-3">{section.desc}</p>
-                <div className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${c.text}`}>
-                  Explore <ChevronRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        <p className="text-center text-[10px] text-gray-400 dark:text-gray-500 mt-3 font-medium">
-          Come back tomorrow to discover 3 more featured sections
-        </p>
-      </section>
-
-      {/* ── ALL SECTIONS GRID ── */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <p className="text-[10px] font-black uppercase tracking-[3px] text-gray-400 dark:text-gray-500">All Sections</p>
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Platform</h2>
           <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {SECTIONS.map((section) => {
-            const c = COLORS[section.color];
-            const Icon = section.icon;
-            const badge = getBadge(section);
-            const isFeatured = dailyFeatured.some(f => f.id === section.id);
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {HUBS.map((hub) => {
+            const Icon = hub.icon;
             return (
               <button
-                key={section.id}
-                onClick={() => go(section.id)}
-                className="group relative text-left p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md transition-all duration-200 active:scale-[0.97]"
+                key={hub.label}
+                onClick={() => router.push(hub.href)}
+                className={`group text-left p-6 rounded-2xl border ${hub.bg} ${hub.border} transition-all duration-200 hover:shadow-xl hover:-translate-y-1 active:scale-[0.98]`}
               >
-                {isFeatured && (
-                  <span className="absolute top-2.5 right-2.5 flex items-center gap-0.5 text-[8px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/40 px-1.5 py-0.5 rounded-full">
-                    <Star size={7} fill="currentColor" /> Today
+                <div className="flex items-start justify-between mb-5">
+                  <div className={`w-12 h-12 ${hub.iconBg} rounded-xl flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-200`}>
+                    <Icon size={22} className="text-white" />
+                  </div>
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${hub.pillStyle}`}>
+                    {hub.pills.length} sections
                   </span>
-                )}
-                {badge > 0 && !isFeatured && (
-                  <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[8px] font-black min-w-[16px] h-4 flex items-center justify-center rounded-full px-1">
-                    {badge > 99 ? '99+' : badge}
-                  </span>
-                )}
-
-                <div className={`w-8 h-8 ${c.icon} rounded-xl flex items-center justify-center mb-2.5 shadow-sm group-hover:scale-110 transition-transform duration-200`}>
-                  <Icon size={14} className="text-white" />
                 </div>
-                <p className="text-[12px] font-black text-gray-900 dark:text-gray-100 mb-0.5 leading-tight">{section.label}</p>
-                <p className={`text-[10px] font-semibold leading-relaxed line-clamp-1 ${c.text}`}>
-                  {section.desc.split('.')[0]}
-                </p>
+
+                <h3 className={`text-lg font-black ${hub.text} mb-1.5`}>{hub.label}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4">{hub.desc}</p>
+
+                <div className="flex flex-wrap gap-1.5 mb-5">
+                  {hub.pills.map((p) => (
+                    <span key={p} className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${hub.pillStyle}`}>{p}</span>
+                  ))}
+                </div>
+
+                <span className={`inline-flex items-center gap-1.5 text-xs font-black ${hub.text}`}>
+                  Browse {hub.label}
+                  <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                </span>
               </button>
             );
           })}
         </div>
       </section>
 
-      {/* ── CAREER WIDGETS ── */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        {/* Profile Completeness */}
-        {(() => {
-          const { score, missing } = calcCompleteness(profile);
-          const barColor = score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500';
-          return (
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <BarChart2 size={14} className="text-white" />
-                  </div>
-                  <p className="text-sm font-black text-gray-900 dark:text-gray-100">Profile Strength</p>
-                </div>
-                <span className={`text-xs font-black px-2 py-0.5 rounded-full ${score >= 80 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : score >= 50 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
-                  {score}%
-                </span>
-              </div>
-              <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-3">
-                <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${score}%` }} />
-              </div>
-              {missing.length > 0 ? (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Missing</p>
-                  {missing.slice(0, 3).map(m => (
-                    <div key={m} className="flex items-center gap-2">
-                      <Circle size={10} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{m}</span>
-                    </div>
-                  ))}
-                  {missing.length > 3 && (
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500">+{missing.length - 3} more</p>
-                  )}
-                  <button
-                    onClick={() => go('profile')}
-                    className="mt-2 flex items-center gap-1.5 text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    Complete profile <ArrowRight size={11} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 size={14} />
-                  <span className="text-xs font-bold">Profile is complete — great work!</span>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* AI Skill Suggestions */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 shrink-0">
-                <img src="/ai.gif" alt="beoneofus AI" className="w-full h-full object-cover" />
-              </div>
-              <p className="text-sm font-black text-gray-900 dark:text-gray-100">AI Skill Suggestions</p>
-            </div>
-            <button
-              onClick={() => fetchSkillSuggestions(true)}
-              disabled={skillsLoading}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all disabled:opacity-50"
-              title="Refresh suggestions"
-            >
-              <RefreshCw size={13} className={`text-gray-400 ${skillsLoading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-
-          {skillsLoading && (
-            <div className="space-y-2">
-              {[1,2,3].map(i => (
-                <div key={i} className="h-8 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          )}
-
-          {!skillsLoading && skillsError && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">{skillsError}</p>
-          )}
-
-          {!skillsLoading && !skillsError && skillSuggestions.length === 0 && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-3">No suggestions yet</p>
-          )}
-
-          {!skillsLoading && skillSuggestions.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {skillSuggestions.slice(0, 6).map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => go('learn')}
-                  title={s.reason}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all hover:-translate-y-0.5 hover:shadow-sm active:scale-95 ${PRIORITY_STYLE[s.priority] || PRIORITY_STYLE.medium}`}
-                >
-                  <img src="/ai.gif" alt="AI" className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />
-                  {s.skill}
-                </button>
-              ))}
-            </div>
-          )}
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2.5">Tap any skill to find courses</p>
+      {/* ── QUICK NAV ──────────────────────────────── */}
+      <section>
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Quick Access</h2>
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
         </div>
 
-        {/* Streak widget */}
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2.5">
+          {NAV_TILES.map((tile) => {
+            const Icon = tile.icon;
+            const badge = getBadge(tile.stat);
+            return (
+              <button
+                key={tile.id}
+                onClick={() => go(tile.id)}
+                className="group relative flex flex-col items-center gap-2 py-4 px-1 rounded-2xl bg-white dark:bg-[#18181B] border border-gray-200/80 dark:border-zinc-800/80 hover:border-gray-300 dark:hover:border-zinc-600 hover:shadow-md transition-all duration-200 active:scale-[0.95]"
+              >
+                {badge > 0 && (
+                  <span className="absolute top-2 right-2 bg-red-500 text-white text-[8px] font-black min-w-[15px] h-[15px] flex items-center justify-center rounded-full px-1">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
+                <Icon size={18} className={`${tile.color} group-hover:scale-110 transition-transform duration-200`} />
+                <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 text-center leading-tight">{tile.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS — ONBOARDING STEPS ────────── */}
+      <section>
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Getting Started</h2>
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+          <span className="text-[10px] font-black text-gray-400 shrink-0">
+            {stepsDone.filter(Boolean).length}/{STEPS.length} done
+          </span>
+        </div>
+
+        <div className="relative">
+          {/* Connector line */}
+          <div className="absolute left-5 top-6 bottom-6 w-px bg-gray-200 dark:bg-gray-800 hidden sm:block" />
+
+          <div className="space-y-3">
+            {STEPS.map((step, i) => {
+              const done = stepsDone[i];
+              return (
+                <button
+                  key={step.n}
+                  onClick={() => go(step.key)}
+                  className="group w-full text-left flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-[#18181B] border border-gray-200/80 dark:border-zinc-800/80 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all duration-200 active:scale-[0.99]"
+                >
+                  {/* Step number / checkmark */}
+                  <div className={`relative z-10 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-black transition-all duration-200 ${
+                    done
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 group-hover:bg-blue-600 group-hover:text-white'
+                  }`}>
+                    {done ? <CheckCheck size={16} /> : step.n}
+                  </div>
+
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <p className={`text-sm font-black mb-0.5 transition-colors ${
+                      done
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                    }`}>
+                      {step.label}
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">{step.desc}</p>
+                  </div>
+
+                  <ChevronRight
+                    size={16}
+                    className={`shrink-0 mt-1 transition-all duration-200 group-hover:translate-x-0.5 ${
+                      done ? 'text-emerald-400' : 'text-gray-300 dark:text-gray-600'
+                    }`}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── LIVE FEED ──────────────────────────────── */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">What&apos;s New</h2>
+            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 px-2 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live
+            </div>
+          </div>
+          <button onClick={() => go('blog')} className="text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+            View all <ArrowRight size={11} />
+          </button>
+        </div>
+
+        {feedPosts.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-8 text-center">
+            <FileText size={26} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">No posts yet — be the first to publish.</p>
+            <button onClick={() => go('blog')} className="text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline">
+              Go to Blog
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {feedPosts.map((post) => (
+              <button
+                key={post.id}
+                onClick={() => go('blog')}
+                className="group text-left p-4 rounded-2xl bg-white dark:bg-[#18181B] border border-gray-200/80 dark:border-zinc-800/80 hover:border-gray-300 dark:hover:border-zinc-600 hover:shadow-md transition-all duration-200 active:scale-[0.98]"
+              >
+                {post.cover_url ? (
+                  <div className="relative w-full h-28 rounded-xl overflow-hidden mb-3 border border-gray-100 dark:border-gray-800">
+                    <Image src={post.cover_url} alt={post.title} fill sizes="300px" className="object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-full h-28 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 mb-3 flex items-center justify-center border border-gray-100 dark:border-gray-800">
+                    <FileText size={24} className="text-blue-300 dark:text-blue-700" />
+                  </div>
+                )}
+                <h3 className="text-[13px] font-black text-gray-900 dark:text-gray-100 leading-tight line-clamp-2 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  {post.title}
+                </h3>
+                <div className="flex items-center gap-2">
+                  {post.tags?.[0] && (
+                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40">
+                      {post.tags[0]}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
+                    <Clock size={9} />
+                    {timeAgo(post.created_at)} ago
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── CAREER PROGRESS ────────────────────────── */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        {/* Profile Strength */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center">
-              <Flame size={14} className="text-white" />
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
+              <BarChart2 size={15} className="text-white" />
+            </div>
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100">Profile Strength</p>
+            <span className={`ml-auto text-xs font-black px-2 py-0.5 rounded-full ${score >= 80 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : score >= 50 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+              {score}%
+            </span>
+          </div>
+          <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-3">
+            <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${score}%` }} />
+          </div>
+          {missing.length > 0 ? (
+            <div className="space-y-1">
+              {missing.slice(0, 3).map(m => (
+                <div key={m} className="flex items-center gap-2">
+                  <Circle size={9} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">{m}</span>
+                </div>
+              ))}
+              {missing.length > 3 && <p className="text-[10px] text-gray-400">+{missing.length - 3} more</p>}
+              <button onClick={() => go('profile')} className="mt-2 flex items-center gap-1 text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline">
+                Complete profile <ArrowRight size={10} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 size={14} />
+              <span className="text-xs font-bold">Profile complete — great work!</span>
+            </div>
+          )}
+        </div>
+
+        {/* Activity Streak */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-8 h-8 bg-orange-500 rounded-xl flex items-center justify-center shrink-0">
+              <Flame size={15} className="text-white" />
             </div>
             <p className="text-sm font-black text-gray-900 dark:text-gray-100">Activity Streak</p>
           </div>
-          <div className="flex items-end gap-3 mb-3">
+          <div className="flex items-end gap-2.5 mb-3">
             <p className="text-5xl font-black text-orange-500 leading-none">{streak}</p>
             <div className="mb-1">
-              <p className="text-sm font-black text-gray-700 dark:text-gray-300">day{streak !== 1 ? "s" : ""}</p>
-              <p className="text-xs text-gray-400">consecutive</p>
+              <p className="text-sm font-black text-gray-700 dark:text-gray-300">day{streak !== 1 ? 's' : ''}</p>
+              <p className="text-[10px] text-gray-400">consecutive</p>
             </div>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
             {streak === 0
-              ? "Start your streak — log in and take action every day."
+              ? 'Log in and take action every day to start your streak.'
               : streak >= 7
-              ? `${streak} days strong! You're on fire. Keep going.`
-              : "You're building momentum. Come back tomorrow!"}
+              ? `${streak} days strong. Keep the momentum going.`
+              : 'Building momentum — come back tomorrow!'}
           </p>
         </div>
 
-        {/* Pathways quick-access */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Map size={14} className="text-white" />
-            </div>
-            <p className="text-sm font-black text-gray-900 dark:text-gray-100">Career Pathways</p>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4">
-            {pathwayCount > 0
-              ? `You're enrolled in ${pathwayCount} pathway${pathwayCount !== 1 ? "s" : ""}. Keep progressing toward your goal.`
-              : "Structured roadmaps to reach your target role — step by step with AI gap analysis."}
-          </p>
-          <button
-            onClick={() => go('pathways')}
-            className="flex items-center gap-1.5 text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            {pathwayCount > 0 ? "Continue pathways" : "Browse pathways"} <ArrowRight size={11} />
-          </button>
-        </div>
-
-        {/* Leaderboard quick-access */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center">
-              <Trophy size={14} className="text-white" />
-            </div>
-            <p className="text-sm font-black text-gray-900 dark:text-gray-100">Leaderboard</p>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4">
-            See the top pathway completers and certificate earners in the community.
-          </p>
-          <button
-            onClick={() => go('leaderboard')}
-            className="flex items-center gap-1.5 text-[11px] font-black text-amber-600 dark:text-amber-400 hover:underline"
-          >
-            View rankings <ArrowRight size={11} />
-          </button>
-        </div>
-      </section>
-
-      {/* ── QUICK ACTIONS ── */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl p-5 text-white">
-          <h3 className="text-sm font-black mb-1">Share to your network</h3>
-          <p className="text-xs text-blue-100 mb-4 leading-relaxed">Post an update, share a code snippet, or start a discussion in your feed.</p>
-          <button
-            onClick={() => go('feed')}
-            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 transition-all text-white text-xs font-black px-4 py-2 rounded-xl active:scale-95"
-          >
-            <Home size={13} /> Open Feed
-          </button>
-        </div>
-
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-2xl p-5 text-white">
-          <h3 className="text-sm font-black mb-1">Browse opportunities</h3>
-          <p className="text-xs text-emerald-100 mb-4 leading-relaxed">Find your next role, freelance gig, or collaboration in the jobs board.</p>
-          <button
-            onClick={() => go('marketplace')}
-            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 transition-all text-white text-xs font-black px-4 py-2 rounded-xl active:scale-95"
-          >
-            <Briefcase size={13} /> View Jobs
-          </button>
-        </div>
       </section>
 
     </div>

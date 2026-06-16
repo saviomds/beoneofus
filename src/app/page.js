@@ -170,6 +170,7 @@ export default function LandingPage() {
   const [pageViews, setPageViews] = useState(null);
   const [liveStats, setLiveStats] = useState(FALLBACK_STATS);
   const [testimonials, setTestimonials] = useState(FALLBACK_TESTIMONIALS);
+  const [sponsors, setSponsors] = useState([]);
   const [heroVisible, setHeroVisible] = useState(false);
   const [navAvatarError, setNavAvatarError] = useState(false);
   const [typeText, setTypeText] = useState("");
@@ -239,6 +240,14 @@ export default function LandingPage() {
       if (viewData) setPageViews(viewData);
     };
     fetchStats();
+  }, []);
+
+  /* sponsors */
+  useEffect(() => {
+    fetch("/api/sponsors")
+      .then(r => r.json())
+      .then(d => setSponsors(d.sponsors || []))
+      .catch(() => {});
   }, []);
 
   /* testimonials */
@@ -1162,6 +1171,9 @@ export default function LandingPage() {
         {/* ── Stats bar ───────────────────────── */}
         <StatsBar stats={liveStats} pageViews={pageViews} />
 
+        {/* ── Sponsors strip ──────────────────── */}
+        <SponsorsStrip sponsors={sponsors} />
+
         {/* ── What is beoneofus ───────────────── */}
         <WhatIsSection />
 
@@ -1233,6 +1245,66 @@ function StatsBar({ stats, pageViews }) {
         </div>
       </div>
     </div>
+  );
+}
+
+const TIER_LABEL = { gold: "Gold Partner", silver: "Silver Partner", bronze: "Bronze Partner" };
+const TIER_COLOR = { gold: "text-yellow-500", silver: "text-slate-400", bronze: "text-orange-500" };
+const TIER_ORDER = { gold: 0, silver: 1, bronze: 2 };
+
+function SponsorsStrip({ sponsors }) {
+  const [ref, visible] = useIntersect();
+  if (!sponsors.length) return null;
+
+  const sorted = [...sponsors].sort(
+    (a, b) => (TIER_ORDER[a.tier] ?? 3) - (TIER_ORDER[b.tier] ?? 3)
+  );
+
+  return (
+    <section ref={ref} className={`relative z-10 border-b border-gray-200 dark:border-white/5 bg-white/60 dark:bg-white/[0.015] py-12 px-4 reveal ${visible ? "visible" : ""}`}>
+      <div className="max-w-6xl mx-auto">
+        <p className="text-center text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-600 mb-10">
+          Proudly supported by
+        </p>
+
+        <div className="flex flex-wrap items-center justify-center gap-10 sm:gap-14">
+          {sorted.map((s) => (
+            <a
+              key={s.id}
+              href={s.website || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={s.company_name}
+              className="group flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-1"
+            >
+              {s.logo_url ? (
+                <img
+                  src={s.logo_url}
+                  alt={s.company_name}
+                  className="h-9 sm:h-11 max-w-[130px] object-contain opacity-50 dark:opacity-35 grayscale group-hover:opacity-100 group-hover:grayscale-0 transition-all duration-300"
+                />
+              ) : (
+                <div className="h-10 px-5 flex items-center bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-xl text-sm font-bold text-gray-500 dark:text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white group-hover:border-gray-300 dark:group-hover:border-white/20 transition-all">
+                  {s.company_name}
+                </div>
+              )}
+              <span className={`text-[9px] font-black uppercase tracking-widest ${TIER_COLOR[s.tier] ?? "text-gray-400"}`}>
+                {TIER_LABEL[s.tier] ?? s.tier}
+              </span>
+            </a>
+          ))}
+        </div>
+
+        <div className="text-center mt-10">
+          <Link
+            href="/sponsors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-400 dark:text-gray-600 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            <Handshake size={12} /> Become a sponsor
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 

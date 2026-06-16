@@ -1,3 +1,5 @@
+export const maxDuration = 60;
+
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
@@ -22,21 +24,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing applicantId' }, { status: 400 });
     }
 
-    // Securely update the founder application status in the database (Bypasses RLS)
-    if (applicationId) {
-      const { error: updateError } = await supabase
-        .from('founder_applications')
-        .update({ status: status })
-        .eq('id', applicationId);
+    // Run DB update and user lookup in parallel to cut latency
+    const [updateResult, userResult] = await Promise.all([
+      applicationId
+        ? supabase.from('founder_applications').update({ status }).eq('id', applicationId)
+        : Promise.resolve({ error: null }),
+      supabase.auth.admin.getUserById(applicantId),
+    ]);
 
-      if (updateError) {
-        console.error('Supabase update error:', updateError);
-      }
+    if (updateResult.error) {
+      console.error('Supabase update error:', updateResult.error);
     }
 
-    // Fetch the actual applicant's email from Supabase Auth
-    const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(applicantId);
-
+    const { data: { user }, error: userError } = userResult;
     if (userError || !user?.email) {
       console.error('Failed to fetch applicant from Supabase:', userError);
       return NextResponse.json({ error: 'Applicant email not found' }, { status: 404 });

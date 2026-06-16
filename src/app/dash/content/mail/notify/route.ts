@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 import { NextResponse } from 'next/server';
 // @ts-ignore - Ensure 'resend' is installed via npm install resend

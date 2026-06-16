@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
+export const maxDuration = 60;
 
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';

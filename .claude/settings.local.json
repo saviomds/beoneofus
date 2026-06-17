@@ -26,7 +26,11 @@
       "Bash(supabase *)",
       "PowerShell(supabase *)",
       "PowerShell(cd \"C:\\\\Users\\\\Dell\\\\beoneofus\"; npx supabase db query --file \"supabase/migrations/_search_indexes.sql\" --linked -o table 2>&1; Write-Host \"EXIT:$LASTEXITCODE\")",
-      "Bash(powershell -c \"\\(Get-Content 'C:\\\\Users\\\\Dell\\\\beoneofus\\\\src\\\\app\\\\dash\\\\content\\\\SettingsContent.js'\\).Count\")"
+      "Bash(powershell -c \"\\(Get-Content 'C:\\\\Users\\\\Dell\\\\beoneofus\\\\src\\\\app\\\\dash\\\\content\\\\SettingsContent.js'\\).Count\")",
+      "Bash(vercel *)",
+      "Bash(git remote *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\Dell\\\\AppData\\\\Roaming\\\\com.vercel.cli\\\\Data\\\\auth.json\" | ConvertFrom-Json\\).token)"
     ]
   }
 }

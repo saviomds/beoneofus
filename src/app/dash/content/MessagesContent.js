@@ -9,15 +9,16 @@ import {
   ChevronLeft, MessageSquare, BadgeCheck, Sparkles, Loader2,
   ThumbsUp, Camera, Smile, Star, Pin, Copy, Reply,
   ZoomIn, Download, Clock, Users, Filter, Bell, BellOff,
-  ChevronDown, CornerUpLeft, Code2
+  ChevronDown, CornerUpLeft, Code2, Home, BarChart2,
+  Settings, ListChecks, Inbox, Zap, Hash, AtSign,
+  Maximize2, Tag, Heart, ArrowRight, FileText, Link2,
+  PanelRightOpen, PanelRightClose
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
 import { useDashboard } from "./DashboardContext";
 
-/* ─────────────────────────────────────────────────────────────
-   HELPERS
-───────────────────────────────────────────────────────────── */
+/* ─── HELPERS ───────────────────────────────────────────────── */
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 const SNIPPET_LANGS = ["text","javascript","typescript","python","rust","go","bash","sql","json","html","css","java","cpp","ruby","swift","kotlin"];
 
@@ -27,30 +28,195 @@ function parseSnippet(text) {
   return null;
 }
 
+/* ── Status badge ── */
+function StatusBadge({ status }) {
+  const map = {
+    new:        { label: "New",         bg: "#EFF6FF", color: "#1D4ED8", dot: "#3B82F6" },
+    active:     { label: "Active",      bg: "#FFF7ED", color: "#C2410C", dot: "#F97316" },
+    completed:  { label: "Done",        bg: "#F0FDF4", color: "#15803D", dot: "#22C55E" },
+    important:  { label: "Important",   bg: "#FDF4FF", color: "#A21CAF", dot: "#D946EF" },
+    waiting:    { label: "Waiting",     bg: "#F8FAFC", color: "#64748B", dot: "#94A3B8" },
+    blocked:    { label: "Blocked",     bg: "#FFF1F2", color: "#BE123C", dot: "#F43F5E" },
+    incoming:   { label: "Pending",     bg: "#EFF6FF", color: "#1E40AF", dot: "#60A5FA" },
+    none:       { label: "Connect",     bg: "#F5F3FF", color: "#6D28D9", dot: "#8B5CF6" },
+  };
+  const s = map[status] || map.none;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: s.bg, color: s.color,
+      fontSize: 11, fontWeight: 600, letterSpacing: "0.01em",
+      padding: "2px 8px", borderRadius: 100,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, flexShrink: 0 }} />
+      {s.label}
+    </span>
+  );
+}
+
+/* ── Code snippet block ── */
 function SnippetBlock({ snippet, isMine }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
     navigator.clipboard.writeText(snippet.code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
   };
   return (
-    <div className={`rounded-2xl overflow-hidden border text-left w-full max-w-[320px] sm:max-w-[400px] ${isMine ? 'border-blue-400/20' : 'border-gray-200 dark:border-gray-700'}`}>
-      <div className={`flex items-center justify-between px-3 py-1.5 ${isMine ? 'bg-blue-700' : 'bg-gray-800 dark:bg-gray-900'}`}>
-        <div className="flex items-center gap-1.5">
-          <Code2 size={11} className="text-gray-400" />
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{snippet.lang}</span>
+    <div style={{
+      borderRadius: 14, overflow: "hidden",
+      border: `1px solid ${isMine ? "rgba(96,165,250,0.25)" : "#E2E8F0"}`,
+      maxWidth: 400, width: "100%", textAlign: "left",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "6px 12px", background: isMine ? "#1E3A5F" : "#1E293B",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <Code2 size={11} color="#94A3B8" />
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em" }}>{snippet.lang}</span>
         </div>
-        <button onClick={copy} className="text-[10px] font-bold text-gray-400 hover:text-white flex items-center gap-1 transition-colors">
-          {copied ? <><Check size={9} className="text-emerald-400" /> Copied</> : <><Copy size={9} /> Copy</>}
+        <button onClick={copy} style={{
+          fontSize: 10, fontWeight: 700, color: copied ? "#34D399" : "#94A3B8",
+          background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
+        }}>
+          {copied ? <><Check size={9} /> Copied</> : <><Copy size={9} /> Copy</>}
         </button>
       </div>
-      <pre className="bg-gray-900 text-gray-100 text-[11px] font-mono px-3 py-2.5 overflow-x-auto leading-5 whitespace-pre max-h-60">{snippet.code}</pre>
+      <pre style={{
+        background: "#0F172A", color: "#E2E8F0", fontSize: 11, fontFamily: "monospace",
+        padding: "10px 14px", overflowX: "auto", margin: 0,
+        lineHeight: 1.6, whiteSpace: "pre", maxHeight: 240,
+      }}>{snippet.code}</pre>
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
+/* ── Attachment card ── */
+function AttachmentCard({ url, name }) {
+  const ext = (name || url || "").split(".").pop().toLowerCase();
+  const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
+  return (
+    <div style={{
+      display: "inline-flex", alignItems: "center", gap: 10,
+      background: "#F8FAFC", border: "1px solid #E2E8F0",
+      borderRadius: 12, padding: "8px 12px", marginTop: 6, maxWidth: 240,
+    }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 8, background: isImage ? "#DBEAFE" : "#F1F5F9",
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      }}>
+        {isImage ? <Camera size={16} color="#3B82F6" /> : <FileText size={16} color="#64748B" />}
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ fontSize: 12, fontWeight: 600, color: "#1E293B", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>
+          {name || "Attachment"}
+        </p>
+        <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>{ext.toUpperCase()}</p>
+      </div>
+      <a href={url} download target="_blank" rel="noreferrer" style={{ color: "#94A3B8", flexShrink: 0, lineHeight: 0 }}>
+        <Download size={14} />
+      </a>
+    </div>
+  );
+}
+
+/* ── AI Summary panel ── */
+function AISummaryPanel({ messages, activeChat }) {
+  const lastMessages = messages.slice(-5);
+  const hasContent = lastMessages.length > 0;
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
+      border: "1px solid #DDD6FE", borderRadius: 16, padding: 16, marginBottom: 16,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8, background: "#7C3AED",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Sparkles size={14} color="white" />
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#5B21B6", letterSpacing: "0.03em" }}>AI Summary</span>
+      </div>
+      {hasContent ? (
+        <p style={{ fontSize: 12, color: "#6D28D9", lineHeight: 1.6, margin: 0 }}>
+          This conversation with <strong>@{activeChat?.username}</strong> has {messages.length} message{messages.length !== 1 ? "s" : ""}. 
+          {messages.some(m => m.image_url) ? " Contains shared images." : ""}
+          {messages.some(m => parseSnippet(m.text)) ? " Includes code snippets." : ""}
+        </p>
+      ) : (
+        <p style={{ fontSize: 12, color: "#7C3AED", lineHeight: 1.6, margin: 0, fontStyle: "italic" }}>
+          No messages yet. Start a conversation to see AI insights.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ── Task card ── */
+function TaskCard({ task, onToggle }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "flex-start", gap: 10,
+      padding: "10px 12px", borderRadius: 12,
+      background: "#F8FAFC", border: "1px solid #E2E8F0",
+      marginBottom: 8, transition: "all 0.15s",
+    }}>
+      <button onClick={() => onToggle(task.id)} style={{
+        width: 18, height: 18, borderRadius: 5, border: `2px solid ${task.done ? "#22C55E" : "#CBD5E1"}`,
+        background: task.done ? "#22C55E" : "white", cursor: "pointer", flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1,
+        transition: "all 0.15s",
+      }}>
+        {task.done && <Check size={11} color="white" strokeWidth={3} />}
+      </button>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 500, color: task.done ? "#94A3B8" : "#1E293B", margin: 0, textDecoration: task.done ? "line-through" : "none" }}>
+          {task.title}
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+          {task.due && (
+            <span style={{ fontSize: 11, color: "#64748B", display: "flex", alignItems: "center", gap: 3 }}>
+              <Clock size={10} /> {task.due}
+            </span>
+          )}
+          {task.priority && (
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100,
+              background: task.priority === "high" ? "#FFF1F2" : "#FFF7ED",
+              color: task.priority === "high" ? "#BE123C" : "#C2410C",
+            }}>
+              {task.priority === "high" ? "🔥 High" : "⚡ Med"}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Vertical nav icon ── */
+function NavIcon({ icon: Icon, active, onClick, tooltip }) {
+  return (
+    <button
+      onClick={onClick}
+      title={tooltip}
+      style={{
+        width: 40, height: 40, borderRadius: 11, border: "none", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: active ? "#EFF6FF" : "transparent",
+        color: active ? "#2563EB" : "#94A3B8",
+        transition: "all 0.15s",
+        marginBottom: 4,
+      }}
+    >
+      <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
+    </button>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
    MAIN COMPONENT
-───────────────────────────────────────────────────────────── */
+══════════════════════════════════════════════════════════════ */
 export default function MessagesContent() {
   const [contacts, setContacts] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
@@ -64,7 +230,7 @@ export default function MessagesContent() {
 
   // UI states
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterUnread, setFilterUnread] = useState(false);
+  const [filterTab, setFilterTab] = useState("all");
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [blockerId, setBlockerId] = useState(null);
   const [activeConnectionId, setActiveConnectionId] = useState(null);
@@ -85,15 +251,20 @@ export default function MessagesContent() {
   const [snippetCode, setSnippetCode] = useState("");
   const [snippetLang, setSnippetLang] = useState("javascript");
   const [messageSendError, setMessageSendError] = useState(null);
+  const [showRightPanel, setShowRightPanel] = useState(typeof window !== 'undefined' ? window.innerWidth > 1400 : false);
+  const [activeNav, setActiveNav] = useState("messages");
+  const [tasks, setTasks] = useState([
+    { id: 1, title: "Update content documentation", due: "Tomorrow", priority: "high", done: false },
+    { id: 2, title: "Review design feedback", due: "Friday", priority: "medium", done: false },
+    { id: 3, title: "Schedule follow-up call", due: "Next week", priority: "medium", done: true },
+  ]);
+
   const forceScrollRef = useRef(false);
 
   const [mutedChats, setMutedChats] = useState(() => {
     if (typeof window !== "undefined") {
-      try {
-        return JSON.parse(localStorage.getItem("muted_chats") || "[]");
-      } catch {
-        return [];
-      }
+      try { return JSON.parse(localStorage.getItem("muted_chats") || "[]"); }
+      catch { return []; }
     }
     return [];
   });
@@ -112,360 +283,163 @@ export default function MessagesContent() {
   const typingTimeoutsRef = useRef({});
   const lastTypingSentRef = useRef(0);
 
-  // Toast
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
   const showToast = useCallback((msg, type = "success") => {
-    setToastMessage(msg);
-    setToastType(type);
+    setToastMessage(msg); setToastType(type);
     setTimeout(() => setToastMessage(""), 4000);
   }, []);
 
   const broadcastRef = useRef(null);
 
-  /* ── Sync ref ── */
-  useEffect(() => {
-    activeChatRef.current = activeChat;
-  }, [activeChat]);
+  useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
-  /* ── Close more menu on outside click ── */
   useEffect(() => {
     const handler = (e) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
-        setShowMoreMenu(false);
-      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) setShowMoreMenu(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  /* ─────────────────────────────────────────────────────────
-     1. INITIAL CONTACT FETCH
-  ───────────────────────────────────────────────────────── */
+  /* ── 1. Contacts ── */
   useEffect(() => {
     let isMounted = true;
-
     const fetchContacts = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const uid = session.user.id;
       if (isMounted) setCurrentUserId(uid);
 
       const { data: connections } = await supabase
-        .from("connections")
-        .select("sender_id, receiver_id")
+        .from("connections").select("sender_id, receiver_id")
         .or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
 
-      const connectedIds = (connections || []).map((c) =>
-        c.sender_id === uid ? c.receiver_id : c.sender_id
-      );
+      const connectedIds = (connections || []).map(c => c.sender_id === uid ? c.receiver_id : c.sender_id);
 
       if (connectedIds.length > 0) {
         const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, username, status, avatar_url, is_verified")
-          .in("id", connectedIds);
-
+          .from("profiles").select("id, username, status, avatar_url, is_verified").in("id", connectedIds);
         if (isMounted) {
           setContacts(profiles || []);
-          setActiveChat((prev) => {
-            if (prev && profiles?.some((p) => p.id === prev.id)) return prev;
+          setActiveChat(prev => {
+            if (prev && profiles?.some(p => p.id === prev.id)) return prev;
             return profiles?.length > 0 ? profiles[0] : null;
           });
         }
       } else {
-        if (isMounted) {
-          setContacts([]);
-          setActiveChat(null);
-        }
+        if (isMounted) { setContacts([]); setActiveChat(null); }
       }
     };
-
     fetchContacts();
-
-    const channel = supabase
-      .channel("messages-contacts-update")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "connections" },
-        fetchContacts
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "profiles" },
-        fetchContacts
-      )
+    const channel = supabase.channel("messages-contacts-update")
+      .on("postgres_changes", { event: "*", schema: "public", table: "connections" }, fetchContacts)
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, fetchContacts)
       .subscribe();
-
-    return () => {
-      isMounted = false;
-      supabase.removeChannel(channel);
-    };
+    return () => { isMounted = false; supabase.removeChannel(channel); };
   }, []);
 
-  /* ── Target chat from context ── */
   useEffect(() => {
     if (targetChatUser) {
       setActiveChat(targetChatUser);
-      setContacts((prev) =>
-        prev.find((c) => c.id === targetChatUser.id)
-          ? prev
-          : [targetChatUser, ...prev]
-      );
+      setContacts(prev => prev.find(c => c.id === targetChatUser.id) ? prev : [targetChatUser, ...prev]);
       setTargetChatUser(null);
       setIsMobileChatOpen(true);
     }
   }, [targetChatUser, setTargetChatUser]);
 
-  /* ─────────────────────────────────────────────────────────
-     2. UNREAD COUNTS & PREVIEWS
-  ───────────────────────────────────────────────────────── */
+  /* ── 2. Unread ── */
   useEffect(() => {
     if (!currentUserId) return;
-
     const fetchUnreadAndPreviews = async () => {
-      const { data } = await supabase
-        .from("messages")
+      const { data } = await supabase.from("messages")
         .select("sender_id, receiver_id, is_read, text, image_url, created_at")
-        .or(
-          `sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`
-        )
+        .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
         .order("created_at", { ascending: false });
 
-      const counts = {};
-      const previews = {};
-
-      (data || []).forEach((msg) => {
-        const otherId =
-          msg.sender_id === currentUserId
-            ? msg.receiver_id
-            : msg.sender_id;
-        if (
-          msg.receiver_id === currentUserId &&
-          !msg.is_read &&
-          activeChatRef.current?.id !== msg.sender_id
-        ) {
+      const counts = {}, previews = {};
+      (data || []).forEach(msg => {
+        const otherId = msg.sender_id === currentUserId ? msg.receiver_id : msg.sender_id;
+        if (msg.receiver_id === currentUserId && !msg.is_read && activeChatRef.current?.id !== msg.sender_id)
           counts[otherId] = (counts[otherId] || 0) + 1;
-        }
         if (!previews[otherId]) {
           const isSender = msg.sender_id === currentUserId;
-          previews[otherId] = {
-            text:
-              (isSender ? "You: " : "") +
-              (msg.text || (msg.image_url ? "📷 Image" : "New message")),
-            isSender,
-            isRead: msg.is_read,
-          };
+          previews[otherId] = { text: (isSender ? "You: " : "") + (msg.text || (msg.image_url ? "📷 Image" : "New message")), isSender, isRead: msg.is_read };
         }
       });
-
-      setUnreadCounts(counts);
-      setLastMessagePreviews(previews);
+      setUnreadCounts(counts); setLastMessagePreviews(previews);
     };
-
     fetchUnreadAndPreviews();
-
-    const ch = supabase
-      .channel("messages-unread-update")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "messages",
-          filter: `receiver_id=eq.${currentUserId}`,
-        },
-        fetchUnreadAndPreviews
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "messages",
-          filter: `sender_id=eq.${currentUserId}`,
-        },
-        fetchUnreadAndPreviews
-      )
+    const ch = supabase.channel("messages-unread-update")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${currentUserId}` }, fetchUnreadAndPreviews)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `sender_id=eq.${currentUserId}` }, fetchUnreadAndPreviews)
       .subscribe();
-
     return () => supabase.removeChannel(ch);
   }, [currentUserId]);
 
-  /* ─────────────────────────────────────────────────────────
-     3. PRESENCE
-  ───────────────────────────────────────────────────────── */
+  /* ── 3. Presence ── */
   useEffect(() => {
     if (!currentUserId) return;
-    const presenceCh = supabase.channel("online-users", {
-      config: { presence: { key: currentUserId } },
-    });
-    presenceCh
-      .on("presence", { event: "sync" }, () =>
-        setOnlineUsers(presenceCh.presenceState())
-      )
-      .subscribe(async (status) => {
-        if (status === "SUBSCRIBED")
-          await presenceCh.track({ online_at: new Date().toISOString() });
-      });
+    const presenceCh = supabase.channel("online-users", { config: { presence: { key: currentUserId } } });
+    presenceCh.on("presence", { event: "sync" }, () => setOnlineUsers(presenceCh.presenceState()))
+      .subscribe(async status => { if (status === "SUBSCRIBED") await presenceCh.track({ online_at: new Date().toISOString() }); });
     return () => supabase.removeChannel(presenceCh);
   }, [currentUserId]);
 
-  /* ─────────────────────────────────────────────────────────
-     4. ACTIVE CHAT: messages + connection
-  ───────────────────────────────────────────────────────── */
-  const fetchMessages = useCallback(
-    async (chatId, uid) => {
-      setIsLoadingMessages(true);
-      const { data, error } = await supabase
-        .from("messages")
-        .select(
-          "*, replied_message:reply_to_message_id(*), message_reactions(id, user_id, emoji)"
-        )
-        .or(
-          `and(sender_id.eq.${uid},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${uid})`
-        )
-        .order("created_at", { ascending: true });
-
-      setIsLoadingMessages(false);
-      if (error) {
-        showToast("Failed to load messages: " + error.message, "error");
-        return;
-      }
-      setMessages(data || []);
-      setUnreadCounts((prev) => ({ ...prev, [chatId]: 0 }));
-
-      await supabase
-        .from("messages")
-        .update({ is_read: true })
-        .eq("receiver_id", uid)
-        .eq("sender_id", chatId)
-        .eq("is_read", false);
-    },
-    [showToast]
-  );
+  /* ── 4. Messages ── */
+  const fetchMessages = useCallback(async (chatId, uid) => {
+    setIsLoadingMessages(true);
+    const { data, error } = await supabase.from("messages")
+      .select("*, replied_message:reply_to_message_id(*), message_reactions(id, user_id, emoji)")
+      .or(`and(sender_id.eq.${uid},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${uid})`)
+      .order("created_at", { ascending: true });
+    setIsLoadingMessages(false);
+    if (error) { showToast("Failed to load messages: " + error.message, "error"); return; }
+    setMessages(data || []);
+    setUnreadCounts(prev => ({ ...prev, [chatId]: 0 }));
+    await supabase.from("messages").update({ is_read: true }).eq("receiver_id", uid).eq("sender_id", chatId).eq("is_read", false);
+  }, [showToast]);
 
   useEffect(() => {
     if (!activeChat || !currentUserId) return;
-
     const checkConnection = async () => {
-      const { data: conn } = await supabase
-        .from("connections")
-        .select("*")
-        .or(
-          `and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`
-        )
+      const { data: conn } = await supabase.from("connections").select("*")
+        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${activeChat.id}),and(sender_id.eq.${activeChat.id},receiver_id.eq.${currentUserId})`)
         .maybeSingle();
-
-      if (!conn) {
-        setConnectionStatus("none");
-        setBlockerId(null);
-        setActiveConnectionId(null);
-        setMessages([]);
-      } else {
+      if (!conn) { setConnectionStatus("none"); setBlockerId(null); setActiveConnectionId(null); setMessages([]); }
+      else {
         setActiveConnectionId(conn.id);
-        if (conn.status === "blocked") {
-          setConnectionStatus("blocked");
-          setBlockerId(conn.blocked_by);
-          setMessages([]);
-        } else if (conn.status === "pending") {
-          setConnectionStatus(
-            conn.sender_id === currentUserId ? "waiting" : "incoming"
-          );
-          setMessages([]);
-        } else {
-          setConnectionStatus("accepted");
-          setBlockerId(null);
-          fetchMessages(activeChat.id, currentUserId);
-        }
+        if (conn.status === "blocked") { setConnectionStatus("blocked"); setBlockerId(conn.blocked_by); setMessages([]); }
+        else if (conn.status === "pending") { setConnectionStatus(conn.sender_id === currentUserId ? "waiting" : "incoming"); setMessages([]); }
+        else { setConnectionStatus("accepted"); setBlockerId(null); fetchMessages(activeChat.id, currentUserId); }
       }
     };
-
     checkConnection();
-
     const chId = `chat-${[currentUserId, activeChat.id].sort().join("-")}`;
-    channelRef.current = supabase
-      .channel(chId)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "connections" },
-        checkConnection
-      )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
-        async (payload) => {
-          const msg = payload.new;
-          if (
-            msg.sender_id !== activeChat.id &&
-            msg.receiver_id !== activeChat.id
-          )
-            return;
-          const { data } = await supabase
-            .from("messages")
-            .select(
-              "*, replied_message:reply_to_message_id(*), message_reactions(id, user_id, emoji)"
-            )
-            .eq("id", msg.id)
-            .maybeSingle();
-          setMessages((prev) =>
-            prev.find((m) => m.id === msg.id)
-              ? prev
-              : [...prev, data || msg]
-          );
-          if (msg.receiver_id === currentUserId) {
-            await supabase
-              .from("messages")
-              .update({ is_read: true })
-              .eq("id", msg.id);
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "messages" },
-        (payload) => {
-          const upd = payload.new;
-          if (
-            upd.sender_id !== activeChat.id &&
-            upd.receiver_id !== activeChat.id
-          )
-            return;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === upd.id
-                ? { ...m, is_read: upd.is_read, text: upd.text }
-                : m
-            )
-          );
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "messages" },
-        (payload) => {
-          setMessages((prev) =>
-            prev.filter((m) => m.id !== payload.old.id)
-          );
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "message_reactions" },
-        () => {
-          fetchMessages(activeChat.id, currentUserId);
-        }
-      )
+    channelRef.current = supabase.channel(chId)
+      .on("postgres_changes", { event: "*", schema: "public", table: "connections" }, checkConnection)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, async payload => {
+        const msg = payload.new;
+        if (msg.sender_id !== activeChat.id && msg.receiver_id !== activeChat.id) return;
+        const { data } = await supabase.from("messages").select("*, replied_message:reply_to_message_id(*), message_reactions(id, user_id, emoji)").eq("id", msg.id).maybeSingle();
+        setMessages(prev => prev.find(m => m.id === msg.id) ? prev : [...prev, data || msg]);
+        if (msg.receiver_id === currentUserId) await supabase.from("messages").update({ is_read: true }).eq("id", msg.id);
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, payload => {
+        const upd = payload.new;
+        if (upd.sender_id !== activeChat.id && upd.receiver_id !== activeChat.id) return;
+        setMessages(prev => prev.map(m => m.id === upd.id ? { ...m, is_read: upd.is_read, text: upd.text } : m));
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, payload => {
+        setMessages(prev => prev.filter(m => m.id !== payload.old.id));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "message_reactions" }, () => {
+        fetchMessages(activeChat.id, currentUserId);
+      })
       .subscribe();
-
-    return () => {
-      if (channelRef.current) supabase.removeChannel(channelRef.current);
-    };
+    return () => { if (channelRef.current) supabase.removeChannel(channelRef.current); };
   }, [activeChat, currentUserId, fetchMessages]);
 
-  /* ── Auto-scroll ── */
   useEffect(() => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
@@ -476,304 +450,140 @@ export default function MessagesContent() {
     }
   }, [messages, connectionStatus, typingUsers]);
 
-  /* ─────────────────────────────────────────────────────────
-     5. BROADCAST (typing only)
-  ───────────────────────────────────────────────────────── */
+  /* ── 5. Broadcast ── */
   useEffect(() => {
     if (!currentUserId) return;
-
-    broadcastRef.current = supabase
-      .channel(`broadcast-${currentUserId}-${Date.now()}`)
+    broadcastRef.current = supabase.channel(`broadcast-${currentUserId}-${Date.now()}`)
       .on("broadcast", { event: "typing" }, ({ payload }) => {
         if (payload.targetId !== currentUserId) return;
-        setTypingUsers((prev) => ({ ...prev, [payload.senderId]: true }));
-        if (typingTimeoutsRef.current[payload.senderId])
-          clearTimeout(typingTimeoutsRef.current[payload.senderId]);
+        setTypingUsers(prev => ({ ...prev, [payload.senderId]: true }));
+        if (typingTimeoutsRef.current[payload.senderId]) clearTimeout(typingTimeoutsRef.current[payload.senderId]);
         typingTimeoutsRef.current[payload.senderId] = setTimeout(() => {
-          setTypingUsers((prev) => ({ ...prev, [payload.senderId]: false }));
+          setTypingUsers(prev => ({ ...prev, [payload.senderId]: false }));
         }, 3000);
-      })
-      .subscribe();
-
-    return () => {
-      if (broadcastRef.current) supabase.removeChannel(broadcastRef.current);
-    };
+      }).subscribe();
+    return () => { if (broadcastRef.current) supabase.removeChannel(broadcastRef.current); };
   }, [currentUserId]);
 
-  /* ─────────────────────────────────────────────────────────
-     6. CONNECTION HANDLERS
-  ───────────────────────────────────────────────────────── */
+  /* ── Connection handlers ── */
   const handleSendRequest = async () => {
-    const { error } = await supabase.from("connections").insert({
-      sender_id: currentUserId,
-      receiver_id: activeChat.id,
-      status: "pending",
-    });
+    const { error } = await supabase.from("connections").insert({ sender_id: currentUserId, receiver_id: activeChat.id, status: "pending" });
     if (error) {
-      if (error.code === "23503") {
-        showToast("This user no longer exists.", "error");
-        setContacts((p) => p.filter((c) => c.id !== activeChat.id));
-        setActiveChat(null);
-      } else {
-        showToast("Failed to send request: " + error.message, "error");
-      }
+      if (error.code === "23503") { showToast("This user no longer exists.", "error"); setContacts(p => p.filter(c => c.id !== activeChat.id)); setActiveChat(null); }
+      else showToast("Failed to send request: " + error.message, "error");
       return;
     }
     setConnectionStatus("waiting");
-    await supabase.from("notifications").insert({
-      receiver_id: activeChat.id,
-      actor_id: currentUserId,
-      type: "connection_request",
-      content: "wants to connect",
-    });
+    await supabase.from("notifications").insert({ receiver_id: activeChat.id, actor_id: currentUserId, type: "connection_request", content: "wants to connect" });
   };
 
   const handleAcceptRequest = async () => {
     if (!activeConnectionId) return;
-    const { error } = await supabase
-      .from("connections")
-      .update({ status: "accepted" })
-      .eq("id", activeConnectionId);
+    const { error } = await supabase.from("connections").update({ status: "accepted" }).eq("id", activeConnectionId);
     if (!error) {
       setConnectionStatus("accepted");
-      await supabase.from("notifications").insert({
-        receiver_id: activeChat.id,
-        actor_id: currentUserId,
-        type: "handshake",
-        content: "accepted your connection request",
-      });
-
-      // Email the requester
+      await supabase.from("notifications").insert({ receiver_id: activeChat.id, actor_id: currentUserId, type: "handshake", content: "accepted your connection request" });
       (async () => {
         const { data: { session } } = await supabase.auth.getSession();
-        const { data: senderProfile } = await supabase
-          .from('profiles').select('email, username').eq('id', activeChat.id).single();
-        const { data: myProfile } = await supabase
-          .from('profiles').select('username').eq('id', currentUserId).single();
+        const { data: senderProfile } = await supabase.from('profiles').select('email, username').eq('id', activeChat.id).single();
+        const { data: myProfile } = await supabase.from('profiles').select('username').eq('id', currentUserId).single();
         if (session && senderProfile?.email) {
-          fetch('/api/notifications/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-            body: JSON.stringify({
-              type: 'connection_accepted',
-              email: senderProfile.email,
-              name: senderProfile.username || 'there',
-              extra: { acceptorName: myProfile?.username || 'Someone' },
-            }),
-          }).catch(() => {});
+          fetch('/api/notifications/send', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ type: 'connection_accepted', email: senderProfile.email, name: senderProfile.username || 'there', extra: { acceptorName: myProfile?.username || 'Someone' } }) }).catch(() => {});
         }
       })();
     }
   };
 
-  /* ─────────────────────────────────────────────────────────
-     7. BLOCK / UNBLOCK
-  ───────────────────────────────────────────────────────── */
   const handleBlockUser = async () => {
     if (!activeConnectionId || !currentUserId) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase
-        .from("connections")
-        .update({ status: "blocked", blocked_by: currentUserId })
-        .eq("id", activeConnectionId);
+      const { error } = await supabase.from("connections").update({ status: "blocked", blocked_by: currentUserId }).eq("id", activeConnectionId);
       if (error) throw error;
-      setShowBlockConfirm(false);
-      setShowMoreMenu(false);
-    } catch (e) {
-      showToast("Could not block user: " + e.message, "error");
-    } finally {
-      setIsProcessing(false);
-    }
+      setShowBlockConfirm(false); setShowMoreMenu(false);
+    } catch (e) { showToast("Could not block user: " + e.message, "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleUnblockUser = async () => {
     if (!activeConnectionId || !currentUserId) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase
-        .from("connections")
-        .update({ status: "accepted", blocked_by: null })
-        .eq("id", activeConnectionId)
-        .eq("blocked_by", currentUserId);
+      const { error } = await supabase.from("connections").update({ status: "accepted", blocked_by: null }).eq("id", activeConnectionId).eq("blocked_by", currentUserId);
       if (error) throw error;
       setShowMoreMenu(false);
-    } catch (e) {
-      showToast("Could not unblock: " + e.message, "error");
-    } finally {
-      setIsProcessing(false);
-    }
+    } catch (e) { showToast("Could not unblock: " + e.message, "error"); }
+    finally { setIsProcessing(false); }
   };
 
-  /* ─────────────────────────────────────────────────────────
-     8. DELETE MESSAGE
-  ───────────────────────────────────────────────────────── */
   const handleDeleteMessage = async (msgId) => {
     setDeletingMsgId(msgId);
-    // Optimistic remove
-    setMessages((prev) => prev.filter((m) => m.id !== msgId));
+    setMessages(prev => prev.filter(m => m.id !== msgId));
     setShowDeleteConfirm(null);
-    const { error } = await supabase
-      .from("messages")
-      .delete()
-      .eq("id", msgId)
-      .eq("sender_id", currentUserId);
-    if (error) {
-      showToast("Failed to delete message.", "error");
-      fetchMessages(activeChat.id, currentUserId); // rollback
-    }
+    const { error } = await supabase.from("messages").delete().eq("id", msgId).eq("sender_id", currentUserId);
+    if (error) { showToast("Failed to delete message.", "error"); fetchMessages(activeChat.id, currentUserId); }
     setDeletingMsgId(null);
   };
 
-  /* ─────────────────────────────────────────────────────────
-     9. AI SUGGEST REPLY
-     FIX: Properly parse API response (content[0].text not message.content)
-  ───────────────────────────────────────────────────────── */
   const handleSuggestReply = async () => {
     if (isSuggesting || !activeChat) return;
-    const lastMsg = [...messages]
-      .reverse()
-      .find((m) => m.sender_id === activeChat.id);
+    const lastMsg = [...messages].reverse().find(m => m.sender_id === activeChat.id);
     const prompt = lastMsg?.text
       ? `Draft a brief, friendly reply (1-2 sentences) to this message: "${lastMsg.text}". Return ONLY the reply text, no quotes or preamble.`
       : "Draft a friendly one-sentence opening message to start a conversation. Return ONLY the message text.";
-
     setIsSuggesting(true);
     let attempt = 0;
-    const maxRetries = 3;
-
-    while (attempt < maxRetries) {
+    while (attempt < 3) {
       try {
-        const res = await fetch("/api/chats", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: [{ role: "user", content: prompt }],
-          }),
-        });
-
+        const res = await fetch("/api/chats", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }) });
         const textResponse = await res.text();
         let data;
-        try {
-          data = JSON.parse(textResponse);
-        } catch {
-          throw new Error(
-            "AI API returned invalid response. Please restart your dev server."
-          );
-        }
-        if (!res.ok)
-          throw new Error(data?.error || "Failed to fetch AI response");
-
-        // FIX: handle both response shapes gracefully
+        try { data = JSON.parse(textResponse); } catch { throw new Error("AI API returned invalid response."); }
+        if (!res.ok) throw new Error(data?.error || "Failed to fetch AI response");
         let suggested = "";
-        if (typeof data?.message?.content === "string") {
-          suggested = data.message.content;
-        } else if (Array.isArray(data?.message?.content)) {
-          suggested = data.message.content
-            .filter((b) => b.type === "text")
-            .map((b) => b.text)
-            .join("");
-        } else if (typeof data?.content === "string") {
-          suggested = data.content;
-        } else if (Array.isArray(data?.content)) {
-          suggested = data.content
-            .filter((b) => b.type === "text")
-            .map((b) => b.text)
-            .join("");
-        }
-
+        if (typeof data?.message?.content === "string") suggested = data.message.content;
+        else if (Array.isArray(data?.message?.content)) suggested = data.message.content.filter(b => b.type === "text").map(b => b.text).join("");
+        else if (typeof data?.content === "string") suggested = data.content;
+        else if (Array.isArray(data?.content)) suggested = data.content.filter(b => b.type === "text").map(b => b.text).join("");
         setInputValue(suggested.replace(/^["']|["']$/g, "").trim());
         textareaRef.current?.focus();
         break;
       } catch (err) {
         attempt++;
-        if (attempt >= maxRetries) {
-          showToast("AI suggestion failed: " + err.message, "error");
-        } else {
-          await new Promise((resolve) =>
-            setTimeout(resolve, 1000 * attempt)
-          );
-        }
+        if (attempt >= 3) showToast("AI suggestion failed: " + err.message, "error");
+        else await new Promise(r => setTimeout(r, 1000 * attempt));
       }
     }
     setIsSuggesting(false);
   };
 
-  /* ─────────────────────────────────────────────────────────
-     10. REACTIONS
-  ───────────────────────────────────────────────────────── */
   const handleReaction = async (msgId, emoji) => {
-    const msg = messages.find((m) => m.id === msgId);
+    const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
-    const existing = msg.message_reactions?.find(
-      (r) => r.user_id === currentUserId && r.emoji === emoji
-    );
-
-    // Optimistic update
-    setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== msgId) return m;
-        const reactions = m.message_reactions || [];
-        if (existing)
-          return {
-            ...m,
-            message_reactions: reactions.filter((r) => r.id !== existing.id),
-          };
-        return {
-          ...m,
-          message_reactions: [
-            ...reactions,
-            {
-              id: `temp-${Date.now()}`,
-              message_id: msgId,
-              user_id: currentUserId,
-              emoji,
-            },
-          ],
-        };
-      })
-    );
+    const existing = msg.message_reactions?.find(r => r.user_id === currentUserId && r.emoji === emoji);
+    setMessages(prev => prev.map(m => {
+      if (m.id !== msgId) return m;
+      const reactions = m.message_reactions || [];
+      if (existing) return { ...m, message_reactions: reactions.filter(r => r.id !== existing.id) };
+      return { ...m, message_reactions: [...reactions, { id: `temp-${Date.now()}`, message_id: msgId, user_id: currentUserId, emoji }] };
+    }));
     setEmojiPickerMsgId(null);
-
     try {
-      if (existing) {
-        await supabase
-          .from("message_reactions")
-          .delete()
-          .eq("id", existing.id);
-      } else {
-        const { error } = await supabase.from("message_reactions").insert({
-          message_id: msgId,
-          user_id: currentUserId,
-          emoji,
-        });
-        if (error) throw error;
-      }
-    } catch {
-      showToast("Reaction failed.", "error");
-      fetchMessages(activeChat.id, currentUserId);
-    }
+      if (existing) { await supabase.from("message_reactions").delete().eq("id", existing.id); }
+      else { const { error } = await supabase.from("message_reactions").insert({ message_id: msgId, user_id: currentUserId, emoji }); if (error) throw error; }
+    } catch { showToast("Reaction failed.", "error"); fetchMessages(activeChat.id, currentUserId); }
   };
 
-  /* ─────────────────────────────────────────────────────────
-     11. TYPING
-  ───────────────────────────────────────────────────────── */
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
-    // FIX: guard against null activeChat
     if (!activeChat || !currentUserId) return;
     const now = Date.now();
     if (now - lastTypingSentRef.current > 1500) {
-      broadcastRef.current?.send({
-        type: "broadcast",
-        event: "typing",
-        payload: { targetId: activeChat.id, senderId: currentUserId },
-      });
+      broadcastRef.current?.send({ type: "broadcast", event: "typing", payload: { targetId: activeChat.id, senderId: currentUserId } });
       lastTypingSentRef.current = now;
     }
   };
 
-  // FIX: Auto-resize textarea — guard against null ref
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -782,24 +592,14 @@ export default function MessagesContent() {
   }, [inputValue]);
 
   const handleKeyDown = (e) => {
-    if (
-      e.key === "Enter" &&
-      !e.shiftKey &&
-      !e.nativeEvent?.isComposing
-    ) {
-      // FIX: Skip on touch devices so mobile keyboard Enter still adds newlines
-      const isTouchDevice =
-        typeof window !== "undefined" &&
-        window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent?.isComposing) {
+      const isTouchDevice = typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches;
       if (isTouchDevice) return;
       e.preventDefault();
       if (inputValue.trim() || imageFile) handleSendMessage(e);
     }
   };
 
-  /* ─────────────────────────────────────────────────────────
-     12. SEND MESSAGE
-  ───────────────────────────────────────────────────────── */
   const handleSendMessage = async (e) => {
     e?.preventDefault();
     if (connectionStatus !== "accepted") return;
@@ -807,286 +607,161 @@ export default function MessagesContent() {
     const imageToUpload = imageFile;
     const replyToId = replyingTo?.id;
     if (!msgText && !imageToUpload) return;
-
     setMessageSendError(null);
     const optimisticId = `opt-${Date.now()}`;
-    const optimistic = {
-      id: optimisticId,
-      sender_id: currentUserId,
-      receiver_id: activeChat.id,
-      text: msgText,
-      image_url: imagePreview,
-      replied_message: replyingTo,
-      created_at: new Date().toISOString(),
-      isSending: true,
-      message_reactions: [],
-    };
+    const optimistic = { id: optimisticId, sender_id: currentUserId, receiver_id: activeChat.id, text: msgText, image_url: imagePreview, replied_message: replyingTo, created_at: new Date().toISOString(), isSending: true, message_reactions: [] };
     forceScrollRef.current = true;
-    setMessages((prev) => [...prev, optimistic]);
-    setLastMessagePreviews((prev) => ({
-      ...prev,
-      [activeChat.id]: {
-        text: `You: ${
-          msgText || (imageToUpload ? "📷 Image" : "New message")
-        }`,
-        isSender: true,
-        isRead: false,
-      },
-    }));
-
-    setInputValue("");
-    setImageFile(null);
-    setImagePreview(null);
-    setReplyingTo(null);
+    setMessages(prev => [...prev, optimistic]);
+    setLastMessagePreviews(prev => ({ ...prev, [activeChat.id]: { text: `You: ${msgText || (imageToUpload ? "📷 Image" : "New message")}`, isSender: true, isRead: false } }));
+    setInputValue(""); setImageFile(null); setImagePreview(null); setReplyingTo(null);
     if (imageInputRef.current) imageInputRef.current.value = "";
-
     try {
       let imageUrl = null;
       if (imageToUpload) {
         const ext = imageToUpload.name.split(".").pop();
         const path = `${currentUserId}/msg-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("chat_images")
-          .upload(path, imageToUpload);
+        const { error: upErr } = await supabase.storage.from("chat_images").upload(path, imageToUpload);
         if (upErr) throw new Error("Image upload failed: " + upErr.message);
-        const { data: urlData } = supabase.storage
-          .from("chat_images")
-          .getPublicUrl(path);
+        const { data: urlData } = supabase.storage.from("chat_images").getPublicUrl(path);
         imageUrl = urlData.publicUrl;
       }
-
-      const { data: inserted, error } = await supabase
-        .from("messages")
-        .insert({
-          sender_id: currentUserId,
-          receiver_id: activeChat.id,
-          text: msgText || "",
-          image_url: imageUrl,
-          reply_to_message_id: replyToId,
-        })
-        .select()
-        .single();
+      const { data: inserted, error } = await supabase.from("messages").insert({ sender_id: currentUserId, receiver_id: activeChat.id, text: msgText || "", image_url: imageUrl, reply_to_message_id: replyToId }).select().single();
       if (error) throw error;
-
-      setMessages((prev) => {
-        // If realtime already added it, just remove optimistic
-        if (prev.some((m) => m.id === inserted.id && !m.isSending)) {
-          return prev.filter((m) => m.id !== optimisticId);
-        }
-        return prev.map((m) =>
-          m.id === optimisticId
-            ? {
-                ...m,
-                ...inserted,
-                image_url: imageUrl || m.image_url,
-                isSending: false,
-              }
-            : m
-        );
+      setMessages(prev => {
+        if (prev.some(m => m.id === inserted.id && !m.isSending)) return prev.filter(m => m.id !== optimisticId);
+        return prev.map(m => m.id === optimisticId ? { ...m, ...inserted, image_url: imageUrl || m.image_url, isSending: false } : m);
       });
-
-      await supabase.from("notifications").insert({
-        receiver_id: activeChat.id,
-        actor_id: currentUserId,
-        type: "message",
-        content: msgText
-          ? msgText.length > 100
-            ? msgText.slice(0, 100) + "…"
-            : msgText
-          : "Sent an image",
-      });
+      await supabase.from("notifications").insert({ receiver_id: activeChat.id, actor_id: currentUserId, type: "message", content: msgText ? (msgText.length > 100 ? msgText.slice(0, 100) + "…" : msgText) : "Sent an image" });
       notifyRecipient();
     } catch (err) {
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
       setMessageSendError(err.message);
       showToast("Failed to send: " + err.message, "error");
     }
   };
 
-  /* ── File attach ── */
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      showToast("Image must be under 10MB.", "error");
-      return;
-    }
+    if (file.size > 10 * 1024 * 1024) { showToast("Image must be under 10MB.", "error"); return; }
     setImageFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
   };
 
-  /* ── Mute toggle ── */
   const toggleMute = (contactId) => {
-    setMutedChats((prev) => {
-      const next = prev.includes(contactId)
-        ? prev.filter((id) => id !== contactId)
-        : [...prev, contactId];
+    setMutedChats(prev => {
+      const next = prev.includes(contactId) ? prev.filter(id => id !== contactId) : [...prev, contactId];
       localStorage.setItem("muted_chats", JSON.stringify(next));
       return next;
     });
   };
 
-  /* ── Copy message ── */
-  const copyMessage = (text) => {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => showToast("Copied to clipboard"));
-  };
+  const copyMessage = (text) => { navigator.clipboard.writeText(text).then(() => showToast("Copied to clipboard")); };
 
-  /* ── Notify recipient if first message or after 2-day gap ── */
   const notifyRecipient = useCallback(async () => {
     if (!activeChat || !currentUserId) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return;
-    fetch('/api/messages/notify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ receiver_id: activeChat.id }),
-    }).catch(() => {});
+    fetch('/api/messages/notify', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ receiver_id: activeChat.id }) }).catch(() => {});
   }, [activeChat, currentUserId]);
 
-  /* ── Send snippet ── */
   const sendSnippet = useCallback(async () => {
     if (!snippetCode.trim() || connectionStatus !== "accepted" || !currentUserId || !activeChat) return;
     const encoded = JSON.stringify({ __snippet: true, lang: snippetLang, code: snippetCode });
-    setShowSnippetPanel(false);
-    setSnippetCode("");
-    setSnippetLang("javascript");
-
+    setShowSnippetPanel(false); setSnippetCode(""); setSnippetLang("javascript");
     const optimisticId = `opt-${Date.now()}`;
     forceScrollRef.current = true;
-    setMessages((prev) => [...prev, {
-      id: optimisticId,
-      sender_id: currentUserId,
-      receiver_id: activeChat.id,
-      text: encoded,
-      image_url: null,
-      replied_message: null,
-      created_at: new Date().toISOString(),
-      isSending: true,
-      message_reactions: [],
-    }]);
-
+    setMessages(prev => [...prev, { id: optimisticId, sender_id: currentUserId, receiver_id: activeChat.id, text: encoded, image_url: null, replied_message: null, created_at: new Date().toISOString(), isSending: true, message_reactions: [] }]);
     try {
-      const { data: inserted, error } = await supabase
-        .from('messages')
-        .insert({ sender_id: currentUserId, receiver_id: activeChat.id, text: encoded })
-        .select().single();
+      const { data: inserted, error } = await supabase.from('messages').insert({ sender_id: currentUserId, receiver_id: activeChat.id, text: encoded }).select().single();
       if (error) throw error;
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === inserted.id && !m.isSending))
-          return prev.filter((m) => m.id !== optimisticId);
-        return prev.map((m) => m.id === optimisticId ? { ...m, ...inserted, isSending: false } : m);
+      setMessages(prev => {
+        if (prev.some(m => m.id === inserted.id && !m.isSending)) return prev.filter(m => m.id !== optimisticId);
+        return prev.map(m => m.id === optimisticId ? { ...m, ...inserted, isSending: false } : m);
       });
       notifyRecipient();
-    } catch (err) {
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-      showToast("Failed to send snippet: " + err.message, "error");
-    }
+    } catch (err) { setMessages(prev => prev.filter(m => m.id !== optimisticId)); showToast("Failed to send snippet: " + err.message, "error"); }
   }, [snippetCode, snippetLang, connectionStatus, currentUserId, activeChat, notifyRecipient, showToast]);
 
-  /* ── Auto-paste long text → snippet panel ── */
   const handlePaste = useCallback((e) => {
     const pasted = e.clipboardData?.getData('text') || '';
-    if (pasted.length > 500 && connectionStatus === "accepted") {
-      e.preventDefault();
-      setSnippetCode(pasted);
-      setShowSnippetPanel(true);
-    }
+    if (pasted.length > 500 && connectionStatus === "accepted") { e.preventDefault(); setSnippetCode(pasted); setShowSnippetPanel(true); }
   }, [connectionStatus]);
 
-  /* ── Filtered contacts ── */
-  const filteredContacts = contacts.filter((c) => {
-    const matchSearch = c.username
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchUnread = filterUnread
-      ? (unreadCounts[c.id] || 0) > 0
-      : true;
-    return matchSearch && matchUnread;
+  const hasAnyUnread = Object.values(unreadCounts).some(n => n > 0);
+  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+
+  const filteredContacts = contacts.filter(c => {
+    const matchSearch = c.username.toLowerCase().includes(searchQuery.toLowerCase());
+    if (filterTab === "unread") return matchSearch && (unreadCounts[c.id] || 0) > 0;
+    return matchSearch;
   });
 
-  const hasAnyUnread = Object.values(unreadCounts).some((n) => n > 0);
-
-  /* ─────────────────────────────────────────────────────────
-     LOADING GATE
-  ───────────────────────────────────────────────────────── */
+  /* ── Loading ── */
   if (!currentUserId) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 size={32} className="animate-spin text-violet-500" />
-          <p className="text-sm font-semibold text-gray-400 tracking-widest uppercase">
-            Authenticating…
-          </p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", background: "#F8FAFC" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <Loader2 size={28} color="#6366F1" className="animate-spin" />
+          <p style={{ fontSize: 12, fontWeight: 600, color: "#94A3B8", letterSpacing: "0.1em", textTransform: "uppercase" }}>Connecting…</p>
         </div>
       </div>
     );
   }
 
-  /* ─────────────────────────────────────────────────────────
+  /* ═══════════════════════════════════════════════════════
      RENDER
-  ───────────────────────────────────────────────────────── */
+  ═══════════════════════════════════════════════════════ */
   return (
     <>
-      {/* ── IMAGE LIGHTBOX ── */}
+      {/* Global styles */}
+      <style>{`
+        .msg-hover-actions { opacity: 0; pointer-events: none; transition: opacity 0.15s; }
+        .msg-row:hover .msg-hover-actions { opacity: 1; pointer-events: all; }
+        .contact-card:hover { background: #F8FAFC !important; }
+        .contact-card.active { background: #EFF6FF !important; }
+        .nav-icon:hover { background: #F1F5F9 !important; color: #475569 !important; }
+        .composer-area:focus-within { border-color: #6366F1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.08) !important; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 100px; }
+        ::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .slide-up { animation: slideUp 0.2s ease; }
+        .fade-in { animation: fadeIn 0.15s ease; }
+      `}</style>
+
+      {/* ── LIGHTBOX ── */}
       {lightboxImage && (
-        <div
-          className="fixed inset-0 z-[400] bg-black/95 flex items-center justify-center p-4"
-          onClick={() => setLightboxImage(null)}
-        >
-          <button className="absolute top-4 right-4 text-white/60 hover:text-white p-2 z-10">
-            <X size={24} />
+        <div style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setLightboxImage(null)}>
+          <button style={{ position: "absolute", top: 20, right: 20, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 10, width: 40, height: 40, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "white", zIndex: 10 }}>
+            <X size={20} />
           </button>
-          <a
-            href={lightboxImage}
-            download
-            className="absolute top-4 right-16 text-white/60 hover:text-white p-2 z-10"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Download size={22} />
+          <a href={lightboxImage} download style={{ position: "absolute", top: 20, right: 72, background: "rgba(255,255,255,0.1)", borderRadius: 10, width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", color: "white", zIndex: 10 }} onClick={e => e.stopPropagation()}>
+            <Download size={18} />
           </a>
-          <div className="relative max-w-4xl max-h-[90vh] w-full h-full">
-            <Image
-              src={lightboxImage}
-              alt="Full size"
-              fill
-              sizes="100vw"
-              className="object-contain"
-            />
+          <div style={{ position: "relative", maxWidth: 900, maxHeight: "88vh", width: "100%", height: "80vh" }}>
+            <Image src={lightboxImage} alt="Full size" fill sizes="100vw" style={{ objectFit: "contain" }} />
           </div>
         </div>
       )}
 
-      {/* ── BLOCK CONFIRM MODAL ── */}
+      {/* ── BLOCK CONFIRM ── */}
       {showBlockConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 w-full max-w-sm rounded-2xl p-8 shadow-2xl text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-14 h-14 bg-orange-100 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <ShieldAlert size={28} className="text-orange-500" />
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="slide-up" style={{ background: "white", borderRadius: 20, padding: 32, maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.12)" }}>
+            <div style={{ width: 56, height: 56, background: "#FFF7ED", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <ShieldAlert size={24} color="#F97316" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
-              Block @{activeChat?.username}?
-            </h3>
-            {/* FIX: removed duplicate paragraph */}
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-              They won&apos;t be able to message you. You can unblock at any time.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowBlockConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBlockUser}
-                disabled={isProcessing}
-                className="flex-1 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold transition-colors disabled:opacity-50"
-              >
-                {isProcessing ? "Blocking…" : "Block"}
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: "#0F172A", margin: "0 0 8px" }}>Block @{activeChat?.username}?</h3>
+            <p style={{ fontSize: 13, color: "#64748B", margin: "0 0 24px", lineHeight: 1.6 }}>They won't be able to message you. You can unblock anytime.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowBlockConfirm(false)} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1.5px solid #E2E8F0", background: "white", fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleBlockUser} disabled={isProcessing} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "#F97316", fontSize: 13, fontWeight: 700, color: "white", cursor: "pointer", opacity: isProcessing ? 0.6 : 1 }}>
+                {isProcessing ? "Blocking…" : "Block User"}
               </button>
             </div>
           </div>
@@ -1095,28 +770,14 @@ export default function MessagesContent() {
 
       {/* ── DELETE CONFIRM ── */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 w-full max-w-xs rounded-2xl p-6 shadow-2xl text-center animate-in fade-in zoom-in duration-150">
-            <Trash2 size={24} className="text-red-500 mx-auto mb-3" />
-            <p className="text-gray-900 dark:text-gray-100 font-semibold mb-1">
-              Delete this message?
-            </p>
-            <p className="text-gray-500 dark:text-gray-400 text-xs mb-5">
-              This cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDeleteMessage(showDeleteConfirm)}
-                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors"
-              >
-                Delete
-              </button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(6px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="slide-up" style={{ background: "white", borderRadius: 18, padding: 24, maxWidth: 320, width: "100%", textAlign: "center", boxShadow: "0 16px 50px rgba(0,0,0,0.1)" }}>
+            <Trash2 size={22} color="#EF4444" style={{ margin: "0 auto 12px" }} />
+            <p style={{ fontSize: 15, fontWeight: 700, color: "#0F172A", margin: "0 0 6px" }}>Delete message?</p>
+            <p style={{ fontSize: 12, color: "#94A3B8", margin: "0 0 20px" }}>This action cannot be undone.</p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowDeleteConfirm(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "white", fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => handleDeleteMessage(showDeleteConfirm)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: "#EF4444", fontSize: 13, fontWeight: 700, color: "white", cursor: "pointer" }}>Delete</button>
             </div>
           </div>
         </div>
@@ -1124,125 +785,92 @@ export default function MessagesContent() {
 
       {/* ── PROFILE MODAL ── */}
       {selectedUserId && (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setSelectedUserId(null)}
-          />
-          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto z-10 bg-white dark:bg-gray-950 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl">
-            <button
-              onClick={() => setSelectedUserId(null)}
-              className="absolute top-5 right-5 z-10 p-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 dark:text-gray-400 hover:text-red-600 transition-colors"
-            >
-              <X size={18} />
+        <div style={{ position: "fixed", inset: 0, zIndex: 250, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)" }} onClick={() => setSelectedUserId(null)} />
+          <div style={{ position: "relative", width: "100%", maxWidth: 900, maxHeight: "90vh", overflowY: "auto", zIndex: 10, background: "white", borderRadius: 24, border: "1px solid #F1F5F9", boxShadow: "0 24px 80px rgba(0,0,0,0.12)" }}>
+            <button onClick={() => setSelectedUserId(null)} style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 32, height: 32, borderRadius: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748B" }}>
+              <X size={16} />
             </button>
-            <div className="p-4 sm:p-6">
+            <div style={{ padding: "20px 24px" }}>
               <ProfileContent viewUserId={selectedUserId} />
             </div>
           </div>
         </div>
       )}
 
-      {/* ── MAIN LAYOUT ── */}
-      <div className="w-full flex h-full bg-transparent overflow-hidden relative">
+      {/* ══════════════════════════════════════════════════════
+          MAIN LAYOUT
+      ══════════════════════════════════════════════════════ */}
+      <div style={{ 
+        display: "flex", 
+        height: "100%", 
+        background: "#F8FAFC", 
+        overflow: "hidden", 
+        fontFamily: "'Inter', -apple-system, sans-serif",
+        position: "relative" 
+      }}>
 
-        {/* ════════════════════════════════════
-            SIDEBAR
-        ════════════════════════════════════ */}
-        <div
-          className={`w-full md:w-72 lg:w-80 flex-col shrink-0 ${
-            isMobileChatOpen ? "hidden md:flex" : "flex"
-          }`}
-        >
-          {/* Header */}
-          <div className="pb-3 px-4 md:px-1">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
-                Messages
-              </h2>
+        {/* Narrow icon nav removed for responsive layout */}
+
+        {/* ── INBOX PANEL ── */}
+        <div style={{
+          width: 'clamp(280px,24vw,340px)', display: isMobileChatOpen ? "none" : "flex", flexDirection: "column",
+          background: "white", borderRight: "1px solid #F1F5F9", flexShrink: 0,
+          // Show on md+
+        }} className="md:flex">
+          {/* Inbox header */}
+          <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid #F1F5F9" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#0F172A", margin: 0 }}>Inbox</h2>
               {hasAnyUnread && (
-                <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">
-                  {Object.values(unreadCounts).reduce((a, b) => a + b, 0)} new
-                </span>
+                <span style={{ fontSize: 11, fontWeight: 700, background: "#6366F1", color: "white", padding: "2px 8px", borderRadius: 100 }}>{totalUnread}</span>
+              )}
+            </div>
+
+            {/* Search */}
+            <div style={{ position: "relative", marginBottom: 12 }}>
+              <Search size={13} color="#94A3B8" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+              <input
+                type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search conversations…"
+                style={{ width: "100%", background: "#F8FAFC", border: "1px solid #F1F5F9", borderRadius: 10, padding: "7px 28px 7px 30px", fontSize: 12, color: "#334155", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94A3B8", lineHeight: 0 }}>
+                  <X size={12} />
+                </button>
               )}
             </div>
 
             {/* Filter tabs */}
-            <div className="flex items-center bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1 mb-3 gap-1">
-              {(
-                [
-                  ["All", false],
-                  ["Unread", true],
-                ]
-              ).map(([label, val]) => (
-                <button
-                  key={label}
-                  onClick={() => setFilterUnread(val)}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                    filterUnread === val
-                      ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                      : "text-gray-500 dark:text-gray-400"
-                  }`}
-                >
+            <div style={{ display: "flex", gap: 4 }}>
+              {[["all", "All"], ["unread", "Unread"]].map(([val, label]) => (
+                <button key={val} onClick={() => setFilterTab(val)} style={{
+                  flex: 1, padding: "5px 0", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600,
+                  background: filterTab === val ? "#EEF2FF" : "transparent",
+                  color: filterTab === val ? "#4F46E5" : "#94A3B8",
+                  transition: "all 0.15s",
+                }}>
                   {label}
-                  {label === "Unread" && hasAnyUnread && (
-                    <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 inline-block animate-pulse" />
-                  )}
+                  {label === "Unread" && hasAnyUnread && <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: "#6366F1", marginLeft: 4, verticalAlign: "middle" }} />}
                 </button>
               ))}
-            </div>
-
-            {/* Search */}
-            <div className="relative group">
-              <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none"
-              />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search…"
-                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2 pl-9 pr-8 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              )}
             </div>
           </div>
 
           {/* Contact list */}
-          <div className="flex-1 overflow-y-auto space-y-1 pr-4 md:pr-1 pb-2 custom-scrollbar">
-            {filteredContacts.length === 0 && (
-              <div className="text-center py-12 px-4">
-                <MessageSquare
-                  size={32}
-                  className="text-gray-300 dark:text-gray-700 mx-auto mb-3"
-                />
-                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500">
-                  {filterUnread
-                    ? "No unread messages"
-                    : searchQuery
-                    ? `No results for "${searchQuery}"`
-                    : "No connections yet"}
+          <div style={{ flex: 1, overflowY: "auto", padding: "8px 8px" }}>
+            {filteredContacts.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 16px" }}>
+                <MessageSquare size={28} color="#E2E8F0" style={{ margin: "0 auto 10px" }} />
+                <p style={{ fontSize: 12, fontWeight: 600, color: "#94A3B8" }}>
+                  {filterTab === "unread" ? "No unread messages" : searchQuery ? `No results for "${searchQuery}"` : "No conversations yet"}
                 </p>
-                {filterUnread && (
-                  <button
-                    onClick={() => setFilterUnread(false)}
-                    className="mt-2 text-xs text-blue-500 font-bold underline underline-offset-2"
-                  >
-                    Show all
-                  </button>
+                {filterTab === "unread" && (
+                  <button onClick={() => setFilterTab("all")} style={{ fontSize: 12, color: "#6366F1", fontWeight: 600, background: "none", border: "none", cursor: "pointer", marginTop: 6 }}>Show all</button>
                 )}
               </div>
-            )}
-
-            {filteredContacts.map((contact, i) => {
+            ) : filteredContacts.map((contact, i) => {
               const isActive = activeChat?.id === contact.id;
               const isOnline = Object.keys(onlineUsers).includes(contact.id);
               const unread = unreadCounts[contact.id] || 0;
@@ -1251,109 +879,43 @@ export default function MessagesContent() {
               const isMuted = mutedChats.includes(contact.id);
 
               return (
-                <div
-                  key={contact.id}
-                  onClick={() => {
-                    setActiveChat(contact);
-                    setShowMoreMenu(false);
-                    setIsMobileChatOpen(true);
-                  }}
-                  className={`group flex items-center gap-3 p-4 md:p-3 cursor-pointer rounded-2xl border transition-all duration-200 animate-in fade-in slide-in-from-left-2 ${
-                    isActive
-                      ? "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/60"
-                      : "bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 border-transparent hover:border-gray-200 dark:hover:border-gray-700/50"
-                  }`}
+                <div key={contact.id}
+                  className={`contact-card${isActive ? " active" : ""}`}
+                  onClick={() => { setActiveChat(contact); setShowMoreMenu(false); setIsMobileChatOpen(true); }}
                   style={{
-                    animationDelay: `${i * 30}ms`,
-                    animationFillMode: "both",
+                    display: "flex", alignItems: "center", gap: 10, padding: "10px", cursor: "pointer",
+                    borderRadius: 12, marginBottom: 2, transition: "background 0.12s",
+                    background: isActive ? "#EFF6FF" : "transparent",
+                    animation: `slideUp 0.2s ease ${i * 25}ms both`,
                   }}
                 >
                   {/* Avatar */}
-                  <div
-                    className={`relative w-11 h-11 rounded-full shrink-0 overflow-hidden border-2 transition-all cursor-pointer ${
-                      isActive
-                        ? "border-blue-300 dark:border-blue-700"
-                        : "border-transparent group-hover:border-blue-100 dark:group-hover:border-blue-900"
-                    }`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedUserId(contact.id);
-                    }}
-                  >
-                    {contact.avatar_url ? (
-                      <Image
-                        src={contact.avatar_url}
-                        alt=""
-                        fill
-                        sizes="44px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div
-                        className={`w-full h-full flex items-center justify-center text-sm font-black ${
-                          isActive
-                            ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-                        }`}
-                      >
-                        {contact.username[0].toUpperCase()}
-                      </div>
-                    )}
-                    {isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full" />
-                    )}
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, overflow: "hidden", position: "relative", cursor: "pointer", border: isActive ? "2px solid #BFDBFE" : "2px solid transparent" }}
+                      onClick={e => { e.stopPropagation(); setSelectedUserId(contact.id); }}>
+                      {contact.avatar_url ? (
+                        <Image src={contact.avatar_url} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
+                      ) : (
+                        <div style={{ width: "100%", height: "100%", background: isActive ? "#DBEAFE" : "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: isActive ? "#2563EB" : "#64748B" }}>
+                          {contact.username[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    {isOnline && <div style={{ position: "absolute", bottom: 0, right: 0, width: 10, height: 10, background: "#22C55E", borderRadius: "50%", border: "2px solid white" }} />}
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span
-                        className={`text-sm font-bold truncate flex items-center gap-1 ${
-                          isActive
-                            ? "text-blue-700 dark:text-blue-300"
-                            : "text-gray-900 dark:text-gray-100"
-                        }`}
-                      >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, marginBottom: 2 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: isActive ? "#1D4ED8" : "#1E293B", display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {contact.username}
-                        {contact.is_verified && (
-                          <BadgeCheck
-                            size={13}
-                            className="text-blue-500 shrink-0"
-                            fill="currentColor"
-                            stroke="white"
-                          />
-                        )}
-                        {isMuted && (
-                          <BellOff size={11} className="text-gray-400 shrink-0" />
-                        )}
+                        {contact.is_verified && <BadgeCheck size={12} color="#3B82F6" fill="#3B82F6" stroke="white" strokeWidth={2} />}
+                        {isMuted && <BellOff size={10} color="#94A3B8" />}
                       </span>
-                      {unread > 0 && (
-                        <span className="text-[9px] font-black text-white bg-blue-600 px-1.5 py-0.5 rounded-md shrink-0 shadow-sm">
-                          {unread}
-                        </span>
-                      )}
+                      {unread > 0 && <span style={{ fontSize: 10, fontWeight: 800, background: "#6366F1", color: "white", padding: "1px 6px", borderRadius: 100, flexShrink: 0 }}>{unread}</span>}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <p
-                        className={`text-xs truncate flex-1 ${
-                          isTyping
-                            ? "text-blue-500 italic font-semibold"
-                            : unread > 0
-                            ? "text-gray-700 dark:text-gray-200 font-semibold"
-                            : "text-gray-400 dark:text-gray-500"
-                        }`}
-                      >
-                        {isTyping
-                          ? "typing…"
-                          : preview?.text || (isOnline ? "Online" : "Tap to chat")}
-                      </p>
-                      {!isTyping && preview?.isSender && (
-                        preview.isRead ? (
-                          <CheckCheck size={13} className="text-blue-400 shrink-0" />
-                        ) : (
-                          <Check size={13} className="text-gray-400 shrink-0" />
-                        )
-                      )}
-                    </div>
+                    <p style={{ fontSize: 11.5, color: isTyping ? "#6366F1" : unread > 0 ? "#334155" : "#94A3B8", fontWeight: isTyping || unread > 0 ? 500 : 400, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: isTyping ? "italic" : "normal" }}>
+                      {isTyping ? "typing…" : preview?.text || (isOnline ? "Online" : "Start a conversation")}
+                    </p>
                   </div>
                 </div>
               );
@@ -1361,140 +923,83 @@ export default function MessagesContent() {
           </div>
         </div>
 
-        {/* ── DIVIDER ── */}
-        <div className="hidden md:block w-px bg-gray-200 dark:bg-gray-800 mx-3 shrink-0" />
+        {/* ══════════════════════════════════════════════
+            MAIN CHAT AREA
+        ══════════════════════════════════════════════ */}
+        <div style={{ flex: 1, display: isMobileChatOpen || contacts.length > 0 ? "flex" : "flex", flexDirection: "column", minWidth: 0, minHeight: 0, background: "#F8FAFC", position: "relative" }}>
 
-        {/* ════════════════════════════════════
-            CHAT AREA
-        ════════════════════════════════════ */}
-        <div
-          className={`flex-1 flex-col min-w-0 min-h-0 ${
-            !isMobileChatOpen ? "hidden md:flex" : "flex"
-          }`}
-        >
           {activeChat ? (
             <>
-              {/* Chat Header - Mobile optimized */}
-              <div className="pb-2 pt-1 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0 z-10 relative bg-white dark:bg-gray-950 md:bg-transparent px-4 md:px-0">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <button
-                    onClick={() => setIsMobileChatOpen(false)}
-                    className="md:hidden p-1.5 -ml-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors shrink-0"
-                  >
-                    <ChevronLeft size={22} />
+              {/* ── Chat header ── */}
+              <div style={{
+                padding: "14px 20px", background: "white", borderBottom: "1px solid #F1F5F9",
+                display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, zIndex: 5,
+                boxShadow: "0 1px 0 #F1F5F9",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                  <button onClick={() => setIsMobileChatOpen(false)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 4, lineHeight: 0, display: "flex" }}
+                    className="md:hidden">
+                    <ChevronLeft size={20} />
                   </button>
-                  <div
-                    className="relative w-9 h-9 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 cursor-pointer shrink-0 hover:opacity-80 transition-opacity"
-                    onClick={() => setSelectedUserId(activeChat.id)}
-                  >
+
+                  <div style={{ position: "relative", width: 36, height: 36, borderRadius: 10, overflow: "hidden", flexShrink: 0, cursor: "pointer" }}
+                    onClick={() => setSelectedUserId(activeChat.id)}>
                     {activeChat.avatar_url ? (
-                      <Image
-                        src={activeChat.avatar_url}
-                        alt=""
-                        fill
-                        sizes="36px"
-                        className="object-cover"
-                      />
+                      <Image src={activeChat.avatar_url} alt="" fill sizes="36px" style={{ objectFit: "cover" }} />
                     ) : (
-                      <div className="w-full h-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-sm font-black text-violet-600 dark:text-violet-300">
+                      <div style={{ width: "100%", height: "100%", background: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#7C3AED" }}>
                         {activeChat.username[0].toUpperCase()}
                       </div>
                     )}
                   </div>
-                  <div
-                    className="cursor-pointer min-w-0 flex-1"
-                    onClick={() => setSelectedUserId(activeChat.id)}
-                  >
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight flex items-center gap-1 hover:text-violet-600 dark:hover:text-violet-400 transition-colors min-w-0">
-                      <span className="truncate">@{activeChat.username}</span>
-                      {activeChat.is_verified && (
-                        <BadgeCheck
-                          size={14}
-                          className="text-violet-500 shrink-0"
-                          fill="currentColor"
-                          stroke="white"
-                        />
-                      )}
+
+                  <div style={{ cursor: "pointer", minWidth: 0 }} onClick={() => setSelectedUserId(activeChat.id)}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#0F172A", margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>@{activeChat.username}</span>
+                      {activeChat.is_verified && <BadgeCheck size={14} color="#6366F1" fill="#6366F1" stroke="white" strokeWidth={2} />}
                     </h3>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1">
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                          connectionStatus === "blocked"
-                            ? "bg-red-500"
-                            : Object.keys(onlineUsers).includes(activeChat.id)
-                            ? "bg-green-500"
-                            : "bg-gray-300 dark:bg-gray-600"
-                        }`}
-                      />
-                      <span className="text-gray-400 dark:text-gray-500 truncate">
-                        {connectionStatus === "blocked"
-                          ? "Blocked"
-                          : Object.keys(onlineUsers).includes(activeChat.id)
-                          ? "Online"
-                          : "Offline"}
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 1 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: connectionStatus === "blocked" ? "#EF4444" : Object.keys(onlineUsers).includes(activeChat.id) ? "#22C55E" : "#CBD5E1" }} />
+                      <span style={{ fontSize: 11, fontWeight: 500, color: "#94A3B8" }}>
+                        {connectionStatus === "blocked" ? "Blocked" : Object.keys(onlineUsers).includes(activeChat.id) ? "Online" : "Offline"}
                       </span>
-                    </p>
+                    </div>
+                  </div>
+
+                  <div style={{ marginLeft: 8 }}>
+                    <StatusBadge status={connectionStatus || "none"} />
                   </div>
                 </div>
 
-                {/* Header actions */}
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <div className="relative" ref={moreMenuRef}>
-                    <button
-                      onClick={() => setShowMoreMenu((p) => !p)}
-                      className={`p-2 rounded-xl transition-all ${
-                        showMoreMenu
-                          ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                          : "text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      }`}
-                    >
-                      <MoreHorizontal size={18} />
+                {/* Header right actions */}
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <button onClick={() => setShowRightPanel(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid #F1F5F9", background: showRightPanel ? "#EEF2FF" : "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: showRightPanel ? "#6366F1" : "#64748B", transition: "all 0.15s" }} title="Toggle panel">
+                    {showRightPanel ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+                  </button>
+
+                  <div style={{ position: "relative" }} ref={moreMenuRef}>
+                    <button onClick={() => setShowMoreMenu(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid #F1F5F9", background: showMoreMenu ? "#F8FAFC" : "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748B", transition: "all 0.15s" }}>
+                      <MoreHorizontal size={16} />
                     </button>
                     {showMoreMenu && (
-                      <div className="absolute top-full right-0 mt-1 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl z-50 py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
-                        <button
-                          onClick={() => {
-                            setSelectedUserId(activeChat.id);
-                            setShowMoreMenu(false);
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-semibold"
-                        >
-                          <Users size={14} /> View Profile
-                        </button>
-                        <button
-                          onClick={() => {
-                            toggleMute(activeChat.id);
-                            setShowMoreMenu(false);
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-semibold"
-                        >
-                          {mutedChats.includes(activeChat.id) ? (
-                            <>
-                              <Bell size={14} /> Unmute
-                            </>
-                          ) : (
-                            <>
-                              <BellOff size={14} /> Mute Notifications
-                            </>
-                          )}
-                        </button>
-                        <div className="border-t border-gray-100 dark:border-gray-800 my-1" />
-                        {connectionStatus === "blocked" &&
-                        blockerId === currentUserId ? (
-                          <button
-                            onClick={handleUnblockUser}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors font-bold"
-                          >
+                      <div className="slide-up" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, width: 200, background: "white", border: "1px solid #F1F5F9", borderRadius: 14, boxShadow: "0 8px 32px rgba(0,0,0,0.08)", zIndex: 50, padding: "6px 0", overflow: "hidden" }}>
+                        {[
+                          { label: "View Profile", icon: Users, action: () => { setSelectedUserId(activeChat.id); setShowMoreMenu(false); } },
+                          { label: mutedChats.includes(activeChat.id) ? "Unmute" : "Mute", icon: mutedChats.includes(activeChat.id) ? Bell : BellOff, action: () => { toggleMute(activeChat.id); setShowMoreMenu(false); } },
+                        ].map(item => (
+                          <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#334155", textAlign: "left", transition: "background 0.1s" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#F8FAFC"} onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                            <item.icon size={14} /> {item.label}
+                          </button>
+                        ))}
+                        <div style={{ borderTop: "1px solid #F1F5F9", margin: "4px 0" }} />
+                        {connectionStatus === "blocked" && blockerId === currentUserId ? (
+                          <button onClick={handleUnblockUser} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#16A34A", textAlign: "left" }}>
                             <ShieldCheck size={14} /> Unblock User
                           </button>
                         ) : (
-                          <button
-                            onClick={() => {
-                              setShowBlockConfirm(true);
-                              setShowMoreMenu(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors font-bold"
-                          >
+                          <button onClick={() => { setShowBlockConfirm(true); setShowMoreMenu(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#F97316", textAlign: "left" }}>
                             <ShieldAlert size={14} /> Block User
                           </button>
                         )}
@@ -1504,14 +1009,12 @@ export default function MessagesContent() {
                 </div>
               </div>
 
-              {/* ── Messages ── */}
-              <div
-                ref={scrollRef}
-                className="flex-1 overflow-y-auto py-4 px-4 md:px-1 space-y-1 no-scrollbar mobile-chat-scroll relative"
-              >
+              {/* ── Message area ── */}
+              <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 2, minHeight: 0 }}>
+
                 {isLoadingMessages && (
-                  <div className="flex justify-center py-8">
-                    <Loader2 size={24} className="animate-spin text-blue-500" />
+                  <div style={{ display: "flex", justifyContent: "center", padding: "32px 0" }}>
+                    <Loader2 size={22} color="#6366F1" className="animate-spin" />
                   </div>
                 )}
 
@@ -1519,83 +1022,41 @@ export default function MessagesContent() {
                   <>
                     {messages.map((msg, idx) => {
                       const isMine = msg.sender_id === currentUserId;
-                      const reactionsByEmoji = (
-                        msg.message_reactions || []
-                      ).reduce((acc, r) => {
-                        acc[r.emoji] = acc[r.emoji] || [];
-                        acc[r.emoji].push(r);
-                        return acc;
-                      }, {});
+                      const reactionsByEmoji = (msg.message_reactions || []).reduce((acc, r) => { acc[r.emoji] = acc[r.emoji] || []; acc[r.emoji].push(r); return acc; }, {});
                       const isHovered = hoveredMsgId === msg.id;
-                      // FIX: use strict same-sender check for grouping
                       const prevMsg = messages[idx - 1];
-                      const sameAsPrev =
-                        prevMsg?.sender_id === msg.sender_id;
+                      const sameAsPrev = prevMsg?.sender_id === msg.sender_id;
+                      const snip = parseSnippet(msg.text);
 
                       return (
-                        <div
-                          key={msg.id}
-                          className={`flex gap-3 px-4 md:px-1 ${
-                            isMine ? "justify-end" : "justify-start"
-                          } group/msg`}
+                        <div key={msg.id} className="msg-row" style={{ display: "flex", gap: 8, justifyContent: isMine ? "flex-end" : "flex-start", marginBottom: sameAsPrev ? 2 : 10, padding: "0 0", position: "relative" }}
                           onMouseEnter={() => setHoveredMsgId(msg.id)}
-                          onMouseLeave={() => setHoveredMsgId(null)}
-                        >
-                          {/* Sender avatar — FIX: add relative positioning wrapper */}
+                          onMouseLeave={() => setHoveredMsgId(null)}>
+
+                          {/* Avatar */}
                           {!isMine && (
-                            <div
-                              className={`relative w-7 h-7 shrink-0 rounded-full overflow-hidden mt-auto mb-1 cursor-pointer ${
-                                sameAsPrev
-                                  ? "opacity-0 pointer-events-none"
-                                  : ""
-                              }`}
-                              onClick={() =>
-                                setSelectedUserId(activeChat.id)
-                              }
-                            >
+                            <div style={{ width: 30, height: 30, borderRadius: 10, overflow: "hidden", flexShrink: 0, alignSelf: "flex-end", marginBottom: 2, cursor: "pointer", opacity: sameAsPrev ? 0 : 1, pointerEvents: sameAsPrev ? "none" : "auto", position: "relative" }}
+                              onClick={() => setSelectedUserId(activeChat.id)}>
                               {activeChat.avatar_url ? (
-                                <Image
-                                  src={activeChat.avatar_url}
-                                  alt=""
-                                  fill
-                                  sizes="28px"
-                                  className="object-cover"
-                                />
+                                <Image src={activeChat.avatar_url} alt="" fill sizes="30px" style={{ objectFit: "cover" }} />
                               ) : (
-                                <div className="w-full h-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-xs font-black text-violet-600">
+                                <div style={{ width: "100%", height: "100%", background: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#7C3AED" }}>
                                   {activeChat.username[0].toUpperCase()}
                                 </div>
                               )}
                             </div>
                           )}
 
-                          <div
-                            className={`flex flex-col max-w-[85%] md:max-w-[78%] ${
-                              isMine ? "items-end" : "items-start"
-                            }`}
-                          >
+                          <div style={{ display: "flex", flexDirection: "column", maxWidth: "min(700px,85%)", alignItems: isMine ? "flex-end" : "flex-start" }}>
                             {/* Reply preview */}
                             {msg.replied_message && (
-                              <div
-                                className={`flex items-start gap-2 mb-1 px-3 py-1.5 rounded-xl text-xs border max-w-full ${
-                                  isMine
-                                    ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50 text-right"
-                                    : "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-left"
-                                }`}
-                              >
-                                <CornerUpLeft
-                                  size={12}
-                                  className="text-gray-400 shrink-0 mt-0.5"
-                                />
-                                <div className="min-w-0">
-                                  <p className="font-bold text-gray-500 dark:text-gray-400 text-[10px] uppercase tracking-wide">
-                                    @
-                                    {msg.replied_message.sender_id ===
-                                    currentUserId
-                                      ? "You"
-                                      : activeChat.username}
+                              <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 4, padding: "6px 10px", borderRadius: 10, background: isMine ? "rgba(99,102,241,0.06)" : "#F8FAFC", border: `1px solid ${isMine ? "rgba(99,102,241,0.12)" : "#F1F5F9"}`, maxWidth: "100%" }}>
+                                <CornerUpLeft size={11} color="#94A3B8" style={{ flexShrink: 0, marginTop: 1 }} />
+                                <div style={{ minWidth: 0 }}>
+                                  <p style={{ fontSize: 10, fontWeight: 700, color: "#6366F1", margin: "0 0 1px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                                    @{msg.replied_message.sender_id === currentUserId ? "You" : activeChat.username}
                                   </p>
-                                  <p className="text-gray-500 dark:text-gray-400 truncate">
+                                  <p style={{ fontSize: 11.5, color: "#64748B", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     {msg.replied_message.text || "📷 Image"}
                                   </p>
                                 </div>
@@ -1603,127 +1064,74 @@ export default function MessagesContent() {
                             )}
 
                             {/* Bubble */}
-                            <div
-                              className={`relative inline-block text-[14px] break-words rounded-2xl shadow-sm transition-all ${
-                                msg.isSending ? "opacity-60" : ""
-                              } ${
-                                (!msg.text && msg.image_url) || parseSnippet(msg.text)
-                                  ? "bg-transparent shadow-none"
-                                  : isMine
-                                  ? "bg-blue-600 text-white rounded-br-md"
-                                  : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-md"
-                              }`}
-                            >
+                            <div style={{
+                              position: "relative",
+                              background: snip ? "transparent" : (!msg.text && msg.image_url) ? "transparent" : isMine ? "#4F46E5" : "white",
+                              color: isMine && !snip ? "white" : "#1E293B",
+                              borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                              border: snip ? "none" : (!msg.text && msg.image_url) ? "none" : isMine ? "none" : "1px solid #F1F5F9",
+                              boxShadow: snip || (!msg.text && msg.image_url) ? "none" : isMine ? "0 2px 12px rgba(79,70,229,0.2)" : "0 1px 4px rgba(0,0,0,0.04)",
+                              opacity: msg.isSending ? 0.65 : 1,
+                              transition: "opacity 0.2s",
+                            }}>
                               {msg.image_url && (
-                                <div
-                                  className={`relative w-48 sm:w-64 aspect-video rounded-xl overflow-hidden cursor-zoom-in ${
-                                    msg.text ? "m-1.5" : ""
-                                  } bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800`}
-                                  onClick={() =>
-                                    setLightboxImage(msg.image_url)
-                                  }
-                                >
-                                  <Image
-                                    src={msg.image_url}
-                                    alt="attachment"
-                                    fill
-                                    sizes="256px"
-                                    className="object-cover hover:scale-105 transition-transform"
-                                  />
-                                  <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center">
-                                    <ZoomIn
-                                      size={20}
-                                      className="text-white opacity-0 group-hover/msg:opacity-100 transition-opacity drop-shadow-lg"
-                                    />
+                                <div style={{ position: "relative", width: 220, aspectRatio: "4/3", borderRadius: 14, overflow: "hidden", cursor: "zoom-in", background: "#F1F5F9", margin: msg.text ? "0 0 4px 0" : 0 }}
+                                  onClick={() => setLightboxImage(msg.image_url)}>
+                                  <Image src={msg.image_url} alt="attachment" fill sizes="220px" style={{ objectFit: "cover" }} />
+                                  <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0)", transition: "background 0.15s" }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.08)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = "rgba(0,0,0,0)"}>
+                                    <ZoomIn size={18} color="white" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", opacity: 0 }} />
                                   </div>
                                 </div>
                               )}
-                              {msg.text && (() => {
-                                const snip = parseSnippet(msg.text);
-                                if (snip) return <SnippetBlock snippet={snip} isMine={isMine} />;
-                                return <p className="px-4 py-3 whitespace-pre-wrap leading-relaxed">{msg.text}</p>;
-                              })()}
+                              {msg.text && (snip ? <SnippetBlock snippet={snip} isMine={isMine} /> : (
+                                <p style={{ padding: "10px 14px", margin: 0, fontSize: 14, lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.text}</p>
+                              ))}
 
-                              {/* FIX: single floating action bar — removed duplicate */}
-                              <div
-                                className={`absolute top-1/2 -translate-y-1/2 ${
-                                  isMine
-                                    ? "right-full mr-2"
-                                    : "left-full ml-2"
-                                } flex items-center gap-1 p-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm transition-all duration-150 z-20 ${
-                                  isHovered || emojiPickerMsgId === msg.id
-                                    ? "opacity-100 translate-x-0"
-                                    : `opacity-0 pointer-events-none ${
-                                        isMine
-                                          ? "translate-x-2"
-                                          : "-translate-x-2"
-                                      }`
-                                }`}
-                              >
-                                {/* Emoji picker */}
-                                <div className="relative">
-                                  <button
-                                    onClick={() =>
-                                      setEmojiPickerMsgId(
-                                        emojiPickerMsgId === msg.id
-                                          ? null
-                                          : msg.id
-                                      )
-                                    }
-                                    className={`p-1.5 rounded-lg text-gray-500 hover:text-yellow-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all ${
-                                      emojiPickerMsgId === msg.id
-                                        ? "bg-gray-100 dark:bg-gray-800 text-yellow-500"
-                                        : ""
-                                    }`}
-                                    title="React"
-                                  >
-                                    <Smile size={16} />
+                              {/* Floating action bar */}
+                              <div className="msg-hover-actions" style={{
+                                position: "absolute", top: "50%", transform: "translateY(-50%)",
+                                [isMine ? "right" : "left"]: "calc(100% + 6px)",
+                                display: "flex", alignItems: "center", gap: 2,
+                                background: "white", border: "1px solid #F1F5F9", borderRadius: 10,
+                                boxShadow: "0 2px 12px rgba(0,0,0,0.06)", padding: "3px 4px", zIndex: 20,
+                              }}>
+                                <div style={{ position: "relative" }}>
+                                  <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: emojiPickerMsgId === msg.id ? "#FFF7ED" : "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.12s" }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = "#FFF7ED"; e.currentTarget.style.color = "#F97316"; }}
+                                    onMouseLeave={e => { if (emojiPickerMsgId !== msg.id) { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#94A3B8"; } }}>
+                                    <Smile size={14} />
                                   </button>
                                   {emojiPickerMsgId === msg.id && (
-                                    <div
-                                      className={`absolute ${
-                                        isMine ? "right-0" : "left-0"
-                                      } bottom-full mb-3 flex w-max gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-3 py-2 shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-100`}
-                                    >
-                                      {QUICK_EMOJIS.map((e) => (
-                                        <button
-                                          key={e}
-                                          onClick={() =>
-                                            handleReaction(msg.id, e)
-                                          }
-                                          className="text-xl hover:scale-125 hover:-translate-y-1 transition-transform focus:outline-none"
-                                        >
+                                    <div className="slide-up" style={{ position: "absolute", [isMine ? "right" : "left"]: 0, bottom: "calc(100% + 6px)", display: "flex", gap: 6, background: "white", border: "1px solid #F1F5F9", borderRadius: 100, padding: "6px 10px", boxShadow: "0 8px 28px rgba(0,0,0,0.1)", zIndex: 100, whiteSpace: "nowrap" }}>
+                                      {QUICK_EMOJIS.map(e => (
+                                        <button key={e} onClick={() => handleReaction(msg.id, e)} style={{ fontSize: 18, background: "none", border: "none", cursor: "pointer", padding: "0 2px", transition: "transform 0.1s", lineHeight: 1 }}
+                                          onMouseEnter={el => el.currentTarget.style.transform = "scale(1.3) translateY(-2px)"}
+                                          onMouseLeave={el => el.currentTarget.style.transform = "scale(1)"}>
                                           {e}
                                         </button>
                                       ))}
                                     </div>
                                   )}
                                 </div>
-                                <button
-                                  onClick={() => setReplyingTo(msg)}
-                                  className="p-1.5 rounded-lg text-gray-500 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
-                                  title="Reply"
-                                >
-                                  <Reply size={16} />
+                                <button onClick={() => setReplyingTo(msg)} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.12s" }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = "#EFF6FF"; e.currentTarget.style.color = "#3B82F6"; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#94A3B8"; }}>
+                                  <Reply size={14} />
                                 </button>
                                 {msg.text && (
-                                  <button
-                                    onClick={() => { const s = parseSnippet(msg.text); copyMessage(s ? s.code : msg.text); }}
-                                    className="p-1.5 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
-                                    title="Copy"
-                                  >
-                                    <Copy size={16} />
+                                  <button onClick={() => { const s = parseSnippet(msg.text); copyMessage(s ? s.code : msg.text); }} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.12s" }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.color = "#475569"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#94A3B8"; }}>
+                                    <Copy size={14} />
                                   </button>
                                 )}
                                 {isMine && (
-                                  <button
-                                    onClick={() =>
-                                      setShowDeleteConfirm(msg.id)
-                                    }
-                                    className="p-1.5 rounded-lg text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={16} />
+                                  <button onClick={() => setShowDeleteConfirm(msg.id)} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.12s" }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = "#FFF1F2"; e.currentTarget.style.color = "#EF4444"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#94A3B8"; }}>
+                                    <Trash2 size={14} />
                                   </button>
                                 )}
                               </div>
@@ -1731,196 +1139,111 @@ export default function MessagesContent() {
 
                             {/* Reactions */}
                             {Object.keys(reactionsByEmoji).length > 0 && (
-                              <div
-                                className={`flex flex-wrap gap-1 mt-1 ${
-                                  isMine ? "justify-end" : "justify-start"
-                                }`}
-                              >
-                                {Object.entries(reactionsByEmoji).map(
-                                  ([emoji, reactors]) => {
-                                    const myReaction = reactors.find(
-                                      (r) => r.user_id === currentUserId
-                                    );
-                                    return (
-                                      <button
-                                        key={emoji}
-                                        onClick={() =>
-                                          handleReaction(msg.id, emoji)
-                                        }
-                                        className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border transition-all ${
-                                          myReaction
-                                            ? "bg-blue-600 border-blue-600 text-white"
-                                            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300"
-                                        }`}
-                                      >
-                                        <span>{emoji}</span>
-                                        {reactors.length > 1 && (
-                                          <span>{reactors.length}</span>
-                                        )}
-                                      </button>
-                                    );
-                                  }
-                                )}
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4, justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                                {Object.entries(reactionsByEmoji).map(([emoji, reactors]) => {
+                                  const myReaction = reactors.find(r => r.user_id === currentUserId);
+                                  return (
+                                    <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 600, padding: "2px 7px", borderRadius: 100, border: `1.5px solid ${myReaction ? "#6366F1" : "#F1F5F9"}`, background: myReaction ? "#EEF2FF" : "white", color: myReaction ? "#4F46E5" : "#64748B", cursor: "pointer", transition: "all 0.12s" }}>
+                                      <span>{emoji}</span>
+                                      {reactors.length > 1 && <span>{reactors.length}</span>}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             )}
 
-                            {/* Timestamp & read receipt */}
-                            <div
-                              className={`mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500 px-0.5 ${
-                                isMine ? "flex-row-reverse" : ""
-                              }`}
-                            >
-                              <span>
-                                {new Date(msg.created_at).toLocaleTimeString(
-                                  [],
-                                  { hour: "2-digit", minute: "2-digit" }
-                                )}
+                            {/* Timestamp & receipt */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexDirection: isMine ? "row-reverse" : "row" }}>
+                              <span style={{ fontSize: 10.5, color: "#CBD5E1" }}>
+                                {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                               </span>
-                              {isMine &&
-                                (msg.isSending ? (
-                                  <Clock
-                                    size={11}
-                                    className="text-gray-400 animate-pulse"
-                                  />
-                                ) : msg.is_read ? (
-                                  <>
-                                    <CheckCheck
-                                      size={11}
-                                      className="text-blue-500"
-                                    />
-                                    <span className="text-blue-500 font-semibold">
-                                      Seen
-                                    </span>
-                                  </>
-                                ) : (
-                                  <Check
-                                    size={11}
-                                    className="text-gray-400"
-                                  />
-                                ))}
+                              {isMine && (
+                                msg.isSending ? <Clock size={10} color="#CBD5E1" /> :
+                                msg.is_read ? <><CheckCheck size={10} color="#6366F1" /><span style={{ fontSize: 10, color: "#6366F1", fontWeight: 600 }}>Seen</span></> :
+                                <Check size={10} color="#CBD5E1" />
+                              )}
                             </div>
                           </div>
                         </div>
                       );
                     })}
 
-                    {/* Typing indicator */}
+                    {/* Typing */}
                     {typingUsers[activeChat.id] && (
-                      <div className="flex gap-3 px-4 md:px-1 justify-start animate-in fade-in slide-in-from-bottom-2">
-                        {/* FIX: proper relative wrapper for avatar */}
-                        <div className="relative w-7 h-7 shrink-0 rounded-full overflow-hidden">
+                      <div className="fade-in" style={{ display: "flex", gap: 8, justifyContent: "flex-start", marginBottom: 8 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 10, overflow: "hidden", flexShrink: 0, position: "relative" }}>
                           {activeChat.avatar_url ? (
-                            <Image
-                              src={activeChat.avatar_url}
-                              alt=""
-                              fill
-                              sizes="28px"
-                              className="object-cover"
-                            />
+                            <Image src={activeChat.avatar_url} alt="" fill sizes="30px" style={{ objectFit: "cover" }} />
                           ) : (
-                            <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-black text-gray-500">
+                            <div style={{ width: "100%", height: "100%", background: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#7C3AED" }}>
                               {activeChat.username[0].toUpperCase()}
                             </div>
                           )}
                         </div>
-                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-                          <span className="flex gap-1 items-center">
-                            {[0, 150, 300].map((delay) => (
-                              <span
-                                key={delay}
-                                className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"
-                                style={{ animationDelay: `${delay}ms` }}
-                              />
+                        <div style={{ background: "white", border: "1px solid #F1F5F9", borderRadius: "18px 18px 18px 4px", padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                            {[0, 150, 300].map(delay => (
+                              <span key={delay} style={{ width: 7, height: 7, borderRadius: "50%", background: "#CBD5E1", display: "inline-block", animation: `bounce 1.2s ${delay}ms infinite` }} />
                             ))}
-                          </span>
+                          </div>
                         </div>
                       </div>
                     )}
                   </>
                 ) : (
-                  /* ── Connection States ── */
-                  <div className="flex-1 flex flex-col items-center justify-center min-h-[60%] text-center px-6">
+                  /* Connection states */
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 32, minHeight: "60%" }}>
                     {connectionStatus === "blocked" ? (
-                      <div className="space-y-3">
-                        <div className="w-16 h-16 mx-auto bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center">
-                          <ShieldAlert size={28} className="text-red-500" />
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 60, height: 60, background: "#FFF1F2", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <ShieldAlert size={26} color="#F43F5E" />
                         </div>
-                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                          Connection blocked
-                        </p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B", margin: 0 }}>Connection blocked</p>
                         {blockerId === currentUserId ? (
-                          <button
-                            onClick={handleUnblockUser}
-                            className="text-violet-500 text-sm font-bold hover:underline underline-offset-2"
-                          >
+                          <button onClick={handleUnblockUser} style={{ fontSize: 13, color: "#6366F1", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
                             Unblock @{activeChat.username}
                           </button>
                         ) : (
-                          <p className="text-xs text-gray-400 italic">
-                            You&apos;ve been blocked by this user.
-                          </p>
+                          <p style={{ fontSize: 12, color: "#94A3B8", fontStyle: "italic", margin: 0 }}>You've been blocked by this user.</p>
                         )}
                       </div>
                     ) : connectionStatus === "none" ? (
-                      <div className="space-y-4">
-                        <div className="w-16 h-16 mx-auto bg-violet-50 dark:bg-violet-900/20 rounded-2xl flex items-center justify-center">
-                          <UserPlus size={28} className="text-violet-500" />
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+                        <div style={{ width: 64, height: 64, background: "#F5F3FF", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <UserPlus size={28} color="#7C3AED" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">
-                            No connection yet
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            Send a request to start chatting.
-                          </p>
+                          <p style={{ fontSize: 15, fontWeight: 700, color: "#1E293B", margin: "0 0 6px" }}>No connection yet</p>
+                          <p style={{ fontSize: 13, color: "#94A3B8", margin: 0 }}>Send a request to start chatting.</p>
                         </div>
-                        <button
-                          onClick={handleSendRequest}
-                          className="bg-violet-600 hover:bg-violet-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-violet-600/20"
-                        >
+                        <button onClick={handleSendRequest} style={{ padding: "11px 28px", borderRadius: 12, background: "#6366F1", color: "white", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", boxShadow: "0 4px 14px rgba(99,102,241,0.3)", transition: "all 0.15s" }}
+                          onMouseEnter={e => e.currentTarget.style.background = "#4F46E5"}
+                          onMouseLeave={e => e.currentTarget.style.background = "#6366F1"}>
                           Send Connection Request
                         </button>
                       </div>
                     ) : connectionStatus === "waiting" ? (
-                      <div className="space-y-3">
-                        <div className="w-16 h-16 mx-auto bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center">
-                          <Send
-                            size={28}
-                            className="text-gray-400 animate-pulse"
-                          />
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 60, height: 60, background: "#F8FAFC", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Send size={24} color="#94A3B8" className="animate-pulse" />
                         </div>
-                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                          Request sent
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Waiting for @{activeChat.username} to accept…
-                        </p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B", margin: 0 }}>Request sent</p>
+                        <p style={{ fontSize: 12, color: "#94A3B8", margin: 0 }}>Waiting for @{activeChat.username} to accept…</p>
                       </div>
                     ) : connectionStatus === "incoming" ? (
-                      <div className="space-y-4">
-                        <div className="w-16 h-16 mx-auto bg-green-50 dark:bg-green-900/20 rounded-2xl flex items-center justify-center">
-                          <UserPlus size={28} className="text-green-500" />
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+                        <div style={{ width: 64, height: 64, background: "#F0FDF4", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <UserPlus size={28} color="#22C55E" />
                         </div>
-                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                          @{activeChat.username} wants to connect
-                        </p>
-                        <div className="flex gap-3">
-                          <button
-                            onClick={handleAcceptRequest}
-                            className="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-lg shadow-green-600/20"
-                          >
-                            <Check size={16} /> Accept
+                        <p style={{ fontSize: 15, fontWeight: 700, color: "#1E293B", margin: 0 }}>@{activeChat.username} wants to connect</p>
+                        <div style={{ display: "flex", gap: 10 }}>
+                          <button onClick={handleAcceptRequest} style={{ padding: "10px 22px", borderRadius: 11, background: "#22C55E", color: "white", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 12px rgba(34,197,94,0.25)" }}>
+                            <Check size={14} /> Accept
                           </button>
-                          <button
-                            onClick={() => {
-                              supabase
-                                .from("connections")
-                                .delete()
-                                .eq("id", activeConnectionId);
-                              setConnectionStatus("none");
-                            }}
-                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-200 px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
-                          >
+                          <button onClick={() => { supabase.from("connections").delete().eq("id", activeConnectionId); setConnectionStatus("none"); }}
+                            style={{ padding: "10px 22px", borderRadius: 11, background: "white", border: "1.5px solid #E2E8F0", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#FFF1F2"; e.currentTarget.style.borderColor = "#FECDD3"; e.currentTarget.style.color = "#EF4444"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#E2E8F0"; e.currentTarget.style.color = "#475569"; }}>
                             Decline
                           </button>
                         </div>
@@ -1930,279 +1253,280 @@ export default function MessagesContent() {
                 )}
               </div>
 
-              {/* ── Input Area ── Mobile optimized */}
-              <div
-                className={`pt-2 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-3 px-3 md:px-0 shrink-0 transition-all duration-300 bg-white dark:bg-gray-950 md:bg-transparent border-t border-gray-200 dark:border-gray-800 md:border-0 ${
-                  connectionStatus === "accepted"
-                    ? "opacity-100 translate-y-0"
-                    : "opacity-30 translate-y-2 pointer-events-none"
-                }`}
-              >
+              {/* ── Composer ── */}
+              <div style={{
+                padding: "12px 16px 14px", background: "white", borderTop: "1px solid #F1F5F9", flexShrink: 0,
+                opacity: connectionStatus === "accepted" ? 1 : 0.4,
+                pointerEvents: connectionStatus === "accepted" ? "auto" : "none",
+                transition: "opacity 0.2s",
+              }}>
                 {/* Reply banner */}
                 {replyingTo && (
-                  <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 border-b-0 rounded-t-2xl px-4 py-2.5 text-xs animate-in fade-in slide-in-from-bottom-2 duration-150">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <CornerUpLeft
-                        size={13}
-                        className="text-blue-500 shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <span className="font-bold text-blue-600 dark:text-blue-400">
-                          @
-                          {replyingTo.sender_id === currentUserId
-                            ? "You"
-                            : activeChat.username}
-                        </span>
-                        <p className="text-gray-500 dark:text-gray-400 truncate">
-                          {replyingTo.text || "📷 Image"}
-                        </p>
-                      </div>
+                  <div className="slide-up" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#EEF2FF", border: "1px solid #C7D2FE", borderBottom: "none", borderRadius: "12px 12px 0 0", padding: "8px 12px", marginBottom: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                      <CornerUpLeft size={12} color="#6366F1" />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "#4F46E5" }}>@{replyingTo.sender_id === currentUserId ? "You" : activeChat.username}</span>
+                      <span style={{ fontSize: 12, color: "#818CF8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{replyingTo.text || "📷 Image"}</span>
                     </div>
-                    <button
-                      onClick={() => setReplyingTo(null)}
-                      className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0"
-                    >
-                      <X size={14} />
+                    <button onClick={() => setReplyingTo(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#818CF8", lineHeight: 0 }}>
+                      <X size={13} />
                     </button>
                   </div>
                 )}
 
                 {/* Image preview */}
                 {imagePreview && (
-                  <div
-                    className={`bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 border-b-0 ${
-                      replyingTo ? "" : "rounded-t-2xl"
-                    } px-3 py-2.5 flex items-center gap-3 animate-in fade-in duration-150`}
-                  >
-                    <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
-                      <Image
-                        src={imagePreview}
-                        alt="preview"
-                        fill
-                        sizes="56px"
-                        className="object-cover"
-                      />
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#F8FAFC", border: "1px solid #F1F5F9", borderBottom: "none", borderRadius: replyingTo ? 0 : "12px 12px 0 0", padding: "8px 12px" }}>
+                    <div style={{ position: "relative", width: 48, height: 48, borderRadius: 8, overflow: "hidden", flexShrink: 0, border: "1px solid #E2E8F0" }}>
+                      <Image src={imagePreview} alt="preview" fill sizes="48px" style={{ objectFit: "cover" }} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">
-                        {imageFile?.name}
-                      </p>
-                      <p className="text-[10px] text-gray-400">
-                        {imageFile
-                          ? `${(imageFile.size / 1024).toFixed(0)} KB`
-                          : ""}
-                      </p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: "#334155", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{imageFile?.name}</p>
+                      <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>{imageFile ? `${(imageFile.size / 1024).toFixed(0)} KB` : ""}</p>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setImageFile(null);
-                        setImagePreview(null);
-                        if (imageInputRef.current)
-                          imageInputRef.current.value = "";
-                      }}
-                      className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <X size={16} />
+                    <button onClick={() => { setImageFile(null); setImagePreview(null); if (imageInputRef.current) imageInputRef.current.value = ""; }} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", lineHeight: 0 }}>
+                      <X size={15} />
                     </button>
                   </div>
                 )}
 
-                {/* Send error */}
+                {/* Error */}
                 {messageSendError && (
-                  <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-xl px-3 py-2 mb-2 text-xs text-red-600 dark:text-red-400">
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#FFF1F2", border: "1px solid #FECDD3", borderRadius: 10, padding: "7px 10px", marginBottom: 8, fontSize: 12, color: "#BE123C" }}>
                     <AlertTriangle size={13} />
-                    <span className="flex-1 truncate">{messageSendError}</span>
-                    <button
-                      onClick={() => setMessageSendError(null)}
-                      className="p-0.5 hover:text-red-800"
-                    >
-                      <X size={12} />
-                    </button>
+                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{messageSendError}</span>
+                    <button onClick={() => setMessageSendError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#BE123C", lineHeight: 0 }}><X size={12} /></button>
                   </div>
                 )}
 
-                <form
-                  onSubmit={handleSendMessage}
-                  className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 ${
-                    replyingTo || imagePreview
-                      ? "rounded-b-2xl rounded-t-none border-t-0"
-                      : "rounded-2xl"
-                  } focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all shadow-sm overflow-hidden`}
-                >
-                  <input
-                    type="file"
-                    ref={imageInputRef}
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    className="hidden"
-                  />
+                {/* Main composer box */}
+                <form onSubmit={handleSendMessage} className="composer-area" style={{
+                  background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: replyingTo || imagePreview ? "0 0 14px 14px" : 14,
+                  borderTop: replyingTo || imagePreview ? "none" : undefined, transition: "border-color 0.15s, box-shadow 0.15s", overflow: "hidden",
+                }}>
+                  <input type="file" ref={imageInputRef} onChange={handleFileChange} accept="image/*" style={{ display: "none" }} />
 
-                  {/* Textarea row */}
-                  <div className="flex items-end gap-2 px-3 pt-3 pb-1">
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 8, padding: "10px 12px 6px" }}>
                     <textarea
-                      ref={textareaRef}
-                      value={inputValue}
-                      onChange={handleInputChange}
-                      onKeyDown={handleKeyDown}
-                      onPaste={handlePaste}
-                      placeholder="Type a message…"
-                      rows={2}
-                      className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 resize-none max-h-[140px] leading-relaxed placeholder:text-gray-400 dark:placeholder:text-gray-500 py-1"
+                      ref={textareaRef} value={inputValue} onChange={handleInputChange}
+                      onKeyDown={handleKeyDown} onPaste={handlePaste}
+                      placeholder="Type a message…" rows={1}
+                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 14, color: "#1E293B", lineHeight: 1.55, maxHeight: 120, fontFamily: "inherit", paddingTop: 2 }}
                     />
-                    <button
-                      type="submit"
-                      disabled={!inputValue.trim() && !imageFile}
-                      className="w-9 h-9 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex items-center justify-center transition-all shadow-md shadow-blue-600/20 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 shrink-0 mb-0.5"
-                    >
-                      <Send size={15} strokeWidth={2.5} />
+                    <button type="submit" disabled={!inputValue.trim() && !imageFile} style={{
+                      width: 36, height: 36, borderRadius: 10, background: "#4F46E5", border: "none", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      boxShadow: "0 2px 8px rgba(79,70,229,0.25)", transition: "all 0.15s", marginBottom: 2,
+                      opacity: (!inputValue.trim() && !imageFile) ? 0.35 : 1,
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#4338CA"}
+                      onMouseLeave={e => e.currentTarget.style.background = "#4F46E5"}>
+                      <Send size={15} color="white" strokeWidth={2.5} />
                     </button>
                   </div>
 
-                  {/* Action bar row */}
-                  <div className="flex items-center gap-0.5 px-2 pb-2 border-t border-gray-100 dark:border-gray-800 pt-1.5 mt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 active:bg-blue-100 rounded-lg transition-all min-h-[36px]"
-                      title="Attach image"
-                    >
-                      <Paperclip size={15} />
-                      <span className="hidden sm:inline">Attach</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSuggestReply}
-                      disabled={isSuggesting}
-                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 active:bg-violet-100 rounded-lg transition-all disabled:opacity-40 min-h-[36px]"
-                      title="AI suggest reply"
-                    >
-                      {isSuggesting
-                        ? <Loader2 size={15} className="animate-spin text-violet-500" />
-                        : <Sparkles size={15} />}
-                      <span className="hidden sm:inline">{isSuggesting ? "Thinking…" : "AI Reply"}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowSnippetPanel((p) => !p)}
-                      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all min-h-[36px] ${
-                        showSnippetPanel
-                          ? "text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20"
-                          : "text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20"
-                      }`}
-                      title="Send code snippet"
-                    >
-                      <Code2 size={15} />
-                      <span className="hidden sm:inline">Snippet</span>
-                    </button>
-                    <div className="flex-1" />
+                  {/* Action row */}
+                  <div style={{ display: "flex", alignItems: "center", padding: "0 8px 8px", gap: 2 }}>
+                    {[
+                      { icon: Paperclip, label: "Attach", title: "Attach image", action: () => imageInputRef.current?.click(), color: "#64748B", hoverBg: "#EEF2FF", hoverColor: "#4F46E5" },
+                      { icon: isSuggesting ? Loader2 : Sparkles, label: isSuggesting ? "Thinking…" : "AI Reply", title: "AI suggest reply", action: handleSuggestReply, color: "#64748B", hoverBg: "#F5F3FF", hoverColor: "#7C3AED", spin: isSuggesting },
+                      { icon: Code2, label: "Snippet", title: "Send code snippet", action: () => setShowSnippetPanel(p => !p), color: showSnippetPanel ? "#7C3AED" : "#64748B", hoverBg: "#F5F3FF", hoverColor: "#7C3AED" },
+                    ].map(btn => (
+                      <button key={btn.label} type="button" onClick={btn.action} title={btn.title}
+                        style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 9px", borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", fontSize: 12, fontWeight: 500, color: btn.color, transition: "all 0.12s" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = btn.hoverBg; e.currentTarget.style.color = btn.hoverColor; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = btn.color; }}>
+                        <btn.icon size={14} className={btn.spin ? "animate-spin" : ""} />
+                        <span style={{ display: "none" }} className="sm:inline">{btn.label}</span>
+                      </button>
+                    ))}
+                    <div style={{ flex: 1 }} />
                     {inputValue.length > 0 && (
-                      <span className={`text-[10px] font-mono px-2 ${inputValue.length > 500 ? "text-red-400" : "text-gray-300 dark:text-gray-600"}`}>
-                        {inputValue.length}
-                      </span>
+                      <span style={{ fontSize: 11, fontFamily: "monospace", color: inputValue.length > 500 ? "#EF4444" : "#CBD5E1", paddingRight: 4 }}>{inputValue.length}</span>
                     )}
-                    <span className="text-[10px] text-gray-300 dark:text-gray-700 font-medium hidden sm:block pr-1">
-                      Enter to send
-                    </span>
+                    <span style={{ fontSize: 11, color: "#E2E8F0", fontWeight: 500 }}>⏎ send</span>
                   </div>
                 </form>
 
                 {/* Snippet panel */}
                 {showSnippetPanel && (
-                  <div className="mt-2 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150">
-                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center gap-2">
-                        <Code2 size={13} className="text-violet-500" />
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Code / Long Text</span>
+                  <div className="slide-up" style={{ marginTop: 8, border: "1.5px solid #E2E8F0", borderRadius: 14, overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "#F8FAFC", borderBottom: "1px solid #F1F5F9" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Code2 size={13} color="#7C3AED" />
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>Code / Long Text</span>
                       </div>
-                      <select
-                        value={snippetLang}
-                        onChange={(e) => setSnippetLang(e.target.value)}
-                        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-[11px] text-gray-700 dark:text-gray-300 font-bold focus:outline-none"
-                      >
-                        {SNIPPET_LANGS.map((l) => <option key={l} value={l}>{l}</option>)}
+                      <select value={snippetLang} onChange={e => setSnippetLang(e.target.value)} style={{ background: "white", border: "1px solid #E2E8F0", borderRadius: 7, padding: "3px 8px", fontSize: 11, fontWeight: 700, color: "#334155", outline: "none" }}>
+                        {SNIPPET_LANGS.map(l => <option key={l} value={l}>{l}</option>)}
                       </select>
                     </div>
-                    <textarea
-                      value={snippetCode}
-                      onChange={(e) => setSnippetCode(e.target.value)}
-                      autoFocus
-                      rows={6}
+                    <textarea value={snippetCode} onChange={e => setSnippetCode(e.target.value)} autoFocus rows={6}
                       placeholder="// paste or type code here…"
-                      className="w-full bg-gray-900 text-gray-100 text-[12px] font-mono px-3 py-2.5 resize-y focus:outline-none placeholder:text-gray-600 min-h-[120px] max-h-[300px]"
+                      style={{ width: "100%", background: "#0F172A", color: "#E2E8F0", fontSize: 12, fontFamily: "monospace", padding: "10px 14px", resize: "vertical", outline: "none", border: "none", minHeight: 120, maxHeight: 300, boxSizing: "border-box", display: "block" }}
                     />
-                    <div className="flex gap-2 p-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                      <button
-                        type="button"
-                        onClick={sendSnippet}
-                        disabled={!snippetCode.trim()}
-                        className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all disabled:opacity-40 active:scale-95"
-                      >
-                        <Send size={12} /> Send
+                    <div style={{ display: "flex", gap: 8, padding: 10, background: "#F8FAFC", borderTop: "1px solid #F1F5F9" }}>
+                      <button type="button" onClick={sendSnippet} disabled={!snippetCode.trim()} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 16px", borderRadius: 9, background: "#7C3AED", color: "white", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: !snippetCode.trim() ? 0.4 : 1, transition: "all 0.15s" }}>
+                        <Send size={11} /> Send
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => { setShowSnippetPanel(false); setSnippetCode(""); }}
-                        className="px-4 py-2 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl font-medium transition-colors"
-                      >
-                        Cancel
-                      </button>
+                      <button type="button" onClick={() => { setShowSnippetPanel(false); setSnippetCode(""); }} style={{ padding: "7px 14px", borderRadius: 9, background: "none", border: "none", color: "#64748B", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Cancel</button>
                     </div>
                   </div>
                 )}
               </div>
             </>
           ) : (
-            /* No active chat */
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
-              <MessageSquare
-                size={48}
-                className="text-gray-200 dark:text-gray-800"
-              />
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, textAlign: "center" }}>
+              <div style={{ width: 60, height: 60, background: "#F1F5F9", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <MessageSquare size={28} color="#CBD5E1" />
+              </div>
               <div>
-                <p className="text-sm font-bold text-gray-400 dark:text-gray-500">
-                  No conversation selected
-                </p>
-                <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">
-                  Choose a contact from the sidebar
-                </p>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "#64748B", margin: "0 0 6px" }}>No conversation selected</p>
+                <p style={{ fontSize: 13, color: "#CBD5E1", margin: 0 }}>Choose a contact from the sidebar</p>
               </div>
             </div>
           )}
         </div>
+
+        {/* ══════════════════════════════════════════════
+            RIGHT AI PANEL
+        ══════════════════════════════════════════════ */}
+        {showRightPanel && activeChat && (
+          <div 
+            className="right-ai-panel slide-up"
+            style={{ 
+              display: "flex", 
+              flexDirection: "column", 
+              background: "white", 
+              borderLeft: "1px solid #F1F5F9", 
+              flexShrink: 0, 
+              overflowY: "auto", 
+              padding: "16px 14px" 
+            }}
+          >
+            {/* Mobile close button */}
+            <div className="panel-close-btn" style={{ display: "none", justifyContent: "flex-end", marginBottom: 12 }}>
+              <button onClick={() => setShowRightPanel(false)} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: 6, cursor: "pointer", color: "#64748B" }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* User profile card */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px", background: "#F8FAFC", borderRadius: 14, border: "1px solid #F1F5F9", cursor: "pointer" }} onClick={() => setSelectedUserId(activeChat.id)}>
+                <div style={{ position: "relative", width: 40, height: 40, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
+                  {activeChat.avatar_url ? (
+                    <Image src={activeChat.avatar_url} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", background: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#7C3AED" }}>
+                      {activeChat.username[0].toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", margin: 0, display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    @{activeChat.username}
+                    {activeChat.is_verified && <BadgeCheck size={12} color="#6366F1" fill="#6366F1" stroke="white" strokeWidth={2} />}
+                  </p>
+                  <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>{activeChat.status || "Member"}</p>
+                </div>
+                <ArrowRight size={13} color="#CBD5E1" />
+              </div>
+            </div>
+
+            {/* Thread info */}
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>Thread Info</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {[
+                  { label: "Status", value: <StatusBadge status={connectionStatus || "none"} /> },
+                  { label: "Messages", value: <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{messages.length}</span> },
+                  { label: "Online", value: <span style={{ fontSize: 12, fontWeight: 600, color: Object.keys(onlineUsers).includes(activeChat.id) ? "#22C55E" : "#94A3B8" }}>{Object.keys(onlineUsers).includes(activeChat.id) ? "Yes" : "No"}</span> },
+                ].map(row => (
+                  <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F8FAFC" }}>
+                    <span style={{ fontSize: 12, color: "#94A3B8" }}>{row.label}</span>
+                    {row.value}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* AI Summary */}
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>AI Summary</p>
+              <AISummaryPanel messages={messages} activeChat={activeChat} />
+            </div>
+
+            {/* Tasks */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>Tasks</p>
+                <button
+                  onClick={() => setTasks(prev => [...prev, { id: Date.now(), title: "New task", due: "", priority: "medium", done: false }])}
+                  style={{ fontSize: 11, fontWeight: 600, color: "#6366F1", background: "none", border: "none", cursor: "pointer" }}>
+                  + Add
+                </button>
+              </div>
+              {tasks.map(task => (
+                <TaskCard key={task.id} task={task} onToggle={id => setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t))} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── TOAST ── */}
       {toastMessage && (
-        <div
-          className={`fixed bottom-6 right-6 z-[300] flex items-center gap-3 bg-white dark:bg-gray-900 border px-4 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200 max-w-sm ${
-            toastType === "error"
-              ? "border-red-200 dark:border-red-900/50"
-              : "border-green-200 dark:border-green-900/50"
-          }`}
-        >
-          {toastType === "error" ? (
-            <AlertTriangle size={16} className="text-red-500 shrink-0" />
-          ) : (
-            <Check size={16} className="text-green-500 shrink-0" />
-          )}
-          <span
-            className={`text-sm font-semibold ${
-              toastType === "error"
-                ? "text-red-700 dark:text-red-400"
-                : "text-green-700 dark:text-green-400"
-            }`}
-          >
-            {toastMessage}
-          </span>
-          <button
-            onClick={() => setToastMessage("")}
-            className="ml-1 text-gray-400 hover:text-gray-600 shrink-0"
-          >
-            <X size={14} />
+        <div className="slide-up" style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 300,
+          display: "flex", alignItems: "center", gap: 10,
+          background: "white", border: `1px solid ${toastType === "error" ? "#FECDD3" : "#BBF7D0"}`,
+          padding: "10px 16px", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,0,0,0.08)",
+          maxWidth: 360,
+        }}>
+          {toastType === "error"
+            ? <AlertTriangle size={15} color="#EF4444" style={{ flexShrink: 0 }} />
+            : <Check size={15} color="#22C55E" style={{ flexShrink: 0 }} />}
+          <span style={{ fontSize: 13, fontWeight: 600, color: toastType === "error" ? "#BE123C" : "#15803D", flex: 1 }}>{toastMessage}</span>
+          <button onClick={() => setToastMessage("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", lineHeight: 0 }}>
+            <X size={13} />
           </button>
         </div>
       )}
+
+      <style>{`
+        @keyframes bounce {
+          0%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-5px); }
+        }
+        .md\\:flex { display: flex !important; }
+        .sm\\:inline { display: inline !important; }
+        @media (max-width: 768px) {
+          .md\\:flex { display: none !important; }
+          .md\\:hidden { display: none !important; }
+        }
+        @media (max-width: 640px) {
+          .sm\\:inline { display: none !important; }
+        }
+        .right-ai-panel {
+          width: 260px;
+          position: relative;
+          z-index: 60;
+        }
+        @media (max-width: 1024px) {
+          .right-ai-panel {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 300px;
+            box-shadow: -10px 0 40px rgba(0,0,0,0.1);
+          }
+          .panel-close-btn { display: flex !important; }
+        }
+        @media (max-width: 480px) {
+          .right-ai-panel { width: 100%; }
+        }
+      `}</style>
     </>
   );
 }

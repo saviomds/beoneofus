@@ -130,7 +130,7 @@ export default function AuthForm() {
     const params = new URLSearchParams(window.location.search);
     const errCode = params.get('error');
     if (errCode === 'session_expired') {
-      supabase.auth.signOut().catch(() => {});
+      supabase?.auth.signOut().catch(() => {});
       setError('Your session has expired. Please sign in again.');
     } else if (errCode === 'email_not_verified') {
       setError('Please verify your email address before accessing the platform.');
@@ -154,6 +154,7 @@ export default function AuthForm() {
 
   // ── Auth bootstrap: check existing session + handle recovery URL ───────────
   useEffect(() => {
+    if (!supabase) { setIsCheckingAuth(false); return; }
     let mounted = true;
 
     async function bootstrap() {

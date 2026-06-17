@@ -23,6 +23,7 @@ export default function ClientShell() {
   useEffect(() => {
     const stored = localStorage.getItem('theme');
     if (stored) return; // device already has an explicit preference
+    if (!supabase) return;
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return;

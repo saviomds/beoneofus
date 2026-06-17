@@ -17,10 +17,15 @@ function ensureVapid() {
   vapidReady = true;
 }
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-);
+let supabaseAdmin = null;
+function getSupabaseAdmin() {
+  if (supabaseAdmin) return supabaseAdmin;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Supabase env vars are not set');
+  supabaseAdmin = createClient(url, key);
+  return supabaseAdmin;
+}
 
 /**
  * POST /api/push/send
@@ -43,7 +48,8 @@ export async function POST(request) {
     }
 
     // Fetch all subscriptions for this user
-    const { data: subs, error } = await supabaseAdmin
+    const admin = getSupabaseAdmin();
+    const { data: subs, error } = await admin
       .from('push_subscriptions')
       .select('endpoint, p256dh, auth')
       .eq('user_id', user_id);
@@ -61,7 +67,7 @@ export async function POST(request) {
         ).catch(async err => {
           // 410 Gone / 404 = subscription expired, remove it
           if (err.statusCode === 410 || err.statusCode === 404) {
-            await supabaseAdmin
+            await admin
               .from('push_subscriptions')
               .delete()
               .eq('endpoint', sub.endpoint);

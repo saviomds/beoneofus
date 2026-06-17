@@ -11,6 +11,7 @@ const ALLOWED_TYPES = [
   'role_changed',
   'partnership_accepted',
   'partnership_declined',
+  'chat_task_assigned',
 ];
 
 export async function POST(request) {

@@ -576,6 +576,45 @@ const templates = {
     };
   },
 
+  /* ── Chat task assigned ────────────────────────────────────────── */
+  chat_task_assigned({ name, taskTitle, assignerName, due, priority }) {
+    const n   = escapeHtml(name);
+    const tt  = escapeHtml(taskTitle);
+    const an  = escapeHtml(assignerName || 'Someone');
+    const pr  = escapeHtml(priority || 'medium');
+    const prColor = priority === 'high' ? '#ef4444' : priority === 'low' ? '#6b7280' : '#f59e0b';
+    return {
+      subject: `${an} assigned you a task: "${tt}"`,
+      html: baseShell(
+        header('linear-gradient(90deg,#6366f1,#8b5cf6)', 'Task Assigned 📋', `From your conversation with ${an}`)
+        + `<tr><td style="padding:36px 40px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.7;">Hi <strong>${n}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
+            <strong>${an}</strong> has assigned you a task from your direct conversation.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:14px;margin-bottom:24px;">
+            <tr><td style="padding:20px 24px;">
+              <p style="margin:0 0 10px;font-size:16px;font-weight:800;color:#1e1b4b;">${tt}</p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding-top:10px;border-top:1px solid #c7d2fe;">
+                    <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Priority</p>
+                    <p style="margin:4px 0 0;font-size:13px;font-weight:700;color:${prColor};text-transform:capitalize;">${pr}</p>
+                  </td>
+                  ${due ? `<td style="padding-top:10px;border-top:1px solid #c7d2fe;">
+                    <p style="margin:0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;">Due</p>
+                    <p style="margin:4px 0 0;font-size:13px;font-weight:700;color:#374151;">${escapeHtml(due)}</p>
+                  </td>` : ''}
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+          ${ctaButton('Open Messages →', SITE_URL + '/dash', '#6366f1')}
+        </td></tr></table>`
+      ),
+    };
+  },
+
   /* ── New DM message ─────────────────────────────────────────────────────── */
   new_dm_message({ name, senderName, isFirst }) {
     const n  = escapeHtml(name);

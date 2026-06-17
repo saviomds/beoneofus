@@ -153,7 +153,20 @@ function AISummaryPanel({ messages, activeChat }) {
 }
 
 /* ── Task card ── */
-function TaskCard({ task, onToggle }) {
+function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task.title);
+  const inputRef = useRef(null);
+
+  const commitRename = () => {
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== task.title) onRename(task.id, trimmed);
+    else setDraft(task.title);
+  };
+
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
   return (
     <div style={{
       display: "flex", alignItems: "flex-start", gap: 10,
@@ -164,16 +177,33 @@ function TaskCard({ task, onToggle }) {
       <button onClick={() => onToggle(task.id)} style={{
         width: 18, height: 18, borderRadius: 5, border: `2px solid ${task.done ? "#22C55E" : "#CBD5E1"}`,
         background: task.done ? "#22C55E" : "white", cursor: "pointer", flexShrink: 0,
-        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1,
+        display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2,
         transition: "all 0.15s",
       }}>
         {task.done && <Check size={11} color="white" strokeWidth={3} />}
       </button>
+
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13, fontWeight: 500, color: task.done ? "#94A3B8" : "#1E293B", margin: 0, textDecoration: task.done ? "line-through" : "none" }}>
-          {task.title}
-        </p>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={e => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { setEditing(false); setDraft(task.title); } }}
+            style={{ width: "100%", fontSize: 13, fontWeight: 500, color: "#1E293B", border: "none", borderBottom: "1.5px solid #6366F1", outline: "none", background: "transparent", padding: "0 0 2px", boxSizing: "border-box" }}
+          />
+        ) : (
+          <p
+            onClick={() => { setEditing(true); setDraft(task.title); }}
+            title="Click to rename"
+            style={{ fontSize: 13, fontWeight: 500, color: task.done ? "#94A3B8" : "#1E293B", margin: 0, textDecoration: task.done ? "line-through" : "none", cursor: "text", wordBreak: "break-word" }}
+          >
+            {task.title}
+          </p>
+        )}
+
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
           {task.due && (
             <span style={{ fontSize: 11, color: "#64748B", display: "flex", alignItems: "center", gap: 3 }}>
               <Clock size={10} /> {task.due}
@@ -187,6 +217,20 @@ function TaskCard({ task, onToggle }) {
             }}>
               {task.priority === "high" ? "🔥 High" : "⚡ Med"}
             </span>
+          )}
+          {task.assigned_to ? (
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 100, background: "#EEF2FF", color: "#4F46E5", display: "flex", alignItems: "center", gap: 3 }}>
+              <AtSign size={9} /> {chatUsername}
+            </span>
+          ) : (
+            <button
+              onClick={() => onAssign(task)}
+              style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 100, border: "1px dashed #CBD5E1", background: "transparent", color: "#94A3B8", cursor: "pointer", display: "flex", alignItems: "center", gap: 3, transition: "all 0.12s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#6366F1"; e.currentTarget.style.color = "#6366F1"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#CBD5E1"; e.currentTarget.style.color = "#94A3B8"; }}
+            >
+              <AtSign size={9} /> Assign to @{chatUsername}
+            </button>
           )}
         </div>
       </div>
@@ -253,11 +297,112 @@ export default function MessagesContent() {
   const [messageSendError, setMessageSendError] = useState(null);
   const [showRightPanel, setShowRightPanel] = useState(typeof window !== 'undefined' ? window.innerWidth > 1400 : false);
   const [activeNav, setActiveNav] = useState("messages");
-  const [tasks, setTasks] = useState([
-    { id: 1, title: "Update content documentation", due: "Tomorrow", priority: "high", done: false },
-    { id: 2, title: "Review design feedback", due: "Friday", priority: "medium", done: false },
-    { id: 3, title: "Schedule follow-up call", due: "Next week", priority: "medium", done: true },
-  ]);
+  const [tasksByUser, setTasksByUser] = useState({});
+  const currentTasks = activeChat ? (tasksByUser[activeChat.id] || []) : [];
+
+  // Load tasks from DB whenever the active chat changes
+  useEffect(() => {
+    if (!activeChat || !currentUserId) return;
+    supabase
+      .from('chat_tasks')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .eq('chat_user_id', activeChat.id)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (data) setTasksByUser(prev => ({ ...prev, [activeChat.id]: data }));
+      });
+  }, [activeChat?.id, currentUserId]);
+
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
+  const showToast = useCallback((msg, type = "success") => {
+    setToastMessage(msg); setToastType(type);
+    setTimeout(() => setToastMessage(""), 4000);
+  }, []);
+
+  const addTask = useCallback(async () => {
+    if (!activeChat || !currentUserId) return;
+    const { data, error } = await supabase
+      .from('chat_tasks')
+      .insert({ user_id: currentUserId, chat_user_id: activeChat.id, title: 'New task', priority: 'medium', done: false })
+      .select()
+      .single();
+    if (!error && data) {
+      setTasksByUser(prev => ({ ...prev, [activeChat.id]: [...(prev[activeChat.id] || []), data] }));
+    }
+  }, [activeChat, currentUserId]);
+
+  const toggleTask = useCallback(async (taskId) => {
+    if (!activeChat) return;
+    setTasksByUser(prev => {
+      const list = prev[activeChat.id] || [];
+      return { ...prev, [activeChat.id]: list.map(t => t.id === taskId ? { ...t, done: !t.done } : t) };
+    });
+    const task = (tasksByUser[activeChat.id] || []).find(t => t.id === taskId);
+    if (task) await supabase.from('chat_tasks').update({ done: !task.done }).eq('id', taskId);
+  }, [activeChat, tasksByUser]);
+
+  const renameTask = useCallback(async (taskId, newTitle) => {
+    if (!activeChat) return;
+    setTasksByUser(prev => ({
+      ...prev,
+      [activeChat.id]: (prev[activeChat.id] || []).map(t => t.id === taskId ? { ...t, title: newTitle } : t),
+    }));
+    await supabase.from('chat_tasks').update({ title: newTitle }).eq('id', taskId);
+  }, [activeChat]);
+
+  const assignTask = useCallback(async (task) => {
+    if (!activeChat || !currentUserId) return;
+    setTasksByUser(prev => ({
+      ...prev,
+      [activeChat.id]: (prev[activeChat.id] || []).map(t => t.id === task.id ? { ...t, assigned_to: activeChat.id } : t),
+    }));
+    await supabase.from('chat_tasks').update({ assigned_to: activeChat.id }).eq('id', task.id);
+
+    // Send email notification to the assigned user
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      showToast("Task assigned, but couldn't send email — not authenticated.", "error");
+      return;
+    }
+
+    const [{ data: assigneeProfile, error: assigneeErr }, { data: myProfile }] = await Promise.all([
+      supabase.from('profiles').select('email, username').eq('id', activeChat.id).single(),
+      supabase.from('profiles').select('username').eq('id', currentUserId).single(),
+    ]);
+
+    if (assigneeErr || !assigneeProfile?.email) {
+      showToast("Task assigned. Could not find assignee email to notify.", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          type: 'chat_task_assigned',
+          email: assigneeProfile.email,
+          name: assigneeProfile.username || 'there',
+          extra: {
+            taskTitle: task.title,
+            assignerName: myProfile?.username || 'Someone',
+            due: task.due || null,
+            priority: task.priority || 'medium',
+          },
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        showToast(`Task assigned, but email failed: ${body.error || res.status}`, "error");
+      } else {
+        showToast(`Task assigned — @${assigneeProfile.username} notified by email.`);
+      }
+    } catch (err) {
+      showToast(`Task assigned, but email error: ${err.message}`, "error");
+    }
+  }, [activeChat, currentUserId, showToast]);
 
   const forceScrollRef = useRef(false);
 
@@ -283,16 +428,15 @@ export default function MessagesContent() {
   const typingTimeoutsRef = useRef({});
   const lastTypingSentRef = useRef(0);
 
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState("success");
-  const showToast = useCallback((msg, type = "success") => {
-    setToastMessage(msg); setToastType(type);
-    setTimeout(() => setToastMessage(""), 4000);
-  }, []);
-
   const broadcastRef = useRef(null);
 
   useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
+
+  useEffect(() => {
+    const onResize = () => { if (window.innerWidth <= 768) setShowRightPanel(false); };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     const handler = (e) => {
@@ -1009,6 +1153,8 @@ export default function MessagesContent() {
                 </div>
               </div>
 
+              {/* ── Body: messages + side panel ── */}
+              <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
               {/* ── Message area ── */}
               <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 2, minHeight: 0 }}>
 
@@ -1253,6 +1399,84 @@ export default function MessagesContent() {
                 )}
               </div>
 
+              {/* ── Right panel (shares height with messages only) ── */}
+              {showRightPanel && (
+                <div
+                  className="right-ai-panel slide-up"
+                  style={{ display: "flex", flexDirection: "column", background: "white", borderLeft: "1px solid #F1F5F9", flexShrink: 0, overflowY: "auto", padding: "16px 14px" }}
+                >
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+                    <button onClick={() => setShowRightPanel(false)} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: 6, cursor: "pointer", color: "#64748B" }}>
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px", background: "#F8FAFC", borderRadius: 14, border: "1px solid #F1F5F9", cursor: "pointer" }} onClick={() => setSelectedUserId(activeChat.id)}>
+                      <div style={{ position: "relative", width: 40, height: 40, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
+                        {activeChat.avatar_url ? (
+                          <Image src={activeChat.avatar_url} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
+                        ) : (
+                          <div style={{ width: "100%", height: "100%", background: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#7C3AED" }}>
+                            {activeChat.username[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", margin: 0, display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          @{activeChat.username}
+                          {activeChat.is_verified && <BadgeCheck size={12} color="#6366F1" fill="#6366F1" stroke="white" strokeWidth={2} />}
+                        </p>
+                        <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>{activeChat.status || "Member"}</p>
+                      </div>
+                      <ArrowRight size={13} color="#CBD5E1" />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>Thread Info</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {[
+                        { label: "Status", value: <StatusBadge status={connectionStatus || "none"} /> },
+                        { label: "Messages", value: <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{messages.length}</span> },
+                        { label: "Online", value: <span style={{ fontSize: 12, fontWeight: 600, color: Object.keys(onlineUsers).includes(activeChat.id) ? "#22C55E" : "#94A3B8" }}>{Object.keys(onlineUsers).includes(activeChat.id) ? "Yes" : "No"}</span> },
+                      ].map(row => (
+                        <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F8FAFC" }}>
+                          <span style={{ fontSize: 12, color: "#94A3B8" }}>{row.label}</span>
+                          {row.value}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>AI Summary</p>
+                    <AISummaryPanel messages={messages} activeChat={activeChat} />
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>Tasks</p>
+                      <button
+                        onClick={addTask}
+                        style={{ fontSize: 11, fontWeight: 600, color: "#6366F1", background: "none", border: "none", cursor: "pointer" }}>
+                        + Add
+                      </button>
+                    </div>
+                    {currentTasks.length === 0 && (
+                      <p style={{ fontSize: 12, color: "#CBD5E1", textAlign: "center", padding: "12px 0", margin: 0 }}>No tasks yet for this chat.</p>
+                    )}
+                    {currentTasks.map(task => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onToggle={toggleTask}
+                        onRename={renameTask}
+                        onAssign={assignTask}
+                        chatUsername={activeChat?.username}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              </div>{/* end body row */}
+
               {/* ── Composer ── */}
               <div style={{
                 padding: "12px 16px 14px", background: "white", borderTop: "1px solid #F1F5F9", flexShrink: 0,
@@ -1387,91 +1611,6 @@ export default function MessagesContent() {
           )}
         </div>
 
-        {/* ══════════════════════════════════════════════
-            RIGHT AI PANEL
-        ══════════════════════════════════════════════ */}
-        {showRightPanel && activeChat && (
-          <div 
-            className="right-ai-panel slide-up"
-            style={{ 
-              display: "flex", 
-              flexDirection: "column", 
-              background: "white", 
-              borderLeft: "1px solid #F1F5F9", 
-              flexShrink: 0, 
-              overflowY: "auto", 
-              padding: "16px 14px" 
-            }}
-          >
-            {/* Mobile close button */}
-            <div className="panel-close-btn" style={{ display: "none", justifyContent: "flex-end", marginBottom: 12 }}>
-              <button onClick={() => setShowRightPanel(false)} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: 6, cursor: "pointer", color: "#64748B" }}>
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* User profile card */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px", background: "#F8FAFC", borderRadius: 14, border: "1px solid #F1F5F9", cursor: "pointer" }} onClick={() => setSelectedUserId(activeChat.id)}>
-                <div style={{ position: "relative", width: 40, height: 40, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
-                  {activeChat.avatar_url ? (
-                    <Image src={activeChat.avatar_url} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
-                  ) : (
-                    <div style={{ width: "100%", height: "100%", background: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#7C3AED" }}>
-                      {activeChat.username[0].toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", margin: 0, display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    @{activeChat.username}
-                    {activeChat.is_verified && <BadgeCheck size={12} color="#6366F1" fill="#6366F1" stroke="white" strokeWidth={2} />}
-                  </p>
-                  <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>{activeChat.status || "Member"}</p>
-                </div>
-                <ArrowRight size={13} color="#CBD5E1" />
-              </div>
-            </div>
-
-            {/* Thread info */}
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>Thread Info</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {[
-                  { label: "Status", value: <StatusBadge status={connectionStatus || "none"} /> },
-                  { label: "Messages", value: <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{messages.length}</span> },
-                  { label: "Online", value: <span style={{ fontSize: 12, fontWeight: 600, color: Object.keys(onlineUsers).includes(activeChat.id) ? "#22C55E" : "#94A3B8" }}>{Object.keys(onlineUsers).includes(activeChat.id) ? "Yes" : "No"}</span> },
-                ].map(row => (
-                  <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F8FAFC" }}>
-                    <span style={{ fontSize: 12, color: "#94A3B8" }}>{row.label}</span>
-                    {row.value}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* AI Summary */}
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>AI Summary</p>
-              <AISummaryPanel messages={messages} activeChat={activeChat} />
-            </div>
-
-            {/* Tasks */}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>Tasks</p>
-                <button
-                  onClick={() => setTasks(prev => [...prev, { id: Date.now(), title: "New task", due: "", priority: "medium", done: false }])}
-                  style={{ fontSize: 11, fontWeight: 600, color: "#6366F1", background: "none", border: "none", cursor: "pointer" }}>
-                  + Add
-                </button>
-              </div>
-              {tasks.map(task => (
-                <TaskCard key={task.id} task={task} onToggle={id => setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t))} />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── TOAST ── */}
@@ -1509,22 +1648,13 @@ export default function MessagesContent() {
         }
         .right-ai-panel {
           width: 260px;
-          position: relative;
-          z-index: 60;
+          flex-shrink: 0;
         }
-        @media (max-width: 1024px) {
-          .right-ai-panel {
-            position: absolute;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            width: 300px;
-            box-shadow: -10px 0 40px rgba(0,0,0,0.1);
-          }
-          .panel-close-btn { display: flex !important; }
+        @media (max-width: 1100px) {
+          .right-ai-panel { width: 220px; }
         }
-        @media (max-width: 480px) {
-          .right-ai-panel { width: 100%; }
+        @media (max-width: 768px) {
+          .right-ai-panel { display: none !important; }
         }
       `}</style>
     </>

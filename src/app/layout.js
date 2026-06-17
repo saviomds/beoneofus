@@ -1,5 +1,4 @@
 import './globals.css';
-import Script from 'next/script';
 import { ThemeProvider } from './components/ThemeProvider';
 import { LanguageProvider } from '../lib/i18n';
 import ClientShell from './components/ClientShell';
@@ -56,15 +55,7 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className="antialiased overflow-x-hidden overflow-y-auto" suppressHydrationWarning>
-        {/* Blocking theme script — runs before hydration to prevent flash.
-            next/script beforeInteractive keeps it out of React's component tree. */}
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}else{document.documentElement.classList.remove('dark')}}catch(e){}})();`,
-          }}
-        />
+        {/* next-themes ThemeProvider injects its own blocking script for theme detection */}
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <LanguageProvider>
             <ClientShell />

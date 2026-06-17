@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-);
+let _admin;
+function getSupabaseAdmin() {
+  if (!_admin) {
+    _admin = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+    );
+  }
+  return _admin;
+}
 
 export async function POST(request) {
   try {
@@ -16,13 +22,13 @@ export async function POST(request) {
     const token = authHeader.replace('Bearer ', '').trim();
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authErr } = await getSupabaseAdmin().auth.getUser(token);
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const normalizedCode = code.trim().toUpperCase();
 
     // Find referrer
-    const { data: referrer } = await supabaseAdmin
+    const { data: referrer } = await getSupabaseAdmin()
       .from('profiles')
       .select('id')
       .eq('referral_code', normalizedCode)
@@ -32,7 +38,7 @@ export async function POST(request) {
     if (referrer.id === user.id) return NextResponse.json({ error: 'Cannot use your own code' }, { status: 400 });
 
     // Idempotent — each user can only be referred once
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await getSupabaseAdmin()
       .from('referrals')
       .select('id')
       .eq('referred_id', user.id)
@@ -40,7 +46,7 @@ export async function POST(request) {
 
     if (existing) return NextResponse.json({ ok: true, already: true });
 
-    const { error: insertErr } = await supabaseAdmin.from('referrals').insert({
+    const { error: insertErr } = await getSupabaseAdmin().from('referrals').insert({
       referrer_id: referrer.id,
       referred_id: user.id,
       code: normalizedCode,

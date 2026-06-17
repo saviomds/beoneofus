@@ -3,10 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-);
+let _admin;
+function getSupabaseAdmin() {
+  if (!_admin) {
+    _admin = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+    );
+  }
+  return _admin;
+}
 
 export async function POST(request) {
   try {
@@ -28,7 +34,7 @@ export async function POST(request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // Upsert subscription (endpoint is unique per user)
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabaseAdmin()
       .from('push_subscriptions')
       .upsert(
         { user_id: user.id, endpoint, p256dh: keys.p256dh, auth: keys.auth },
@@ -57,7 +63,7 @@ export async function DELETE(request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('push_subscriptions')
       .delete()
       .eq('user_id', user.id)

@@ -2,10 +2,16 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+let _admin;
+function getSupabaseAdmin() {
+  if (!_admin) {
+    _admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+    );
+  }
+  return _admin;
+}
 
 export async function POST(request) {
   try {
@@ -26,7 +32,7 @@ export async function POST(request) {
 
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
-      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+      const { data: { user } } = await getSupabaseAdmin().auth.getUser(token);
       reporterId = user?.id ?? null;
     }
 
@@ -38,7 +44,7 @@ export async function POST(request) {
         try {
           const parsed = JSON.parse(accessToken);
           const token = Array.isArray(parsed) ? parsed[0] : parsed;
-          const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+          const { data: { user } } = await getSupabaseAdmin().auth.getUser(token);
           reporterId = user?.id ?? null;
         } catch (_) {}
       }
@@ -49,7 +55,7 @@ export async function POST(request) {
     }
 
     // Prevent duplicate reports from the same user on the same content
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await getSupabaseAdmin()
       .from('reports')
       .select('id')
       .eq('reporter_id', reporterId)
@@ -61,7 +67,7 @@ export async function POST(request) {
       return NextResponse.json({ message: 'Already reported' }, { status: 200 });
     }
 
-    const { error } = await supabaseAdmin.from('reports').insert({
+    const { error } = await getSupabaseAdmin().from('reports').insert({
       reporter_id: reporterId,
       content_type,
       content_id,

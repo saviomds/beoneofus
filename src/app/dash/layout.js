@@ -25,6 +25,10 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.performance !== 'unde
 }
 
 /* ── Mobile bottom nav ─────────────────────────────────────────── */
+/* NAV_H: approximate pill height used to compute FAB / content clearance */
+export const MOB_NAV_CLEARANCE = 'calc(env(safe-area-inset-bottom,0px) + 5.5rem)';
+const NAV_BOTTOM               = 'calc(env(safe-area-inset-bottom,0px) + 0.75rem)';
+
 const BOTTOM_NAV = [
   { id: 'home',          icon: Home,          label: 'Home'    },
   { id: 'messages',      icon: MessageSquare, label: 'Msgs'    },
@@ -37,22 +41,30 @@ function BottomNav({ pathname }) {
   const router = useRouter();
   const active = pathname?.split('/')[2] || 'home';
   return (
-    <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
-      <div className="flex items-center gap-1 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-2xl border border-gray-200/80 dark:border-zinc-700/50 rounded-2xl shadow-xl shadow-black/8 dark:shadow-black/40 px-2 py-2">
+    <nav
+      className="md:hidden fixed left-3 right-3 z-50 pointer-events-none"
+      style={{ bottom: NAV_BOTTOM }}
+    >
+      <div className="pointer-events-auto flex items-center bg-white/[0.97] dark:bg-zinc-900/[0.97] backdrop-blur-2xl border border-gray-100 dark:border-zinc-800 rounded-[22px] shadow-[0_8px_32px_rgba(0,0,0,0.10),0_2px_8px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] px-1.5 py-1.5">
         {BOTTOM_NAV.map(({ id, icon: Icon, label }) => {
           const isActive = active === id;
           return (
             <button
               key={id}
               onClick={() => router.push('/dash/' + id)}
-              className={`relative flex flex-col items-center justify-center gap-0.5 w-14 h-12 rounded-xl transition-all duration-200 ${
+              className={`relative flex-1 flex flex-col items-center justify-center gap-[3px] h-[50px] rounded-[16px] transition-all duration-200 active:scale-[0.93] ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
-                  : 'text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                  : 'text-gray-400 dark:text-zinc-500'
               }`}
             >
-              <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
-              <span className="text-[8px] font-black uppercase tracking-wide leading-none">{label}</span>
+              <Icon size={16} strokeWidth={isActive ? 2.5 : 1.8} />
+              <span className={`text-[8.5px] font-bold leading-none tracking-tight ${isActive ? 'opacity-90' : 'opacity-60'}`}>
+                {label}
+              </span>
+              {isActive && (
+                <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white/50" />
+              )}
             </button>
           );
         })}
@@ -136,13 +148,14 @@ function DashLayoutContent({ children }) {
 
       {/* ══ LEFT SIDEBAR ═════════════════════════════════════════ */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 flex flex-col
+        fixed top-0 left-0 z-50 flex flex-col
+        h-[100dvh]
         w-[272px] max-w-[88vw]
         bg-white dark:bg-[#111115]
         border-r border-gray-100 dark:border-zinc-800/60
         shadow-xl shadow-black/4 dark:shadow-black/40
-        transition-all duration-300 ease-in-out
-        md:relative md:shadow-none
+        transition-transform duration-300 ease-in-out
+        md:relative md:shadow-none md:h-auto md:inset-auto
         md:border-r md:border-gray-100 dark:md:border-zinc-800/60
         ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-60 xl:w-64'}
         ${isLeftOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -163,6 +176,8 @@ function DashLayoutContent({ children }) {
             isCollapsed={isSidebarCollapsed}
             onToggleCollapse={toggleSidebarCollapse}
           />
+          {/* Spacer so last nav items clear the floating bottom nav */}
+          <div className="md:hidden shrink-0" style={{ height: MOB_NAV_CLEARANCE }} aria-hidden="true" />
         </div>
       </aside>
 
@@ -177,22 +192,29 @@ function DashLayoutContent({ children }) {
         </div>
 
         {/* Scrollable content area */}
-        <div className={`flex-1 min-h-0 ${isMessages ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar pb-24 md:pb-0'}`}>
-          <div className={isMessages ? 'w-full h-full' : 'w-full h-full'}>
-            {children}
-          </div>
+        <div className={`flex-1 min-h-0 ${isMessages ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
+          {children}
+          {/* Mobile bottom nav clearance — keeps content from hiding behind the pill */}
+          {!isMessages && (
+            <div
+              className="md:hidden w-full shrink-0"
+              style={{ height: MOB_NAV_CLEARANCE }}
+              aria-hidden="true"
+            />
+          )}
         </div>
       </main>
 
       {/* ══ RIGHT SIDEBAR ════════════════════════════════════════ */}
       <aside className={`
-        fixed inset-y-0 right-0 z-50 flex flex-col
+        fixed top-0 right-0 z-50 flex flex-col
+        h-[100dvh]
         w-[288px] max-w-[90vw]
         bg-white dark:bg-[#111115]
         border-l border-gray-100 dark:border-zinc-800/60
         shadow-xl shadow-black/4 dark:shadow-black/40
         transition-transform duration-300 ease-in-out
-        lg:relative lg:translate-x-0 lg:shadow-none
+        lg:relative lg:translate-x-0 lg:shadow-none lg:h-auto lg:inset-auto
         lg:w-64 xl:w-72
         ${isRightOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
@@ -208,6 +230,8 @@ function DashLayoutContent({ children }) {
         </div>
         <div className="flex-1 overflow-y-auto no-scrollbar">
           <RightSidebar onClose={() => setIsRightOpen(false)} />
+          {/* Spacer so last items clear the floating bottom nav */}
+          <div className="lg:hidden shrink-0" style={{ height: MOB_NAV_CLEARANCE }} aria-hidden="true" />
         </div>
       </aside>
 
@@ -393,7 +417,10 @@ export default function DashLayout({ children }) {
         <PickUsernameModal onDone={() => setShowPickUsername(false)} />
       )}
       {!isAuthenticated && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-md">
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-md"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom,0px) + 5.75rem)' }}
+        >
           <div className="flex items-center justify-between gap-4 bg-zinc-900 dark:bg-zinc-950 text-white pl-5 pr-2 py-2 rounded-2xl shadow-2xl shadow-black/30 border border-zinc-700/60 backdrop-blur-xl">
             <span className="text-sm text-zinc-300 font-medium">
               Guest mode — sign in to interact.

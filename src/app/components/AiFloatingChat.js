@@ -264,18 +264,19 @@ export default function AiFloatingChat() {
       )}
 
       {/* ── Chat panel ── */}
+      {/* bottom = nav clearance (5.5rem) + FAB height (3.25rem) + 8px gap = ~9rem + safe-area */}
       <div
         className={`
           fixed z-[65]
           inset-x-3 sm:inset-x-auto
-          bottom-[76px] sm:right-4 sm:bottom-[88px]
-          lg:right-6 lg:bottom-24
+          sm:right-4 lg:right-6
           sm:w-[400px]
           transition-all duration-300 ease-out origin-bottom-right
           ${open
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
             : "opacity-0 translate-y-4 scale-[0.97] pointer-events-none"}
         `}
+        style={{ bottom: 'calc(env(safe-area-inset-bottom,0px) + 9.25rem)' }}
       >
         {/* Glass panel */}
         <div
@@ -511,7 +512,11 @@ export default function AiFloatingChat() {
       </div>
 
       {/* ── FAB toggle ── */}
-      <div className="fixed z-[65] bottom-[76px] right-3 sm:bottom-[88px] sm:right-4 lg:bottom-24 lg:right-6">
+      {/* Positioned above the bottom nav pill: nav clearance (5.5rem) + 20px gap */}
+      <div
+        className="fixed z-[65] right-3 sm:right-4 lg:right-6"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom,0px) + 5.75rem)' }}
+      >
         <button
           onClick={() => setOpen(o => !o)}
           className={`relative w-13 h-13 w-[52px] h-[52px] rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 border-2 border-white/20 ${

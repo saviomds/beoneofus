@@ -12,8 +12,7 @@ import NotificationPopup from '../components/NotificationPopup'
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../supabaseClient';
 
-/* Patch performance.measure at module load time — Next.js/Turbopack calls it
-   synchronously during render with marks that have negative timestamps in dev. */
+/* Patch performance.measure at module load time */
 if (typeof globalThis !== 'undefined' && typeof globalThis.performance !== 'undefined') {
   const _origMeasure = globalThis.performance.measure.bind(globalThis.performance);
   globalThis.performance.measure = (...args) => {
@@ -39,7 +38,7 @@ function BottomNav({ pathname }) {
   const active = pathname?.split('/')[2] || 'home';
   return (
     <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
-      <div className="flex items-center gap-1 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-gray-200/80 dark:border-zinc-700/60 rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/40 px-2 py-2">
+      <div className="flex items-center gap-1 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-2xl border border-gray-200/80 dark:border-zinc-700/50 rounded-2xl shadow-xl shadow-black/8 dark:shadow-black/40 px-2 py-2">
         {BOTTOM_NAV.map(({ id, icon: Icon, label }) => {
           const isActive = active === id;
           return (
@@ -49,7 +48,7 @@ function BottomNav({ pathname }) {
               className={`relative flex flex-col items-center justify-center gap-0.5 w-14 h-12 rounded-xl transition-all duration-200 ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
-                  : 'text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                  : 'text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800'
               }`}
             >
               <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
@@ -62,11 +61,33 @@ function BottomNav({ pathname }) {
   );
 }
 
+/* ── Sidebar collapse helpers ───────────────────────────────────── */
+const COLLAPSE_KEY = 'sidebar_collapsed_v1';
+
+function readCollapsed() {
+  if (typeof window === 'undefined') return false;
+  try { return localStorage.getItem(COLLAPSE_KEY) === 'true'; } catch { return false; }
+}
+
 /* ── Main layout shell ──────────────────────────────────────────── */
 function DashLayoutContent({ children }) {
-  const [isLeftOpen, setIsLeftOpen]   = useState(false);
-  const [isRightOpen, setIsRightOpen] = useState(false);
+  const [isLeftOpen, setIsLeftOpen]         = useState(false);
+  const [isRightOpen, setIsRightOpen]       = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const pathname = usePathname();
+
+  /* Read persisted collapse preference on mount (client only) */
+  useLayoutEffect(() => {
+    setIsSidebarCollapsed(readCollapsed());
+  }, []);
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem(COLLAPSE_KEY, String(next)); } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => { setIsLeftOpen(false); setIsRightOpen(false); }, [pathname]);
 
@@ -78,12 +99,12 @@ function DashLayoutContent({ children }) {
   const isMessages = pathname?.endsWith('/messages') || pathname?.endsWith('/ai');
 
   return (
-    <div className="flex w-full min-h-screen h-screen bg-[#F2F3F5] dark:bg-[#09090B] text-gray-900 dark:text-gray-100 relative overflow-hidden">
+    <div className="flex w-full min-h-screen h-screen bg-slate-50 dark:bg-[#09090B] text-gray-900 dark:text-gray-100 relative overflow-hidden">
 
       {/* ══ MOBILE TOP BAR ═══════════════════════════════════════ */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4
-                      bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl
-                      border-b border-gray-200/70 dark:border-zinc-800/70">
+                      bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl
+                      border-b border-gray-100 dark:border-zinc-800/60 shadow-sm">
         <button
           onClick={() => setIsLeftOpen(true)}
           className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
@@ -108,7 +129,7 @@ function DashLayoutContent({ children }) {
       {/* ══ OVERLAY ══════════════════════════════════════════════ */}
       {(isLeftOpen || isRightOpen) && (
         <div
-          className="fixed inset-0 bg-black/40 z-[49] md:hidden backdrop-blur-[2px]"
+          className="fixed inset-0 bg-black/30 z-[49] md:hidden backdrop-blur-sm"
           onClick={() => { setIsLeftOpen(false); setIsRightOpen(false); }}
         />
       )}
@@ -118,25 +139,30 @@ function DashLayoutContent({ children }) {
         fixed inset-y-0 left-0 z-50 flex flex-col
         w-[272px] max-w-[88vw]
         bg-white dark:bg-[#111115]
-        border-r border-gray-200/80 dark:border-zinc-800/80
-        shadow-2xl shadow-black/5 dark:shadow-black/50
-        transition-transform duration-300 ease-in-out
-        md:relative md:translate-x-0 md:shadow-none
-        md:w-60 xl:w-64
-        ${isLeftOpen ? 'translate-x-0' : '-translate-x-full'}
+        border-r border-gray-100 dark:border-zinc-800/60
+        shadow-xl shadow-black/4 dark:shadow-black/40
+        transition-all duration-300 ease-in-out
+        md:relative md:shadow-none
+        md:border-r md:border-gray-100 dark:md:border-zinc-800/60
+        ${isSidebarCollapsed ? 'md:w-[72px]' : 'md:w-60 xl:w-64'}
+        ${isLeftOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         {/* Mobile drawer header */}
         <div className="md:hidden flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-zinc-800 shrink-0">
           <span className="font-black text-[15px] tracking-tighter text-gray-900 dark:text-gray-100">Menu</span>
           <button
             onClick={() => setIsLeftOpen(false)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-200 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-200 transition-colors"
           >
             <X size={15} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto no-scrollbar">
-          <Sidebar onClose={() => setIsLeftOpen(false)} />
+        <div className="flex-1 overflow-y-auto no-scrollbar overflow-x-hidden">
+          <Sidebar
+            onClose={() => setIsLeftOpen(false)}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={toggleSidebarCollapse}
+          />
         </div>
       </aside>
 
@@ -146,7 +172,7 @@ function DashLayoutContent({ children }) {
         <div className="md:hidden h-14 shrink-0" />
 
         {/* Desktop header */}
-        <div className="hidden md:block shrink-0 bg-white dark:bg-[#111115] border-b border-gray-200/80 dark:border-zinc-800/80">
+        <div className="hidden md:block shrink-0 bg-white dark:bg-[#111115] border-b border-gray-100 dark:border-zinc-800/60">
           <Header />
         </div>
 
@@ -163,8 +189,8 @@ function DashLayoutContent({ children }) {
         fixed inset-y-0 right-0 z-50 flex flex-col
         w-[288px] max-w-[90vw]
         bg-white dark:bg-[#111115]
-        border-l border-gray-200/80 dark:border-zinc-800/80
-        shadow-2xl shadow-black/5 dark:shadow-black/50
+        border-l border-gray-100 dark:border-zinc-800/60
+        shadow-xl shadow-black/4 dark:shadow-black/40
         transition-transform duration-300 ease-in-out
         lg:relative lg:translate-x-0 lg:shadow-none
         lg:w-64 xl:w-72
@@ -175,7 +201,7 @@ function DashLayoutContent({ children }) {
           <span className="font-black text-[15px] tracking-tighter text-gray-900 dark:text-gray-100">Network</span>
           <button
             onClick={() => setIsRightOpen(false)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-200 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 hover:text-gray-700 dark:text-zinc-500 dark:hover:text-zinc-200 transition-colors"
           >
             <X size={15} />
           </button>
@@ -201,7 +227,7 @@ const USERNAME_RE = /^[a-z0-9_-]{3,20}$/;
 
 function PickUsernameModal({ onDone }) {
   const [username, setUsername] = useState('');
-  const [status, setStatus] = useState('idle'); // idle | checking | available | taken | invalid
+  const [status, setStatus] = useState('idle');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const timer = useRef(null);
@@ -240,7 +266,7 @@ function PickUsernameModal({ onDone }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-300">
         <h2 className="text-lg font-black text-gray-900 dark:text-gray-100 mb-1 tracking-tight">
           Choose your username
@@ -292,16 +318,12 @@ function PickUsernameModal({ onDone }) {
   );
 }
 
-// Returns true if Supabase has a cached session (synchronous).
-// @supabase/ssr's createBrowserClient stores sessions in cookies, not localStorage.
 function hasCachedSession() {
   if (typeof window === 'undefined') return false;
   try {
-    // Cookie storage (createBrowserClient from @supabase/ssr)
     if (document.cookie.split(';').some(
       c => c.trim().match(/^sb-.+-auth-token/)
     )) return true;
-    // localStorage fallback (legacy createClient storage)
     return Object.keys(localStorage).some(
       k => k.startsWith('sb-') && k.endsWith('-auth-token') && !!localStorage.getItem(k)
     );
@@ -309,8 +331,6 @@ function hasCachedSession() {
 }
 
 export default function DashLayout({ children }) {
-  // Always start with isLoading=true so server and client render the same initial HTML (no hydration mismatch).
-  // useLayoutEffect then immediately skips the spinner for returning users before the browser paints.
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showPickUsername, setShowPickUsername] = useState(false);
@@ -344,8 +364,7 @@ export default function DashLayout({ children }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F2F3F5] dark:bg-[#09090B] flex flex-col items-center justify-center gap-6">
-        {/* Wordmark */}
+      <div className="min-h-screen bg-slate-50 dark:bg-[#09090B] flex flex-col items-center justify-center gap-6">
         <div className="flex items-center gap-2.5 select-none">
           <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
             <span className="text-white font-black text-sm">b</span>
@@ -354,7 +373,6 @@ export default function DashLayout({ children }) {
             beone<span className="text-blue-600">of</span>us
           </span>
         </div>
-        {/* Progress bar */}
         <div className="w-32 h-0.5 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
           <div className="h-full bg-blue-600 rounded-full animate-[loading_1.2s_ease-in-out_infinite]" style={{ width: '40%' }} />
         </div>

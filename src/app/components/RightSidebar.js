@@ -51,13 +51,13 @@ const SectionHeader = ({ title, icon: Icon, iconColor, isCollapsible, isOpen, on
     onClick={isCollapsible ? onToggle : undefined}
   >
     <div className="flex items-center gap-2">
-      {Icon && <Icon size={12} className={iconColor || 'text-gray-400 dark:text-gray-500'} />}
-      <h3 className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-[0.14em]">{title}</h3>
+      {Icon && <Icon size={11} className={iconColor || 'text-gray-400 dark:text-gray-500'} />}
+      <h3 className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[2px]">{title}</h3>
     </div>
     <div className="flex items-center gap-1.5">
       {action}
       {isCollapsible && (
-        <ChevronRight size={11} className={`text-gray-400 dark:text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
+        <ChevronRight size={10} className={`text-gray-300 dark:text-gray-600 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
       )}
     </div>
   </div>
@@ -375,7 +375,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
   };
 
   return (
-    <aside className="w-full flex flex-col p-3 xl:p-5 gap-5 h-screen sticky top-0 overflow-y-auto custom-scrollbar bg-transparent border-l border-gray-100 dark:border-gray-800/60 animate-in fade-in slide-in-from-right-6 duration-300 md:animate-none">
+    <aside className="w-full flex flex-col p-4 xl:p-5 gap-5 h-screen sticky top-0 overflow-y-auto custom-scrollbar bg-transparent animate-in fade-in slide-in-from-right-4 duration-300 md:animate-none">
 
       {/* ── Mobile Quick Nav ── horizontal scroll, lg hidden */}
       <div className="lg:hidden shrink-0">
@@ -413,14 +413,14 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
       <div className="shrink-0">
         <div className="grid grid-cols-3 gap-2">
           {[
-            { label: 'Members',   value: statsLoaded ? formatCount(liveStats.members)    : '—', icon: Users,    colorText: 'text-blue-600 dark:text-blue-400',    colorBg: 'bg-blue-50 dark:bg-blue-900/15' },
-            { label: 'Posts 24h', value: statsLoaded ? formatCount(liveStats.postsToday) : '—', icon: Activity, colorText: 'text-emerald-600 dark:text-emerald-400', colorBg: 'bg-emerald-50 dark:bg-emerald-900/15' },
-            { label: 'Groups',    value: statsLoaded ? formatCount(liveStats.groups)     : '—', icon: Layers,   colorText: 'text-violet-600 dark:text-violet-400',  colorBg: 'bg-violet-50 dark:bg-violet-900/15' },
-          ].map(({ label, value, icon: Icon, colorText, colorBg }) => (
-            <div key={label} className={`${colorBg} rounded-xl p-2.5 flex flex-col items-center gap-1`}>
-              <Icon size={13} className={colorText} />
-              <span className={`text-sm font-black leading-none ${colorText}`}>{value}</span>
-              <span className="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-center">{label}</span>
+            { label: 'Members',   value: statsLoaded ? formatCount(liveStats.members)    : '—', icon: Users,    text: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-950/40',    border: 'border-blue-100 dark:border-blue-900/40' },
+            { label: 'Posts 24h', value: statsLoaded ? formatCount(liveStats.postsToday) : '—', icon: Activity, text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40', border: 'border-emerald-100 dark:border-emerald-900/40' },
+            { label: 'Groups',    value: statsLoaded ? formatCount(liveStats.groups)     : '—', icon: Layers,   text: 'text-violet-600 dark:text-violet-400',  bg: 'bg-violet-50 dark:bg-violet-950/40',  border: 'border-violet-100 dark:border-violet-900/40' },
+          ].map(({ label, value, icon: Icon, text, bg, border }) => (
+            <div key={label} className={`${bg} border ${border} rounded-xl p-3 flex flex-col items-center gap-1.5`}>
+              <Icon size={12} className={text} />
+              <span className={`text-[15px] font-black leading-none tracking-tight ${text}`}>{value}</span>
+              <span className="text-[8px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider text-center leading-tight">{label}</span>
             </div>
           ))}
         </div>
@@ -430,9 +430,9 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
       <div className="shrink-0">
         <button
           onClick={() => setShowBroadcastModal(true)}
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm py-3.5 rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 active:scale-[0.98]"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] py-3 rounded-xl transition-all shadow-lg shadow-blue-500/15 flex items-center justify-center gap-2 active:scale-[0.98] tracking-wide"
         >
-          <Plus size={17} strokeWidth={3} /> Create Broadcast
+          <Plus size={15} strokeWidth={2.5} /> New Broadcast
         </button>
       </div>
 
@@ -453,9 +453,9 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
                 key={label}
                 href={href}
                 onClick={() => onClose?.()}
-                className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border ${bg} ${border} hover:scale-105 active:scale-95 transition-all group`}
+                className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border ${bg} ${border} hover:scale-[1.04] active:scale-95 transition-all shadow-sm shadow-black/3`}
               >
-                <Icon size={15} className={`${text} shrink-0`} />
+                <Icon size={14} className={`${text} shrink-0`} />
                 <span className={`text-[8px] font-bold ${text} text-center leading-tight`}>{label}</span>
               </Link>
             ))}
@@ -501,41 +501,41 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
                     <div
                       key={user.id}
                       onClick={() => setSelectedUserId(user.id)}
-                      className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group"
+                      className="flex items-center justify-between gap-2 cursor-pointer p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-all group border border-transparent hover:border-gray-100 dark:hover:border-gray-800/60"
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div className="relative w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700/50">
+                        <div className="relative w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 ring-1 ring-gray-200/60 dark:ring-gray-700/40">
                           {user.avatar_url ? (
                             <Image src={user.avatar_url} alt="" fill sizes="36px" className="object-cover" />
                           ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-blue-500/15 to-violet-500/15 flex items-center justify-center text-blue-500 font-bold text-xs uppercase">
+                            <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs uppercase">
                               {user.username?.[0]}
                             </div>
                           )}
                           {onlineUserIds.has(user.id) && (
-                            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white dark:border-gray-900" />
+                            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white dark:border-gray-900 shadow-sm" />
                           )}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
+                          <span className="text-[12px] font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
                             <span className="truncate">@{user.username}</span>
                             {user.is_verified && <BadgeCheck size={11} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />}
                           </span>
                           <span className={`text-[9px] font-medium truncate ${onlineUserIds.has(user.id) ? 'text-emerald-500 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                            {onlineUserIds.has(user.id) ? 'Online' : (user.status || 'Offline')}
+                            {onlineUserIds.has(user.id) ? '● Online now' : (user.status || 'Member')}
                           </span>
                         </div>
                       </div>
                       <button
                         onClick={e => handleFollowToggle(e, user.id, isFollowed)}
-                        className={`shrink-0 p-1.5 rounded-lg border text-[10px] font-black flex items-center gap-1 transition-all ${
+                        className={`shrink-0 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-all ${
                           isFollowed
-                            ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50 text-emerald-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800/50 hover:text-red-600'
-                            : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800/50 hover:text-blue-600'
+                            ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50 text-emerald-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 hover:text-red-600'
+                            : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-blue-600 hover:border-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:border-blue-600 dark:hover:text-white'
                         }`}
                         title={isFollowed ? 'Unfollow' : 'Connect'}
                       >
-                        {isFollowed ? <Check size={12} /> : <UserPlus size={12} />}
+                        {isFollowed ? <Check size={11} /> : <UserPlus size={11} />}
                       </button>
                     </div>
                   );
@@ -644,17 +644,17 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
                     <button
                       key={group.id}
                       onClick={() => { router.push('/dash/groups'); onClose?.(); }}
-                      className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:border-blue-200 dark:hover:border-blue-800/50 hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition-all group text-left"
+                      className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-gray-800/70 hover:border-blue-200 dark:hover:border-blue-800/50 hover:shadow-sm transition-all group text-left"
                     >
                       <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${iconStyle}`}>
-                        {group.is_private ? <Lock size={12} /> : <Hash size={12} />}
+                        {group.is_private ? <Lock size={11} /> : <Hash size={11} />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{group.name}</p>
+                        <p className="text-[12px] font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{group.name}</p>
                         <p className="text-[9px] text-gray-400 dark:text-gray-500 truncate">{group.description || (group.is_private ? 'Private · Members only' : 'Open community')}</p>
                       </div>
                       {idx === 0 && (
-                        <span className="shrink-0 text-[8px] font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800/30 px-1.5 py-0.5 rounded-full uppercase tracking-wider">Hot</span>
+                        <span className="shrink-0 text-[8px] font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800/30 px-1.5 py-0.5 rounded-full uppercase tracking-wider">Hot</span>
                       )}
                     </button>
                   );
@@ -703,13 +703,13 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Nothing yet — check back soon</p>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {newsItems.map((item, idx) => {
                   const typeConfig = {
-                    post:  { color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-900/20',    Icon: Newspaper, nav: () => { if (item.authorId) setSelectedUserId(item.authorId); } },
-                    event: { color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', Icon: Calendar, nav: () => { router.push('/dash/events'); onClose?.(); } },
-                    page:  { color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-900/20', Icon: FileText,  nav: () => { router.push('/dash/pages'); onClose?.(); } },
-                    job:   { color: 'text-amber-600 dark:text-amber-400',   bg: 'bg-amber-50 dark:bg-amber-900/20',  Icon: Briefcase, nav: () => { if (item.authorId) setSelectedUserId(item.authorId); else { router.push('/dash'); onClose?.(); } } },
+                    post:  { color: 'text-blue-600 dark:text-blue-400',       bg: 'bg-blue-50 dark:bg-blue-900/20',       Icon: Newspaper, nav: () => { if (item.authorId) setSelectedUserId(item.authorId); } },
+                    event: { color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', Icon: Calendar,  nav: () => { router.push('/dash/events'); onClose?.(); } },
+                    page:  { color: 'text-violet-600 dark:text-violet-400',   bg: 'bg-violet-50 dark:bg-violet-900/20',   Icon: FileText,  nav: () => { router.push('/dash/pages'); onClose?.(); } },
+                    job:   { color: 'text-amber-600 dark:text-amber-400',     bg: 'bg-amber-50 dark:bg-amber-900/20',     Icon: Briefcase, nav: () => { if (item.authorId) setSelectedUserId(item.authorId); else { router.push('/dash'); onClose?.(); } } },
                   }[item.type] || { color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800', Icon: Newspaper, nav: () => {} };
 
                   const dateLabel = item.type === 'event'
@@ -720,28 +720,30 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
                     <div
                       key={`${item.type}-${item.id}-${idx}`}
                       onClick={typeConfig.nav}
-                      className="flex gap-2.5 p-2 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group"
+                      className="flex gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group border border-transparent hover:border-gray-100 dark:hover:border-gray-800"
                     >
-                      <div className={`w-7 h-7 rounded-lg ${typeConfig.bg} flex items-center justify-center shrink-0 mt-0.5`}>
-                        <typeConfig.Icon size={12} className={typeConfig.color} />
+                      {/* Numbered indicator */}
+                      <div className="shrink-0 flex flex-col items-center gap-1 pt-0.5">
+                        <span className={`text-[11px] font-black leading-none tabular-nums ${idx === 0 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'}`}>
+                          {String(idx + 1).padStart(2, '0')}
+                        </span>
+                        <div className={`w-5 h-5 rounded-lg ${typeConfig.bg} flex items-center justify-center`}>
+                          <typeConfig.Icon size={10} className={typeConfig.color} />
+                        </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-1.5 mb-0.5">
-                          <p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200 leading-tight line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex-1">
-                            {item.title || 'Untitled'}
-                          </p>
-                          <span className={`shrink-0 text-[7px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full ${typeConfig.bg} ${typeConfig.color}`}>
-                            {item.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
+                        <p className="text-[12px] font-semibold text-gray-800 dark:text-gray-200 leading-snug line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-1">
+                          {item.title || 'Untitled'}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[8px] font-black uppercase tracking-wider ${typeConfig.color}`}>{item.label}</span>
                           {item.sub && (
                             <span className="text-[9px] text-gray-400 dark:text-gray-500 truncate flex items-center gap-0.5">
                               {item.type === 'event' && <MapPin size={7} />}
                               {item.sub}
                             </span>
                           )}
-                          <span className="ml-auto text-[9px] text-gray-400 dark:text-gray-500 shrink-0 flex items-center gap-0.5">
+                          <span className="ml-auto text-[9px] text-gray-400 dark:text-gray-500 shrink-0 flex items-center gap-0.5 whitespace-nowrap">
                             <Clock size={7} /> {dateLabel}
                           </span>
                         </div>

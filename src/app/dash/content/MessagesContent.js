@@ -17,6 +17,7 @@ import {
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
 import { useDashboard } from "./DashboardContext";
+import { useOnlineUsers } from "../../contexts/OnlineUsersContext";
 
 /* ─── HELPERS ───────────────────────────────────────────────── */
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
@@ -268,7 +269,7 @@ export default function MessagesContent() {
   const [inputValue, setInputValue] = useState("");
   const [currentUserId, setCurrentUserId] = useState(null);
   const { targetChatUser, setTargetChatUser } = useDashboard();
-  const [onlineUsers, setOnlineUsers] = useState({});
+  const onlineUsers = useOnlineUsers();
   const [unreadCounts, setUnreadCounts] = useState({});
   const [lastMessagePreviews, setLastMessagePreviews] = useState({});
 
@@ -519,15 +520,6 @@ export default function MessagesContent() {
       .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `sender_id=eq.${currentUserId}` }, fetchUnreadAndPreviews)
       .subscribe();
     return () => supabase.removeChannel(ch);
-  }, [currentUserId]);
-
-  /* ── 3. Presence ── */
-  useEffect(() => {
-    if (!currentUserId) return;
-    const presenceCh = supabase.channel("online-users", { config: { presence: { key: currentUserId } } });
-    presenceCh.on("presence", { event: "sync" }, () => setOnlineUsers(presenceCh.presenceState()))
-      .subscribe(async status => { if (status === "SUBSCRIBED") await presenceCh.track({ online_at: new Date().toISOString() }); });
-    return () => supabase.removeChannel(presenceCh);
   }, [currentUserId]);
 
   /* ── 4. Messages ── */
@@ -1016,7 +1008,7 @@ export default function MessagesContent() {
               </div>
             ) : filteredContacts.map((contact, i) => {
               const isActive = activeChat?.id === contact.id;
-              const isOnline = Object.keys(onlineUsers).includes(contact.id);
+              const isOnline = onlineUsers.has(contact.id);
               const unread = unreadCounts[contact.id] || 0;
               const preview = lastMessagePreviews[contact.id];
               const isTyping = typingUsers[contact.id];
@@ -1104,9 +1096,9 @@ export default function MessagesContent() {
                       {activeChat.is_verified && <BadgeCheck size={14} color="#6366F1" fill="#6366F1" stroke="white" strokeWidth={2} />}
                     </h3>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 1 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: connectionStatus === "blocked" ? "#EF4444" : Object.keys(onlineUsers).includes(activeChat.id) ? "#22C55E" : "#CBD5E1" }} />
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: connectionStatus === "blocked" ? "#EF4444" : onlineUsers.has(activeChat.id) ? "#22C55E" : "#CBD5E1" }} />
                       <span style={{ fontSize: 11, fontWeight: 500, color: "#94A3B8" }}>
-                        {connectionStatus === "blocked" ? "Blocked" : Object.keys(onlineUsers).includes(activeChat.id) ? "Online" : "Offline"}
+                        {connectionStatus === "blocked" ? "Blocked" : onlineUsers.has(activeChat.id) ? "Online" : "Offline"}
                       </span>
                     </div>
                   </div>
@@ -1437,7 +1429,7 @@ export default function MessagesContent() {
                       {[
                         { label: "Status", value: <StatusBadge status={connectionStatus || "none"} /> },
                         { label: "Messages", value: <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{messages.length}</span> },
-                        { label: "Online", value: <span style={{ fontSize: 12, fontWeight: 600, color: Object.keys(onlineUsers).includes(activeChat.id) ? "#22C55E" : "#94A3B8" }}>{Object.keys(onlineUsers).includes(activeChat.id) ? "Yes" : "No"}</span> },
+                        { label: "Online", value: <span style={{ fontSize: 12, fontWeight: 600, color: onlineUsers.has(activeChat.id) ? "#22C55E" : "#94A3B8" }}>{onlineUsers.has(activeChat.id) ? "Yes" : "No"}</span> },
                       ].map(row => (
                         <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F8FAFC" }}>
                           <span style={{ fontSize: 12, color: "#94A3B8" }}>{row.label}</span>

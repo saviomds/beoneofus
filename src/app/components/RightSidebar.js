@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import ProfileContent from "../dash/content/ProfileContent";
 import NewPost from "./NewPost";
+import { useOnlineUsers } from "../contexts/OnlineUsersContext";
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -97,6 +98,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
 
   const [liveStats, setLiveStats]       = useState({ members: 0, postsToday: 0, groups: 0 });
   const [statsLoaded, setStatsLoaded]   = useState(false);
+  const onlineUserIds = useOnlineUsers();
 
   useEffect(() => {
     const handleSync = (e) => setActiveModals(e.detail);
@@ -510,14 +512,18 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
                               {user.username?.[0]}
                             </div>
                           )}
-                          <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white dark:border-gray-900" />
+                          {onlineUserIds.has(user.id) && (
+                            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white dark:border-gray-900" />
+                          )}
                         </div>
                         <div className="flex flex-col min-w-0">
                           <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
                             <span className="truncate">@{user.username}</span>
                             {user.is_verified && <BadgeCheck size={11} className="text-blue-500 shrink-0" fill="currentColor" stroke="white" />}
                           </span>
-                          <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium truncate">{user.status || 'Active'}</span>
+                          <span className={`text-[9px] font-medium truncate ${onlineUserIds.has(user.id) ? 'text-emerald-500 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                            {onlineUserIds.has(user.id) ? 'Online' : (user.status || 'Offline')}
+                          </span>
                         </div>
                       </div>
                       <button

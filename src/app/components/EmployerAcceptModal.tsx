@@ -16,6 +16,7 @@ import Link from "next/link";
 import { supabase } from "../supabaseClient";
 import ProfileContent from "../dash/content/ProfileContent";
 import { useDashboard } from "../dash/content/DashboardContext";
+import { useOnlineUsers } from "../contexts/OnlineUsersContext";
 
 /* ─────────────────────────────────────────────────────────────
    HELPERS
@@ -203,7 +204,7 @@ export default function MessagesContent() {
   const [inputValue, setInputValue] = useState("");
   const [currentUserId, setCurrentUserId] = useState<any>(null);
   const { targetChatUser, setTargetChatUser } = useDashboard() as any;
-  const [onlineUsers, setOnlineUsers] = useState<Record<string, any>>({});
+  const onlineUsers = useOnlineUsers();
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [lastMessagePreviews, setLastMessagePreviews] = useState<Record<string, any>>({});
 
@@ -464,23 +465,6 @@ export default function MessagesContent() {
   /* ─────────────────────────────────────────────────────────
      3. PRESENCE
   ───────────────────────────────────────────────────────── */
-  useEffect(() => {
-    if (!currentUserId) return;
-    const presenceCh = supabase.channel("online-users", {
-      config: { presence: { key: currentUserId } },
-    });
-    presenceCh
-      .on("presence", { event: "sync" }, () =>
-        setOnlineUsers(presenceCh.presenceState())
-      )
-      .subscribe(async (status) => {
-        if (status === "SUBSCRIBED")
-          await presenceCh.track({ online_at: new Date().toISOString() });
-      });
-    return () => {
-      supabase.removeChannel(presenceCh);
-    };
-  }, [currentUserId]);
 
   /* ─────────────────────────────────────────────────────────
      4. ACTIVE CHAT: messages + connection
@@ -1668,7 +1652,7 @@ export default function MessagesContent() {
 
             {filteredContacts.map((contact, i) => {
               const isActive = activeChat?.id === contact.id;
-              const isOnline = Object.keys(onlineUsers).includes(contact.id);
+              const isOnline = onlineUsers.has(contact.id);
               const unread = unreadCounts[contact.id] || 0;
               const preview = lastMessagePreviews[contact.id];
               const isTyping = typingUsers[contact.id];
@@ -1845,7 +1829,7 @@ export default function MessagesContent() {
                         className={`w-1.5 h-1.5 rounded-full ${
                           connectionStatus === "blocked"
                             ? "bg-red-500"
-                            : Object.keys(onlineUsers).includes(activeChat.id)
+                            : onlineUsers.has(activeChat.id)
                             ? "bg-green-500"
                             : "bg-gray-300 dark:bg-gray-600"
                         }`}
@@ -1853,7 +1837,7 @@ export default function MessagesContent() {
                       <span className="text-gray-400 dark:text-gray-500">
                         {connectionStatus === "blocked"
                           ? "Blocked"
-                          : Object.keys(onlineUsers).includes(activeChat.id)
+                          : onlineUsers.has(activeChat.id)
                           ? "Online"
                           : "Offline"}
                       </span>

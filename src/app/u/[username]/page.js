@@ -9,7 +9,8 @@ import {
   Terminal, Briefcase, Share2, CheckCircle2, Clock,
   ArrowLeft, Loader2, Copy, Check, MessageSquare,
   Heart, Code, ExternalLink, BadgeCheck, Zap, Star,
-  Eye, EyeOff, Wifi, FolderGit2, Tag, Link2
+  Eye, EyeOff, Wifi, FolderGit2, Tag, Link2,
+  Crown, ShieldCheck, Sparkles
 } from "lucide-react";
 import GitHubStats from "../../components/GitHubStats";
 import { supabase } from "../../supabaseClient";
@@ -244,6 +245,16 @@ export default function PublicProfilePage() {
   const isOwnProfile = currentUserId === profile?.id;
   const visibility = profile?.profile_visibility ?? DEFAULT_VIS;
 
+  const isFounder = profile?.role === "founder";
+  const isAdmin   = profile?.is_admin && !isFounder;
+
+  // Accent palette — founder gets gold, admin gets violet, regular gets blue
+  const accent = isFounder
+    ? { ring: "ring-amber-400/60", border: "border-amber-400/50", glow: "shadow-amber-400/30", text: "text-amber-500", bg: "bg-amber-500", bgMuted: "bg-amber-50 dark:bg-amber-900/20", banner: "from-[#0f0c02] via-amber-950 to-[#1a1200]", strip: "from-amber-500/10 via-amber-400/5 to-transparent border-amber-500/20", badgeBg: "bg-amber-500/10 border-amber-500/30 text-amber-400", statBorder: "border-amber-200 dark:border-amber-800/40" }
+    : isAdmin
+    ? { ring: "ring-violet-500/60", border: "border-violet-500/50", glow: "shadow-violet-500/30", text: "text-violet-500", bg: "bg-violet-500", bgMuted: "bg-violet-50 dark:bg-violet-900/20", banner: "from-[#0a0010] via-violet-950 to-[#0d0018]", strip: "from-violet-500/10 via-violet-400/5 to-transparent border-violet-500/20", badgeBg: "bg-violet-500/10 border-violet-500/30 text-violet-400", statBorder: "border-violet-200 dark:border-violet-800/40" }
+    : null;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0D0D0D] text-gray-900 dark:text-gray-100">
 
@@ -282,9 +293,26 @@ export default function PublicProfilePage() {
         <div className="relative h-48 sm:h-64 md:h-72 overflow-hidden">
           {profile.banner_url ? (
             <Image src={profile.banner_url} alt="Banner" fill className="object-cover" />
+          ) : accent ? (
+            <div className={`absolute inset-0 bg-gradient-to-br ${accent.banner}`}>
+              {/* Noise texture */}
+              <div className="absolute inset-0 opacity-[0.07]" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
+              }} />
+              {/* Radial glow */}
+              <div className={`absolute inset-0 opacity-30 bg-radial-gradient`} style={{
+                background: isFounder
+                  ? "radial-gradient(ellipse 70% 60% at 50% 100%, rgba(251,191,36,0.25) 0%, transparent 70%)"
+                  : "radial-gradient(ellipse 70% 60% at 50% 100%, rgba(139,92,246,0.25) 0%, transparent 70%)"
+              }} />
+              {/* Dot grid */}
+              <div className="absolute inset-0 opacity-10" style={{
+                backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.6) 1px, transparent 0)`,
+                backgroundSize: `28px 28px`
+              }} />
+            </div>
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-700">
-              {/* Grid pattern overlay */}
               <div className="absolute inset-0 opacity-20" style={{
                 backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.4) 1px, transparent 0)`,
                 backgroundSize: `24px 24px`
@@ -302,12 +330,20 @@ export default function PublicProfilePage() {
 
             {/* Avatar */}
             <div className="flex items-end gap-4">
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl border-4 border-white dark:border-gray-900 overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0 shadow-2xl ring-1 ring-black/5">
-                {profile.avatar_url ? (
-                  <Image src={profile.avatar_url} alt={profile.username} width={128} height={128} className="object-cover w-full h-full" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-3xl font-black text-gray-400 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30">
-                    {profile.username?.[0]?.toUpperCase() || "?"}
+              <div className={`relative w-28 h-28 sm:w-32 sm:h-32 shrink-0 ${accent ? `p-[3px] rounded-3xl bg-gradient-to-br ${isFounder ? "from-amber-400 via-yellow-300 to-amber-600" : "from-violet-500 via-purple-400 to-violet-700"} shadow-2xl ${accent.glow}` : ""}`}>
+                <div className={`w-full h-full rounded-[20px] border-4 ${accent ? "border-transparent" : "border-white dark:border-gray-900"} overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-xl`}>
+                  {profile.avatar_url ? (
+                    <Image src={profile.avatar_url} alt={profile.username} width={128} height={128} className="object-cover w-full h-full" />
+                  ) : (
+                    <div className={`w-full h-full flex items-center justify-center text-3xl font-black ${accent ? `${accent.text} bg-gradient-to-br ${isFounder ? "from-amber-950 to-yellow-900" : "from-violet-950 to-purple-900"}` : "text-gray-400 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30"}`}>
+                      {profile.username?.[0]?.toUpperCase() || "?"}
+                    </div>
+                  )}
+                </div>
+                {/* Role icon badge on avatar */}
+                {accent && (
+                  <div className={`absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full ${isFounder ? "bg-amber-500" : "bg-violet-600"} flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900`}>
+                    {isFounder ? <Crown size={13} className="text-white" /> : <ShieldCheck size={13} className="text-white" />}
                   </div>
                 )}
               </div>
@@ -370,17 +406,27 @@ export default function PublicProfilePage() {
 
           {/* Name + bio */}
           <div className="mb-5">
+
+            {/* Admin / Founder identity strip */}
+            {accent && (
+              <div className={`flex items-center gap-2.5 mb-3 px-3 py-2 rounded-xl border bg-gradient-to-r ${accent.strip} w-fit`}>
+                {isFounder
+                  ? <Crown size={13} className="text-amber-400 shrink-0" />
+                  : <ShieldCheck size={13} className="text-violet-400 shrink-0" />
+                }
+                <span className={`text-xs font-black uppercase tracking-widest ${accent.text}`}>
+                  {isFounder ? "Platform Founder" : "Platform Admin"}
+                </span>
+                <Sparkles size={11} className={`${accent.text} opacity-60`} />
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-gray-100">
+              <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${accent ? `bg-gradient-to-r ${isFounder ? "from-amber-300 via-yellow-200 to-amber-400" : "from-violet-300 via-purple-200 to-violet-400"} bg-clip-text text-transparent` : "text-gray-900 dark:text-gray-100"}`}>
                 {profile.full_name || `@${profile.username}`}
               </h1>
               {profile.is_verified && <VerifiedBadge size={22} />}
               {(profile.is_premium || profile.is_admin) && vis(profile, 'premium_badge') && <PremiumBadge size={20} isTrial={!!profile.is_trial_premium} />}
-              {profile.is_admin && (
-                <span className="text-[10px] font-black px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-800/50 uppercase tracking-widest">
-                  Admin
-                </span>
-              )}
               {vis(profile, "work_status") && profile.work_status && profile.work_status !== "None" && (
                 <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border uppercase tracking-widest flex items-center gap-1 ${
                   profile.work_status === "Hiring"
@@ -441,12 +487,12 @@ export default function PublicProfilePage() {
               { label: "Certificates", value: stats.certificates, icon: <Award size={18} />, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-900/20", border: "border-amber-200 dark:border-amber-800/30" },
               { label: "Posts", value: stats.posts, icon: <MessageSquare size={18} />, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/20", border: "border-emerald-200 dark:border-emerald-800/30" },
             ].map((s) => (
-              <div key={s.label} className={`flex items-center gap-3 p-4 bg-white dark:bg-gray-900 border ${s.border} rounded-2xl shadow-sm hover:shadow-md transition-all`}>
-                <div className={`w-10 h-10 rounded-xl ${s.bg} ${s.color} flex items-center justify-center shrink-0`}>
+              <div key={s.label} className={`flex items-center gap-3 p-4 bg-white dark:bg-gray-900 border ${accent ? accent.statBorder : s.border} rounded-2xl shadow-sm hover:shadow-md transition-all ${accent ? `hover:${accent.glow}` : ""}`}>
+                <div className={`w-10 h-10 rounded-xl ${accent ? accent.bgMuted : s.bg} ${accent ? accent.text : s.color} flex items-center justify-center shrink-0`}>
                   {s.icon}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xl font-black text-gray-900 dark:text-gray-100 leading-none">{s.value}</div>
+                  <div className={`text-xl font-black leading-none ${accent ? `bg-gradient-to-r ${isFounder ? "from-amber-400 to-yellow-300" : "from-violet-400 to-purple-300"} bg-clip-text text-transparent` : "text-gray-900 dark:text-gray-100"}`}>{s.value}</div>
                   <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5 truncate">{s.label}</div>
                 </div>
               </div>
@@ -666,8 +712,8 @@ export default function PublicProfilePage() {
               )}
 
               {/* About card */}
-              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-3">
-                <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm uppercase tracking-widest">About</h3>
+              <div className={`bg-white dark:bg-gray-900 border ${accent ? accent.statBorder : "border-gray-200 dark:border-gray-800"} rounded-2xl p-5 shadow-sm space-y-3`}>
+                <h3 className={`font-black text-sm uppercase tracking-widest ${accent ? accent.text : "text-gray-900 dark:text-gray-100"}`}>About</h3>
                 <div className="space-y-2.5 text-sm text-gray-600 dark:text-gray-400">
                   {vis(profile, "work_status") && profile.work_status && profile.work_status !== "None" && (
                     <div className="flex items-center gap-2">

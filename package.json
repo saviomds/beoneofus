@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.2",
     "@monaco-editor/react": "^4.7.0",
     "@serwist/next": "^9.0.0",
     "@supabase/ssr": "^0.5.2",

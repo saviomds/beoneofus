@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Users, Briefcase, Activity, ArrowRight, Target, Loader2, CheckCircle2,
@@ -10,7 +10,7 @@ import {
   ScrollText, FileText, Send, DollarSign, PenLine, XCircle, Eye,
   Printer, History, Trash2, Ban, ExternalLink, AlertOctagon,
   ChevronRight, Mail, CalendarDays, Star, BookOpen, Lock, Unlock,
-  Package, Truck, ShoppingBag,
+  Package, Truck, ShoppingBag, Play, Pause, Square,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -58,6 +58,26 @@ function getRelativeTime(dateStr: string) {
   if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
   if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
   return Math.floor(diff / 86400) + 'd ago';
+}
+
+function CircularProgress({ rings }: { rings: { value: number; max: number; color: string; r: number; sw: number }[] }) {
+  const S = 160, C = S / 2;
+  return (
+    <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`}>
+      {rings.map(({ value, max, color, r, sw }, i) => {
+        const circ = 2 * Math.PI * r;
+        const fill = Math.min(value / (max || 1), 1) * circ;
+        return (
+          <g key={i}>
+            <circle cx={C} cy={C} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={sw} />
+            <circle cx={C} cy={C} r={r} fill="none" stroke={color} strokeWidth={sw}
+              strokeDasharray={`${fill} ${circ}`} strokeLinecap="round"
+              transform={`rotate(-90 ${C} ${C})`} style={{ transition: 'stroke-dasharray 0.8s ease' }} />
+          </g>
+        );
+      })}
+    </svg>
+  );
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -161,6 +181,21 @@ export default function FounderDashboard() {
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordVerifying, setPasswordVerifying] = useState(false);
+
+  // ── Bento grid widget state ────────────────────────────────────────────────
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [checklistItems, setChecklistItems] = useState([
+    { id: 1, text: 'Review pending applications', done: false },
+    { id: 2, text: 'Assign weekly tasks to team', done: true },
+    { id: 3, text: 'Update platform version notes', done: false },
+    { id: 4, text: 'Check co-founder contracts', done: false },
+  ]);
+  const [newCheckItem, setNewCheckItem] = useState('');
+  const [bentoTaskTab, setBentoTaskTab] = useState<'upcoming' | 'overdue' | 'completed'>('upcoming');
+  const formatTimer = (s: number) =>
+    [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map(n => String(n).padStart(2, '0')).join(':');
 
   const handleTabClick = useCallback(async (tabId: string) => {
     if (PROTECTED_TABS.has(tabId) && !protectedUnlocked) {
@@ -383,7 +418,16 @@ export default function FounderDashboard() {
   }, []);
 
   useEffect(() => {
-    if (hasAccess && activeTab === 'tasks') {
+    if (timerRunning) {
+      timerRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [timerRunning]);
+
+  useEffect(() => {
+    if (hasAccess && (activeTab === 'tasks' || activeTab === 'overview')) {
       fetchTasks();
       if (allUsers.length === 0) fetchUsers();
     }
@@ -954,8 +998,25 @@ export default function FounderDashboard() {
 
   const progress = stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0;
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  const upcomingTasks = tasks
+    .filter(t => t.due_date && new Date(t.due_date) > new Date() && t.status !== 'completed')
+    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+    .slice(0, 3);
+
+  const bentoTasksList = bentoTaskTab === 'upcoming'
+    ? tasks.filter(t => t.status !== 'completed' && (!t.due_date || new Date(t.due_date) >= new Date())).slice(0, 5)
+    : bentoTaskTab === 'overdue'
+    ? tasks.filter(t => t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date()).slice(0, 5)
+    : tasks.filter(t => t.status === 'completed').slice(0, 5);
+
+  const taskProgress = (t: any) => t.status === 'completed' ? 100 : t.status === 'in_progress' ? 55 : 10;
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black p-4 sm:p-8 animate-in fade-in duration-500">
+    <div className="min-h-screen bg-[#F3F4F6] dark:bg-zinc-950 p-4 sm:p-8 animate-in fade-in duration-500"
+      style={{ backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.045) 1px, transparent 1px)', backgroundSize: '22px 22px' }}>
       {/* Password Gate Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -1016,63 +1077,101 @@ export default function FounderDashboard() {
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-[2.5rem] border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-          <div className="flex items-center gap-5 relative z-10">
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 dark:bg-gray-800 border-4 border-white dark:border-gray-900 shadow-lg flex items-center justify-center text-xl font-black text-gray-400 uppercase overflow-hidden shrink-0">
-              {profile?.avatar_url
-                ? <Image src={profile.avatar_url} alt="avatar" fill sizes="80px" className="object-cover" />
-                : (profile?.username?.substring(0, 2) || 'FD')}
+        {/* ── Premium Header ──────────────────────────────────────────────────── */}
+        <header className="relative overflow-hidden bg-white dark:bg-zinc-900 rounded-[2rem] p-6 sm:p-8 border border-white dark:border-zinc-800 shadow-sm">
+          {/* Decorative blobs */}
+          <div className="absolute -top-16 -right-16 w-72 h-72 bg-gradient-to-br from-amber-200 via-orange-100 to-transparent rounded-full blur-3xl opacity-50 pointer-events-none" />
+          <div className="absolute -bottom-20 -left-10 w-56 h-56 bg-gradient-to-tr from-sky-100 to-transparent rounded-full blur-3xl opacity-40 pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              {/* Avatar */}
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-3xl overflow-hidden bg-gradient-to-br from-amber-400 to-orange-500 shadow-xl shadow-orange-200/50 dark:shadow-orange-900/30 flex-shrink-0 flex items-center justify-center text-2xl font-black text-white">
+                {profile?.avatar_url
+                  ? <Image src={profile.avatar_url} alt="avatar" fill sizes="80px" className="object-cover" />
+                  : (profile?.username?.substring(0, 2).toUpperCase() || 'FD')}
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5">
+                  <Crown size={11} /> {isAdmin ? 'Admin & Founder' : 'Co-Founder Workspace'}
+                </p>
+                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                  {greeting}, {profile?.username || 'Founder'} 👋
+                </h1>
+                <p className="text-gray-400 dark:text-zinc-500 mt-1 text-xs font-medium flex items-center gap-1.5">
+                  <Calendar size={12} /> {currentDate}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                <Crown size={14} /> {isAdmin ? 'Admin & Founder' : 'Co-Founder Node Active'}
-              </p>
-              <h1 className="text-2xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tighter">
-                Welcome, {profile?.username || 'Founder'}
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400 mt-1 font-medium text-sm flex items-center gap-2">
-                <Calendar size={14} /> {currentDate}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 relative z-10 w-full md:w-auto flex-wrap">
-            <Link href="/member-dashboard" className="flex items-center justify-center gap-2 px-5 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold transition-all text-sm border border-gray-200 dark:border-gray-700">
-              <Users size={15} /> Member View
-            </Link>
-            <Link href="/dash/feed" className="flex items-center justify-center gap-2 px-5 py-3 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-bold transition-all shadow-md text-sm">
-              <Terminal size={15} /> Dashboard
-            </Link>
-            {isAdmin && (
-              <Link href="/dash/more" className="flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-md text-sm">
-                <Shield size={15} /> Admin Panel <ArrowRight size={14} />
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <Link href="/member-dashboard"
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-600 dark:text-gray-300 rounded-2xl font-bold transition-all text-xs border border-gray-100 dark:border-zinc-700">
+                <Users size={13} /> Member View
               </Link>
-            )}
+              <Link href="/dash/feed"
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-900 dark:bg-white hover:bg-gray-700 dark:hover:bg-gray-100 text-white dark:text-gray-900 rounded-2xl font-bold transition-all shadow-md text-xs">
+                <Terminal size={13} /> Dashboard
+              </Link>
+              {isAdmin && (
+                <Link href="/dash/more"
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-[#FFB020] hover:bg-amber-400 text-white rounded-2xl font-bold transition-all shadow-md shadow-amber-200 text-xs">
+                  <Shield size={13} /> Admin Panel <ArrowRight size={12} />
+                </Link>
+              )}
+            </div>
           </div>
         </header>
 
         {/* Tab Bar */}
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 p-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-x-auto flex-1">
-            {TABS.map(tab => {
-              const isLocked = tab.protected && !protectedUnlocked;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabClick(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex-1 justify-center ${activeTab === tab.id ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}`}
-                >
-                  <tab.icon size={14} /> {tab.label}
-                  {isLocked && <Lock size={10} className="opacity-50" />}
-                </button>
-              );
-            })}
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-0.5 p-1 rounded-2xl overflow-x-auto flex-1"
+            style={{ background: 'white', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 2px 14px rgba(0,0,0,0.05)' }}>
+            {(() => {
+              const META: Record<string, { color: string; grad: string; badge?: number }> = {
+                overview:     { color: '#8b5cf6', grad: 'linear-gradient(135deg,#8b5cf6,#6d28d9)' },
+                applications: { color: '#f59e0b', grad: 'linear-gradient(135deg,#FFB020,#f97316)',
+                                badge: applications.filter((a: any) => a.status === 'pending').length || 0 },
+                users:        { color: '#3b82f6', grad: 'linear-gradient(135deg,#3b82f6,#2563eb)',
+                                badge: allUsers.length || 0 },
+                orders:       { color: '#10b981', grad: 'linear-gradient(135deg,#10b981,#059669)' },
+                tasks:        { color: '#6366f1', grad: 'linear-gradient(135deg,#6366f1,#4f46e5)' },
+                contracts:    { color: '#14b8a6', grad: 'linear-gradient(135deg,#14b8a6,#0d9488)',
+                                badge: contractsList.length || 0 },
+                platform:     { color: '#f43f5e', grad: 'linear-gradient(135deg,#f43f5e,#e11d48)' },
+              };
+              return TABS.map(tab => {
+                const isActive = activeTab === tab.id;
+                const isLocked = tab.protected && !protectedUnlocked;
+                const m = META[tab.id] || { color: '#6b7280', grad: 'linear-gradient(135deg,#374151,#111827)' };
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabClick(tab.id)}
+                    style={isActive ? { background: m.grad } : {}}
+                    className={`relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[11px] font-black whitespace-nowrap transition-all duration-200 flex-1 justify-center
+                      ${isActive ? 'text-white shadow-lg scale-[1.02]' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    <tab.icon size={13} style={isActive ? { color: 'rgba(255,255,255,0.9)' } : { color: m.color }} />
+                    <span>{tab.label}</span>
+                    {(m.badge ?? 0) > 0 && (
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none ${
+                        isActive ? 'bg-white/25 text-white' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {m.badge}
+                      </span>
+                    )}
+                    {isLocked && <Lock size={9} style={{ opacity: isActive ? 0.6 : 0.35 }} />}
+                  </button>
+                );
+              });
+            })()}
           </div>
-          {/* Lock/unlock button — shown to anyone who has unlocked */}
           {protectedUnlocked && (
             <button
               onClick={handleLock}
-              className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-400 hover:text-orange-500 hover:border-orange-200 transition-all shadow-sm shrink-0"
+              className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-400 hover:text-amber-500 hover:border-amber-200 hover:bg-amber-50 transition-all shadow-sm shrink-0"
               title="Lock protected sections"
             >
               <Unlock size={15} />
@@ -1080,59 +1179,312 @@ export default function FounderDashboard() {
           )}
         </div>
 
-        {/* ── OVERVIEW ─────────────────────────────────────────────────────────── */}
+        {/* ── OVERVIEW — Bento Grid ──────────────────────────────────────────── */}
         {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { icon: Users,         label: 'Team Members',     value: stats.team,         color: 'blue',   sub: 'Active co-founders' },
-                { icon: Crown,         label: 'Pending Apps',     value: stats.pendingApps,  color: 'amber',  sub: 'Awaiting review' },
-                { icon: ClipboardList, label: 'Total Tasks',      value: stats.totalTasks,   color: 'violet', sub: 'Across all users' },
-                { icon: CheckCircle2,  label: 'Task Completion',  value: `${progress}%`,     color: 'emerald', sub: `${stats.completedTasks}/${stats.totalTasks} done` },
-              ].map(({ icon: Icon, label, value, color, sub }) => (
-                <div key={label} className={`bg-white dark:bg-gray-900 p-6 rounded-[2rem] border shadow-sm transition-all hover:shadow-md ${
-                  color === 'blue' ? 'border-blue-200 dark:border-blue-500/20' :
-                  color === 'amber' ? 'border-amber-200 dark:border-amber-500/20' :
-                  color === 'violet' ? 'border-violet-200 dark:border-violet-500/20' :
-                  'border-emerald-200 dark:border-emerald-500/20'
-                }`}>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${
-                    color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' :
-                    color === 'amber' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' :
-                    color === 'violet' ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400' :
-                    'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                  }`}>
-                    <Icon size={20} />
+          <div className="space-y-5">
+
+            {/* ── Row 1 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+              {/* Widget A — Checklist */}
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-zinc-800 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Quick Tasks</p>
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white mt-0.5">My Checklist</h3>
                   </div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-                  <p className="text-2xl font-black text-gray-900 dark:text-white">{value}</p>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1 font-medium">{sub}</p>
+                  <button onClick={() => handleTabClick('tasks')} className="p-2 rounded-xl bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-400 hover:text-gray-700 transition-all">
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
-              ))}
+
+                {/* Add item */}
+                <div className="flex gap-2 mb-5">
+                  <input
+                    value={newCheckItem}
+                    onChange={e => setNewCheckItem(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && newCheckItem.trim()) {
+                        setChecklistItems(prev => [...prev, { id: Date.now(), text: newCheckItem.trim(), done: false }]);
+                        setNewCheckItem('');
+                      }
+                    }}
+                    placeholder="+ Add a task…"
+                    className="flex-1 bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-300 dark:placeholder-zinc-600 focus:outline-none focus:border-blue-300 transition-all"
+                  />
+                  <button
+                    onClick={() => { if (newCheckItem.trim()) { setChecklistItems(prev => [...prev, { id: Date.now(), text: newCheckItem.trim(), done: false }]); setNewCheckItem(''); } }}
+                    className="p-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl hover:bg-gray-700 dark:hover:bg-gray-200 transition-all"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+
+                {/* Items */}
+                <div className="space-y-2.5">
+                  {checklistItems.map(item => (
+                    <div key={item.id} className="flex items-center gap-3 group">
+                      <button
+                        onClick={() => setChecklistItems(prev => prev.map(i => i.id === item.id ? { ...i, done: !i.done } : i))}
+                        className={`w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center border-2 transition-all ${item.done ? 'bg-blue-600 border-blue-600 shadow-sm shadow-blue-200' : 'border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-blue-300'}`}
+                      >
+                        {item.done && <Check size={11} color="white" strokeWidth={3} />}
+                      </button>
+                      <span className={`flex-1 text-sm font-medium transition-all ${item.done ? 'line-through text-gray-300 dark:text-zinc-600' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {item.text}
+                      </span>
+                      <button
+                        onClick={() => setChecklistItems(prev => prev.filter(i => i.id !== item.id))}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-400 transition-all"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 pt-4 border-t border-gray-50 dark:border-zinc-800 flex items-center gap-3">
+                  <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
+                    {checklistItems.filter(i => i.done).length}/{checklistItems.length} done
+                  </span>
+                  <div className="flex-1 h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                      style={{ width: `${checklistItems.length ? (checklistItems.filter(i => i.done).length / checklistItems.length) * 100 : 0}%` }} />
+                  </div>
+                  <span className="text-[11px] font-black text-blue-600 whitespace-nowrap">
+                    {checklistItems.length ? Math.round(checklistItems.filter(i => i.done).length / checklistItems.length * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Widget B — Focus Timer */}
+              <div className="bg-[#FFB020] rounded-3xl p-6 shadow-sm shadow-amber-200/60 hover:shadow-md transition-shadow flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-[10px] font-black text-amber-700/50 uppercase tracking-widest">Productivity</p>
+                    <h3 className="text-lg font-black text-white mt-0.5">Focus Timer</h3>
+                  </div>
+                  <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center">
+                    <Clock size={18} className="text-white" />
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col items-center justify-center py-6">
+                  <div className="font-mono text-5xl font-black text-white tracking-tighter tabular-nums drop-shadow-sm">
+                    {formatTimer(timerSeconds)}
+                  </div>
+                  <p className="text-amber-100/70 text-xs font-medium mt-2">
+                    {timerRunning ? 'Session in progress…' : timerSeconds > 0 ? 'Session paused' : 'Ready to focus'}
+                  </p>
+                </div>
+
+                <div className="flex gap-2.5 mt-2">
+                  <button
+                    onClick={() => setTimerRunning(r => !r)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/20 hover:bg-white/30 active:scale-95 text-white rounded-2xl font-bold text-sm transition-all"
+                  >
+                    {timerRunning ? <Pause size={16} /> : <Play size={16} />}
+                    {timerRunning ? 'Pause' : 'Start'}
+                  </button>
+                  <button
+                    onClick={() => { setTimerRunning(false); setTimerSeconds(0); }}
+                    className="w-12 h-12 flex items-center justify-center bg-white/20 hover:bg-white/30 active:scale-95 text-white rounded-2xl transition-all"
+                    title="Reset"
+                  >
+                    <Square size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Widget C — Activity Overview */}
+              <div className="bg-[#121212] rounded-3xl p-6 shadow-sm hover:shadow-lg transition-shadow flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Statistics</p>
+                    <h3 className="text-lg font-black text-white mt-0.5">Activity</h3>
+                  </div>
+                  <button onClick={() => fetchStats()} className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-500 hover:text-white transition-all">
+                    <RefreshCw size={13} />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="flex-1 space-y-4">
+                    {[
+                      { label: 'Working hrs', value: `${Math.min(stats.completedTasks * 2, 40)}/40`, color: '#FFB020' },
+                      { label: 'Tasks done',  value: `${stats.completedTasks}/${stats.totalTasks}`, color: '#00E5B0' },
+                      { label: 'Team size',   value: `${stats.team}`,                               color: '#00A3FF' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label}>
+                        <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mb-0.5">{label}</p>
+                        <p className="text-xl font-black tabular-nums" style={{ color }}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="relative flex-shrink-0">
+                    <CircularProgress rings={[
+                      { value: stats.completedTasks, max: stats.totalTasks || 1, color: '#FFB020', r: 63, sw: 10 },
+                      { value: stats.team,           max: 20,                    color: '#00E5B0', r: 46, sw: 10 },
+                      { value: stats.pendingApps === 0 ? 1 : 0, max: 1,         color: '#00A3FF', r: 29, sw: 10 },
+                    ]} />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <p className="text-white font-black text-lg tabular-nums">{progress}%</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-white/5 grid grid-cols-3 gap-2 text-center">
+                  {[
+                    { label: 'Pending', value: stats.pendingApps, color: 'text-amber-400' },
+                    { label: 'Members', value: stats.team,        color: 'text-teal-400'  },
+                    { label: 'Tasks',   value: stats.totalTasks,  color: 'text-blue-400'  },
+                  ].map(({ label, value, color }) => (
+                    <div key={label}>
+                      <p className={`text-lg font-black tabular-nums ${color}`}>{value}</p>
+                      <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-bold">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: 'Review Applications', desc: 'Accept or decline co-founder requests', icon: Crown, tab: 'applications', color: 'amber' },
-                { label: 'Manage Team Tasks',   desc: 'Assign and track all team objectives',  icon: ClipboardList, tab: 'tasks', color: 'violet' },
-                { label: 'Browse Users',         desc: 'View all platform members and their roles', icon: Users, tab: 'users', color: 'blue' },
-                { label: 'Contracts',            desc: 'Create and send work contracts to users',   icon: ScrollText, tab: 'contracts', color: 'emerald' },
-              ].map(({ label, desc, icon: Icon, tab, color }) => (
-                <button key={label} onClick={() => handleTabClick(tab)}
-                  className="flex items-start gap-4 p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-blue-500/40 hover:shadow-md transition-all text-left group">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500' :
-                    color === 'amber' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-500' :
-                    'bg-violet-50 dark:bg-violet-900/20 text-violet-500'
-                  }`}>
-                    <Icon size={18} />
-                  </div>
+            {/* ── Row 2 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+              {/* Widget D — Upcoming Reminders */}
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-zinc-800 hover:shadow-md transition-shadow flex flex-col">
+                <div className="flex items-center justify-between mb-5">
                   <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</p>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
+                    <p className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Schedule</p>
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white mt-0.5">Upcoming</h3>
                   </div>
+                  <span className="text-[10px] font-black bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-full">
+                    {upcomingTasks.length} due
+                  </span>
+                </div>
+
+                {upcomingTasks.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center py-8 text-gray-300 dark:text-zinc-700">
+                    <CalendarDays size={28} className="mb-2" />
+                    <p className="text-xs font-medium">No upcoming deadlines</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 flex-1">
+                    {upcomingTasks.map((t, idx) => {
+                      const daysLeft = Math.ceil((new Date(t.due_date).getTime() - Date.now()) / 86400000);
+                      const colors = ['bg-blue-500', 'bg-violet-500', 'bg-[#FFB020]'];
+                      return (
+                        <div key={t.id} className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors">
+                          <div className={`w-9 h-9 rounded-xl ${colors[idx % 3]} flex items-center justify-center text-white shrink-0`}>
+                            <CalendarDays size={14} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{t.title}</p>
+                            <p className="text-[10px] text-gray-400 font-medium mt-0.5">
+                              {t.assignee?.username ? `@${t.assignee.username} · ` : ''}
+                              {new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </p>
+                          </div>
+                          <span className={`text-[10px] font-black px-2 py-1 rounded-full shrink-0 ${daysLeft <= 1 ? 'bg-red-50 text-red-500 dark:bg-red-500/10' : daysLeft <= 3 ? 'bg-amber-50 text-amber-500 dark:bg-amber-500/10' : 'bg-blue-50 text-blue-500 dark:bg-blue-500/10'}`}>
+                            {daysLeft === 0 ? 'Today' : daysLeft === 1 ? '1d' : `${daysLeft}d`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <button onClick={() => handleTabClick('tasks')}
+                  className="w-full mt-4 py-2.5 bg-gray-900 dark:bg-white hover:bg-gray-700 dark:hover:bg-gray-200 text-white dark:text-gray-900 text-xs font-black rounded-2xl transition-all flex items-center justify-center gap-1.5">
+                  View All Tasks <ChevronRight size={13} />
                 </button>
-              ))}
+              </div>
+
+              {/* Widget E — Tasks I've Assigned */}
+              <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-zinc-800 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Management</p>
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white mt-0.5">Tasks I've Assigned</h3>
+                  </div>
+                  <button onClick={() => handleTabClick('tasks')}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-gray-900 dark:bg-white hover:bg-gray-700 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-xl text-xs font-bold transition-all">
+                    <Plus size={13} /> Assign Task
+                  </button>
+                </div>
+
+                {/* Tab bar */}
+                <div className="flex gap-1 p-1 bg-gray-50 dark:bg-zinc-800 rounded-2xl mb-5">
+                  {(['upcoming', 'overdue', 'completed'] as const).map(tab => {
+                    const overdueCt = tasks.filter(t => t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date()).length;
+                    return (
+                      <button key={tab} onClick={() => setBentoTaskTab(tab)}
+                        className={`flex-1 py-2 rounded-xl text-[11px] font-black capitalize transition-all flex items-center justify-center gap-1 ${bentoTaskTab === tab ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-gray-300'}`}>
+                        {tab}
+                        {tab === 'overdue' && overdueCt > 0 && (
+                          <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black">{overdueCt}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Task rows */}
+                {tasksLoading ? (
+                  <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-gray-200 dark:text-zinc-700" size={22} /></div>
+                ) : bentoTasksList.length === 0 ? (
+                  <div className="py-10 text-center text-gray-300 dark:text-zinc-700">
+                    <ClipboardList size={28} className="mx-auto mb-2" />
+                    <p className="text-xs font-medium">No {bentoTaskTab} tasks</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {bentoTasksList.map((t, idx) => {
+                      const pct = taskProgress(t);
+                      const pColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Low' ? '#3b82f6' : '#f59e0b';
+                      const trackColor = t.priority === 'High' ? '#fee2e2' : t.priority === 'Low' ? '#dbeafe' : '#fef3c7';
+                      return (
+                        <div key={t.id} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors group">
+                          {/* Priority ID badge */}
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-black shrink-0"
+                            style={{ backgroundColor: pColor }}>
+                            {String(idx + 1).padStart(2, '0')}
+                          </div>
+                          {/* Title + progress */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{t.title}</p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: trackColor }}>
+                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: pColor }} />
+                              </div>
+                              <span className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 shrink-0">{pct}%</span>
+                            </div>
+                          </div>
+                          {/* Assignee avatar */}
+                          <div className="shrink-0">
+                            {t.assignee?.avatar_url ? (
+                              <div className="relative w-7 h-7 rounded-full border-2 border-white dark:border-zinc-900 overflow-hidden bg-gray-100">
+                                <Image src={t.assignee.avatar_url} alt={t.assignee.username || ''} fill sizes="28px" className="object-cover" />
+                              </div>
+                            ) : (
+                              <div className="w-7 h-7 rounded-full border-2 border-white dark:border-zinc-900 bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center text-white text-[9px] font-black">
+                                {t.assignee?.username?.substring(0, 2).toUpperCase() || '??'}
+                              </div>
+                            )}
+                          </div>
+                          {/* Due date */}
+                          {t.due_date && (
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 shrink-0 hidden sm:block">
+                              {new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1141,11 +1493,25 @@ export default function FounderDashboard() {
         {activeTab === 'applications' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                <Crown size={20} className="text-amber-500" /> Applications
-                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({applications.length})</span>
-              </h2>
-              <button onClick={fetchApplications} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: 'linear-gradient(135deg,#FFB020,#f97316)' }}>
+                  <Crown size={17} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#f59e0b' }}>Admin Panel</p>
+                  <h2 className="text-xl font-black text-gray-900 leading-tight flex items-center gap-2">
+                    Applications
+                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">{applications.length}</span>
+                    {applications.filter((a: any) => a.status === 'pending').length > 0 && (
+                      <span className="text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full">
+                        {applications.filter((a: any) => a.status === 'pending').length} pending
+                      </span>
+                    )}
+                  </h2>
+                </div>
+              </div>
+              <button onClick={fetchApplications} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-amber-50 rounded-xl text-xs font-bold text-gray-500 hover:text-amber-600 border border-gray-200 hover:border-amber-200 transition-all shadow-sm">
                 <RefreshCw size={12} /> Refresh
               </button>
             </div>
@@ -1250,11 +1616,20 @@ export default function FounderDashboard() {
         {activeTab === 'users' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                <Users size={20} className="text-blue-500" /> Platform Users
-                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({filteredUsers.length})</span>
-              </h2>
-              <button onClick={fetchUsers} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: 'linear-gradient(135deg,#3b82f6,#2563eb)' }}>
+                  <Users size={17} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-500">Admin Panel</p>
+                  <h2 className="text-xl font-black text-gray-900 leading-tight flex items-center gap-2">
+                    Platform Users
+                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">{filteredUsers.length}</span>
+                  </h2>
+                </div>
+              </div>
+              <button onClick={fetchUsers} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-blue-50 rounded-xl text-xs font-bold text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-200 transition-all shadow-sm">
                 <RefreshCw size={12} /> Refresh
               </button>
             </div>
@@ -1304,60 +1679,89 @@ export default function FounderDashboard() {
                   const isActioning = userActionLoading === user.id;
                   const daysSince = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000);
 
+                  const ringColor = suspended ? '#ef4444' : suspicious ? '#f59e0b' : user.is_verified ? '#10b981' : '#e2e8f0';
+                  const initGrad = user.is_admin
+                    ? 'linear-gradient(135deg,#FFB020,#f97316)'
+                    : user.role === 'founder'
+                      ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)'
+                      : user.is_premium
+                        ? 'linear-gradient(135deg,#3b82f6,#6366f1)'
+                        : 'linear-gradient(135deg,#94a3b8,#64748b)';
+
                   return (
-                    <div key={user.id} className={`bg-white dark:bg-gray-900 border rounded-2xl transition-all ${
-                      suspended    ? 'border-red-200 dark:border-red-500/20' :
-                      suspicious   ? 'border-amber-200 dark:border-amber-500/20' :
-                      'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
-                    }`}>
+                    <div key={user.id} className="group bg-white rounded-2xl transition-all hover:shadow-md hover:-translate-y-px"
+                      style={{ border: `1px solid ${suspended ? '#fecaca' : suspicious ? '#fde68a' : '#f1f5f9'}` }}>
                       {/* Card header row */}
-                      <div className="flex items-center gap-3 p-4">
-                        <div className="relative w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 flex items-center justify-center text-xs font-bold text-gray-500 uppercase">
-                          {user.avatar_url
-                            ? <Image src={user.avatar_url} alt="avatar" fill sizes="44px" className="object-cover" />
-                            : user.username?.substring(0, 2)}
+                      <div className="flex items-center gap-3.5 p-4">
+
+                        {/* Circular avatar with status ring */}
+                        <div className="relative shrink-0">
+                          <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-white text-sm font-black select-none"
+                            style={{ background: user.avatar_url ? undefined : initGrad, outline: `2.5px solid ${ringColor}`, outlineOffset: '2px' }}>
+                            {user.avatar_url
+                              ? <Image src={user.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" />
+                              : user.username?.substring(0, 2).toUpperCase()}
+                          </div>
                           {suspended && (
-                            <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
-                              <Ban size={14} className="text-red-500" />
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center border border-white">
+                              <Ban size={8} className="text-white" />
+                            </div>
+                          )}
+                          {!suspended && user.is_verified && (
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center border border-white">
+                              <span className="text-white text-[8px] font-black leading-none">✓</span>
                             </div>
                           )}
                         </div>
 
+                        {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">@{user.username}</p>
-                            {user.is_admin && <Badge color="amber2">Admin</Badge>}
-                            {user.role && user.role !== 'member' && <Badge color="violet">{user.role}</Badge>}
-                            {user.is_verified && <Badge color="blue">✓ Verified</Badge>}
-                            {user.is_premium && <Badge color="amber">Premium</Badge>}
-                            {suspended && <Badge color="red">Suspended</Badge>}
-                            {suspicious && !suspended && <Badge color="amber">⚠ Suspicious</Badge>}
+                          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                            <p className="text-sm font-black text-gray-900 truncate">@{user.username}</p>
+                            {user.is_admin && (
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md text-white leading-none"
+                                style={{ background: 'linear-gradient(135deg,#FFB020,#f97316)' }}>Admin</span>
+                            )}
+                            {user.role && user.role !== 'member' && (
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md text-white leading-none"
+                                style={{ background: 'linear-gradient(135deg,#8b5cf6,#6d28d9)' }}>{user.role}</span>
+                            )}
+                            {user.is_premium && (
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md leading-none"
+                                style={{ background: 'linear-gradient(135deg,#fef3c7,#fde68a)', color: '#92400e' }}>★ Premium</span>
+                            )}
+                            {suspended && (
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-red-50 text-red-600 leading-none border border-red-200">Suspended</span>
+                            )}
+                            {suspicious && !suspended && (
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 leading-none border border-amber-200">⚠ Suspicious</span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                            {user.email && <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate flex items-center gap-1"><Mail size={9} />{user.email}</p>}
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1"><CalendarDays size={9} />{daysSince}d ago</p>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {user.email && <p className="text-[10px] text-gray-400 truncate flex items-center gap-1"><Mail size={9} />{user.email}</p>}
+                            <p className="text-[10px] text-gray-400 flex items-center gap-1 shrink-0"><CalendarDays size={9} />{daysSince}d ago</p>
                           </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Actions — subtle until hover */}
+                        <div className="flex items-center gap-0.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => window.open(`/u/${user.username}`, '_blank')}
-                            className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-500 rounded-lg border border-gray-200 dark:border-gray-700 transition-all" title="View profile">
+                            className="p-2 hover:bg-blue-50 text-gray-400 hover:text-blue-500 rounded-xl transition-all" title="View profile">
                             <ExternalLink size={13} />
                           </button>
                           <button onClick={() => { setActiveTab('contracts'); setTimeout(() => setShowContractModal(true), 50); setContractForm(prev => ({ ...prev, user_id: user.id })); }}
-                            className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-gray-400 hover:text-emerald-500 rounded-lg border border-gray-200 dark:border-gray-700 transition-all" title="Create contract">
+                            className="p-2 hover:bg-teal-50 text-gray-400 hover:text-teal-500 rounded-xl transition-all" title="Create contract">
                             <ScrollText size={13} />
                           </button>
                           <button onClick={() => { setActiveTab('tasks'); setTaskForm(prev => ({ ...prev, assignee_id: user.id })); setShowTaskModal(true); }}
-                            className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-gray-400 hover:text-violet-500 rounded-lg border border-gray-200 dark:border-gray-700 transition-all" title="Assign task">
+                            className="p-2 hover:bg-indigo-50 text-gray-400 hover:text-indigo-500 rounded-xl transition-all" title="Assign task">
                             <ClipboardList size={13} />
                           </button>
                           {user.role === 'member' && (
                             <button
                               onClick={() => handlePromoteToFounder(user.id, user.username, 'user')}
                               disabled={isActioning || user.id === currentUserId}
-                              className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-gray-400 hover:text-violet-500 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-violet-200 transition-all disabled:opacity-40"
+                              className="p-2 hover:bg-violet-50 text-gray-400 hover:text-violet-500 rounded-xl transition-all disabled:opacity-40"
                               title="Promote to co-founder">
                               {isActioning ? <Loader2 size={13} className="animate-spin" /> : <Crown size={13} />}
                             </button>
@@ -1366,7 +1770,7 @@ export default function FounderDashboard() {
                             <button
                               onClick={() => handleRevokeAccess(user.id, user.username, user.role)}
                               disabled={isActioning || user.id === currentUserId}
-                              className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-gray-400 hover:text-orange-500 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-orange-200 transition-all disabled:opacity-40"
+                              className="p-2 hover:bg-orange-50 text-gray-400 hover:text-orange-500 rounded-xl transition-all disabled:opacity-40"
                               title="Revoke team access">
                               {isActioning ? <Loader2 size={13} className="animate-spin" /> : <UserX size={13} />}
                             </button>
@@ -1374,19 +1778,19 @@ export default function FounderDashboard() {
                           <button
                             onClick={() => handleSuspendUser(user.id, !suspended)}
                             disabled={isActioning || user.id === currentUserId}
-                            className={`p-1.5 rounded-lg border transition-all disabled:opacity-40 ${suspended ? 'bg-green-50 dark:bg-green-900/20 text-green-500 hover:bg-green-100 border-green-200 dark:border-green-500/20' : 'bg-gray-50 dark:bg-gray-800 text-gray-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-500 border-gray-200 dark:border-gray-700'}`}
+                            className={`p-2 rounded-xl transition-all disabled:opacity-40 ${suspended ? 'text-green-500 hover:bg-green-50' : 'text-gray-400 hover:bg-amber-50 hover:text-amber-500'}`}
                             title={suspended ? 'Reinstate user' : 'Suspend user'}>
                             {isActioning ? <Loader2 size={13} className="animate-spin" /> : <Ban size={13} />}
                           </button>
                           <button
                             onClick={() => handleDeleteUser(user.id, user.username)}
                             disabled={isActioning || user.id === currentUserId}
-                            className="p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-red-200 transition-all disabled:opacity-40"
+                            className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl transition-all disabled:opacity-40"
                             title="Delete user permanently">
                             <Trash2 size={13} />
                           </button>
                           <button onClick={() => setExpandedUserId(isExpanded ? null : user.id)}
-                            className={`p-1.5 rounded-lg border transition-all ${isExpanded ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500 border-blue-200 dark:border-blue-500/20' : 'bg-gray-50 dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700'}`}>
+                            className={`p-2 rounded-xl transition-all ${isExpanded ? 'bg-blue-50 text-blue-500' : 'text-gray-400 hover:bg-gray-100'}`}>
                             <ChevronRight size={13} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                           </button>
                         </div>
@@ -1552,11 +1956,20 @@ export default function FounderDashboard() {
         {activeTab === 'orders' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                <Package size={20} className="text-violet-500" /> Shop Orders
-                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({shopOrders.length})</span>
-              </h2>
-              <button onClick={fetchShopOrders} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: 'linear-gradient(135deg,#10b981,#059669)' }}>
+                  <Package size={17} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Admin Panel</p>
+                  <h2 className="text-xl font-black text-gray-900 leading-tight flex items-center gap-2">
+                    Shop Orders
+                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">{shopOrders.length}</span>
+                  </h2>
+                </div>
+              </div>
+              <button onClick={fetchShopOrders} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-emerald-50 rounded-xl text-xs font-bold text-gray-500 hover:text-emerald-600 border border-gray-200 hover:border-emerald-200 transition-all shadow-sm">
                 <RefreshCw size={12} /> Refresh
               </button>
             </div>
@@ -1696,17 +2109,27 @@ export default function FounderDashboard() {
         {activeTab === 'contracts' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                <ScrollText size={20} className="text-emerald-500" /> Contracts
-                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({filteredContracts.length})</span>
-              </h2>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: 'linear-gradient(135deg,#14b8a6,#0d9488)' }}>
+                  <ScrollText size={17} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-teal-500">Admin Panel</p>
+                  <h2 className="text-xl font-black text-gray-900 leading-tight flex items-center gap-2">
+                    Contracts
+                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">{filteredContracts.length}</span>
+                  </h2>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
-                <button onClick={fetchContracts} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-all">
+                <button onClick={fetchContracts} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-teal-50 rounded-xl text-xs font-bold text-gray-500 hover:text-teal-600 border border-gray-200 hover:border-teal-200 transition-all shadow-sm">
                   <RefreshCw size={12} /> Refresh
                 </button>
                 <button
                   onClick={() => setShowContractModal(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                  className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                  style={{ background: 'linear-gradient(135deg,#14b8a6,#0d9488)' }}
                 >
                   <Plus size={14} /> New Contract
                 </button>
@@ -1881,17 +2304,27 @@ export default function FounderDashboard() {
         {activeTab === 'tasks' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                <ClipboardList size={20} className="text-violet-500" /> All Tasks
-                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({filteredTasks.length})</span>
-              </h2>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}>
+                  <ClipboardList size={17} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Admin Panel</p>
+                  <h2 className="text-xl font-black text-gray-900 leading-tight flex items-center gap-2">
+                    All Tasks
+                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">{filteredTasks.length}</span>
+                  </h2>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
-                <button onClick={fetchTasks} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-all">
+                <button onClick={fetchTasks} className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-indigo-50 rounded-xl text-xs font-bold text-gray-500 hover:text-indigo-600 border border-gray-200 hover:border-indigo-200 transition-all shadow-sm">
                   <RefreshCw size={12} /> Refresh
                 </button>
                 <button
                   onClick={() => setShowTaskModal(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm text-white"
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}
                 >
                   <Plus size={14} /> Assign Task
                 </button>

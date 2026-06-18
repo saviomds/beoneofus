@@ -440,6 +440,7 @@ export default function Sidebar({ onClose }) {
         { id: 'profile',  icon: User,     label: t('nav.items.profile')  },
         { id: 'premium',  icon: Crown,    label: t('nav.items.premium')  },
         { id: 'settings', icon: Settings, label: t('nav.items.settings') },
+        { id: 'more',     icon: Terminal, label: 'More'                  },
       ],
     },
   ];

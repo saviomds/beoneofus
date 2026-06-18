@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import Groq from "groq-sdk";
+import Anthropic from "@anthropic-ai/sdk";
 
 export const runtime = 'edge';
 
-const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
+const anthropic = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null;
 
 const SYSTEM = `You are a career advisor for BeOneOfUs, a professional growth platform.
 Given a user's current skills and a target role or job description, analyze the gap.
@@ -21,25 +23,18 @@ Return ONLY valid JSON with this exact shape — no markdown, no extra text:
 "missing" = important skills they lack entirely, sorted by priority.
 Limit: have max 8, weak max 5, missing max 8.`;
 
-async function callAI(messages) {
-  for (const model of ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]) {
-    try {
-      const res = await groq.chat.completions.create({
-        model,
-        messages,
-        temperature: 0.4,
-        max_tokens: 800,
-      });
-      return res.choices[0].message.content;
-    } catch (err) {
-      if ((err.status === 429 || err.status === 413) && model !== "llama-3.1-8b-instant") continue;
-      throw err;
-    }
-  }
+async function callAI(userPrompt) {
+  const response = await anthropic.messages.create({
+    model: "claude-haiku-4-5",
+    max_tokens: 800,
+    system: SYSTEM,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+  return response.content[0].text;
 }
 
 export async function POST(req) {
-  if (!groq) return NextResponse.json({ error: "AI not configured" }, { status: 503 });
+  if (!anthropic) return NextResponse.json({ error: "AI not configured" }, { status: 503 });
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -92,10 +87,7 @@ ${jobDescription ? `Job Description:\n${jobDescription.slice(0, 1500)}` : ""}
 Analyze the skill gap. Return JSON only.`;
 
   try {
-    const raw = await callAI([
-      { role: "system", content: SYSTEM },
-      { role: "user", content: userPrompt },
-    ]);
+    const raw = await callAI(userPrompt);
 
     let result;
     try {
@@ -107,6 +99,12 @@ Analyze the skill gap. Return JSON only.`;
 
     return NextResponse.json({ gap: result, profile: { skills: allSkills } });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    if (err.status === 401) {
+      return NextResponse.json({ error: "AI service is misconfigured. Contact support." }, { status: 503 });
+    }
+    if (err.status === 429) {
+      return NextResponse.json({ error: "AI service is busy. Please try again in a moment." }, { status: 503 });
+    }
+    return NextResponse.json({ error: "Analysis failed. Please try again." }, { status: 500 });
   }
 }

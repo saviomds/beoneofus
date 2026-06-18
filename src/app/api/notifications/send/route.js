@@ -15,13 +15,18 @@ const ALLOWED_TYPES = [
 ];
 
 export async function POST(request) {
-  const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-
   try {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 503 });
+    }
+
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+
+    try {
     const authHeader = request.headers.get('Authorization');
     const token = authHeader?.replace('Bearer ', '');
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -41,11 +46,31 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Recipient name required' }, { status: 400 });
     }
 
-    await sendNotificationEmail({ type, email, name, extra: extra || {} });
+    try {
+      await sendNotificationEmail({ type, email, name, extra: extra || {} });
+    } catch (emailErr) {
+      // Log the failure to error_logs so it appears in the admin System Logs panel
+      await supabaseAdmin.from('error_logs').insert({
+        level: 'error',
+        category: 'notifications',
+        message: `sendNotificationEmail failed [${type}]: ${emailErr.message}`,
+        component: 'api/notifications/send',
+        url: '/api/notifications/send',
+        user_id: user.id,
+        metadata: { type, email, error: emailErr.message },
+        resolved: false,
+      }).catch(() => {});
+      console.error('sendNotificationEmail error:', emailErr);
+      return NextResponse.json({ error: emailErr.message }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('notifications/send error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+      console.error('notifications/send error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  } catch (outerError) {
+    console.error('notifications/send outer error:', outerError);
+    return NextResponse.json({ error: outerError.message || 'Server error' }, { status: 500 });
   }
 }

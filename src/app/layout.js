@@ -2,6 +2,7 @@ import './globals.css';
 import { ThemeProvider } from './components/ThemeProvider';
 import { LanguageProvider } from '../lib/i18n';
 import ClientShell from './components/ClientShell';
+import { OnlineUsersProvider } from './contexts/OnlineUsersContext';
 
 export const metadata = {
   title: 'beoneofus - The network for developers',
@@ -58,8 +59,10 @@ export default function RootLayout({ children }) {
         {/* next-themes ThemeProvider injects its own blocking script for theme detection */}
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <LanguageProvider>
-            <ClientShell />
-            {children}
+            <OnlineUsersProvider>
+              <ClientShell />
+              {children}
+            </OnlineUsersProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

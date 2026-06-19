@@ -920,10 +920,10 @@ const fr = {
     key_revoked: "Clé révoquée.",
   },
   founder: {
-    title: "Rejoindre le réseau B1overs",
+    title: "Rejoindre le réseau beoneofus",
     subtitle: "Choisissez votre chemin et complétez votre candidature.",
     how_join: "Comment souhaitez-vous nous rejoindre ?",
-    select_path: "Sélectionnez votre parcours au sein du réseau B1overs.",
+    select_path: "Sélectionnez votre parcours au sein du réseau beoneofus.",
     next: "Suivant",
     back: "Retour",
     submit: "Soumettre la candidature",

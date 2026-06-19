@@ -125,7 +125,7 @@ export default function Header({ setActiveTab }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle keyboard shortcut (Ctrl+K / Cmd+K) to focus main search
+  // Handle keyboard shortcut (Ctrl+K / Cmd+K) to focus main search + Escape to close modals
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -133,10 +133,15 @@ export default function Header({ setActiveTab }) {
         setIsMobileSearchOpen(true);
         searchInputRef.current?.focus();
       }
+      if (e.key === 'Escape') {
+        if (applyingJob) setApplyingJob(null);
+        if (showJobsModal) setShowJobsModal(false);
+        if (showNetworkModal) setShowNetworkModal(false);
+      }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [applyingJob, showJobsModal, showNetworkModal]);
 
   // Update keyboard shortcut string based on OS and screen size
   useEffect(() => {
@@ -1241,8 +1246,9 @@ export default function Header({ setActiveTab }) {
       {applyingJob && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm" onClick={() => setApplyingJob(null)} />
-          <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl p-6 sm:p-8 animate-in fade-in zoom-in-95 duration-200">
-            <button onClick={() => setApplyingJob(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="overflow-y-auto custom-scrollbar p-6 sm:p-8">
+            <button onClick={() => setApplyingJob(null)} className="absolute top-6 right-6 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-500 dark:text-gray-400 transition-colors shadow-sm z-10">
               <X size={18} />
             </button>
             <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 pr-10 tracking-tight">{t('header.jobs_modal.apply_for')} {applyingJob.title}</h2>
@@ -1301,6 +1307,7 @@ export default function Header({ setActiveTab }) {
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       , document.body)}

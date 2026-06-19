@@ -54,7 +54,7 @@ export default function FounderContent({ onSubmitSuccess } = {}) {
       id: 'role',
       field: 'role',
       title: 'How do you want to join?',
-      subtitle: 'Select your intended path within the B1overs network.',
+      subtitle: 'Select your intended path within the beoneofus network.',
       icon: Rocket
     },
     {
@@ -67,13 +67,13 @@ export default function FounderContent({ onSubmitSuccess } = {}) {
     ...(formData.role === 'cofounder' ? [
       { id: 'cf_q1', field: 'cf_q1', title: 'Previous Ventures', subtitle: 'Describe a previous startup or venture you led—what were the biggest challenges you faced?', icon: Briefcase },
       { id: 'cf_q2', field: 'cf_q2', title: 'Scaling', subtitle: 'How do you approach scaling a technology platform from zero to growth?', icon: Zap },
-      { id: 'cf_q3', field: 'cf_q3', title: 'Vision', subtitle: 'What is your long-term vision for B1overs in the developer community?', icon: Star },
+      { id: 'cf_q3', field: 'cf_q3', title: 'Vision', subtitle: 'What is your long-term vision for beoneofus in the developer community?', icon: Star },
       { id: 'cf_q4', field: 'cf_q4', title: 'Conflict Resolution', subtitle: 'How do you handle conflicts or disagreements in a founding team?', icon: MessageSquare },
       { id: 'cf_q5', field: 'cf_q5', title: 'Market Gaps', subtitle: 'What key market gaps do you see in developer social networking, and how would you address them?', icon: Briefcase },
       { id: 'cf_q6', field: 'cf_q6', title: 'Partnerships & Investment', subtitle: 'Tell us about a time you secured investment or built partnerships—how did you succeed?', icon: Briefcase },
       { id: 'cf_q7', field: 'cf_q7', title: 'Emerging Trends', subtitle: 'What emerging developer trends do you believe will shape the future of tech networking?', icon: Zap },
       { id: 'cf_q8', field: 'cf_q8', title: 'Leadership', subtitle: 'How do you balance short-term execution with long-term vision as a leader?', icon: Star },
-      { id: 'cf_q9', field: 'cf_q9', title: 'Culture & Diversity', subtitle: 'How do you plan to foster inclusivity and diversity within B1overs?', icon: User },
+      { id: 'cf_q9', field: 'cf_q9', title: 'Culture & Diversity', subtitle: 'How do you plan to foster inclusivity and diversity within beoneofus?', icon: User },
       { id: 'cf_q10', field: 'cf_q10', title: 'First Year Milestones', subtitle: 'What technical or business milestones would you set for yourself in the first year as a co-founder?', icon: Rocket }
     ] : [
       { id: 'mem_q1', field: 'mem_q1', title: 'Collaboration', subtitle: 'How do you approach collaboration in a remote or distributed team environment?', icon: Users },
@@ -82,7 +82,7 @@ export default function FounderContent({ onSubmitSuccess } = {}) {
       { id: 'mem_q4', field: 'mem_q4', title: 'Mentorship', subtitle: 'Tell us about a time you mentored or helped junior developers—how did you approach it?', icon: UserPlus },
       { id: 'mem_q5', field: 'mem_q5', title: 'Problem Solving', subtitle: 'What’s a challenging bug or problem you encountered, and how did you solve it?', icon: AlertTriangle },
       { id: 'mem_q6', field: 'mem_q6', title: 'Scalability', subtitle: 'How do you ensure your code is scalable and maintainable for future growth?', icon: Rocket },
-      { id: 'mem_q7', field: 'mem_q7', title: 'Why B1overs?', subtitle: 'What excites you most about joining a network of developers, and what unique value would you bring to B1overs?', icon: Star }
+      { id: 'mem_q7', field: 'mem_q7', title: 'Why beoneofus?', subtitle: 'What excites you most about joining a network of developers, and what unique value would you bring to beoneofus?', icon: Star }
     ])
   ];
 

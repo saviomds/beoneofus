@@ -920,10 +920,10 @@ const en = {
     key_revoked: "Key revoked.",
   },
   founder: {
-    title: "Join the B1overs Network",
+    title: "Join the beoneofus Network",
     subtitle: "Select your path and complete your application.",
     how_join: "How do you want to join?",
-    select_path: "Select your intended path within the B1overs network.",
+    select_path: "Select your intended path within the beoneofus network.",
     next: "Next",
     back: "Back",
     submit: "Submit Application",

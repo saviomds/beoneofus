@@ -39,7 +39,10 @@ const BOTTOM_NAV = [
 
 function BottomNav({ pathname }) {
   const router = useRouter();
-  const active = pathname?.split('/')[2] || 'home';
+  const section = pathname?.split('/')[2] || 'home';
+  // Hide on messages/ai — the chat composer sits at the bottom and the nav would cover it
+  if (section === 'messages' || section === 'ai') return null;
+  const active = section;
   return (
     <nav
       className="md:hidden fixed left-3 right-3 z-50 pointer-events-none"

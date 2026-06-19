@@ -296,7 +296,8 @@ export default function MessagesContent() {
   const [snippetCode, setSnippetCode] = useState("");
   const [snippetLang, setSnippetLang] = useState("javascript");
   const [messageSendError, setMessageSendError] = useState(null);
-  const [showRightPanel, setShowRightPanel] = useState(typeof window !== 'undefined' ? window.innerWidth > 1400 : false);
+  const [showRightPanel, setShowRightPanel] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [activeNav, setActiveNav] = useState("messages");
   const [tasksByUser, setTasksByUser] = useState({});
   const currentTasks = activeChat ? (tasksByUser[activeChat.id] || []) : [];
@@ -434,9 +435,15 @@ export default function MessagesContent() {
   useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
   useEffect(() => {
-    const onResize = () => { if (window.innerWidth <= 768) setShowRightPanel(false); };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const update = () => {
+      const mob = window.innerWidth <= 768;
+      setIsMobile(mob);
+      if (mob) setShowRightPanel(false);
+      else if (window.innerWidth > 1400) setShowRightPanel(true);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
   useEffect(() => {
@@ -950,10 +957,11 @@ export default function MessagesContent() {
 
         {/* ── INBOX PANEL ── */}
         <div style={{
-          width: 'clamp(280px,24vw,340px)', display: isMobileChatOpen ? "none" : "flex", flexDirection: "column",
+          width: isMobile ? '100%' : 'clamp(280px,24vw,340px)',
+          display: isMobile && isMobileChatOpen ? "none" : "flex",
+          flexDirection: "column",
           background: "white", borderRight: "1px solid #F1F5F9", flexShrink: 0,
-          // Show on md+
-        }} className="md:flex">
+        }}>
           {/* Inbox header */}
           <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid #F1F5F9" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -1062,7 +1070,7 @@ export default function MessagesContent() {
         {/* ══════════════════════════════════════════════
             MAIN CHAT AREA
         ══════════════════════════════════════════════ */}
-        <div style={{ flex: 1, display: isMobileChatOpen || contacts.length > 0 ? "flex" : "flex", flexDirection: "column", minWidth: 0, minHeight: 0, background: "#F8FAFC", position: "relative" }}>
+        <div style={{ flex: 1, display: isMobile && !isMobileChatOpen ? "none" : "flex", flexDirection: "column", minWidth: 0, minHeight: 0, background: "#F8FAFC", position: "relative" }}>
 
           {activeChat ? (
             <>
@@ -1073,11 +1081,12 @@ export default function MessagesContent() {
                 boxShadow: "0 1px 0 #F1F5F9",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-                  <button onClick={() => setIsMobileChatOpen(false)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 4, lineHeight: 0, display: "flex" }}
-                    className="md:hidden">
-                    <ChevronLeft size={20} />
-                  </button>
+                  {isMobile && (
+                    <button onClick={() => setIsMobileChatOpen(false)}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: "8px 10px 8px 0", lineHeight: 0, display: "flex", alignItems: "center" }}>
+                      <ChevronLeft size={22} />
+                    </button>
+                  )}
 
                   <div style={{ position: "relative", width: 36, height: 36, borderRadius: 10, overflow: "hidden", flexShrink: 0, cursor: "pointer" }}
                     onClick={() => setSelectedUserId(activeChat.id)}>
@@ -1110,9 +1119,11 @@ export default function MessagesContent() {
 
                 {/* Header right actions */}
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <button onClick={() => setShowRightPanel(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid #F1F5F9", background: showRightPanel ? "#EEF2FF" : "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: showRightPanel ? "#6366F1" : "#64748B", transition: "all 0.15s" }} title="Toggle panel">
-                    {showRightPanel ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-                  </button>
+                  {!isMobile && (
+                    <button onClick={() => setShowRightPanel(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid #F1F5F9", background: showRightPanel ? "#EEF2FF" : "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: showRightPanel ? "#6366F1" : "#64748B", transition: "all 0.15s" }} title="Toggle panel">
+                      {showRightPanel ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+                    </button>
+                  )}
 
                   <div style={{ position: "relative" }} ref={moreMenuRef}>
                     <button onClick={() => setShowMoreMenu(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid #F1F5F9", background: showMoreMenu ? "#F8FAFC" : "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748B", transition: "all 0.15s" }}>
@@ -1629,12 +1640,7 @@ export default function MessagesContent() {
           0%, 80%, 100% { transform: translateY(0); }
           40% { transform: translateY(-5px); }
         }
-        .md\\:flex { display: flex !important; }
         .sm\\:inline { display: inline !important; }
-        @media (max-width: 768px) {
-          .md\\:flex { display: none !important; }
-          .md\\:hidden { display: none !important; }
-        }
         @media (max-width: 640px) {
           .sm\\:inline { display: none !important; }
         }

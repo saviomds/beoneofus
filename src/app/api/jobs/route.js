@@ -17,7 +17,7 @@ function getSupabase(cookieStore) {
 
 export async function POST(request) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = getSupabase(cookieStore);
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser();
@@ -51,7 +51,7 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = getSupabase(cookieStore);
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser();

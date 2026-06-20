@@ -268,6 +268,7 @@ export default function MessagesContent() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const { targetChatUser, setTargetChatUser } = useDashboard();
   const onlineUsers = useOnlineUsers();
   const [unreadCounts, setUnreadCounts] = useState({});
@@ -459,9 +460,9 @@ export default function MessagesContent() {
     let isMounted = true;
     const fetchContacts = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) { if (isMounted) setAuthChecked(true); return; }
       const uid = session.user.id;
-      if (isMounted) setCurrentUserId(uid);
+      if (isMounted) { setCurrentUserId(uid); setAuthChecked(true); }
 
       const { data: connections } = await supabase
         .from("connections").select("sender_id, receiver_id")
@@ -842,13 +843,31 @@ export default function MessagesContent() {
     return matchSearch;
   });
 
-  /* ── Loading ── */
+  /* ── Auth gate ── */
   if (!currentUserId) {
+    if (!authChecked) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", background: "#F8FAFC" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+            <Loader2 size={28} color="#6366F1" className="animate-spin" />
+            <p style={{ fontSize: 12, fontWeight: 600, color: "#94A3B8", letterSpacing: "0.1em", textTransform: "uppercase" }}>Loading…</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", background: "#F8FAFC" }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-          <Loader2 size={28} color="#6366F1" className="animate-spin" />
-          <p style={{ fontSize: 12, fontWeight: 600, color: "#94A3B8", letterSpacing: "0.1em", textTransform: "uppercase" }}>Connecting…</p>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, textAlign: "center", padding: "0 24px" }}>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <MessageSquare size={24} color="#6366F1" />
+          </div>
+          <div>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#1E293B", marginBottom: 6 }}>Sign in to message</p>
+            <p style={{ fontSize: 13, color: "#94A3B8", lineHeight: 1.5, maxWidth: 260 }}>Create an account or sign in to start conversations with professionals in your network.</p>
+          </div>
+          <a href="/auth" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 22px", background: "#6366F1", color: "#fff", borderRadius: 12, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+            Sign in to continue
+          </a>
         </div>
       </div>
     );

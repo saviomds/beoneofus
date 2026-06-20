@@ -2,7 +2,7 @@ import ProjectIDE from "../ProjectIDE";
 
 export const metadata = {
   title: "Project IDE - beoneofus",
-  description: "Write and manage your b1overs project code",
+  description: "Write and manage your beoneofus project code",
 };
 
 export default async function IDEPage({ params }) {

@@ -2,7 +2,7 @@ import ProjectsContent from "./ProjectsContent";
 
 export const metadata = {
   title: "Projects - beoneofus",
-  description: "Manage your b1overs projects",
+  description: "Manage your beoneofus projects",
 };
 
 export default function ProjectsPage() {

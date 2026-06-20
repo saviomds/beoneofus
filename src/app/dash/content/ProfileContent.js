@@ -83,7 +83,14 @@ export default function ProfileContent({ viewUserId }) {
   const [editingJobId, setEditingJobId] = useState(null);
   const [jobToDelete, setJobToDelete] = useState(null);
   const [viewJob, setViewJob] = useState(null);
-  
+
+  useEffect(() => {
+    if (!showJobModal) return;
+    const onKey = (e) => { if (e.key === "Escape") { setShowJobModal(false); setEditingJobId(null); } };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [showJobModal]);
+
   // Applications States
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
   const [jobApplicants, setJobApplicants] = useState([]);

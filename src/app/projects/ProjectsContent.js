@@ -318,7 +318,7 @@ export default function ProjectsContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50">
-            b1overs<span className="text-blue-500">.</span>
+            beoneofus<span className="text-blue-500">.</span>
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Your mini code workspace</p>
         </div>
@@ -704,7 +704,7 @@ function EmptyState({ onCreateClick }) {
       </div>
       <p className="font-bold text-gray-900 dark:text-gray-100 text-lg mb-1">No projects yet</p>
       <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs mb-6">
-        Create your first project to start building with b1overs.
+        Create your first project to start building with beoneofus.
       </p>
       <button
         onClick={onCreateClick}

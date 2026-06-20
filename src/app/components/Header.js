@@ -506,7 +506,7 @@ export default function Header({ setActiveTab }) {
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all border border-gray-200 dark:border-gray-700"
               title={t('header.switch_lang')}
             >
-              {lang === 'en' ? '🇫🇷 FR' : '🇬🇧 EN'}
+              {lang === 'en' ? 'FR' : 'EN'}
             </button>
             {mounted && (
               <button

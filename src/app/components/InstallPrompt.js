@@ -33,7 +33,9 @@ export function InstallPrompt() {
   const isStandalone  = useSyncExternalStore(subscribeStandalone, getStandaloneSnapshot, getServerSnapshot);
   const isIOS         = useSyncExternalStore(emptySubscribe,      getIOSSnapshot,        getServerSnapshot);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isDismissed,    setIsDismissed]    = useState(false);
+  const [isDismissed,    setIsDismissed]    = useState(() =>
+    typeof window !== 'undefined' && localStorage.getItem('pwa_install_dismissed') === '1'
+  );
   const [visible,        setVisible]        = useState(false);
 
   /* Capture the native browser install event */
@@ -126,7 +128,7 @@ export function InstallPrompt() {
 
             {/* ── Dismiss ── */}
             <button
-              onClick={() => setIsDismissed(true)}
+              onClick={() => { localStorage.setItem('pwa_install_dismissed', '1'); setIsDismissed(true); }}
               className="w-6 h-6 shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"
               aria-label="Dismiss install prompt"
             >
@@ -164,7 +166,7 @@ export function InstallPrompt() {
                 Install App
               </button>
               <button
-                onClick={() => setIsDismissed(true)}
+                onClick={() => { localStorage.setItem('pwa_install_dismissed', '1'); setIsDismissed(true); }}
                 className="
                   flex-1
                   text-[12px] font-semibold

@@ -36,7 +36,7 @@ function StatusBadge({ status }) {
     active:     { label: "Active",      bg: "#FFF7ED", color: "#C2410C", dot: "#F97316" },
     completed:  { label: "Done",        bg: "#F0FDF4", color: "#15803D", dot: "#22C55E" },
     important:  { label: "Important",   bg: "#FDF4FF", color: "#A21CAF", dot: "#D946EF" },
-    waiting:    { label: "Waiting",     bg: "#F8FAFC", color: "#64748B", dot: "#94A3B8" },
+    waiting:    { label: "Waiting",     bg: "var(--mc-bg)", color: "var(--mc-t5)", dot: "#94A3B8" },
     blocked:    { label: "Blocked",     bg: "#FFF1F2", color: "#BE123C", dot: "#F43F5E" },
     incoming:   { label: "Pending",     bg: "#EFF6FF", color: "#1E40AF", dot: "#60A5FA" },
     none:       { label: "Connect",     bg: "#F5F3FF", color: "#6D28D9", dot: "#8B5CF6" },
@@ -64,7 +64,7 @@ function SnippetBlock({ snippet, isMine }) {
   return (
     <div style={{
       borderRadius: 14, overflow: "hidden",
-      border: `1px solid ${isMine ? "rgba(96,165,250,0.25)" : "#E2E8F0"}`,
+      border: `1px solid ${isMine ? "rgba(96,165,250,0.25)" : "var(--mc-border2)"}`,
       maxWidth: 400, width: "100%", textAlign: "left",
     }}>
       <div style={{
@@ -73,7 +73,7 @@ function SnippetBlock({ snippet, isMine }) {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Code2 size={11} color="#94A3B8" />
-          <span style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em" }}>{snippet.lang}</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--mc-t6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{snippet.lang}</span>
         </div>
         <button onClick={copy} style={{
           fontSize: 10, fontWeight: 700, color: copied ? "#34D399" : "#94A3B8",
@@ -98,22 +98,22 @@ function AttachmentCard({ url, name }) {
   return (
     <div style={{
       display: "inline-flex", alignItems: "center", gap: 10,
-      background: "#F8FAFC", border: "1px solid #E2E8F0",
+      background: "var(--mc-bg)", border: "1px solid var(--mc-border2)",
       borderRadius: 12, padding: "8px 12px", marginTop: 6, maxWidth: 240,
     }}>
       <div style={{
-        width: 32, height: 32, borderRadius: 8, background: isImage ? "#DBEAFE" : "#F1F5F9",
+        width: 32, height: 32, borderRadius: 8, background: isImage ? "#DBEAFE" : "var(--mc-border)",
         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
       }}>
         {isImage ? <Camera size={16} color="#3B82F6" /> : <FileText size={16} color="#64748B" />}
       </div>
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: 12, fontWeight: 600, color: "#1E293B", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>
+        <p style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t2)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>
           {name || "Attachment"}
         </p>
-        <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>{ext.toUpperCase()}</p>
+        <p style={{ fontSize: 11, color: "var(--mc-t6)", margin: 0 }}>{ext.toUpperCase()}</p>
       </div>
-      <a href={url} download target="_blank" rel="noreferrer" style={{ color: "#94A3B8", flexShrink: 0, lineHeight: 0 }}>
+      <a href={url} download target="_blank" rel="noreferrer" style={{ color: "var(--mc-t6)", flexShrink: 0, lineHeight: 0 }}>
         <Download size={14} />
       </a>
     </div>
@@ -172,12 +172,12 @@ function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
     <div style={{
       display: "flex", alignItems: "flex-start", gap: 10,
       padding: "10px 12px", borderRadius: 12,
-      background: "#F8FAFC", border: "1px solid #E2E8F0",
+      background: "var(--mc-bg)", border: "1px solid var(--mc-border2)",
       marginBottom: 8, transition: "all 0.15s",
     }}>
       <button onClick={() => onToggle(task.id)} style={{
         width: 18, height: 18, borderRadius: 5, border: `2px solid ${task.done ? "#22C55E" : "#CBD5E1"}`,
-        background: task.done ? "#22C55E" : "white", cursor: "pointer", flexShrink: 0,
+        background: task.done ? "#22C55E" : "var(--mc-surface)", cursor: "pointer", flexShrink: 0,
         display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2,
         transition: "all 0.15s",
       }}>
@@ -192,13 +192,13 @@ function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
             onChange={e => setDraft(e.target.value)}
             onBlur={commitRename}
             onKeyDown={e => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { setEditing(false); setDraft(task.title); } }}
-            style={{ width: "100%", fontSize: 13, fontWeight: 500, color: "#1E293B", border: "none", borderBottom: "1.5px solid #6366F1", outline: "none", background: "transparent", padding: "0 0 2px", boxSizing: "border-box" }}
+            style={{ width: "100%", fontSize: 13, fontWeight: 500, color: "var(--mc-t2)", border: "none", borderBottom: "1.5px solid #6366F1", outline: "none", background: "transparent", padding: "0 0 2px", boxSizing: "border-box" }}
           />
         ) : (
           <p
             onClick={() => { setEditing(true); setDraft(task.title); }}
             title="Click to rename"
-            style={{ fontSize: 13, fontWeight: 500, color: task.done ? "#94A3B8" : "#1E293B", margin: 0, textDecoration: task.done ? "line-through" : "none", cursor: "text", wordBreak: "break-word" }}
+            style={{ fontSize: 13, fontWeight: 500, color: task.done ? "var(--mc-t6)" : "var(--mc-t2)", margin: 0, textDecoration: task.done ? "line-through" : "none", cursor: "text", wordBreak: "break-word" }}
           >
             {task.title}
           </p>
@@ -206,7 +206,7 @@ function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
 
         <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
           {task.due && (
-            <span style={{ fontSize: 11, color: "#64748B", display: "flex", alignItems: "center", gap: 3 }}>
+            <span style={{ fontSize: 11, color: "var(--mc-t5)", display: "flex", alignItems: "center", gap: 3 }}>
               <Clock size={10} /> {task.due}
             </span>
           )}
@@ -226,7 +226,7 @@ function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
           ) : (
             <button
               onClick={() => onAssign(task)}
-              style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 100, border: "1px dashed #CBD5E1", background: "transparent", color: "#94A3B8", cursor: "pointer", display: "flex", alignItems: "center", gap: 3, transition: "all 0.12s" }}
+              style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 100, border: "1px dashed #CBD5E1", background: "transparent", color: "var(--mc-t6)", cursor: "pointer", display: "flex", alignItems: "center", gap: 3, transition: "all 0.12s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#6366F1"; e.currentTarget.style.color = "#6366F1"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#CBD5E1"; e.currentTarget.style.color = "#94A3B8"; }}
             >
@@ -847,23 +847,23 @@ export default function MessagesContent() {
   if (!currentUserId) {
     if (!authChecked) {
       return (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", background: "#F8FAFC" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", background: "var(--mc-bg)" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
             <Loader2 size={28} color="#6366F1" className="animate-spin" />
-            <p style={{ fontSize: 12, fontWeight: 600, color: "#94A3B8", letterSpacing: "0.1em", textTransform: "uppercase" }}>Loading…</p>
+            <p style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t6)", letterSpacing: "0.1em", textTransform: "uppercase" }}>Loading…</p>
           </div>
         </div>
       );
     }
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", background: "#F8FAFC" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", background: "var(--mc-bg)" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, textAlign: "center", padding: "0 24px" }}>
           <div style={{ width: 56, height: 56, borderRadius: 16, background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <MessageSquare size={24} color="#6366F1" />
           </div>
           <div>
-            <p style={{ fontSize: 16, fontWeight: 700, color: "#1E293B", marginBottom: 6 }}>Sign in to message</p>
-            <p style={{ fontSize: 13, color: "#94A3B8", lineHeight: 1.5, maxWidth: 260 }}>Create an account or sign in to start conversations with professionals in your network.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "var(--mc-t2)", marginBottom: 6 }}>Sign in to message</p>
+            <p style={{ fontSize: 13, color: "var(--mc-t6)", lineHeight: 1.5, maxWidth: 260 }}>Create an account or sign in to start conversations with professionals in your network.</p>
           </div>
           <a href="/auth" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 22px", background: "#6366F1", color: "#fff", borderRadius: 12, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
             Sign in to continue
@@ -880,16 +880,30 @@ export default function MessagesContent() {
     <>
       {/* Global styles */}
       <style>{`
+        :root {
+          --mc-bg:#F8FAFC; --mc-surface:#ffffff; --mc-border:#F1F5F9; --mc-border2:#E2E8F0;
+          --mc-t1:#0F172A; --mc-t2:#1E293B; --mc-t3:#334155; --mc-t4:#475569;
+          --mc-t5:#64748B; --mc-t6:#94A3B8; --mc-t7:#CBD5E1;
+          --mc-hover:#F8FAFC; --mc-active:#EFF6FF; --mc-active-t:#1D4ED8;
+          --mc-bubble-in:#ffffff; --mc-bubble-in-b:#F1F5F9; --mc-bubble-in-t:#1E293B;
+        }
+        .dark {
+          --mc-bg:#0F172A; --mc-surface:#1E293B; --mc-border:#334155; --mc-border2:#475569;
+          --mc-t1:#F1F5F9; --mc-t2:#E2E8F0; --mc-t3:#CBD5E1; --mc-t4:#94A3B8;
+          --mc-t5:#94A3B8; --mc-t6:#64748B; --mc-t7:#475569;
+          --mc-hover:#1E293B; --mc-active:#1E3A5F; --mc-active-t:#93C5FD;
+          --mc-bubble-in:#263449; --mc-bubble-in-b:#334155; --mc-bubble-in-t:#E2E8F0;
+        }
         .msg-hover-actions { opacity: 0; pointer-events: none; transition: opacity 0.15s; }
         .msg-row:hover .msg-hover-actions { opacity: 1; pointer-events: all; }
-        .contact-card:hover { background: #F8FAFC !important; }
-        .contact-card.active { background: #EFF6FF !important; }
-        .nav-icon:hover { background: #F1F5F9 !important; color: #475569 !important; }
+        .contact-card:hover { background: var(--mc-hover) !important; }
+        .contact-card.active { background: var(--mc-active) !important; }
+        .nav-icon:hover { background: var(--mc-hover) !important; color: var(--mc-t4) !important; }
         .composer-area:focus-within { border-color: #6366F1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.08) !important; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 100px; }
-        ::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
+        ::-webkit-scrollbar-thumb { background: var(--mc-border2); border-radius: 100px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--mc-t7); }
         @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .slide-up { animation: slideUp 0.2s ease; }
@@ -914,14 +928,14 @@ export default function MessagesContent() {
       {/* ── BLOCK CONFIRM ── */}
       {showBlockConfirm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div className="slide-up" style={{ background: "white", borderRadius: 20, padding: 32, maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.12)" }}>
+          <div className="slide-up" style={{ background: "var(--mc-surface)", borderRadius: 20, padding: 32, maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.12)" }}>
             <div style={{ width: 56, height: 56, background: "#FFF7ED", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
               <ShieldAlert size={24} color="#F97316" />
             </div>
-            <h3 style={{ fontSize: 17, fontWeight: 700, color: "#0F172A", margin: "0 0 8px" }}>Block @{activeChat?.username}?</h3>
-            <p style={{ fontSize: 13, color: "#64748B", margin: "0 0 24px", lineHeight: 1.6 }}>They won't be able to message you. You can unblock anytime.</p>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--mc-t1)", margin: "0 0 8px" }}>Block @{activeChat?.username}?</h3>
+            <p style={{ fontSize: 13, color: "var(--mc-t5)", margin: "0 0 24px", lineHeight: 1.6 }}>They won't be able to message you. You can unblock anytime.</p>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setShowBlockConfirm(false)} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1.5px solid #E2E8F0", background: "white", fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => setShowBlockConfirm(false)} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1.5px solid var(--mc-border2)", background: "var(--mc-surface)", fontSize: 13, fontWeight: 600, color: "var(--mc-t4)", cursor: "pointer" }}>Cancel</button>
               <button onClick={handleBlockUser} disabled={isProcessing} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "#F97316", fontSize: 13, fontWeight: 700, color: "white", cursor: "pointer", opacity: isProcessing ? 0.6 : 1 }}>
                 {isProcessing ? "Blocking…" : "Block User"}
               </button>
@@ -933,12 +947,12 @@ export default function MessagesContent() {
       {/* ── DELETE CONFIRM ── */}
       {showDeleteConfirm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(6px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div className="slide-up" style={{ background: "white", borderRadius: 18, padding: 24, maxWidth: 320, width: "100%", textAlign: "center", boxShadow: "0 16px 50px rgba(0,0,0,0.1)" }}>
+          <div className="slide-up" style={{ background: "var(--mc-surface)", borderRadius: 18, padding: 24, maxWidth: 320, width: "100%", textAlign: "center", boxShadow: "0 16px 50px rgba(0,0,0,0.1)" }}>
             <Trash2 size={22} color="#EF4444" style={{ margin: "0 auto 12px" }} />
-            <p style={{ fontSize: 15, fontWeight: 700, color: "#0F172A", margin: "0 0 6px" }}>Delete message?</p>
-            <p style={{ fontSize: 12, color: "#94A3B8", margin: "0 0 20px" }}>This action cannot be undone.</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t1)", margin: "0 0 6px" }}>Delete message?</p>
+            <p style={{ fontSize: 12, color: "var(--mc-t6)", margin: "0 0 20px" }}>This action cannot be undone.</p>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowDeleteConfirm(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "white", fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => setShowDeleteConfirm(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1.5px solid var(--mc-border2)", background: "var(--mc-surface)", fontSize: 13, fontWeight: 600, color: "var(--mc-t4)", cursor: "pointer" }}>Cancel</button>
               <button onClick={() => handleDeleteMessage(showDeleteConfirm)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: "#EF4444", fontSize: 13, fontWeight: 700, color: "white", cursor: "pointer" }}>Delete</button>
             </div>
           </div>
@@ -949,8 +963,8 @@ export default function MessagesContent() {
       {selectedUserId && (
         <div style={{ position: "fixed", inset: 0, zIndex: 250, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)" }} onClick={() => setSelectedUserId(null)} />
-          <div style={{ position: "relative", width: "100%", maxWidth: 900, maxHeight: "90vh", overflowY: "auto", zIndex: 10, background: "white", borderRadius: 24, border: "1px solid #F1F5F9", boxShadow: "0 24px 80px rgba(0,0,0,0.12)" }}>
-            <button onClick={() => setSelectedUserId(null)} style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 32, height: 32, borderRadius: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748B" }}>
+          <div style={{ position: "relative", width: "100%", maxWidth: 900, maxHeight: "90vh", overflowY: "auto", zIndex: 10, background: "var(--mc-surface)", borderRadius: 24, border: "1px solid var(--mc-border)", boxShadow: "0 24px 80px rgba(0,0,0,0.12)" }}>
+            <button onClick={() => setSelectedUserId(null)} style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 32, height: 32, borderRadius: 8, background: "var(--mc-bg)", border: "1px solid var(--mc-border2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--mc-t5)" }}>
               <X size={16} />
             </button>
             <div style={{ padding: "20px 24px" }}>
@@ -966,7 +980,7 @@ export default function MessagesContent() {
       <div style={{ 
         display: "flex", 
         height: "100%", 
-        background: "#F8FAFC", 
+        background: "var(--mc-bg)", 
         overflow: "hidden", 
         fontFamily: "'Inter', -apple-system, sans-serif",
         position: "relative" 
@@ -979,12 +993,12 @@ export default function MessagesContent() {
           width: isMobile ? '100%' : 'clamp(280px,24vw,340px)',
           display: isMobile && isMobileChatOpen ? "none" : "flex",
           flexDirection: "column",
-          background: "white", borderRight: "1px solid #F1F5F9", flexShrink: 0,
+          background: "var(--mc-surface)", borderRight: "1px solid var(--mc-border)", flexShrink: 0,
         }}>
           {/* Inbox header */}
-          <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid #F1F5F9" }}>
+          <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid var(--mc-border)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#0F172A", margin: 0 }}>Inbox</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--mc-t1)", margin: 0 }}>Inbox</h2>
               {hasAnyUnread && (
                 <span style={{ fontSize: 11, fontWeight: 700, background: "#6366F1", color: "white", padding: "2px 8px", borderRadius: 100 }}>{totalUnread}</span>
               )}
@@ -996,10 +1010,10 @@ export default function MessagesContent() {
               <input
                 type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search conversations…"
-                style={{ width: "100%", background: "#F8FAFC", border: "1px solid #F1F5F9", borderRadius: 10, padding: "7px 28px 7px 30px", fontSize: 12, color: "#334155", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                style={{ width: "100%", background: "var(--mc-bg)", border: "1px solid var(--mc-border)", borderRadius: 10, padding: "7px 28px 7px 30px", fontSize: 12, color: "var(--mc-t3)", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94A3B8", lineHeight: 0 }}>
+                <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--mc-t6)", lineHeight: 0 }}>
                   <X size={12} />
                 </button>
               )}
@@ -1011,7 +1025,7 @@ export default function MessagesContent() {
                 <button key={val} onClick={() => setFilterTab(val)} style={{
                   flex: 1, padding: "5px 0", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600,
                   background: filterTab === val ? "#EEF2FF" : "transparent",
-                  color: filterTab === val ? "#4F46E5" : "#94A3B8",
+                  color: filterTab === val ? "#4F46E5" : "var(--mc-t6)",
                   transition: "all 0.15s",
                 }}>
                   {label}
@@ -1026,7 +1040,7 @@ export default function MessagesContent() {
             {filteredContacts.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 16px" }}>
                 <MessageSquare size={28} color="#E2E8F0" style={{ margin: "0 auto 10px" }} />
-                <p style={{ fontSize: 12, fontWeight: 600, color: "#94A3B8" }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t6)" }}>
                   {filterTab === "unread" ? "No unread messages" : searchQuery ? `No results for "${searchQuery}"` : "No conversations yet"}
                 </p>
                 {filterTab === "unread" && (
@@ -1048,7 +1062,7 @@ export default function MessagesContent() {
                   style={{
                     display: "flex", alignItems: "center", gap: 10, padding: "10px", cursor: "pointer",
                     borderRadius: 12, marginBottom: 2, transition: "background 0.12s",
-                    background: isActive ? "#EFF6FF" : "transparent",
+                    background: isActive ? "var(--mc-active)" : "transparent",
                     animation: `slideUp 0.2s ease ${i * 25}ms both`,
                   }}
                 >
@@ -1059,7 +1073,7 @@ export default function MessagesContent() {
                       {contact.avatar_url ? (
                         <Image src={contact.avatar_url} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
                       ) : (
-                        <div style={{ width: "100%", height: "100%", background: isActive ? "#DBEAFE" : "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: isActive ? "#2563EB" : "#64748B" }}>
+                        <div style={{ width: "100%", height: "100%", background: isActive ? "#DBEAFE" : "var(--mc-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: isActive ? "#2563EB" : "var(--mc-t5)" }}>
                           {contact.username[0].toUpperCase()}
                         </div>
                       )}
@@ -1069,14 +1083,14 @@ export default function MessagesContent() {
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, marginBottom: 2 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: isActive ? "#1D4ED8" : "#1E293B", display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: isActive ? "var(--mc-active-t)" : "var(--mc-t2)", display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {contact.username}
                         {contact.is_verified && <BadgeCheck size={12} color="#3B82F6" fill="#3B82F6" stroke="white" strokeWidth={2} />}
                         {isMuted && <BellOff size={10} color="#94A3B8" />}
                       </span>
                       {unread > 0 && <span style={{ fontSize: 10, fontWeight: 800, background: "#6366F1", color: "white", padding: "1px 6px", borderRadius: 100, flexShrink: 0 }}>{unread}</span>}
                     </div>
-                    <p style={{ fontSize: 11.5, color: isTyping ? "#6366F1" : unread > 0 ? "#334155" : "#94A3B8", fontWeight: isTyping || unread > 0 ? 500 : 400, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: isTyping ? "italic" : "normal" }}>
+                    <p style={{ fontSize: 11.5, color: isTyping ? "#6366F1" : unread > 0 ? "var(--mc-t3)" : "var(--mc-t6)", fontWeight: isTyping || unread > 0 ? 500 : 400, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: isTyping ? "italic" : "normal" }}>
                       {isTyping ? "typing…" : preview?.text || (isOnline ? "Online" : "Start a conversation")}
                     </p>
                   </div>
@@ -1089,20 +1103,20 @@ export default function MessagesContent() {
         {/* ══════════════════════════════════════════════
             MAIN CHAT AREA
         ══════════════════════════════════════════════ */}
-        <div style={{ flex: 1, display: isMobile && !isMobileChatOpen ? "none" : "flex", flexDirection: "column", minWidth: 0, minHeight: 0, background: "#F8FAFC", position: "relative" }}>
+        <div style={{ flex: 1, display: isMobile && !isMobileChatOpen ? "none" : "flex", flexDirection: "column", minWidth: 0, minHeight: 0, background: "var(--mc-bg)", position: "relative" }}>
 
           {activeChat ? (
             <>
               {/* ── Chat header ── */}
               <div style={{
-                padding: "14px 20px", background: "white", borderBottom: "1px solid #F1F5F9",
+                padding: "14px 20px", background: "var(--mc-surface)", borderBottom: "1px solid var(--mc-border)",
                 display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, zIndex: 5,
-                boxShadow: "0 1px 0 #F1F5F9",
+                boxShadow: "0 1px 0 var(--mc-border)",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                   {isMobile && (
                     <button onClick={() => setIsMobileChatOpen(false)}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: "8px 10px 8px 0", lineHeight: 0, display: "flex", alignItems: "center" }}>
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--mc-t5)", padding: "8px 10px 8px 0", lineHeight: 0, display: "flex", alignItems: "center" }}>
                       <ChevronLeft size={22} />
                     </button>
                   )}
@@ -1119,13 +1133,13 @@ export default function MessagesContent() {
                   </div>
 
                   <div style={{ cursor: "pointer", minWidth: 0 }} onClick={() => setSelectedUserId(activeChat.id)}>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#0F172A", margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--mc-t1)", margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>@{activeChat.username}</span>
                       {activeChat.is_verified && <BadgeCheck size={14} color="#6366F1" fill="#6366F1" stroke="white" strokeWidth={2} />}
                     </h3>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 1 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: connectionStatus === "blocked" ? "#EF4444" : onlineUsers.has(activeChat.id) ? "#22C55E" : "#CBD5E1" }} />
-                      <span style={{ fontSize: 11, fontWeight: 500, color: "#94A3B8" }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: connectionStatus === "blocked" ? "#EF4444" : onlineUsers.has(activeChat.id) ? "#22C55E" : "var(--mc-t7)" }} />
+                      <span style={{ fontSize: 11, fontWeight: 500, color: "var(--mc-t6)" }}>
                         {connectionStatus === "blocked" ? "Blocked" : onlineUsers.has(activeChat.id) ? "Online" : "Offline"}
                       </span>
                     </div>
@@ -1139,27 +1153,27 @@ export default function MessagesContent() {
                 {/* Header right actions */}
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   {!isMobile && (
-                    <button onClick={() => setShowRightPanel(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid #F1F5F9", background: showRightPanel ? "#EEF2FF" : "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: showRightPanel ? "#6366F1" : "#64748B", transition: "all 0.15s" }} title="Toggle panel">
+                    <button onClick={() => setShowRightPanel(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid var(--mc-border)", background: showRightPanel ? "#EEF2FF" : "var(--mc-surface)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: showRightPanel ? "#6366F1" : "var(--mc-t5)", transition: "all 0.15s" }} title="Toggle panel">
                       {showRightPanel ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
                     </button>
                   )}
 
                   <div style={{ position: "relative" }} ref={moreMenuRef}>
-                    <button onClick={() => setShowMoreMenu(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid #F1F5F9", background: showMoreMenu ? "#F8FAFC" : "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748B", transition: "all 0.15s" }}>
+                    <button onClick={() => setShowMoreMenu(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid var(--mc-border)", background: showMoreMenu ? "var(--mc-bg)" : "var(--mc-surface)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--mc-t5)", transition: "all 0.15s" }}>
                       <MoreHorizontal size={16} />
                     </button>
                     {showMoreMenu && (
-                      <div className="slide-up" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, width: 200, background: "white", border: "1px solid #F1F5F9", borderRadius: 14, boxShadow: "0 8px 32px rgba(0,0,0,0.08)", zIndex: 50, padding: "6px 0", overflow: "hidden" }}>
+                      <div className="slide-up" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, width: 200, background: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: 14, boxShadow: "0 8px 32px rgba(0,0,0,0.08)", zIndex: 50, padding: "6px 0", overflow: "hidden" }}>
                         {[
                           { label: "View Profile", icon: Users, action: () => { setSelectedUserId(activeChat.id); setShowMoreMenu(false); } },
                           { label: mutedChats.includes(activeChat.id) ? "Unmute" : "Mute", icon: mutedChats.includes(activeChat.id) ? Bell : BellOff, action: () => { toggleMute(activeChat.id); setShowMoreMenu(false); } },
                         ].map(item => (
-                          <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#334155", textAlign: "left", transition: "background 0.1s" }}
-                            onMouseEnter={e => e.currentTarget.style.background = "#F8FAFC"} onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                          <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "var(--mc-t3)", textAlign: "left", transition: "background 0.1s" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "var(--mc-bg)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>
                             <item.icon size={14} /> {item.label}
                           </button>
                         ))}
-                        <div style={{ borderTop: "1px solid #F1F5F9", margin: "4px 0" }} />
+                        <div style={{ borderTop: "1px solid var(--mc-border)", margin: "4px 0" }} />
                         {connectionStatus === "blocked" && blockerId === currentUserId ? (
                           <button onClick={handleUnblockUser} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#16A34A", textAlign: "left" }}>
                             <ShieldCheck size={14} /> Unblock User
@@ -1218,13 +1232,13 @@ export default function MessagesContent() {
                           <div style={{ display: "flex", flexDirection: "column", maxWidth: "min(700px,85%)", alignItems: isMine ? "flex-end" : "flex-start" }}>
                             {/* Reply preview */}
                             {msg.replied_message && (
-                              <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 4, padding: "6px 10px", borderRadius: 10, background: isMine ? "rgba(99,102,241,0.06)" : "#F8FAFC", border: `1px solid ${isMine ? "rgba(99,102,241,0.12)" : "#F1F5F9"}`, maxWidth: "100%" }}>
+                              <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 4, padding: "6px 10px", borderRadius: 10, background: isMine ? "rgba(99,102,241,0.06)" : "var(--mc-bg)", border: `1px solid ${isMine ? "rgba(99,102,241,0.12)" : "var(--mc-border)"}`, maxWidth: "100%" }}>
                                 <CornerUpLeft size={11} color="#94A3B8" style={{ flexShrink: 0, marginTop: 1 }} />
                                 <div style={{ minWidth: 0 }}>
                                   <p style={{ fontSize: 10, fontWeight: 700, color: "#6366F1", margin: "0 0 1px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                                     @{msg.replied_message.sender_id === currentUserId ? "You" : activeChat.username}
                                   </p>
-                                  <p style={{ fontSize: 11.5, color: "#64748B", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  <p style={{ fontSize: 11.5, color: "var(--mc-t5)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     {msg.replied_message.text || "📷 Image"}
                                   </p>
                                 </div>
@@ -1234,16 +1248,16 @@ export default function MessagesContent() {
                             {/* Bubble */}
                             <div style={{
                               position: "relative",
-                              background: snip ? "transparent" : (!msg.text && msg.image_url) ? "transparent" : isMine ? "#4F46E5" : "white",
-                              color: isMine && !snip ? "white" : "#1E293B",
+                              background: snip ? "transparent" : (!msg.text && msg.image_url) ? "transparent" : isMine ? "#4F46E5" : "var(--mc-bubble-in)",
+                              color: isMine && !snip ? "white" : "var(--mc-bubble-in-t)",
                               borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                              border: snip ? "none" : (!msg.text && msg.image_url) ? "none" : isMine ? "none" : "1px solid #F1F5F9",
+                              border: snip ? "none" : (!msg.text && msg.image_url) ? "none" : isMine ? "none" : "1px solid var(--mc-bubble-in-b)",
                               boxShadow: snip || (!msg.text && msg.image_url) ? "none" : isMine ? "0 2px 12px rgba(79,70,229,0.2)" : "0 1px 4px rgba(0,0,0,0.04)",
                               opacity: msg.isSending ? 0.65 : 1,
                               transition: "opacity 0.2s",
                             }}>
                               {msg.image_url && (
-                                <div style={{ position: "relative", width: 220, aspectRatio: "4/3", borderRadius: 14, overflow: "hidden", cursor: "zoom-in", background: "#F1F5F9", margin: msg.text ? "0 0 4px 0" : 0 }}
+                                <div style={{ position: "relative", width: 220, aspectRatio: "4/3", borderRadius: 14, overflow: "hidden", cursor: "zoom-in", background: "var(--mc-border)", margin: msg.text ? "0 0 4px 0" : 0 }}
                                   onClick={() => setLightboxImage(msg.image_url)}>
                                   <Image src={msg.image_url} alt="attachment" fill sizes="220px" style={{ objectFit: "cover" }} />
                                   <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0)", transition: "background 0.15s" }}
@@ -1262,17 +1276,17 @@ export default function MessagesContent() {
                                 position: "absolute", top: "50%", transform: "translateY(-50%)",
                                 [isMine ? "right" : "left"]: "calc(100% + 6px)",
                                 display: "flex", alignItems: "center", gap: 2,
-                                background: "white", border: "1px solid #F1F5F9", borderRadius: 10,
+                                background: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: 10,
                                 boxShadow: "0 2px 12px rgba(0,0,0,0.06)", padding: "3px 4px", zIndex: 20,
                               }}>
                                 <div style={{ position: "relative" }}>
-                                  <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: emojiPickerMsgId === msg.id ? "#FFF7ED" : "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.12s" }}
+                                  <button onClick={() => setEmojiPickerMsgId(emojiPickerMsgId === msg.id ? null : msg.id)} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: emojiPickerMsgId === msg.id ? "#FFF7ED" : "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--mc-t6)", transition: "all 0.12s" }}
                                     onMouseEnter={e => { e.currentTarget.style.background = "#FFF7ED"; e.currentTarget.style.color = "#F97316"; }}
                                     onMouseLeave={e => { if (emojiPickerMsgId !== msg.id) { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#94A3B8"; } }}>
                                     <Smile size={14} />
                                   </button>
                                   {emojiPickerMsgId === msg.id && (
-                                    <div className="slide-up" style={{ position: "absolute", [isMine ? "right" : "left"]: 0, bottom: "calc(100% + 6px)", display: "flex", gap: 6, background: "white", border: "1px solid #F1F5F9", borderRadius: 100, padding: "6px 10px", boxShadow: "0 8px 28px rgba(0,0,0,0.1)", zIndex: 100, whiteSpace: "nowrap" }}>
+                                    <div className="slide-up" style={{ position: "absolute", [isMine ? "right" : "left"]: 0, bottom: "calc(100% + 6px)", display: "flex", gap: 6, background: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: 100, padding: "6px 10px", boxShadow: "0 8px 28px rgba(0,0,0,0.1)", zIndex: 100, whiteSpace: "nowrap" }}>
                                       {QUICK_EMOJIS.map(e => (
                                         <button key={e} onClick={() => handleReaction(msg.id, e)} style={{ fontSize: 18, background: "none", border: "none", cursor: "pointer", padding: "0 2px", transition: "transform 0.1s", lineHeight: 1 }}
                                           onMouseEnter={el => el.currentTarget.style.transform = "scale(1.3) translateY(-2px)"}
@@ -1283,20 +1297,20 @@ export default function MessagesContent() {
                                     </div>
                                   )}
                                 </div>
-                                <button onClick={() => setReplyingTo(msg)} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.12s" }}
+                                <button onClick={() => setReplyingTo(msg)} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--mc-t6)", transition: "all 0.12s" }}
                                   onMouseEnter={e => { e.currentTarget.style.background = "#EFF6FF"; e.currentTarget.style.color = "#3B82F6"; }}
                                   onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#94A3B8"; }}>
                                   <Reply size={14} />
                                 </button>
                                 {msg.text && (
-                                  <button onClick={() => { const s = parseSnippet(msg.text); copyMessage(s ? s.code : msg.text); }} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.12s" }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.color = "#475569"; }}
+                                  <button onClick={() => { const s = parseSnippet(msg.text); copyMessage(s ? s.code : msg.text); }} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--mc-t6)", transition: "all 0.12s" }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = "var(--mc-bg)"; e.currentTarget.style.color = "var(--mc-t4)"; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#94A3B8"; }}>
                                     <Copy size={14} />
                                   </button>
                                 )}
                                 {isMine && (
-                                  <button onClick={() => setShowDeleteConfirm(msg.id)} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.12s" }}
+                                  <button onClick={() => setShowDeleteConfirm(msg.id)} style={{ width: 28, height: 28, borderRadius: 7, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--mc-t6)", transition: "all 0.12s" }}
                                     onMouseEnter={e => { e.currentTarget.style.background = "#FFF1F2"; e.currentTarget.style.color = "#EF4444"; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#94A3B8"; }}>
                                     <Trash2 size={14} />
@@ -1311,7 +1325,7 @@ export default function MessagesContent() {
                                 {Object.entries(reactionsByEmoji).map(([emoji, reactors]) => {
                                   const myReaction = reactors.find(r => r.user_id === currentUserId);
                                   return (
-                                    <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 600, padding: "2px 7px", borderRadius: 100, border: `1.5px solid ${myReaction ? "#6366F1" : "#F1F5F9"}`, background: myReaction ? "#EEF2FF" : "white", color: myReaction ? "#4F46E5" : "#64748B", cursor: "pointer", transition: "all 0.12s" }}>
+                                    <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 600, padding: "2px 7px", borderRadius: 100, border: `1.5px solid ${myReaction ? "#6366F1" : "var(--mc-border)"}`, background: myReaction ? "#EEF2FF" : "var(--mc-surface)", color: myReaction ? "#4F46E5" : "var(--mc-t5)", cursor: "pointer", transition: "all 0.12s" }}>
                                       <span>{emoji}</span>
                                       {reactors.length > 1 && <span>{reactors.length}</span>}
                                     </button>
@@ -1322,7 +1336,7 @@ export default function MessagesContent() {
 
                             {/* Timestamp & receipt */}
                             <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexDirection: isMine ? "row-reverse" : "row" }}>
-                              <span style={{ fontSize: 10.5, color: "#CBD5E1" }}>
+                              <span style={{ fontSize: 10.5, color: "var(--mc-t7)" }}>
                                 {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                               </span>
                               {isMine && (
@@ -1348,10 +1362,10 @@ export default function MessagesContent() {
                             </div>
                           )}
                         </div>
-                        <div style={{ background: "white", border: "1px solid #F1F5F9", borderRadius: "18px 18px 18px 4px", padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                        <div style={{ background: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "18px 18px 18px 4px", padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
                           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                             {[0, 150, 300].map(delay => (
-                              <span key={delay} style={{ width: 7, height: 7, borderRadius: "50%", background: "#CBD5E1", display: "inline-block", animation: `bounce 1.2s ${delay}ms infinite` }} />
+                              <span key={delay} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--mc-t7)", display: "inline-block", animation: `bounce 1.2s ${delay}ms infinite` }} />
                             ))}
                           </div>
                         </div>
@@ -1366,13 +1380,13 @@ export default function MessagesContent() {
                         <div style={{ width: 60, height: 60, background: "#FFF1F2", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <ShieldAlert size={26} color="#F43F5E" />
                         </div>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B", margin: 0 }}>Connection blocked</p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>Connection blocked</p>
                         {blockerId === currentUserId ? (
                           <button onClick={handleUnblockUser} style={{ fontSize: 13, color: "#6366F1", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
                             Unblock @{activeChat.username}
                           </button>
                         ) : (
-                          <p style={{ fontSize: 12, color: "#94A3B8", fontStyle: "italic", margin: 0 }}>You've been blocked by this user.</p>
+                          <p style={{ fontSize: 12, color: "var(--mc-t6)", fontStyle: "italic", margin: 0 }}>You've been blocked by this user.</p>
                         )}
                       </div>
                     ) : connectionStatus === "none" ? (
@@ -1381,8 +1395,8 @@ export default function MessagesContent() {
                           <UserPlus size={28} color="#7C3AED" />
                         </div>
                         <div>
-                          <p style={{ fontSize: 15, fontWeight: 700, color: "#1E293B", margin: "0 0 6px" }}>No connection yet</p>
-                          <p style={{ fontSize: 13, color: "#94A3B8", margin: 0 }}>Send a request to start chatting.</p>
+                          <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t2)", margin: "0 0 6px" }}>No connection yet</p>
+                          <p style={{ fontSize: 13, color: "var(--mc-t6)", margin: 0 }}>Send a request to start chatting.</p>
                         </div>
                         <button onClick={handleSendRequest} style={{ padding: "11px 28px", borderRadius: 12, background: "#6366F1", color: "white", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", boxShadow: "0 4px 14px rgba(99,102,241,0.3)", transition: "all 0.15s" }}
                           onMouseEnter={e => e.currentTarget.style.background = "#4F46E5"}
@@ -1392,26 +1406,26 @@ export default function MessagesContent() {
                       </div>
                     ) : connectionStatus === "waiting" ? (
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 60, height: 60, background: "#F8FAFC", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: 60, height: 60, background: "var(--mc-bg)", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <Send size={24} color="#94A3B8" className="animate-pulse" />
                         </div>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: "#1E293B", margin: 0 }}>Request sent</p>
-                        <p style={{ fontSize: 12, color: "#94A3B8", margin: 0 }}>Waiting for @{activeChat.username} to accept…</p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>Request sent</p>
+                        <p style={{ fontSize: 12, color: "var(--mc-t6)", margin: 0 }}>Waiting for @{activeChat.username} to accept…</p>
                       </div>
                     ) : connectionStatus === "incoming" ? (
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
                         <div style={{ width: 64, height: 64, background: "#F0FDF4", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <UserPlus size={28} color="#22C55E" />
                         </div>
-                        <p style={{ fontSize: 15, fontWeight: 700, color: "#1E293B", margin: 0 }}>@{activeChat.username} wants to connect</p>
+                        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>@{activeChat.username} wants to connect</p>
                         <div style={{ display: "flex", gap: 10 }}>
                           <button onClick={handleAcceptRequest} style={{ padding: "10px 22px", borderRadius: 11, background: "#22C55E", color: "white", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 12px rgba(34,197,94,0.25)" }}>
                             <Check size={14} /> Accept
                           </button>
                           <button onClick={() => { supabase.from("connections").delete().eq("id", activeConnectionId); setConnectionStatus("none"); }}
-                            style={{ padding: "10px 22px", borderRadius: 11, background: "white", border: "1.5px solid #E2E8F0", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
+                            style={{ padding: "10px 22px", borderRadius: 11, background: "var(--mc-surface)", border: "1.5px solid var(--mc-border2)", color: "var(--mc-t4)", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
                             onMouseEnter={e => { e.currentTarget.style.background = "#FFF1F2"; e.currentTarget.style.borderColor = "#FECDD3"; e.currentTarget.style.color = "#EF4444"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "white"; e.currentTarget.style.borderColor = "#E2E8F0"; e.currentTarget.style.color = "#475569"; }}>
+                            onMouseLeave={e => { e.currentTarget.style.background = "var(--mc-surface)"; e.currentTarget.style.borderColor = "var(--mc-border2)"; e.currentTarget.style.color = "var(--mc-t4)"; }}>
                             Decline
                           </button>
                         </div>
@@ -1425,15 +1439,15 @@ export default function MessagesContent() {
               {showRightPanel && (
                 <div
                   className="right-ai-panel slide-up"
-                  style={{ display: "flex", flexDirection: "column", background: "white", borderLeft: "1px solid #F1F5F9", flexShrink: 0, overflowY: "auto", padding: "16px 14px" }}
+                  style={{ display: "flex", flexDirection: "column", background: "var(--mc-surface)", borderLeft: "1px solid var(--mc-border)", flexShrink: 0, overflowY: "auto", padding: "16px 14px" }}
                 >
                   <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-                    <button onClick={() => setShowRightPanel(false)} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: 6, cursor: "pointer", color: "#64748B" }}>
+                    <button onClick={() => setShowRightPanel(false)} style={{ background: "var(--mc-bg)", border: "1px solid var(--mc-border2)", borderRadius: 10, padding: 6, cursor: "pointer", color: "var(--mc-t5)" }}>
                       <X size={16} />
                     </button>
                   </div>
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px", background: "#F8FAFC", borderRadius: 14, border: "1px solid #F1F5F9", cursor: "pointer" }} onClick={() => setSelectedUserId(activeChat.id)}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px", background: "var(--mc-bg)", borderRadius: 14, border: "1px solid var(--mc-border)", cursor: "pointer" }} onClick={() => setSelectedUserId(activeChat.id)}>
                       <div style={{ position: "relative", width: 40, height: 40, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
                         {activeChat.avatar_url ? (
                           <Image src={activeChat.avatar_url} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
@@ -1444,37 +1458,37 @@ export default function MessagesContent() {
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", margin: 0, display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--mc-t1)", margin: 0, display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           @{activeChat.username}
                           {activeChat.is_verified && <BadgeCheck size={12} color="#6366F1" fill="#6366F1" stroke="white" strokeWidth={2} />}
                         </p>
-                        <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>{activeChat.status || "Member"}</p>
+                        <p style={{ fontSize: 11, color: "var(--mc-t6)", margin: 0 }}>{activeChat.status || "Member"}</p>
                       </div>
                       <ArrowRight size={13} color="#CBD5E1" />
                     </div>
                   </div>
                   <div style={{ marginBottom: 16 }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>Thread Info</p>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "var(--mc-t6)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>Thread Info</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {[
                         { label: "Status", value: <StatusBadge status={connectionStatus || "none"} /> },
-                        { label: "Messages", value: <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{messages.length}</span> },
+                        { label: "Messages", value: <span style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t3)" }}>{messages.length}</span> },
                         { label: "Online", value: <span style={{ fontSize: 12, fontWeight: 600, color: onlineUsers.has(activeChat.id) ? "#22C55E" : "#94A3B8" }}>{onlineUsers.has(activeChat.id) ? "Yes" : "No"}</span> },
                       ].map(row => (
-                        <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F8FAFC" }}>
-                          <span style={{ fontSize: 12, color: "#94A3B8" }}>{row.label}</span>
+                        <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--mc-border)" }}>
+                          <span style={{ fontSize: 12, color: "var(--mc-t6)" }}>{row.label}</span>
                           {row.value}
                         </div>
                       ))}
                     </div>
                   </div>
                   <div style={{ marginBottom: 16 }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>AI Summary</p>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "var(--mc-t6)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>AI Summary</p>
                     <AISummaryPanel messages={messages} activeChat={activeChat} />
                   </div>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                      <p style={{ fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>Tasks</p>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: "var(--mc-t6)", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>Tasks</p>
                       <button
                         onClick={addTask}
                         style={{ fontSize: 11, fontWeight: 600, color: "#6366F1", background: "none", border: "none", cursor: "pointer" }}>
@@ -1482,7 +1496,7 @@ export default function MessagesContent() {
                       </button>
                     </div>
                     {currentTasks.length === 0 && (
-                      <p style={{ fontSize: 12, color: "#CBD5E1", textAlign: "center", padding: "12px 0", margin: 0 }}>No tasks yet for this chat.</p>
+                      <p style={{ fontSize: 12, color: "var(--mc-t7)", textAlign: "center", padding: "12px 0", margin: 0 }}>No tasks yet for this chat.</p>
                     )}
                     {currentTasks.map(task => (
                       <TaskCard
@@ -1501,7 +1515,7 @@ export default function MessagesContent() {
 
               {/* ── Composer ── */}
               <div style={{
-                padding: "12px 16px 14px", background: "white", borderTop: "1px solid #F1F5F9", flexShrink: 0,
+                padding: "12px 16px 14px", background: "var(--mc-surface)", borderTop: "1px solid var(--mc-border)", flexShrink: 0,
                 opacity: connectionStatus === "accepted" ? 1 : 0.4,
                 pointerEvents: connectionStatus === "accepted" ? "auto" : "none",
                 transition: "opacity 0.2s",
@@ -1522,15 +1536,15 @@ export default function MessagesContent() {
 
                 {/* Image preview */}
                 {imagePreview && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#F8FAFC", border: "1px solid #F1F5F9", borderBottom: "none", borderRadius: replyingTo ? 0 : "12px 12px 0 0", padding: "8px 12px" }}>
-                    <div style={{ position: "relative", width: 48, height: 48, borderRadius: 8, overflow: "hidden", flexShrink: 0, border: "1px solid #E2E8F0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--mc-bg)", border: "1px solid var(--mc-border)", borderBottom: "none", borderRadius: replyingTo ? 0 : "12px 12px 0 0", padding: "8px 12px" }}>
+                    <div style={{ position: "relative", width: 48, height: 48, borderRadius: 8, overflow: "hidden", flexShrink: 0, border: "1px solid var(--mc-border2)" }}>
                       <Image src={imagePreview} alt="preview" fill sizes="48px" style={{ objectFit: "cover" }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 12, fontWeight: 600, color: "#334155", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{imageFile?.name}</p>
-                      <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>{imageFile ? `${(imageFile.size / 1024).toFixed(0)} KB` : ""}</p>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t3)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{imageFile?.name}</p>
+                      <p style={{ fontSize: 11, color: "var(--mc-t6)", margin: 0 }}>{imageFile ? `${(imageFile.size / 1024).toFixed(0)} KB` : ""}</p>
                     </div>
-                    <button onClick={() => { setImageFile(null); setImagePreview(null); if (imageInputRef.current) imageInputRef.current.value = ""; }} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", lineHeight: 0 }}>
+                    <button onClick={() => { setImageFile(null); setImagePreview(null); if (imageInputRef.current) imageInputRef.current.value = ""; }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--mc-t6)", lineHeight: 0 }}>
                       <X size={15} />
                     </button>
                   </div>
@@ -1547,7 +1561,7 @@ export default function MessagesContent() {
 
                 {/* Main composer box */}
                 <form onSubmit={handleSendMessage} className="composer-area" style={{
-                  background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: replyingTo || imagePreview ? "0 0 14px 14px" : 14,
+                  background: "var(--mc-bg)", border: "1.5px solid var(--mc-border2)", borderRadius: replyingTo || imagePreview ? "0 0 14px 14px" : 14,
                   borderTop: replyingTo || imagePreview ? "none" : undefined, transition: "border-color 0.15s, box-shadow 0.15s", overflow: "hidden",
                 }}>
                   <input type="file" ref={imageInputRef} onChange={handleFileChange} accept="image/*" style={{ display: "none" }} />
@@ -1557,7 +1571,7 @@ export default function MessagesContent() {
                       ref={textareaRef} value={inputValue} onChange={handleInputChange}
                       onKeyDown={handleKeyDown} onPaste={handlePaste}
                       placeholder="Type a message…" rows={1}
-                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 14, color: "#1E293B", lineHeight: 1.55, maxHeight: 120, fontFamily: "inherit", paddingTop: 2 }}
+                      style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 14, color: "var(--mc-t2)", lineHeight: 1.55, maxHeight: 120, fontFamily: "inherit", paddingTop: 2 }}
                     />
                     <button type="submit" disabled={!inputValue.trim() && !imageFile} style={{
                       width: 36, height: 36, borderRadius: 10, background: "#4F46E5", border: "none", cursor: "pointer",
@@ -1574,9 +1588,9 @@ export default function MessagesContent() {
                   {/* Action row */}
                   <div style={{ display: "flex", alignItems: "center", padding: "0 8px 8px", gap: 2 }}>
                     {[
-                      { icon: Paperclip, label: "Attach", title: "Attach image", action: () => imageInputRef.current?.click(), color: "#64748B", hoverBg: "#EEF2FF", hoverColor: "#4F46E5" },
-                      { icon: isSuggesting ? Loader2 : Sparkles, label: isSuggesting ? "Thinking…" : "AI Reply", title: "AI suggest reply", action: handleSuggestReply, color: "#64748B", hoverBg: "#F5F3FF", hoverColor: "#7C3AED", spin: isSuggesting },
-                      { icon: Code2, label: "Snippet", title: "Send code snippet", action: () => setShowSnippetPanel(p => !p), color: showSnippetPanel ? "#7C3AED" : "#64748B", hoverBg: "#F5F3FF", hoverColor: "#7C3AED" },
+                      { icon: Paperclip, label: "Attach", title: "Attach image", action: () => imageInputRef.current?.click(), color: "var(--mc-t5)", hoverBg: "#EEF2FF", hoverColor: "#4F46E5" },
+                      { icon: isSuggesting ? Loader2 : Sparkles, label: isSuggesting ? "Thinking…" : "AI Reply", title: "AI suggest reply", action: handleSuggestReply, color: "var(--mc-t5)", hoverBg: "#F5F3FF", hoverColor: "#7C3AED", spin: isSuggesting },
+                      { icon: Code2, label: "Snippet", title: "Send code snippet", action: () => setShowSnippetPanel(p => !p), color: showSnippetPanel ? "#7C3AED" : "var(--mc-t5)", hoverBg: "#F5F3FF", hoverColor: "#7C3AED" },
                     ].map(btn => (
                       <button key={btn.label} type="button" onClick={btn.action} title={btn.title}
                         style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 9px", borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", fontSize: 12, fontWeight: 500, color: btn.color, transition: "all 0.12s" }}
@@ -1590,19 +1604,19 @@ export default function MessagesContent() {
                     {inputValue.length > 0 && (
                       <span style={{ fontSize: 11, fontFamily: "monospace", color: inputValue.length > 500 ? "#EF4444" : "#CBD5E1", paddingRight: 4 }}>{inputValue.length}</span>
                     )}
-                    <span style={{ fontSize: 11, color: "#E2E8F0", fontWeight: 500 }}>⏎ send</span>
+                    <span style={{ fontSize: 11, color: "var(--mc-border2)", fontWeight: 500 }}>⏎ send</span>
                   </div>
                 </form>
 
                 {/* Snippet panel */}
                 {showSnippetPanel && (
-                  <div className="slide-up" style={{ marginTop: 8, border: "1.5px solid #E2E8F0", borderRadius: 14, overflow: "hidden" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "#F8FAFC", borderBottom: "1px solid #F1F5F9" }}>
+                  <div className="slide-up" style={{ marginTop: 8, border: "1.5px solid var(--mc-border2)", borderRadius: 14, overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "var(--mc-bg)", borderBottom: "1px solid var(--mc-border)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <Code2 size={13} color="#7C3AED" />
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>Code / Long Text</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--mc-t3)" }}>Code / Long Text</span>
                       </div>
-                      <select value={snippetLang} onChange={e => setSnippetLang(e.target.value)} style={{ background: "white", border: "1px solid #E2E8F0", borderRadius: 7, padding: "3px 8px", fontSize: 11, fontWeight: 700, color: "#334155", outline: "none" }}>
+                      <select value={snippetLang} onChange={e => setSnippetLang(e.target.value)} style={{ background: "var(--mc-surface)", border: "1px solid var(--mc-border2)", borderRadius: 7, padding: "3px 8px", fontSize: 11, fontWeight: 700, color: "var(--mc-t3)", outline: "none" }}>
                         {SNIPPET_LANGS.map(l => <option key={l} value={l}>{l}</option>)}
                       </select>
                     </div>
@@ -1610,11 +1624,11 @@ export default function MessagesContent() {
                       placeholder="// paste or type code here…"
                       style={{ width: "100%", background: "#0F172A", color: "#E2E8F0", fontSize: 12, fontFamily: "monospace", padding: "10px 14px", resize: "vertical", outline: "none", border: "none", minHeight: 120, maxHeight: 300, boxSizing: "border-box", display: "block" }}
                     />
-                    <div style={{ display: "flex", gap: 8, padding: 10, background: "#F8FAFC", borderTop: "1px solid #F1F5F9" }}>
+                    <div style={{ display: "flex", gap: 8, padding: 10, background: "var(--mc-bg)", borderTop: "1px solid var(--mc-border)" }}>
                       <button type="button" onClick={sendSnippet} disabled={!snippetCode.trim()} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 16px", borderRadius: 9, background: "#7C3AED", color: "white", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: !snippetCode.trim() ? 0.4 : 1, transition: "all 0.15s" }}>
                         <Send size={11} /> Send
                       </button>
-                      <button type="button" onClick={() => { setShowSnippetPanel(false); setSnippetCode(""); }} style={{ padding: "7px 14px", borderRadius: 9, background: "none", border: "none", color: "#64748B", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Cancel</button>
+                      <button type="button" onClick={() => { setShowSnippetPanel(false); setSnippetCode(""); }} style={{ padding: "7px 14px", borderRadius: 9, background: "none", border: "none", color: "var(--mc-t5)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Cancel</button>
                     </div>
                   </div>
                 )}
@@ -1622,12 +1636,12 @@ export default function MessagesContent() {
             </>
           ) : (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, textAlign: "center" }}>
-              <div style={{ width: 60, height: 60, background: "#F1F5F9", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 60, height: 60, background: "var(--mc-border)", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <MessageSquare size={28} color="#CBD5E1" />
               </div>
               <div>
-                <p style={{ fontSize: 15, fontWeight: 700, color: "#64748B", margin: "0 0 6px" }}>No conversation selected</p>
-                <p style={{ fontSize: 13, color: "#CBD5E1", margin: 0 }}>Choose a contact from the sidebar</p>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t5)", margin: "0 0 6px" }}>No conversation selected</p>
+                <p style={{ fontSize: 13, color: "var(--mc-t7)", margin: 0 }}>Choose a contact from the sidebar</p>
               </div>
             </div>
           )}
@@ -1640,7 +1654,7 @@ export default function MessagesContent() {
         <div className="slide-up" style={{
           position: "fixed", bottom: 24, right: 24, zIndex: 300,
           display: "flex", alignItems: "center", gap: 10,
-          background: "white", border: `1px solid ${toastType === "error" ? "#FECDD3" : "#BBF7D0"}`,
+          background: "var(--mc-surface)", border: `1px solid ${toastType === "error" ? "#FECDD3" : "#BBF7D0"}`,
           padding: "10px 16px", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,0,0,0.08)",
           maxWidth: 360,
         }}>
@@ -1648,7 +1662,7 @@ export default function MessagesContent() {
             ? <AlertTriangle size={15} color="#EF4444" style={{ flexShrink: 0 }} />
             : <Check size={15} color="#22C55E" style={{ flexShrink: 0 }} />}
           <span style={{ fontSize: 13, fontWeight: 600, color: toastType === "error" ? "#BE123C" : "#15803D", flex: 1 }}>{toastMessage}</span>
-          <button onClick={() => setToastMessage("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", lineHeight: 0 }}>
+          <button onClick={() => setToastMessage("")} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--mc-t6)", lineHeight: 0 }}>
             <X size={13} />
           </button>
         </div>

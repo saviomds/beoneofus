@@ -85,7 +85,7 @@ function readCollapsed() {
 }
 
 /* ── Main layout shell ──────────────────────────────────────────── */
-function DashLayoutContent({ children }) {
+function DashLayoutContent({ children, isAuthenticated }) {
   const [isLeftOpen, setIsLeftOpen]         = useState(false);
   const [isRightOpen, setIsRightOpen]       = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -201,7 +201,7 @@ function DashLayoutContent({ children }) {
           {!isMessages && (
             <div
               className="md:hidden w-full shrink-0"
-              style={{ height: MOB_NAV_CLEARANCE }}
+              style={{ height: !isAuthenticated ? 'calc(' + MOB_NAV_CLEARANCE + ' + 4rem)' : MOB_NAV_CLEARANCE }}
               aria-hidden="true"
             />
           )}
@@ -437,7 +437,7 @@ export default function DashLayout({ children }) {
           </div>
         </div>
       )}
-      <DashLayoutContent>{children}</DashLayoutContent>
+      <DashLayoutContent isAuthenticated={isAuthenticated}>{children}</DashLayoutContent>
     </DashboardProvider>
   );
 }

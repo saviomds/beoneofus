@@ -1129,7 +1129,7 @@ export default function LandingPage() {
             {/* Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[1.1] mb-6">
               <span className="block text-gray-900 dark:text-white">Where the world's</span>
-              <span className="block mt-1"><span className="gradient-text">{typeText || " "}</span><span className="cursor-blink text-blue-500 font-light">|</span></span>
+              <span className="block mt-1"><span className="gradient-text inline-block pb-1">{typeText || " "}</span><span className="cursor-blink text-blue-500 font-light">|</span></span>
               <span className="block text-gray-900 dark:text-white">actually meet.</span>
             </h1>
 

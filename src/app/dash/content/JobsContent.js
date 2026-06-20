@@ -166,6 +166,11 @@ function ApplyModal({ job, profile, onClose, onSubmit, submitting, submitted }) 
   const [linkedin, setLinkedin] = useState(profile?.website || "");
   const [portfolio, setPortfolio] = useState(profile?.github ? `https://github.com/${profile.github}` : "");
 
+  const handleClose = () => {
+    if (coverLetter.trim() && !window.confirm('Discard your application?')) return;
+    onClose();
+  };
+
   if (submitted) {
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
@@ -193,7 +198,7 @@ function ApplyModal({ job, profile, onClose, onSubmit, submitting, submitted }) 
             <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Apply to {job.company}</h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{job.title}</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">
+          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -242,7 +247,7 @@ function ApplyModal({ job, profile, onClose, onSubmit, submitting, submitted }) 
         </div>
 
         <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex gap-3">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+          <button onClick={handleClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
             Cancel
           </button>
           <button
@@ -527,7 +532,7 @@ export default function JobsContent() {
                 saved={savedJobs.includes(job.id)}
                 onSave={handleSave}
                 onView={setSelectedJob}
-                onApply={(j) => { setApplyingJob(j); setSubmitted(false); }}
+                onApply={(j) => { if (!currentUserId) { showToast("Sign in to apply for jobs", "error"); return; } setApplyingJob(j); setSubmitted(false); }}
               />
             </div>
           ))
@@ -540,7 +545,7 @@ export default function JobsContent() {
           job={selectedJob}
           saved={savedJobs.includes(selectedJob.id)}
           onSave={handleSave}
-          onApply={(j) => { setApplyingJob(j); setSubmitted(false); }}
+          onApply={(j) => { if (!currentUserId) { showToast("Sign in to apply for jobs", "error"); return; } setApplyingJob(j); setSubmitted(false); }}
           onClose={() => setSelectedJob(null)}
         />
       )}

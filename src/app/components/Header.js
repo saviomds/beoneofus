@@ -286,7 +286,7 @@ export default function Header({ setActiveTab }) {
         const item = flattenedResults[focusedIndex];
         setSearchQuery('');
         setIsMobileSearchOpen(false);
-        if (item._type === 'post') handleNavigate('feed');
+        if (item._type === 'post') router.push('/posts/' + item.id);
         else if (item._type === 'group') handleNavigate('groups');
         else if (item._type === 'user') setSelectedUserId(item.id);
         else if (item._type === 'course') handleNavigate('learn');
@@ -581,7 +581,7 @@ export default function Header({ setActiveTab }) {
                     <div className="p-2">
                       <div className="text-[9px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-[2px] px-2 mb-1.5 mt-1">{t('header.search_sections.discussions')}</div>
                   {searchResults.posts.map((post, i) => (
-                    <div key={`post-${post.id}`} onClick={() => { setSearchQuery(''); handleNavigate('feed'); }} onMouseEnter={() => setFocusedIndex(i)} className={`flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
+                    <div key={`post-${post.id}`} onClick={() => { setSearchQuery(''); router.push('/posts/' + post.id); }} onMouseEnter={() => setFocusedIndex(i)} className={`flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl cursor-pointer transition-all group ${focusedIndex === i ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
                           <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0 text-blue-500 dark:text-blue-400">
                             <MessageCircle size={15} />
                           </div>

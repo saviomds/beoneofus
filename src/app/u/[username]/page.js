@@ -10,7 +10,7 @@ import {
   ArrowLeft, Loader2, Copy, Check, MessageSquare,
   Heart, Code, ExternalLink, BadgeCheck, Zap, Star,
   Eye, EyeOff, Wifi, FolderGit2, Tag, Link2,
-  Crown, ShieldCheck, Sparkles
+  Crown, ShieldCheck, Sparkles, Flag, ThumbsUp, GraduationCap, Plus, X
 } from "lucide-react";
 import GitHubStats from "../../components/GitHubStats";
 import { supabase } from "../../supabaseClient";
@@ -68,6 +68,10 @@ export default function PublicProfilePage() {
   const [endorsing, setEndorsing] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("none");
   const [connectionProcessing, setConnectionProcessing] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,9 +112,9 @@ export default function PublicProfilePage() {
           .eq("is_public", true)
           .order("created_at", { ascending: false })
           .limit(6),
-        supabase.from("skill_endorsements")
+        supabase.from("endorsements")
           .select("skill, endorser_id")
-          .eq("endorsee_id", profileData.id),
+          .eq("endorsed_id", profileData.id),
       ]);
 
       setStats({
@@ -129,6 +133,15 @@ export default function PublicProfilePage() {
         });
         setEndorsements(map);
       }
+
+      // Fetch verified reviews
+      const { data: reviewsData } = await supabase
+        .from("reviews")
+        .select("id, rating, content, created_at, verified, reviewer_id, profiles!reviews_reviewer_id_fkey(username, full_name, avatar_url, is_verified)")
+        .eq("reviewee_id", profileData.id)
+        .order("created_at", { ascending: false })
+        .limit(6);
+      if (reviewsData) setReviews(reviewsData);
 
       if (certsRes.data && !certsRes.error) {
         setCertificates(certsRes.data);
@@ -199,15 +212,15 @@ export default function PublicProfilePage() {
     try {
       const alreadyEndorsed = endorsements[skill]?.includes(currentUserId);
       if (alreadyEndorsed) {
-        await supabase.from("skill_endorsements")
+        await supabase.from("endorsements")
           .delete()
-          .eq("endorsee_id", profile.id)
+          .eq("endorsed_id", profile.id)
           .eq("endorser_id", currentUserId)
           .eq("skill", skill);
         setEndorsements(prev => ({ ...prev, [skill]: prev[skill].filter(id => id !== currentUserId) }));
       } else {
-        await supabase.from("skill_endorsements")
-          .insert({ endorsee_id: profile.id, endorser_id: currentUserId, skill });
+        await supabase.from("endorsements")
+          .insert({ endorsed_id: profile.id, endorsee_id: profile.id, endorser_id: currentUserId, skill });
         setEndorsements(prev => ({ ...prev, [skill]: [...(prev[skill] || []), currentUserId] }));
       }
     } catch (err) {
@@ -217,6 +230,22 @@ export default function PublicProfilePage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId, profile?.id, endorsements]);
+
+  const handleReport = async () => {
+    if (!currentUserId || !profile || !reportReason.trim()) return;
+    setReportSubmitting(true);
+    try {
+      await supabase.from("reports").insert({
+        reporter_id: currentUserId,
+        target_id: profile.id,
+        target_type: "user",
+        reason: reportReason.trim(),
+      });
+      setShowReportModal(false);
+      setReportReason("");
+    } catch (_) {}
+    setReportSubmitting(false);
+  };
 
   /* ── loading ─────────────────────────────────────────── */
   if (loading) return (
@@ -401,6 +430,15 @@ export default function PublicProfilePage() {
               >
                 <Share2 size={15} />
               </button>
+              {currentUserId && !isOwnProfile && (
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  title="Report user"
+                  className="p-2 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-xl transition-all border border-gray-200 dark:border-gray-700 shadow-sm"
+                >
+                  <Flag size={15} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -539,124 +577,114 @@ export default function PublicProfilePage() {
           {/* ══ MAIN CONTENT GRID ══ */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 pb-16">
 
-            {/* ── LEFT: Certificates + Portfolio ── */}
-            {vis(profile, "certificates") && (
-              <div className="lg:col-span-3 space-y-6">
+            {/* ── LEFT: Experience + Education + Certificates + Portfolio ── */}
+            <div className="lg:col-span-3 space-y-6">
+
+              {/* Experience */}
+              {profile.experience?.length > 0 && (
                 <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
-                  {/* Section header */}
+                  <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30 flex items-center justify-center">
+                      <Briefcase size={15} className="text-blue-500" />
+                    </div>
+                    <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Experience</h2>
+                  </div>
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {profile.experience.map((exp, i) => (
+                      <div key={i} className="px-5 py-4">
+                        <p className="font-bold text-sm text-gray-900 dark:text-gray-100">{exp.title}</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-0.5">{exp.company}</p>
+                        {exp.period && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{exp.period}</p>}
+                        {exp.description && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5 leading-relaxed">{exp.description}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Education */}
+              {profile.education?.length > 0 && (
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                    <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/30 flex items-center justify-center">
+                      <GraduationCap size={15} className="text-purple-500" />
+                    </div>
+                    <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Education</h2>
+                  </div>
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {profile.education.map((edu, i) => (
+                      <div key={i} className="px-5 py-4">
+                        <p className="font-bold text-sm text-gray-900 dark:text-gray-100">{edu.degree}</p>
+                        <p className="text-xs text-purple-600 dark:text-purple-400 font-semibold mt-0.5">{edu.school}</p>
+                        {edu.period && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{edu.period}</p>}
+                        {edu.field && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{edu.field}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Reviews */}
+              {reviews.length > 0 && (
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
                   <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 flex items-center justify-center">
-                        <Award size={16} className="text-amber-500" />
+                        <Star size={15} className="text-amber-500" />
                       </div>
-                      <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Certificates</h2>
+                      <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Reviews</h2>
                     </div>
-                    <span className="text-xs font-black text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full">
-                      {certificates.length}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-black text-gray-700 dark:text-gray-300">
+                        {(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)}
+                      </span>
+                      <div className="flex gap-0.5">
+                        {[1,2,3,4,5].map(n => (
+                          <Star key={n} size={11} className={
+                            n <= Math.round(reviews.reduce((s,r) => s + r.rating, 0) / reviews.length)
+                              ? "fill-amber-400 text-amber-400" : "text-gray-300 dark:text-gray-600"
+                          } />
+                        ))}
+                      </div>
+                      <span className="text-xs text-gray-400">({reviews.length})</span>
+                    </div>
                   </div>
-
-                  {certificates.length === 0 ? (
-                    <div className="flex flex-col items-center py-12 text-center px-6">
-                      <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-3">
-                        <Award size={24} className="text-gray-300 dark:text-gray-600" />
-                      </div>
-                      <p className="text-sm font-medium text-gray-400 dark:text-gray-500">No certificates yet</p>
-                    </div>
-                  ) : (
-                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {certificates.map((cert) => (
-                        <Link
-                          key={cert.id}
-                          href={`/certificate/${cert.id}`}
-                          className="group relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 hover:border-amber-400 dark:hover:border-amber-500/60 transition-all hover:shadow-lg hover:shadow-amber-500/10 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800"
-                        >
-                          {/* Decorative top band */}
-                          <div className={`h-1.5 w-full bg-gradient-to-r ${levelColor(cert.courses?.level)}`} />
-                          <div className="p-4">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-sm shrink-0">
-                                <Award size={15} className="text-white" />
-                              </div>
-                              <ExternalLink size={13} className="text-gray-300 dark:text-gray-600 group-hover:text-amber-500 transition-colors mt-1 shrink-0" />
-                            </div>
-                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200 leading-snug mb-1 line-clamp-2">
-                              {cert.courses?.title ?? "Course Certificate"}
-                            </p>
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {reviews.filter(r => r.verified || r.content).map(r => (
+                      <div key={r.id} className="px-5 py-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden text-xs font-black text-gray-500">
+                            {r.profiles?.avatar_url
+                              ? <Image src={r.profiles.avatar_url} alt="" width={32} height={32} className="object-cover w-full h-full" />
+                              : (r.profiles?.username?.[0]?.toUpperCase() || "?")}
+                          </div>
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              {cert.courses?.category && (
-                                <span className="text-[9px] font-black uppercase tracking-widest text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-md border border-blue-100 dark:border-blue-800/30">
-                                  {cert.courses.category}
-                                </span>
+                              <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                                {r.profiles?.full_name || `@${r.profiles?.username}`}
+                              </span>
+                              {r.verified && (
+                                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 px-1.5 py-0.5 rounded-full uppercase tracking-wider">Verified</span>
                               )}
-                              {cert.courses?.level && (
-                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                                  {cert.courses.level}
-                                </span>
-                              )}
+                              <div className="flex gap-0.5 ml-auto">
+                                {[1,2,3,4,5].map(n => (
+                                  <Star key={n} size={10} className={n <= r.rating ? "fill-amber-400 text-amber-400" : "text-gray-300 dark:text-gray-600"} />
+                                ))}
+                              </div>
                             </div>
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2 font-medium">
-                              Issued {new Date(cert.issued_at).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" })}
-                            </p>
+                            {r.content && <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">{r.content}</p>}
+                            <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1">{timeAgo(r.created_at)}</p>
                           </div>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Portfolio Projects */}
-                {portfolioProjects.length > 0 && (
-                  <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/30 flex items-center justify-center">
-                          <FolderGit2 size={15} className="text-violet-500" />
                         </div>
-                        <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Portfolio</h2>
                       </div>
-                      <span className="text-xs font-black text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full">{portfolioProjects.length}</span>
-                    </div>
-                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {portfolioProjects.map(proj => (
-                        <div key={proj.id} className="group rounded-xl border border-gray-200 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700/50 transition-all bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 p-4 hover:shadow-md">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <p className="text-sm font-bold text-gray-800 dark:text-gray-200 leading-snug line-clamp-1">{proj.title}</p>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {proj.github_url && (
-                                <a href={proj.github_url} target="_blank" rel="noreferrer" className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-                                  <GitBranch size={12} />
-                                </a>
-                              )}
-                              {proj.live_url && (
-                                <a href={proj.live_url} target="_blank" rel="noreferrer" className="p-1 text-gray-400 hover:text-blue-500 transition-colors">
-                                  <ExternalLink size={12} />
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                          {proj.description && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 mb-2">{proj.description}</p>
-                          )}
-                          {proj.tags?.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {proj.tags.slice(0, 3).map(tag => (
-                                <span key={tag} className="text-[9px] font-black uppercase tracking-widest text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 rounded-md border border-violet-100 dark:border-violet-800/30">
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
             {/* ── RIGHT: Posts + Info ── */}
-            <div className={`space-y-6 ${vis(profile, "certificates") ? "lg:col-span-2" : "lg:col-span-5"}`}>
+            <div className="space-y-6 lg:col-span-2">
 
               {/* Recent Posts */}
               {vis(profile, "posts") && (
@@ -788,6 +816,46 @@ export default function PublicProfilePage() {
           )}
         </div>
       </main>
+
+      {/* ══ REPORT MODAL ══ */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-gray-900 dark:text-gray-100">Report User</h3>
+              <button onClick={() => setShowReportModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 transition-all">
+                <X size={16} />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Help us keep the community safe. Tell us what&apos;s wrong with @{profile?.username}.
+            </p>
+            <div className="space-y-2 mb-4">
+              {["Spam or fake account", "Harassment or bullying", "Inappropriate content", "Impersonation", "Other"].map(reason => (
+                <button
+                  key={reason}
+                  onClick={() => setReportReason(reason)}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${
+                    reportReason === reason
+                      ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300"
+                      : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleReport}
+              disabled={!reportReason || reportSubmitting}
+              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 active:scale-95 disabled:opacity-50 text-white font-black py-3 rounded-xl text-sm transition-all"
+            >
+              {reportSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Flag size={14} />}
+              {reportSubmitting ? "Submitting…" : "Submit Report"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

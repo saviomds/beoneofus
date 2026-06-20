@@ -342,8 +342,9 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
     {
       label: 'Explore',
       items: [
+        { id: 'discover',      icon: Compass,    label: 'Discover',      isNew: true            },
+        { id: 'jobs',          icon: Briefcase,  label: 'Jobs'                                  },
         { id: 'contents',      icon: Library,    label: 'Contents',      href: '/contents'      },
-        { id: 'opportunities', icon: TrendingUp, label: 'Opportunities', href: '/opportunities' },
       ],
     },
     {

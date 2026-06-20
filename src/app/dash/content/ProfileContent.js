@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Globe, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, ChevronLeft, Share2, ExternalLink, Award, Eye, EyeOff, Lock, Heart, MessageSquare, Code2, Video, Trash } from "lucide-react";
+import { Mail, Calendar, Activity, Edit3, Save, Loader2, Check, Shield, User, AlertTriangle, Camera, Users, X, MapPin, GitBranch, Globe, Link, Briefcase, Plus, Building, DollarSign, Trash2, FileText, ChevronRight, ChevronLeft, Share2, ExternalLink, Award, Eye, EyeOff, Lock, Heart, MessageSquare, Code2, Video, Trash, BookOpen } from "lucide-react";
 import Cropper from "react-easy-crop";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
@@ -47,9 +47,12 @@ export default function ProfileContent({ viewUserId }) {
   const [profile, setProfile] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({ username: "", status: "", location: "", github: "", website: "", work_status: "", full_name: "" });
+  const [formData, setFormData] = useState({ username: "", status: "", location: "", github: "", website: "", work_status: "", full_name: "", headline: "" });
   const [skillsInput, setSkillsInput] = useState("");
   const [editSkills, setEditSkills] = useState([]);
+  const [editExperience, setEditExperience] = useState([]);
+  const [editEducation, setEditEducation] = useState([]);
+  const [editCerts, setEditCerts] = useState([]);
   const [toast, setToast] = useState({ message: "", type: "success" });
   const [visibility, setVisibility] = useState({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, premium_badge: true });
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -203,9 +206,13 @@ export default function ProfileContent({ viewUserId }) {
             github: profileData.github || "",
             website: profileData.website || "",
             work_status: profileData.work_status || "",
-            full_name: profileData.full_name || ""
+            full_name: profileData.full_name || "",
+            headline: profileData.headline || "",
           });
           setEditSkills(Array.isArray(profileData.skills) ? profileData.skills : []);
+          setEditExperience(Array.isArray(profileData.experience) ? profileData.experience : []);
+          setEditEducation(Array.isArray(profileData.education) ? profileData.education : []);
+          setEditCerts(Array.isArray(profileData.certifications) ? profileData.certifications : []);
           if (profileData.profile_visibility) {
             setVisibility({ bio: true, location: true, github: true, website: true, work_status: true, certificates: true, posts: true, premium_badge: true, ...profileData.profile_visibility });
           }
@@ -317,12 +324,16 @@ export default function ProfileContent({ viewUserId }) {
         .update({
           username: cleanUsername,
           full_name: formData.full_name.trim(),
+          headline: formData.headline?.trim() || null,
           status: formData.status.trim(),
           location: formData.location.trim(),
           github: formData.github.trim(),
           website: formData.website.trim(),
           work_status: formData.work_status,
           skills: editSkills,
+          experience: editExperience,
+          education: editEducation,
+          certifications: editCerts,
           avatar_url: avatarUrl,
           banner_url: bannerUrl
         })
@@ -337,12 +348,16 @@ export default function ProfileContent({ viewUserId }) {
         ...profile,
         username: cleanUsername,
         full_name: formData.full_name.trim(),
+        headline: formData.headline?.trim() || null,
         status: formData.status.trim(),
         location: formData.location.trim(),
         github: formData.github.trim(),
         website: formData.website.trim(),
         work_status: formData.work_status,
         skills: editSkills,
+        experience: editExperience,
+        education: editEducation,
+        certifications: editCerts,
         avatar_url: avatarUrl,
         banner_url: bannerUrl
       });
@@ -1031,6 +1046,52 @@ export default function ProfileContent({ viewUserId }) {
                   </div>
                 </div>
               </div>
+
+              {/* ── Experience ── */}
+              <div className="mt-6 border-t border-gray-100 dark:border-gray-800 pt-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Experience</h4>
+                  <button type="button" onClick={() => setEditExperience(prev => [...prev, { title: "", company: "", period: "", description: "" }])} className="flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                    <Plus size={12} /> Add
+                  </button>
+                </div>
+                {editExperience.map((exp, i) => (
+                  <div key={i} className="mb-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input value={exp.title} onChange={e => { const n=[...editExperience]; n[i]={...n[i],title:e.target.value}; setEditExperience(n); }} placeholder="Job Title" className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <input value={exp.company} onChange={e => { const n=[...editExperience]; n[i]={...n[i],company:e.target.value}; setEditExperience(n); }} placeholder="Company" className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <input value={exp.period} onChange={e => { const n=[...editExperience]; n[i]={...n[i],period:e.target.value}; setEditExperience(n); }} placeholder="Period (e.g. Jan 2022 – Present)" className="w-full text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                    <div className="flex gap-2">
+                      <input value={exp.description} onChange={e => { const n=[...editExperience]; n[i]={...n[i],description:e.target.value}; setEditExperience(n); }} placeholder="Brief description" className="flex-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <button type="button" onClick={() => setEditExperience(prev => prev.filter((_,idx)=>idx!==i))} className="text-red-400 hover:text-red-600 transition-colors"><Trash size={14} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Education ── */}
+              <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Education</h4>
+                  <button type="button" onClick={() => setEditEducation(prev => [...prev, { degree: "", school: "", period: "", field: "" }])} className="flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                    <Plus size={12} /> Add
+                  </button>
+                </div>
+                {editEducation.map((edu, i) => (
+                  <div key={i} className="mb-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input value={edu.degree} onChange={e => { const n=[...editEducation]; n[i]={...n[i],degree:e.target.value}; setEditEducation(n); }} placeholder="Degree / Certificate" className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <input value={edu.school} onChange={e => { const n=[...editEducation]; n[i]={...n[i],school:e.target.value}; setEditEducation(n); }} placeholder="School / Institution" className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div className="flex gap-2">
+                      <input value={edu.period} onChange={e => { const n=[...editEducation]; n[i]={...n[i],period:e.target.value}; setEditEducation(n); }} placeholder="Year / Period" className="flex-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <button type="button" onClick={() => setEditEducation(prev => prev.filter((_,idx)=>idx!==i))} className="text-red-400 hover:text-red-600 transition-colors"><Trash size={14} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
             </div>
           ) : (
             <div className="animate-in fade-in duration-500 pt-4">
@@ -1090,9 +1151,50 @@ export default function ProfileContent({ viewUserId }) {
                   </div>
                 </div>
               )}
+              {/* Experience */}
+              {Array.isArray(profile?.experience) && profile.experience.length > 0 && (
+                <div className="mt-5 border-t border-gray-100 dark:border-gray-800 pt-4">
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Experience</p>
+                  <div className="space-y-3">
+                    {profile.experience.map((exp, i) => (
+                      <div key={i} className="flex gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                          <Briefcase size={14} className="text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{exp.title}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{exp.company}{exp.period ? ` · ${exp.period}` : ''}</p>
+                          {exp.description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{exp.description}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Education */}
+              {Array.isArray(profile?.education) && profile.education.length > 0 && (
+                <div className="mt-5 border-t border-gray-100 dark:border-gray-800 pt-4">
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Education</p>
+                  <div className="space-y-3">
+                    {profile.education.map((edu, i) => (
+                      <div key={i} className="flex gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                          <BookOpen size={14} className="text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{edu.degree}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{edu.school}{edu.period ? ` · ${edu.period}` : ''}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center gap-3 mt-4 text-sm text-gray-600 dark:text-gray-400 font-medium">
                 <div className="relative">
-                  <span 
+                  <span
                     onClick={handleViewFollowers}
                     className={`flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-800 transition-colors ${followersCount > 0 ? 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800/50 hover:text-blue-600 dark:hover:text-blue-400' : 'cursor-default'}`}
                   >

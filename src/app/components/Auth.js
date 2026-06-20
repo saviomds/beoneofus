@@ -145,11 +145,16 @@ export default function AuthForm() {
     }
   }, []);
 
-  // ── Pre-fill referral code from ?ref= URL param ────────────────────────────
+  // ── Pre-fill referral code + mode from URL params ─────────────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const ref = new URLSearchParams(window.location.search).get('ref');
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
     if (ref) setReferralCode(ref.toUpperCase());
+    const mode = params.get('mode');
+    if (mode === 'sign-up') setView('sign-up');
+    else if (mode === 'sign-in') setView('sign-in');
+    else if (mode === 'forgot-password') setView('forgot-password');
   }, []);
 
   // ── Auth bootstrap: check existing session + handle recovery URL ───────────
@@ -244,10 +249,14 @@ export default function AuthForm() {
           const pendingUsername =
             localStorage.getItem('pending_username') || session.user.user_metadata?.username;
 
+          const isNewUser = Date.now() - new Date(session.user.created_at).getTime() < 120_000;
+
           const redirect = () => {
             const params = new URLSearchParams(window.location.search);
             const next = params.get('next');
-            window.location.href = next?.startsWith('/') ? next : '/dash';
+            if (next?.startsWith('/')) { window.location.href = next; return; }
+            // Send new users to onboarding, returning users to dashboard
+            window.location.href = isNewUser ? '/onboarding' : '/dash';
           };
 
           if (pendingUsername) {

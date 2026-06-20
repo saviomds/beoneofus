@@ -53,8 +53,12 @@ const contentMap = {
   contracts:     dynamic(() => import('../content/ContractsContent'),      { loading: () => <TabSkeleton /> }),
   search:        dynamic(() => import('../content/SearchContent'),         { loading: () => <TabSkeleton /> }),
   resume:        dynamic(() => import('../content/ResumeContent'),         { loading: () => <TabSkeleton /> }),
-  jobs:          dynamic(() => import('../content/ServicesContent'),       { loading: () => <TabSkeleton /> }),
+  jobs:          dynamic(() => import('../content/JobsContent'),           { loading: () => <TabSkeleton /> }),
   'company-pages': dynamic(() => import('../content/PagesContent'),       { loading: () => <TabSkeleton /> }),
+  discuss:       dynamic(() => import('../content/MessagesContent'),       { loading: () => <TabSkeleton /> }),
+  discover:      dynamic(() => import('../content/DiscoverContent'),       { loading: () => <TabSkeleton /> }),
+  apply:         dynamic(() => import('../content/JobsContent'),           { loading: () => <TabSkeleton /> }),
+  admin:         dynamic(() => import('../content/AdminContent'),          { loading: () => <TabSkeleton /> }),
 };
 
 export default function DashSection() {

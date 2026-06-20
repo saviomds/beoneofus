@@ -318,7 +318,7 @@ function JobFormModal({ job = null, onClose, onSave }) {
             {imgPreview ? (
               <div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 group">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imgPreview} alt="Job cover" className="w-full h-36 object-cover" />
+                <img src={imgPreview} alt="Job cover" className="w-full aspect-[3/1] object-cover object-center" />
                 {imgUploading && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2 text-white text-xs font-semibold">
                     <Loader2 size={14} className="animate-spin" /> Uploading…
@@ -478,9 +478,9 @@ function JobDetailDrawer({ job, onEdit, onClose }) {
         <div className="p-5 space-y-5 flex-1">
           {/* Cover image */}
           {job.image_url && (
-            <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 -mx-0">
+            <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={job.image_url} alt={job.title} className="w-full h-32 object-cover" />
+              <img src={job.image_url} alt={job.title} className="w-full aspect-[3/1] object-cover object-center" />
             </div>
           )}
 
@@ -603,13 +603,22 @@ function MobileJobCard({ job, onView, onEdit, onDuplicate, onDelete }) {
   return (
     <div
       onClick={() => onView(job)}
-      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 hover:shadow-md hover:shadow-purple-500/5 hover:border-purple-200 dark:hover:border-purple-800/50 transition-all duration-200 cursor-pointer"
+      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden hover:shadow-md hover:shadow-purple-500/5 hover:border-purple-200 dark:hover:border-purple-800/50 transition-all duration-200 cursor-pointer"
     >
+      {/* Banner image */}
+      {job.image_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={job.image_url} alt={job.title} className="w-full aspect-[4/1] object-cover object-center" />
+      )}
+
+      <div className="p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white font-black text-sm shrink-0 shadow-md shadow-purple-500/20">
-            {(job.department || job.company || "JB").substring(0, 2).toUpperCase()}
-          </div>
+          {!job.image_url && (
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white font-black text-sm shrink-0 shadow-md shadow-purple-500/20">
+              {(job.department || job.company || "JB").substring(0, 2).toUpperCase()}
+            </div>
+          )}
           <div className="min-w-0">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">{job.title}</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{job.company}{job.department ? ` · ${job.department}` : ""}</p>
@@ -634,6 +643,7 @@ function MobileJobCard({ job, onView, onEdit, onDuplicate, onDelete }) {
         <span>Rejected <b className="text-red-500">{job.rejected}</b></span>
         <span className="ml-auto">{timeAgo(job.created_at)}</span>
       </div>
+      </div>{/* /p-4 */}
     </div>
   );
 }
@@ -968,10 +978,20 @@ export default function JobsContent() {
                       <input type="checkbox" checked={selectedIds.includes(job.id)} onChange={() => toggleOne(job.id)} onClick={(e) => e.stopPropagation()} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-purple-600" />
                     </td>
                     {/* Title */}
-                    <td className="px-4 py-3.5 min-w-[180px]">
-                      <button onClick={() => setViewingJob(job)} className="text-left group/t">
-                        <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 group-hover/t:text-purple-600 dark:group-hover/t:text-purple-400 transition-colors line-clamp-1">{job.title}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">{job.company} · {job.type}</p>
+                    <td className="px-4 py-3.5 min-w-[200px]">
+                      <button onClick={() => setViewingJob(job)} className="text-left group/t flex items-center gap-2.5">
+                        {job.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={job.image_url} alt="" className="w-9 h-9 rounded-lg object-cover object-center shrink-0 border border-gray-100 dark:border-gray-800" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white font-black text-xs shrink-0">
+                            {(job.company || "JB").substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 group-hover/t:text-purple-600 dark:group-hover/t:text-purple-400 transition-colors line-clamp-1">{job.title}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">{job.company} · {job.type}</p>
+                        </div>
                       </button>
                     </td>
                     {/* Department */}

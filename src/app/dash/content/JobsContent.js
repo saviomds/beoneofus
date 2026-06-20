@@ -5,7 +5,7 @@ import {
   Briefcase, Search, Plus, MoreVertical, Eye, Edit2, Copy,
   Trash2, X, MapPin, Calendar, Users, Loader2, CheckCircle2,
   Upload, Tag, DollarSign, SlidersHorizontal, FileText,
-  Send, Zap, XCircle, Building2, Link, RefreshCw,
+  Send, Zap, XCircle, Building2, RefreshCw, ImagePlus,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 
@@ -132,6 +132,8 @@ function inpCls(err) {
 
 function JobFormModal({ job = null, onClose, onSave }) {
   const isEdit = !!job;
+  const fileInputRef = useRef(null);
+
   const [form, setForm] = useState({
     title:            job?.title || "",
     company:          job?.company || "",
@@ -143,11 +145,13 @@ function JobFormModal({ job = null, onClose, onSave }) {
     requirements:     (job?.requirements || []).join("\n"),
     skills:           (job?.skills || job?.tags || []).join(", "),
     experience_level: job?.experience_level || "Mid-level",
-    external_url:     job?.external_url || "",
     status:           job?.status || "draft",
+    image_url:        job?.image_url || "",
   });
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [saving, setSaving]           = useState(false);
+  const [errors, setErrors]           = useState({});
+  const [imgUploading, setImgUploading] = useState(false);
+  const [imgPreview, setImgPreview]   = useState(job?.image_url || "");
 
   // Single stable handler — no new function references on each render
   const handleChange = useCallback((e) => {
@@ -155,12 +159,72 @@ function JobFormModal({ job = null, onClose, onSave }) {
     setForm((f) => ({ ...f, [name]: value }));
   }, []);
 
+  // Upload image directly to Supabase Storage
+  const handleImagePick = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const MAX_MB = 5;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, image: `Image must be under ${MAX_MB} MB` }));
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setErrors((prev) => ({ ...prev, image: "Only image files are allowed" }));
+      return;
+    }
+
+    setErrors((prev) => ({ ...prev, image: undefined }));
+    setImgUploading(true);
+
+    // Local preview immediately
+    const localUrl = URL.createObjectURL(file);
+    setImgPreview(localUrl);
+
+    try {
+      const ext  = file.name.split(".").pop();
+      const path = `job-images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("job-images")
+        .upload(path, file, { contentType: file.type, cacheControl: "3600", upsert: false });
+
+      if (upErr) {
+        // Bucket may not exist yet — try creating it then retry
+        if (upErr.message?.includes("not found") || upErr.message?.includes("does not exist")) {
+          await supabase.storage.createBucket("job-images", { public: true, fileSizeLimit: 10485760 });
+          const { error: retryErr } = await supabase.storage
+            .from("job-images")
+            .upload(path, file, { contentType: file.type, cacheControl: "3600", upsert: false });
+          if (retryErr) throw retryErr;
+        } else {
+          throw upErr;
+        }
+      }
+
+      const { data: { publicUrl } } = supabase.storage.from("job-images").getPublicUrl(path);
+      setImgPreview(publicUrl);
+      setForm((f) => ({ ...f, image_url: publicUrl }));
+    } catch (err) {
+      setErrors((prev) => ({ ...prev, image: err.message || "Upload failed" }));
+      setImgPreview(job?.image_url || "");
+    } finally {
+      setImgUploading(false);
+    }
+  }, [job?.image_url]);
+
+  const removeImage = useCallback(() => {
+    setImgPreview("");
+    setForm((f) => ({ ...f, image_url: "" }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
   const validate = useCallback(() => {
     const e = {};
     if (!form.title.trim())    e.title    = "Required";
     if (!form.company.trim())  e.company  = "Required";
     if (!form.location.trim()) e.location = "Required";
-    setErrors(e);
+    setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
   }, [form.title, form.company, form.location]);
 
@@ -179,19 +243,14 @@ function JobFormModal({ job = null, onClose, onSave }) {
         requirements:     form.requirements.split("\n").map((r) => r.trim()).filter(Boolean),
         skills:           form.skills.split(",").map((s) => s.trim()).filter(Boolean),
         experience_level: form.experience_level,
-        external_url:     form.external_url,
+        image_url:        form.image_url || null,
         status:           publishNow ? "active" : form.status,
       };
 
       const res = await fetch(
         isEdit ? `/api/jobs/manage?id=${job.id}` : "/api/jobs/manage",
-        {
-          method: isEdit ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
+        { method: isEdit ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
       );
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
 
@@ -204,7 +263,7 @@ function JobFormModal({ job = null, onClose, onSave }) {
       });
       onClose();
     } catch (err) {
-      setErrors({ _api: err.message });
+      setErrors((prev) => ({ ...prev, _api: err.message }));
     } finally {
       setSaving(false);
     }
@@ -239,6 +298,60 @@ function JobFormModal({ job = null, onClose, onSave }) {
               <XCircle size={14} className="shrink-0" /> {errors._api}
             </div>
           )}
+
+          {/* ── Cover image upload ── */}
+          <div>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Job / Company Image</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImagePick}
+            />
+            {imgPreview ? (
+              <div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={imgPreview} alt="Job cover" className="w-full h-36 object-cover" />
+                {imgUploading && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2 text-white text-xs font-semibold">
+                    <Loader2 size={14} className="animate-spin" /> Uploading…
+                  </div>
+                )}
+                {!imgUploading && (
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-1.5 bg-white text-gray-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <ImagePlus size={12} /> Change
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="flex items-center gap-1.5 bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-red-500 transition-colors"
+                    >
+                      <Trash2 size={12} /> Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={imgUploading}
+                className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 rounded-xl p-6 flex flex-col items-center gap-2 text-gray-400 hover:text-purple-500 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {imgUploading
+                  ? <><Loader2 size={20} className="animate-spin" /><span className="text-xs">Uploading…</span></>
+                  : <><ImagePlus size={20} /><span className="text-sm font-medium">Click to upload cover image</span><span className="text-xs">PNG, JPG, WEBP · max 5 MB</span></>
+                }
+              </button>
+            )}
+            {errors.image && <p className="text-xs text-red-500 mt-1">{errors.image}</p>}
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
@@ -297,24 +410,12 @@ function JobFormModal({ job = null, onClose, onSave }) {
             </div>
           </FormField>
 
-          <FormField label="External Application URL">
-            <div className="relative">
-              <Link size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <input name="external_url" type="url" value={form.external_url} onChange={handleChange} placeholder="https://careers.yourcompany.com/job/…" className={`${inpCls()} pl-8`} />
-            </div>
-          </FormField>
-
           <FormField label="Initial Status">
             <select name="status" value={form.status} onChange={handleChange} className={inpCls()}>
               <option value="draft">Draft — save privately</option>
               <option value="active">Active — visible to all</option>
             </select>
           </FormField>
-
-          <div className="border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-3 text-sm text-gray-400 hover:border-purple-300 dark:hover:border-purple-800 transition-colors cursor-pointer">
-            <Upload size={16} className="shrink-0" />
-            <span>Attach files <span className="text-xs">(job spec, company logo)</span></span>
-          </div>
         </div>
 
         {/* Footer */}
@@ -324,14 +425,14 @@ function JobFormModal({ job = null, onClose, onSave }) {
           </button>
           <button
             onClick={() => handleSave(false)}
-            disabled={saving}
+            disabled={saving || imgUploading}
             className="px-4 py-2.5 rounded-xl border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 text-sm font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-100 transition-all disabled:opacity-50"
           >
             Save Draft
           </button>
           <button
             onClick={() => handleSave(true)}
-            disabled={saving}
+            disabled={saving || imgUploading}
             className="flex-1 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-purple-500/20"
           >
             {saving
@@ -369,6 +470,14 @@ function JobDetailDrawer({ job, onEdit, onClose }) {
         </div>
 
         <div className="p-5 space-y-5 flex-1">
+          {/* Cover image */}
+          {job.image_url && (
+            <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 -mx-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={job.image_url} alt={job.title} className="w-full h-32 object-cover" />
+            </div>
+          )}
+
           {/* Hero */}
           <div className="flex items-start gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white font-black text-base shrink-0 shadow-md shadow-purple-500/25">
@@ -446,17 +555,6 @@ function JobDetailDrawer({ job, onEdit, onClose }) {
             </div>
           )}
 
-          {/* External link */}
-          {job.external_url && (
-            <a
-              href={job.external_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400 hover:underline"
-            >
-              <Link size={13} /> View external listing
-            </a>
-          )}
         </div>
       </div>
     </div>

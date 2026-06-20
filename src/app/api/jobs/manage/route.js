@@ -32,7 +32,7 @@ export async function GET() {
     const [jobsRes, appsRes, profileRes] = await Promise.all([
       supabase
         .from('jobs')
-        .select('id, title, company, department, status, type, location, salary, tags, description, requirements, experience_level, views, featured, external_url, created_at')
+        .select('id, title, company, department, status, type, location, salary, tags, description, requirements, experience_level, views, featured, image_url, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
       supabase
@@ -78,7 +78,7 @@ export async function POST(request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { title, company, department, type, location, salary, description, requirements, skills, status, experience_level, external_url, featured } = body;
+    const { title, company, department, type, location, salary, description, requirements, skills, status, experience_level, image_url, featured } = body;
 
     if (!title?.trim())   return NextResponse.json({ error: 'title is required' },   { status: 400 });
     if (!company?.trim()) return NextResponse.json({ error: 'company is required' }, { status: 400 });
@@ -97,7 +97,7 @@ export async function POST(request) {
         tags:             Array.isArray(skills) ? skills : [],
         status:           status || 'draft',
         experience_level: experience_level || 'Mid-level',
-        external_url:     external_url?.trim() || null,
+        image_url:        image_url?.trim() || null,
         featured:         featured || false,
         user_id:          user.id,
         views:            0,
@@ -138,7 +138,7 @@ export async function PATCH(request) {
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
     const body = await request.json();
-    const { title, company, department, type, location, salary, description, requirements, skills, status, experience_level, external_url, featured } = body;
+    const { title, company, department, type, location, salary, description, requirements, skills, status, experience_level, image_url, featured } = body;
 
     const updates = {};
     if (title        !== undefined) updates.title            = title.trim();
@@ -152,7 +152,7 @@ export async function PATCH(request) {
     if (skills       !== undefined) updates.tags             = Array.isArray(skills) ? skills : [];
     if (status       !== undefined) updates.status           = status;
     if (experience_level !== undefined) updates.experience_level = experience_level;
-    if (external_url !== undefined) updates.external_url    = external_url?.trim() || null;
+    if (image_url    !== undefined) updates.image_url        = image_url?.trim() || null;
     if (featured     !== undefined) updates.featured         = featured;
 
     const { data, error } = await supabase

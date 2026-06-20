@@ -159,16 +159,31 @@ function JobFormModal({ job = null, onClose, onSave }) {
     setForm((f) => ({ ...f, [name]: value }));
   }, []);
 
+  // Compress image to max 900px wide, 0.82 JPEG quality → typically < 150 KB
+  const compressImage = useCallback((file) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const blobUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(blobUrl);
+        const MAX_W = 900;
+        const scale = img.width > MAX_W ? MAX_W / img.width : 1;
+        const canvas = document.createElement("canvas");
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.82);
+      };
+      img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(file); };
+      img.src = blobUrl;
+    });
+  }, []);
+
   // Upload image directly to Supabase Storage
   const handleImagePick = useCallback(async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const MAX_MB = 5;
-    if (file.size > MAX_MB * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, image: `Image must be under ${MAX_MB} MB` }));
-      return;
-    }
     if (!file.type.startsWith("image/")) {
       setErrors((prev) => ({ ...prev, image: "Only image files are allowed" }));
       return;
@@ -177,25 +192,25 @@ function JobFormModal({ job = null, onClose, onSave }) {
     setErrors((prev) => ({ ...prev, image: undefined }));
     setImgUploading(true);
 
-    // Local preview immediately
+    // Show local preview instantly while compressing + uploading in background
     const localUrl = URL.createObjectURL(file);
     setImgPreview(localUrl);
 
     try {
-      const ext  = file.name.split(".").pop();
-      const path = `job-images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      // Compress before upload — turns a 5 MB photo into ~100–200 KB
+      const compressed = await compressImage(file);
+      const path = `job-images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
 
       const { error: upErr } = await supabase.storage
         .from("job-images")
-        .upload(path, file, { contentType: file.type, cacheControl: "3600", upsert: false });
+        .upload(path, compressed, { contentType: "image/jpeg", cacheControl: "3600", upsert: false });
 
       if (upErr) {
-        // Bucket may not exist yet — try creating it then retry
         if (upErr.message?.includes("not found") || upErr.message?.includes("does not exist")) {
           await supabase.storage.createBucket("job-images", { public: true, fileSizeLimit: 10485760 });
           const { error: retryErr } = await supabase.storage
             .from("job-images")
-            .upload(path, file, { contentType: file.type, cacheControl: "3600", upsert: false });
+            .upload(path, compressed, { contentType: "image/jpeg", cacheControl: "3600", upsert: false });
           if (retryErr) throw retryErr;
         } else {
           throw upErr;
@@ -209,9 +224,10 @@ function JobFormModal({ job = null, onClose, onSave }) {
       setErrors((prev) => ({ ...prev, image: err.message || "Upload failed" }));
       setImgPreview(job?.image_url || "");
     } finally {
+      URL.revokeObjectURL(localUrl);
       setImgUploading(false);
     }
-  }, [job?.image_url]);
+  }, [job?.image_url, compressImage]);
 
   const removeImage = useCallback(() => {
     setImgPreview("");

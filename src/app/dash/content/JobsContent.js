@@ -205,17 +205,7 @@ function JobFormModal({ job = null, onClose, onSave }) {
         .from("job-images")
         .upload(path, compressed, { contentType: "image/jpeg", cacheControl: "3600", upsert: false });
 
-      if (upErr) {
-        if (upErr.message?.includes("not found") || upErr.message?.includes("does not exist")) {
-          await supabase.storage.createBucket("job-images", { public: true, fileSizeLimit: 10485760 });
-          const { error: retryErr } = await supabase.storage
-            .from("job-images")
-            .upload(path, compressed, { contentType: "image/jpeg", cacheControl: "3600", upsert: false });
-          if (retryErr) throw retryErr;
-        } else {
-          throw upErr;
-        }
-      }
+      if (upErr) throw upErr;
 
       const { data: { publicUrl } } = supabase.storage.from("job-images").getPublicUrl(path);
       setImgPreview(publicUrl);

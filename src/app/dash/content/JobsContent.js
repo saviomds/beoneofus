@@ -370,12 +370,12 @@ export default function JobsContent() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       setCurrentUserId(session.user.id);
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("username, full_name, status, skills, avatar_url, github, website")
-        .eq("id", session.user.id)
-        .single();
-      if (prof) setProfile(prof);
+      const [profRes, appsRes] = await Promise.all([
+        supabase.from("profiles").select("username, full_name, status, skills, avatar_url, github, website").eq("id", session.user.id).single(),
+        fetch("/api/jobs").then(r => r.ok ? r.json() : { applications: [] }).catch(() => ({ applications: [] })),
+      ]);
+      if (profRes.data) setProfile(profRes.data);
+      if (appsRes.applications?.length) setAppliedJobs(appsRes.applications.map(a => a.job_id));
     };
     load();
   }, []);
@@ -393,10 +393,21 @@ export default function JobsContent() {
 
   const handleApply = async (job, { coverLetter, portfolio }) => {
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setAppliedJobs((prev) => [...prev, job.id]);
-    setSubmitting(false);
-    setSubmitted(true);
+    try {
+      const res = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: job.id, cover_letter: coverLetter, portfolio_url: portfolio }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to submit");
+      setAppliedJobs((prev) => [...prev, job.id]);
+      setSubmitted(true);
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const filtered = jobs.filter((j) => {

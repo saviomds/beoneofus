@@ -10,7 +10,7 @@ import {
   ArrowLeft, Loader2, Copy, Check, MessageSquare,
   Heart, Code, ExternalLink, BadgeCheck, Zap, Star,
   Eye, EyeOff, Wifi, FolderGit2, Tag, Link2,
-  Crown, ShieldCheck, Sparkles, Flag, ThumbsUp, GraduationCap, Plus, X
+  Crown, ShieldCheck, Sparkles, Flag, GraduationCap, X
 } from "lucide-react";
 import GitHubStats from "../../components/GitHubStats";
 import { supabase } from "../../supabaseClient";
@@ -134,14 +134,22 @@ export default function PublicProfilePage() {
         setEndorsements(map);
       }
 
-      // Fetch verified reviews
+      // Fetch reviews (two-step: reviews FK → auth.users, not profiles)
       const { data: reviewsData } = await supabase
         .from("reviews")
-        .select("id, rating, content, created_at, verified, reviewer_id, profiles!reviews_reviewer_id_fkey(username, full_name, avatar_url, is_verified)")
+        .select("id, rating, content, created_at, verified, reviewer_id")
         .eq("reviewee_id", profileData.id)
         .order("created_at", { ascending: false })
         .limit(6);
-      if (reviewsData) setReviews(reviewsData);
+      if (reviewsData?.length) {
+        const ids = reviewsData.map(r => r.reviewer_id);
+        const { data: rProfiles } = await supabase
+          .from("profiles")
+          .select("id, username, full_name, avatar_url, is_verified")
+          .in("id", ids);
+        const pm = Object.fromEntries((rProfiles || []).map(p => [p.id, p]));
+        setReviews(reviewsData.map(r => ({ ...r, profiles: pm[r.reviewer_id] || null })));
+      }
 
       if (certsRes.data && !certsRes.error) {
         setCertificates(certsRes.data);
@@ -237,8 +245,8 @@ export default function PublicProfilePage() {
     try {
       await supabase.from("reports").insert({
         reporter_id: currentUserId,
-        target_id: profile.id,
-        target_type: "user",
+        content_id: profile.id,
+        content_type: "user",
         reason: reportReason.trim(),
       });
       setShowReportModal(false);

@@ -1,0 +1,507 @@
+You are a senior full-stack product engineer. I want you to upgrade my platform beoneofus.work into a complete Mauritius Talent Ecosystem platform.
+
+Do not create a simple mockup. Build production-ready features with professional UX/UI, real database logic, authentication, APIs, and Supabase integration.
+
+GOAL:
+Transform beoneofus.work from a job platform into a complete ecosystem where:
+Students → learn
+Developers → grow
+Companies → hire
+Founders → build
+Mentors → guide
+
+TECH REQUIREMENTS:
+- Use my existing codebase and architecture
+- Keep my current branding, colors, fonts, and design system
+- Create modern premium SaaS-level UI/UX
+- Fully responsive (desktop/tablet/mobile)
+- Use Supabase:
+  - Auth
+  - Database
+  - Storage
+  - Realtime subscriptions
+  - Row Level Security
+- All features must work with real data
+- No fake/static data
+
+IMPLEMENT THESE FEATURES:
+
+================================
+1. AI CAREER SKILL GAP FINDER
+================================
+
+Create:
+Career AI Scanner
+
+User can upload:
+- CV
+- profile information
+- projects
+- experience
+- skills
+
+Create AI analysis flow:
+
+Input:
+User profile
+
+Output:
+
+Current Level:
+Example:
+Frontend Developer ⭐⭐⭐
+
+Detected Skills:
+React
+JavaScript
+Node.js
+
+Missing Skills:
+❌ Cloud
+❌ Cybersecurity
+❌ System Design
+
+Generate:
+
+Personal learning roadmap:
+
+Month 1:
+Learn:
+- skill A
+Build:
+- project
+
+Month 2:
+Learn:
+- skill B
+
+Month 3:
+Prepare:
+- job applications
+
+Store results in Supabase.
+
+Create:
+career_analysis table
+
+with:
+id
+user_id
+skills_found
+missing_skills
+roadmap
+created_at
+
+
+================================
+2. AI MENTOR MARKETPLACE
+================================
+
+Create mentor system.
+
+Mentor profiles:
+
+Fields:
+- name
+- expertise
+- experience
+- availability
+- hourly rate
+- skills
+- bio
+- portfolio
+
+Users can search mentors.
+
+Add AI mentor matching:
+
+User enters:
+
+"I need help becoming a senior React developer"
+
+AI recommends:
+
+Best mentors based on:
+- skills
+- goals
+- experience
+
+Create:
+
+mentors table
+
+mentor_sessions table
+
+Features:
+- booking
+- messaging
+- reviews
+- ratings
+
+
+================================
+3. PROJECT MARKETPLACE
+================================
+
+Create:
+
+Build Together section
+
+Users can create projects:
+
+Example:
+
+Project:
+Restaurant Mobile App
+
+Need:
+- React Native developer
+- UI Designer
+- Marketing
+
+Users can join.
+
+Database:
+
+projects
+
+project_members
+
+project_requests
+
+
+Features:
+
+- Apply
+- Accept members
+- Team chat
+- Project status
+- Portfolio showcase
+
+
+================================
+4. MAURITIUS TECH COMMUNITY HUB
+================================
+
+Create:
+
+Tech Mauritius page
+
+Sections:
+
+Events
+Hackathons
+Discussions
+Startup ideas
+Tech news
+
+Features:
+
+Create posts
+Comments
+Likes
+Follow users
+
+Database:
+
+posts
+comments
+likes
+events
+
+
+================================
+5. AI JOB MATCHING SYSTEM
+================================
+
+Upgrade job system.
+
+Do not use only keyword search.
+
+Create AI matching:
+
+Compare:
+
+Job requirements
+
+against:
+
+User:
+- skills
+- projects
+- experience
+- verified tests
+
+Return:
+
+Match score:
+
+Example:
+
+85% Match
+
+Explain:
+
+Why matched:
+✓ React experience
+✓ Node skills
+
+Missing:
+❌ AWS
+
+
+Database:
+
+job_matches
+
+
+================================
+6. FREELANCE + REMOTE WORK HUB
+================================
+
+Create:
+
+Remote Opportunities
+
+Categories:
+
+Africa
+Europe
+Asia
+Worldwide
+
+
+Features:
+
+Freelance jobs
+Remote jobs
+Contracts
+Applications
+Portfolio links
+
+
+Tables:
+
+freelance_jobs
+applications
+
+
+================================
+7. COMPANY TECH PROFILE
+================================
+
+Create company pages.
+
+Company profile:
+
+Name
+
+Technology stack:
+React
+AWS
+Python
+
+Hiring roles
+
+Culture
+
+Remote policy
+
+Projects
+
+Reviews
+
+
+Database:
+
+companies
+
+company_profiles
+
+
+================================
+8. AI INTERVIEW SIMULATOR
+================================
+
+Create:
+
+AI Interview Practice
+
+User selects:
+
+Frontend Developer
+
+AI generates questions.
+
+Example:
+
+Explain React lifecycle.
+
+Evaluate:
+
+Technical score:
+Communication score:
+
+Feedback:
+
+Improve:
+- architecture
+- state management
+
+
+Save:
+
+interviews table
+
+
+================================
+9. STARTUP BUILDER
+================================
+
+Create:
+
+Startup Match
+
+Users post:
+
+"I have a startup idea"
+
+Need:
+
+Developer
+Designer
+Co-founder
+Marketing
+
+
+Features:
+
+Match people
+
+Chat
+
+Team creation
+
+
+Database:
+
+startup_ideas
+
+startup_matches
+
+
+================================
+10. VERIFIED SKILLS SYSTEM
+================================
+
+Create skill verification.
+
+Users take tests:
+
+React test
+JavaScript test
+Python test
+
+
+Results:
+
+Score:
+92%
+
+Badge:
+Verified
+
+
+Display badge on profile.
+
+
+Database:
+
+skill_tests
+
+certifications
+
+
+================================
+UX/UI REQUIREMENTS
+================================
+
+Create premium SaaS design.
+
+Use:
+
+- modern cards
+- dashboards
+- smooth animations
+- empty states
+- loading states
+- error handling
+- skeleton loaders
+- notifications
+
+
+Create:
+
+User dashboard:
+
+Overview
+Career AI
+Mentors
+Projects
+Jobs
+Community
+Interviews
+Skills
+
+
+Create:
+
+Company dashboard:
+
+Jobs
+Applicants
+Talent search
+Analytics
+
+
+Mobile:
+
+Bottom navigation
+
+No overlapping elements.
+
+================================
+
+SECURITY
+================================
+
+Implement:
+
+Supabase RLS policies
+
+Users can only edit:
+their own profiles
+their own projects
+their own applications
+
+Protect private data.
+
+
+================================
+
+FINAL REQUIREMENT
+================================
+
+After implementation:
+
+Run full testing:
+
+- Authentication test
+- Database test
+- Mobile responsiveness test
+- Feature flow test
+- Error handling test
+
+Fix all bugs.
+
+The final result should feel like a professional product ready for launch, not a prototype.

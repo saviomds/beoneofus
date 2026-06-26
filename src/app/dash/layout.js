@@ -357,16 +357,51 @@ function hasCachedSession() {
   } catch { return false; }
 }
 
+/* ── Session-expired sign-in card ─────────────────────────────── */
+function SessionExpiredCard({ onDismiss }) {
+  const router = useRouter();
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl p-6 w-full max-w-sm animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+        <div className="w-11 h-11 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center mb-4">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-amber-500"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+        </div>
+        <h3 className="text-base font-black text-gray-900 dark:text-gray-100 mb-1 tracking-tight">Session expired</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
+          You were signed out automatically. Sign in again to continue.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => router.push('/auth')}
+            className="flex-1 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-sm shadow-blue-500/20"
+          >
+            Sign in
+          </button>
+          <button
+            onClick={onDismiss}
+            className="px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 font-bold text-sm transition-all"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashLayout({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showPickUsername, setShowPickUsername] = useState(false);
+  const [showSessionExpired, setShowSessionExpired] = useState(false);
   const router = useRouter();
+  const wasAuthenticatedRef = useRef(false);
 
   useLayoutEffect(() => {
     if (hasCachedSession()) {
       setIsLoading(false);
       setIsAuthenticated(true);
+      wasAuthenticatedRef.current = true;
     }
     if (typeof window !== 'undefined' && localStorage.getItem('pick_username') === '1') {
       setShowPickUsername(true);
@@ -377,13 +412,25 @@ export default function DashLayout({ children }) {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
+      if (session) wasAuthenticatedRef.current = true;
       setIsLoading(false);
     };
 
     checkAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
+      const authed = !!session;
+      setIsAuthenticated(authed);
+      if (!authed && wasAuthenticatedRef.current) {
+        // Session just ended while user was logged in → show expired card
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          if (!session) setShowSessionExpired(true);
+        } else {
+          setShowSessionExpired(true);
+        }
+        wasAuthenticatedRef.current = false;
+      }
+      if (authed) wasAuthenticatedRef.current = true;
     });
 
     return () => authListener.subscription?.unsubscribe();
@@ -419,7 +466,10 @@ export default function DashLayout({ children }) {
       {showPickUsername && (
         <PickUsernameModal onDone={() => setShowPickUsername(false)} />
       )}
-      {!isAuthenticated && (
+      {showSessionExpired && (
+        <SessionExpiredCard onDismiss={() => setShowSessionExpired(false)} />
+      )}
+      {!isAuthenticated && !showSessionExpired && (
         <div
           className="fixed left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-md"
           style={{ bottom: 'calc(env(safe-area-inset-bottom,0px) + 5.75rem)' }}

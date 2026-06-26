@@ -1,12 +1,10 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-import { notFound } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useEffect, useState, Suspense } from 'react';
 import { supabase } from '../../supabaseClient';
 import NewPost from '../../components/NewPost';
-import { useRouter } from 'next/navigation';
 
 const TabSkeleton = () => (
   <div className="w-full h-full animate-pulse space-y-6">
@@ -54,6 +52,14 @@ const contentMap = {
   search:        dynamic(() => import('../content/SearchContent'),         { loading: () => <TabSkeleton /> }),
   resume:        dynamic(() => import('../content/ResumeContent'),         { loading: () => <TabSkeleton /> }),
   jobs:          dynamic(() => import('../content/JobsContent'),           { loading: () => <TabSkeleton /> }),
+  mentors:       dynamic(() => import('../content/MentorsContent'),         { loading: () => <TabSkeleton /> }),
+  'career-ai':   dynamic(() => import('../content/CareerAIContent'),       { loading: () => <TabSkeleton /> }),
+  projects:      dynamic(() => import('../content/ProjectMarketplaceContent'), { loading: () => <TabSkeleton /> }),
+  freelance:     dynamic(() => import('../content/FreelanceContent'),      { loading: () => <TabSkeleton /> }),
+  companies:     dynamic(() => import('../content/CompaniesContent'),      { loading: () => <TabSkeleton /> }),
+  skills:        dynamic(() => import('../content/SkillsContent'),         { loading: () => <TabSkeleton /> }),
+  startups:      dynamic(() => import('../content/StartupsContent'),       { loading: () => <TabSkeleton /> }),
+  'tech-hub':    dynamic(() => import('../content/TechHubContent'),        { loading: () => <TabSkeleton /> }),
   'company-pages': dynamic(() => import('../content/PagesContent'),       { loading: () => <TabSkeleton /> }),
   discuss:       dynamic(() => import('../content/MessagesContent'),       { loading: () => <TabSkeleton /> }),
   discover:      dynamic(() => import('../content/DiscoverContent'),       { loading: () => <TabSkeleton /> }),
@@ -88,7 +94,12 @@ export default function DashSection() {
   }, []);
 
   const Content = contentMap[section];
-  if (!Content) notFound();
+  // Redirect unknown sections to home instead of calling notFound()
+  // in a client component (can cause hydration issues)
+  useEffect(() => {
+    if (section && !contentMap[section]) router.replace('/dash/home');
+  }, [section]);
+  if (!Content) return <TabSkeleton />;
 
   /* messages takes full height without page-level padding */
   const isFullHeight = section === 'messages' || section === 'ai';

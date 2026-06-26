@@ -32,7 +32,13 @@
       "PowerShell(Get-ChildItem *)",
       "PowerShell(\\(Get-Content \"C:\\\\Users\\\\Dell\\\\AppData\\\\Roaming\\\\com.vercel.cli\\\\Data\\\\auth.json\" | ConvertFrom-Json\\).token)",
       "Bash(grep -v \"^commit\\\\|^Author\\\\|^Date\\\\|^$\\\\|^    \")",
-      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('apiKey','NOT_FOUND'\\)[:15] if d.get\\('apiKey'\\) else 'NOT_IN_SETTINGS'\\)\")"
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('apiKey','NOT_FOUND'\\)[:15] if d.get\\('apiKey'\\) else 'NOT_IN_SETTINGS'\\)\")",
+      "Bash(npx playwright *)",
+      "Bash(xargs -I {} sh -c 'wc -l \"src/app/components/{}\" 2>/dev/null || true')",
+      "Bash(find C:\\\\\\\\Users\\\\\\\\Dell\\\\\\\\beoneofus -name \"*.env*\" -type f)",
+      "Bash(grep *)",
+      "Bash(find C:\\\\\\\\Users\\\\\\\\Dell\\\\\\\\beoneofus *)",
+      "Bash(find \"C:\\\\\\\\Users\\\\\\\\Dell\\\\\\\\beoneofus\" -name \"*.sql\" -type f)"
     ]
   }
 }

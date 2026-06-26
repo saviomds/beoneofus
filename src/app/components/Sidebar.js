@@ -5,7 +5,7 @@ import {
   Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
   GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
   ShoppingBag, User, BookOpen, Sparkles, Zap, Compass, BarChart2, Briefcase,
-  Map, Trophy, ScrollText, Building2, Library, TrendingUp,
+  Map, Trophy, ScrollText, Building2, Library, TrendingUp, Globe,
   Search, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -342,18 +342,27 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
     {
       label: 'Explore',
       items: [
-        { id: 'discover',      icon: Compass,    label: 'Discover',      isNew: true            },
-        { id: 'jobs',          icon: Briefcase,  label: 'Jobs'                                  },
-        { id: 'contents',      icon: Library,    label: 'Contents',      href: '/contents'      },
+        { id: 'discover',   icon: Compass,   label: 'Discover', isNew: true       },
+        { id: 'career-ai',  icon: TrendingUp,label: 'Career AI', isNew: true       },
+        { id: 'jobs',       icon: Briefcase, label: 'Jobs'                         },
+        { id: 'freelance',  icon: Globe,     label: 'Remote Work', isNew: true     },
+        { id: 'companies',  icon: Building2, label: 'Companies'                    },
+        { id: 'contents',   icon: Library,   label: 'Contents', href: '/contents'  },
       ],
     },
     {
       label: t('nav.groups.tools'),
       items: [
-        { id: 'ai',          icon: Sparkles,  label: t('nav.items.ai'), isNew: true },
-        { id: 'analytics',   icon: BarChart2, label: 'Analytics',       isNew: true },
-        { id: 'leaderboard', icon: Trophy,    label: 'Leaderboard',     isNew: true },
-        { id: 'resume',      icon: FileText,  label: 'Resume Builder',  isNew: true },
+        { id: 'ai',          icon: Sparkles,      label: t('nav.items.ai'), isNew: true },
+        { id: 'mentors',     icon: Users,         label: 'Mentors',         isNew: true },
+        { id: 'projects',    icon: Map,           label: 'Build Together',  isNew: true },
+        { id: 'startups',    icon: Zap,           label: 'Startup Match',   isNew: true },
+        { id: 'tech-hub',    icon: Newspaper,     label: 'Tech Mauritius',  isNew: true },
+        { id: 'skills',      icon: CheckCheck,    label: 'Verified Skills', isNew: true },
+        { id: 'interview',   icon: HeartHandshake,label: 'Interview AI',    isNew: true },
+        { id: 'analytics',   icon: BarChart2,     label: 'Analytics',       isNew: true },
+        { id: 'leaderboard', icon: Trophy,        label: 'Leaderboard',     isNew: true },
+        { id: 'resume',      icon: FileText,      label: 'Resume Builder',  isNew: true },
       ],
     },
     {

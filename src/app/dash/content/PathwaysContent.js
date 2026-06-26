@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  Map, CheckCircle2, Circle, ChevronRight, Loader2, Zap,
+import { Map, CheckCircle2, Circle, ChevronRight, Loader2, Zap,
   Target, BookOpen, Code2, Briefcase, Camera, PenTool, TrendingUp,
   Award, Lock, Unlock, RefreshCw, X, AlertCircle, Check,
   Star, ChevronDown, ChevronUp, Sparkles, ArrowRight,

@@ -6,6 +6,7 @@ const PUBLIC_API_ROUTES = [
   '/api/invite',
   '/api/auth/',
   '/api/otp-email',
+  '/api/public-settings',
 ];
 
 // Page routes that require a valid session (redirect to /auth if missing)
@@ -43,24 +44,33 @@ function addSecurityHeaders(response) {
 // base64-encoded session JSON. Reading only .0 breaks for larger sessions
 // (e.g. GitHub OAuth with full user metadata that spans multiple chunks).
 function getSupabaseToken(request) {
-  const chunks = request.cookies.getAll()
+  const all = request.cookies.getAll();
+
+  // Session may be stored either CHUNKED (sb-<ref>-auth-token.0/.1 — large
+  // sessions like OAuth) or as a SINGLE cookie (sb-<ref>-auth-token — small
+  // sessions like email/password). Handle both, else small sessions look
+  // logged-out to the proxy and get bounced from protected pages.
+  const chunks = all
     .filter(c => /^sb-.+-auth-token\.\d+$/.test(c.name))
-    .sort((a, b) => {
-      const ai = parseInt(a.name.split('.').pop(), 10);
-      const bi = parseInt(b.name.split('.').pop(), 10);
-      return ai - bi;
-    });
-  if (chunks.length === 0) return null;
+    .sort((a, b) => parseInt(a.name.split('.').pop(), 10) - parseInt(b.name.split('.').pop(), 10));
+
+  let raw;
+  if (chunks.length > 0) {
+    raw = chunks.map(c => (c.value.startsWith('base64-') ? c.value.slice(7) : c.value)).join('');
+  } else {
+    const single = all.find(c => /^sb-.+-auth-token$/.test(c.name));
+    if (!single) return null;
+    raw = single.value.startsWith('base64-') ? single.value.slice(7) : single.value;
+  }
+
+  // Value is base64-encoded session JSON (possibly URL-safe); fall back to
+  // treating it as raw JSON if it isn't base64.
   try {
-    const combined = chunks
-      .map(c => c.value.startsWith('base64-') ? c.value.slice(7) : c.value)
-      .join('');
-    // Normalise to standard base64 in case any chunk used URL-safe chars
-    const b64 = combined.replace(/-/g, '+').replace(/_/g, '/');
+    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
     const data = JSON.parse(Buffer.from(b64, 'base64').toString('utf-8'));
     return data?.access_token ?? null;
   } catch {
-    return null;
+    try { return JSON.parse(raw)?.access_token ?? null; } catch { return null; }
   }
 }
 

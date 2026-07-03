@@ -69,11 +69,11 @@ const FEATURES = [
     label: "Jobs & Services",
     title: "Find Your Next Role or Client",
     desc: "Browse job listings across industries and post freelance services. One-click apply with your beoneofus profile — no CV upload needed.",
-    color: "from-blue-500/10 to-blue-600/5",
-    border: "border-blue-200 dark:border-blue-800/40",
-    icon_bg: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+    color: "from-brand-500/10 to-brand-600/5",
+    border: "border-brand-200 dark:border-brand-800/40",
+    icon_bg: "bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400",
     tag: "All Industries",
-    tag_color: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700/40",
+    tag_color: "bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 border-brand-200 dark:border-brand-700/40",
     size: "sm",
   },
   {
@@ -127,7 +127,7 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: "01", icon: <UserPlus size={20} />, title: "Build Your Profile", desc: "Add your skills, field, and experience. Get verified. Your profile is your global professional identity.", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-600" },
+  { n: "01", icon: <UserPlus size={20} />, title: "Build Your Profile", desc: "Add your skills, field, and experience. Get verified. Your profile is your global professional identity.", color: "text-brand-600 dark:text-brand-400", bg: "bg-brand-600" },
   { n: "02", icon: <Handshake size={20} />, title: "Connect & Collaborate", desc: "Send connection requests to people in your field. Once accepted, a secure private channel opens.", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-600" },
   { n: "03", icon: <Briefcase size={20} />, title: "Find Work or Clients", desc: "Browse jobs and freelance opportunities across all industries. Post your own services and get hired globally.", color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-600" },
   { n: "04", icon: <Bot size={20} />, title: "Grow With AI", desc: "Get personalised skill suggestions, career coaching, and learning paths — tailored to your profession and goals.", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500" },
@@ -138,7 +138,7 @@ const COMMUNITIES = [
   { name: "Design & Creativity", icon: <Sparkles size={20} />, desc: "UI/UX designers, brand strategists, illustrators, and visual creators from every industry.", color: "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400" },
   { name: "Marketing & Growth", icon: <TrendingUp size={20} />, desc: "Performance marketers, content creators, SEO specialists, and growth hackers.", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" },
   { name: "Tech & Engineering", icon: <Code2 size={20} />, desc: "Software engineers, data scientists, DevOps, and all things technology.", color: "bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400" },
-  { name: "Finance & Business", icon: <Briefcase size={20} />, desc: "Finance professionals, analysts, consultants, and business strategists.", color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" },
+  { name: "Finance & Business", icon: <Briefcase size={20} />, desc: "Finance professionals, analysts, consultants, and business strategists.", color: "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400" },
   { name: "Education & Research", icon: <GraduationCap size={20} />, desc: "Academics, educators, researchers, and lifelong learners sharing knowledge globally.", color: "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400" },
 ];
 
@@ -327,14 +327,14 @@ export default function LandingPage() {
   const getNotifIcon = (type) => {
     switch (type) {
       case 'like': return <Heart size={9} className="text-rose-500" />;
-      case 'comment': return <MessageSquare size={9} className="text-blue-500" />;
+      case 'comment': return <MessageSquare size={9} className="text-brand-500" />;
       case 'message': return <MessageSquare size={9} className="text-violet-500" />;
       case 'handshake': return <Check size={9} className="text-emerald-500" />;
       case 'blocked': return <ShieldAlert size={9} className="text-orange-500" />;
       case 'unblocked': return <ShieldCheck size={9} className="text-green-500" />;
       case 'group_invite':
       case 'group_join_request': return <Users size={9} className="text-purple-500" />;
-      case 'connection_request': return <UserPlus size={9} className="text-blue-500" />;
+      case 'connection_request': return <UserPlus size={9} className="text-brand-500" />;
       case 'partnership_update': return <Handshake size={9} className="text-indigo-500" />;
       default: return <Zap size={9} className="text-amber-500" />;
     }
@@ -499,12 +499,12 @@ export default function LandingPage() {
                   onMouseEnter={() => setActiveDropdown(item.id)}
                   className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
                     activeDropdown === item.id
-                      ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10"
+                      ? "text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
                   }`}
                 >
                   {item.label}
-                  <ChevronDown size={13} className={`transition-transform duration-200 ${activeDropdown === item.id ? "rotate-180 text-blue-500" : ""}`} />
+                  <ChevronDown size={13} className={`transition-transform duration-200 ${activeDropdown === item.id ? "rotate-180 text-brand-500" : ""}`} />
                 </button>
               ))}
               <Link href="/docs" onMouseEnter={() => setActiveDropdown(null)} className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-all">
@@ -523,10 +523,10 @@ export default function LandingPage() {
                     <button
                       onClick={() => { setNotifOpen(o => !o); setProfileOpen(false); setActiveDropdown(null); }}
                       onMouseEnter={() => setActiveDropdown(null)}
-                      className="relative text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-2 transition-colors shrink-0"
+                      className="relative text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 p-2 transition-colors shrink-0"
                       aria-label="Notifications"
                     >
-                      <Bell size={19} className={notifOpen ? 'text-blue-600 dark:text-blue-400' : ''} />
+                      <Bell size={19} className={notifOpen ? 'text-brand-600 dark:text-brand-400' : ''} />
                       {unreadCount > 0 && (
                         <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-black flex items-center justify-center rounded-full border-2 border-white dark:border-[#080c12] leading-none">
                           {unreadCount > 99 ? '99+' : unreadCount}
@@ -539,14 +539,14 @@ export default function LandingPage() {
                         {/* Panel header */}
                         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                           <div className="flex items-center gap-2">
-                            <Bell size={14} className="text-blue-600 dark:text-blue-400" />
+                            <Bell size={14} className="text-brand-600 dark:text-brand-400" />
                             <span className="font-black text-sm text-gray-900 dark:text-gray-100">Notifications</span>
                             {unreadCount > 0 && (
                               <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">{unreadCount}</span>
                             )}
                           </div>
                           {unreadCount > 0 && (
-                            <button onClick={handleMarkAllRead} className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                            <button onClick={handleMarkAllRead} className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline">
                               Mark all read
                             </button>
                           )}
@@ -577,7 +577,7 @@ export default function LandingPage() {
                                 key={notif.id}
                                 href={getNotifDest(notif)}
                                 onClick={() => handleNotifClick(notif)}
-                                className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-50 dark:border-gray-800/40 last:border-0 ${notif.unread ? 'bg-blue-50/60 dark:bg-blue-950/30' : ''}`}
+                                className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-50 dark:border-gray-800/40 last:border-0 ${notif.unread ? 'bg-brand-50/60 dark:bg-brand-950/30' : ''}`}
                               >
                                 {/* Avatar + type icon */}
                                 <div className="relative shrink-0 mt-0.5">
@@ -598,7 +598,7 @@ export default function LandingPage() {
                                   <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{formatNotifTime(notif.created_at)}</p>
                                 </div>
 
-                                {notif.unread && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 shrink-0" />}
+                                {notif.unread && <span className="w-1.5 h-1.5 bg-brand-500 rounded-full mt-2 shrink-0" />}
                               </Link>
                             ))
                           )}
@@ -609,7 +609,7 @@ export default function LandingPage() {
                           <Link
                             href="/dash/notifications"
                             onClick={() => setNotifOpen(false)}
-                            className="flex items-center justify-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline py-0.5"
+                            className="flex items-center justify-center gap-1 text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline py-0.5"
                           >
                             View all notifications <ChevronRight size={12} />
                           </Link>
@@ -624,7 +624,7 @@ export default function LandingPage() {
                       onMouseEnter={() => setActiveDropdown(null)}
                       className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 pl-1.5 pr-3 py-1.5 rounded-full transition-all shrink-0"
                     >
-                      <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shadow-sm shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shadow-sm shrink-0">
                         {getAvatarSrc(profile, session) && !navAvatarError
                           ? <img src={getAvatarSrc(profile, session)} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
                           : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
@@ -638,9 +638,9 @@ export default function LandingPage() {
                     {profileOpen && (
                       <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/50 overflow-hidden z-[60]">
                         {/* Profile header */}
-                        <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-br from-blue-50/80 to-white dark:from-blue-950/20 dark:to-gray-950">
+                        <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-br from-brand-50/80 to-white dark:from-brand-950/20 dark:to-gray-950">
                           <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-full bg-blue-600 text-white flex items-center justify-center text-base font-black overflow-hidden shadow-sm shrink-0 ring-2 ring-blue-100 dark:ring-blue-900/50">
+                            <div className="w-11 h-11 rounded-full bg-brand-600 text-white flex items-center justify-center text-base font-black overflow-hidden shadow-sm shrink-0 ring-2 ring-brand-100 dark:ring-brand-900/50">
                               {getAvatarSrc(profile, session) && !navAvatarError
                                 ? <img src={getAvatarSrc(profile, session)} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
                                 : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
@@ -653,7 +653,7 @@ export default function LandingPage() {
                                 <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">@{profile.username}</p>
                               )}
                               {(profile?.role || profile?.company) && (
-                                <p className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold truncate mt-0.5">
+                                <p className="text-[11px] text-brand-600 dark:text-brand-400 font-semibold truncate mt-0.5">
                                   {[profile.role, profile.company].filter(Boolean).join(' · ')}
                                 </p>
                               )}
@@ -702,12 +702,12 @@ export default function LandingPage() {
                 </>
               ) : (
                 <>
-                  <Link href="/auth" onMouseEnter={() => setActiveDropdown(null)} className="hidden sm:block px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                  <Link href="/auth" onMouseEnter={() => setActiveDropdown(null)} className="hidden sm:block px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                     Sign in
                   </Link>
                   <Link href="/auth"
                     onMouseEnter={() => setActiveDropdown(null)}
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105">
+                    className="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 hover:scale-105">
                     Get Started
                   </Link>
                 </>
@@ -715,7 +715,7 @@ export default function LandingPage() {
 
               {/* Mobile toggle */}
               <button
-                className="lg:hidden p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="lg:hidden p-2 text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
                 onClick={() => { setMobileMenuOpen(!mobileMenuOpen); setMobileSection(null); }}>
                 {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
@@ -748,14 +748,14 @@ export default function LandingPage() {
                             className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                               color === "violet" ? "bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400" :
-                              color === "blue"   ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" :
+                              color === "blue"   ? "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400" :
                               color === "emerald"? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" :
                               color === "amber"  ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" :
                               color === "indigo" ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" :
                                                    "bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400"
                             }`}>{icon}</div>
                             <div className="min-w-0">
-                              <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</p>
+                              <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</p>
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
                             </div>
                           </Link>
@@ -774,20 +774,20 @@ export default function LandingPage() {
                           { icon: <Crown size={15} />,       label: "Premium",        href: "/dash/premium"       },
                         ].map(({ icon, label, href }) => (
                           <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all font-medium">
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all font-medium">
                             <span className="shrink-0">{icon}</span>{label}
                           </Link>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-gradient-to-br from-blue-600 to-violet-600 rounded-2xl p-6 text-white flex flex-col justify-between">
+                    <div className="bg-gradient-to-br from-brand-600 to-violet-600 rounded-2xl p-6 text-white flex flex-col justify-between">
                       <div>
                         <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center mb-4"><Sparkles size={18} /></div>
                         <p className="font-black text-lg leading-tight mb-2">Go Premium</p>
                         <p className="text-sm text-white/80 leading-relaxed">Unlock mentorship booking, advanced AI, verified badge, and priority network access.</p>
                       </div>
                       <Link href="/dash/premium" onClick={() => setActiveDropdown(null)}
-                        className="mt-5 flex items-center gap-2 bg-white text-blue-600 font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-blue-50 transition-colors self-start">
+                        className="mt-5 flex items-center gap-2 bg-white text-brand-600 font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-brand-50 transition-colors self-start">
                         Upgrade now <ArrowRight size={14} />
                       </Link>
                     </div>
@@ -809,9 +809,9 @@ export default function LandingPage() {
                           { label: "Education & Research", href: "/community/education-research"  },
                         ].map(({ label, href }) => (
                           <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                            className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-blue-200 dark:hover:border-blue-500/20 hover:bg-blue-50/40 dark:hover:bg-blue-500/5 transition-all group">
-                            <div className="w-2 h-2 rounded-full bg-blue-500/60 shrink-0" />
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</span>
+                            className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-brand-200 dark:hover:border-brand-500/20 hover:bg-brand-50/40 dark:hover:bg-brand-500/5 transition-all group">
+                            <div className="w-2 h-2 rounded-full bg-brand-500/60 shrink-0" />
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</span>
                           </Link>
                         ))}
                       </div>
@@ -827,7 +827,7 @@ export default function LandingPage() {
                           { icon: <Star size={15} />,         label: "Sponsors",         href: "/sponsors" },
                         ].map(({ icon, label, href }) => (
                           <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all font-medium">
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all font-medium">
                             <span className="shrink-0">{icon}</span>{label}
                           </Link>
                         ))}
@@ -849,9 +849,9 @@ export default function LandingPage() {
                       ].map(({ icon, label, desc, href }) => (
                         <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                           className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/5 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 shrink-0 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-500 transition-colors">{icon}</div>
+                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/5 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 shrink-0 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 group-hover:text-brand-500 transition-colors">{icon}</div>
                           <div>
-                            <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</p>
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{desc}</p>
                           </div>
                         </Link>
@@ -867,9 +867,9 @@ export default function LandingPage() {
                       ].map(({ icon, label, desc, href }) => (
                         <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                           className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/5 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 shrink-0 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:text-blue-500 transition-colors">{icon}</div>
+                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/5 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 shrink-0 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 group-hover:text-brand-500 transition-colors">{icon}</div>
                           <div>
-                            <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</p>
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{desc}</p>
                           </div>
                         </Link>
@@ -886,7 +886,7 @@ export default function LandingPage() {
                         { icon: <Users size={14} />,         label: "Community Forum",         href: "/community" },
                       ].map(({ icon, label, href }) => (
                         <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                          className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                          className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                           {icon}{label} <ChevronRight size={13} className="ml-auto" />
                         </Link>
                       ))}
@@ -911,11 +911,11 @@ export default function LandingPage() {
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                               color === "amber"  ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" :
                               color === "indigo" ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" :
-                              color === "blue"   ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" :
+                              color === "blue"   ? "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400" :
                                                    "bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"
                             }`}>{icon}</div>
                             <div>
-                              <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{label}</p>
+                              <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</p>
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>
                             </div>
                           </Link>
@@ -929,11 +929,11 @@ export default function LandingPage() {
                       </div>
                       <div className="space-y-2">
                         <Link href="/auth" onClick={() => setActiveDropdown(null)}
-                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 w-full">
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-brand-500/20 w-full">
                           Get Started Free <ArrowRight size={14} />
                         </Link>
                         <Link href="/sponsors" onClick={() => setActiveDropdown(null)}
-                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm transition-all hover:border-blue-300 dark:hover:border-blue-500/30 w-full">
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm transition-all hover:border-brand-300 dark:hover:border-brand-500/30 w-full">
                           Become a Sponsor
                         </Link>
                       </div>
@@ -951,7 +951,7 @@ export default function LandingPage() {
               {/* User card */}
               {session && (
                 <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-white/5 rounded-xl mb-4">
-                  <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
                     {getAvatarSrc(profile, session) && !navAvatarError
                       ? <img src={getAvatarSrc(profile, session)} alt="av" className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
                       : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
@@ -1017,7 +1017,7 @@ export default function LandingPage() {
                       {section.links.map(link => (
                         <Link key={link.href + link.label} href={link.href}
                           onClick={() => { setMobileMenuOpen(false); setMobileSection(null); }}
-                          className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-all font-medium">
+                          className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-all font-medium">
                           <ChevronRight size={12} className="text-gray-300 dark:text-gray-600 shrink-0" />{link.label}
                         </Link>
                       ))}
@@ -1029,12 +1029,12 @@ export default function LandingPage() {
               {/* Direct links */}
               <div className="pt-3 space-y-0.5">
                 <Link href="/docs" onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center px-3 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-all">
+                  className="flex items-center px-3 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-all">
                   Docs
                 </Link>
                 {session && (
                   <Link href="/dash" onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center px-3 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-all">
+                    className="flex items-center px-3 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-all">
                     Dashboard
                   </Link>
                 )}
@@ -1049,7 +1049,7 @@ export default function LandingPage() {
                   </Link>
                 )}
                 <Link href={session ? "/dash" : "/auth"} onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
+                  className="w-full text-center py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2">
                   {session ? "Open Dashboard" : "Get Started Free"} <ArrowRight size={15} />
                 </Link>
               </div>
@@ -1062,7 +1062,7 @@ export default function LandingPage() {
 
           {/* Orbs — decorative, never clip content */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-            <div className="animate-orb1 absolute -top-20 left-[5%] w-[500px] h-[500px] rounded-full bg-blue-400/20 dark:bg-blue-500/10 blur-[100px]" />
+            <div className="animate-orb1 absolute -top-20 left-[5%] w-[500px] h-[500px] rounded-full bg-brand-400/20 dark:bg-brand-500/10 blur-[100px]" />
             <div className="animate-orb2 absolute top-[10%] right-0 w-[400px] h-[400px] rounded-full bg-violet-400/20 dark:bg-violet-500/10 blur-[100px]" />
             <div className="animate-orb3 absolute bottom-0 left-[30%] w-[350px] h-[350px] rounded-full bg-indigo-400/15 dark:bg-indigo-500/8 blur-[120px]" />
           </div>
@@ -1072,7 +1072,7 @@ export default function LandingPage() {
             {/* Connection request */}
             <div className="animate-float absolute top-[22%] left-[6%] xl:left-[10%] animate-badge-pop" style={{ animationDelay: "1.2s" }}>
               <div className="flex items-center gap-2.5 bg-white/90 dark:bg-[#0f1723]/90 border border-gray-200 dark:border-white/10 rounded-2xl shadow-xl px-3.5 py-2.5 backdrop-blur-sm">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 shrink-0">
+                <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center text-brand-600 shrink-0">
                   <UserPlus size={14} />
                 </div>
                 <div>
@@ -1239,7 +1239,7 @@ function StatsBar({ stats, pageViews }) {
         ))}
         {/* Live page view counter */}
         <div className={`text-center reveal ${visible ? "visible" : ""} reveal-delay-5`}>
-          <p className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400 tracking-tighter">
+          <p className="text-3xl sm:text-4xl font-black text-brand-600 dark:text-brand-400 tracking-tighter">
             {pageViews != null
               ? <AnimatedCounter to={pageViews} suffix="" />
               : <span className="animate-pulse text-gray-300 dark:text-gray-700">—</span>}
@@ -1304,7 +1304,7 @@ function SponsorsStrip({ sponsors }) {
         <div className="text-center mt-10">
           <Link
             href="/sponsors"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-400 dark:text-gray-600 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-400 dark:text-gray-600 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
           >
             <Handshake size={12} /> Become a sponsor
           </Link>
@@ -1319,26 +1319,26 @@ function WhatIsSection() {
   return (
     <section ref={ref} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
       <div className={`text-center mb-16 reveal ${visible ? "visible" : ""}`}>
-        <p className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-3">What is beoneofus?</p>
+        <p className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-3">What is beoneofus?</p>
         <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter text-gray-900 dark:text-white leading-tight mb-6">
           One platform.<br />
-          <span className="text-gray-400 dark:text-gray-600">Every profession.</span>
+          <span className="text-gray-400 dark:text-gray-600">Every kind of opportunity.</span>
         </h2>
         <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto font-medium">
-          beoneofus is where professionals from every field grow careers, find opportunities, and connect with people who help them level up — not just follow them.
+          beoneofus is the connective layer where individuals and institutions — businesses, governments, schools, healthcare, and NGOs — find, verify, and connect with exactly who and what they need, through one AI-native identity.
         </p>
       </div>
 
       <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 reveal ${visible ? "visible" : ""} reveal-delay-2`}>
         {[
-          { icon: <TrendingUp size={20} />, title: "Career Growth", desc: "Jobs, mentorship, and coaching for every profession — tech, design, business, marketing, and more.", c: "text-blue-600 bg-blue-50 dark:bg-blue-900/20" },
+          { icon: <TrendingUp size={20} />, title: "Career Growth", desc: "Jobs, mentorship, and coaching for every profession — tech, design, business, marketing, and more.", c: "text-brand-600 bg-brand-50 dark:bg-brand-900/20" },
           { icon: <Users size={20} />, title: "Real Network", desc: "Mutual-consent connections with professionals who actually match your goals. No spam, no noise.", c: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" },
           { icon: <Bot size={20} />, title: "AI-First Tools", desc: "Personalised skill suggestions, AI-generated courses, and career advice built for your specific field.", c: "text-violet-600 bg-violet-50 dark:bg-violet-900/20" },
           { icon: <Shield size={20} />, title: "Verified & Safe", desc: "Verified identities, secure messaging, and privacy-first design. Your data stays yours.", c: "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20" },
           { icon: <BookOpen size={20} />, title: "Learn Every Day", desc: "AI-generated courses with exams tailored to your level, field, and career goals.", c: "text-amber-600 bg-amber-50 dark:bg-amber-900/20" },
           { icon: <Globe size={20} />, title: "Truly Global", desc: "Members from 100+ countries. Your next mentor, co-founder, or client could be anywhere.", c: "text-rose-600 bg-rose-50 dark:bg-rose-900/20" },
         ].map((item, i) => (
-          <div key={i} className="group flex items-start gap-4 p-5 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-2xl hover:border-blue-300 dark:hover:border-blue-700/50 hover:shadow-lg transition-all duration-300 card-glow">
+          <div key={i} className="group flex items-start gap-4 p-5 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-2xl hover:border-brand-300 dark:hover:border-brand-700/50 hover:shadow-lg transition-all duration-300 card-glow">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.c} group-hover:scale-110 transition-transform`}>{item.icon}</div>
             <div>
               <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{item.title}</h3>
@@ -1357,11 +1357,11 @@ function FeatureBento({ features }) {
     <section className="bg-gray-50 dark:bg-white/[0.015] border-y border-gray-200 dark:border-white/5 py-24 sm:py-32">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div ref={ref} className={`text-center mb-16 reveal ${visible ? "visible" : ""}`}>
-          <p className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-3">Platform Features</p>
+          <p className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-3">The Platform</p>
           <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-4">
-            Six ways to level up.
+            Six modules. One connected experience.
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 font-medium max-w-xl mx-auto">All tools are live, connected, and built for professionals in every field who are serious about their careers.</p>
+          <p className="text-gray-600 dark:text-gray-400 font-medium max-w-xl mx-auto">Every module shares the same profile, verification layer, and AI core — so progress in one area strengthens outcomes in every other.</p>
         </div>
 
         {/* Bento grid */}
@@ -1397,7 +1397,7 @@ function FeatureCard({ feature: f, delay, parentVisible }) {
         <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2 leading-snug">{f.title}</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{f.desc}</p>
 
-        <div className="mt-5 flex items-center gap-1 text-xs font-bold text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        <div className="mt-5 flex items-center gap-1 text-xs font-bold text-gray-500 dark:text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
           Explore <ChevronRight size={13} className="group-hover:translate-x-1 transition-transform" />
         </div>
       </div>
@@ -1410,11 +1410,11 @@ function HowItWorksSection({ steps }) {
   return (
     <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
       <div ref={ref} className={`text-center mb-16 reveal ${visible ? "visible" : ""}`}>
-        <p className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-3">Getting Started</p>
+        <p className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-3">Getting Started</p>
         <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-4">
-          Up and running in minutes.
+          From first sign-in to lasting opportunity.
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 font-medium">Four steps from zero to an active professional on the global network — no matter your field.</p>
+        <p className="text-gray-600 dark:text-gray-400 font-medium">Four steps to a verified profile and AI-matched opportunity — as an individual or an institution.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
@@ -1447,18 +1447,18 @@ function CommunitySection({ communities, session }) {
     <section className="bg-gray-50 dark:bg-white/[0.015] border-t border-gray-200 dark:border-white/5 py-24 sm:py-32">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div ref={ref} className={`text-center mb-16 reveal ${visible ? "visible" : ""}`}>
-          <p className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-3">Community</p>
+          <p className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-3">Community</p>
           <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-4">
             Your people are here.
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 font-medium">Dedicated spaces for every profession and industry. Find your community and join the conversation.</p>
+          <p className="text-gray-600 dark:text-gray-400 font-medium">Dedicated spaces for every field, community, and institution — from founders and engineers to NGOs and educators.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {communities.map((c, i) => (
             <div
               key={c.name}
-              className={`group flex items-start gap-5 bg-white dark:bg-[#0f1723] border border-gray-200 dark:border-white/5 rounded-3xl p-6 hover:border-blue-300 dark:hover:border-blue-700/40 hover:shadow-xl transition-all duration-300 cursor-pointer card-glow reveal ${visible ? "visible" : ""} reveal-delay-${Math.min(i + 1, 5)}`}>
+              className={`group flex items-start gap-5 bg-white dark:bg-[#0f1723] border border-gray-200 dark:border-white/5 rounded-3xl p-6 hover:border-brand-300 dark:hover:border-brand-700/40 hover:shadow-xl transition-all duration-300 cursor-pointer card-glow reveal ${visible ? "visible" : ""} reveal-delay-${Math.min(i + 1, 5)}`}>
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${c.color} group-hover:scale-110 transition-transform`}>
                 {c.icon}
               </div>
@@ -1473,7 +1473,7 @@ function CommunitySection({ communities, session }) {
         </div>
 
         <div className={`text-center mt-10 reveal ${visible ? "visible" : ""} reveal-delay-5`}>
-          <Link href={authLink(session, "/dash/groups")} className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-700/50 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl font-bold text-sm transition-all shadow-sm hover:shadow-md">
+          <Link href={authLink(session, "/dash/groups")} className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-brand-300 dark:hover:border-brand-700/50 text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 rounded-2xl font-bold text-sm transition-all shadow-sm hover:shadow-md">
             See all communities <ArrowRight size={15} />
           </Link>
         </div>
@@ -1487,7 +1487,7 @@ function PremiumSection({ session }) {
   return (
     <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
       <div ref={ref}
-        className={`relative bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 rounded-[2.5rem] overflow-hidden p-8 sm:p-12 lg:p-16 reveal ${visible ? "visible" : ""}`}>
+        className={`relative bg-gradient-to-br from-brand-600 via-indigo-600 to-violet-700 rounded-[2.5rem] overflow-hidden p-8 sm:p-12 lg:p-16 reveal ${visible ? "visible" : ""}`}>
 
         {/* bg decoration */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -1504,7 +1504,7 @@ function PremiumSection({ session }) {
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tighter mb-4 leading-tight">
               Unlock your full<br />potential.
             </h2>
-            <p className="text-blue-100 font-medium max-w-md leading-relaxed">
+            <p className="text-brand-100 font-medium max-w-md leading-relaxed">
               Unlimited mentorship bookings, priority AI responses, exclusive opportunities across all industries, premium coaching, and a verified badge.
             </p>
 
@@ -1517,7 +1517,7 @@ function PremiumSection({ session }) {
                 "Verified premium badge",
                 "Early feature access",
               ].map((perk) => (
-                <div key={perk} className="flex items-center gap-2 text-sm text-blue-100">
+                <div key={perk} className="flex items-center gap-2 text-sm text-brand-100">
                   <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
                   {perk}
                 </div>
@@ -1526,14 +1526,14 @@ function PremiumSection({ session }) {
           </div>
 
           <div className="shrink-0 bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-6 sm:p-8 text-center min-w-[200px]">
-            <p className="text-blue-200 text-sm font-semibold mb-1">Starting from</p>
-            <p className="text-5xl font-black text-white mb-1">$9<span className="text-2xl text-blue-200">.99</span></p>
-            <p className="text-blue-300 text-xs font-semibold mb-6">per month</p>
+            <p className="text-brand-200 text-sm font-semibold mb-1">Starting from</p>
+            <p className="text-5xl font-black text-white mb-1">$9<span className="text-2xl text-brand-200">.99</span></p>
+            <p className="text-brand-300 text-xs font-semibold mb-6">per month</p>
             <Link href={authLink(session, "/dash/premium")}
-              className="block w-full bg-white hover:bg-gray-50 text-blue-600 font-black py-3.5 rounded-2xl text-sm transition-all shadow-xl hover:shadow-2xl hover:scale-105">
+              className="block w-full bg-white hover:bg-gray-50 text-brand-600 font-black py-3.5 rounded-2xl text-sm transition-all shadow-xl hover:shadow-2xl hover:scale-105">
               {session ? "Upgrade Now" : "Get Premium"}
             </Link>
-            <p className="text-blue-300 text-xs mt-3">Cancel anytime</p>
+            <p className="text-brand-300 text-xs mt-3">Cancel anytime</p>
           </div>
         </div>
       </div>
@@ -1546,18 +1546,24 @@ function FinalCTA({ session }) {
   return (
     <section className="border-t border-gray-200 dark:border-white/5 py-24 sm:py-32 bg-white dark:bg-[#080c12]">
       <div ref={ref} className={`max-w-3xl mx-auto px-4 sm:px-6 text-center reveal ${visible ? "visible" : ""}`}>
-        <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-500/30">
-          <Terminal size={28} className="text-white" />
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-brand-500/30 bg-gradient-to-br from-brand-500 to-trust-500">
+          <svg width="30" height="30" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M9 9 4 4.5M9 9l5-4.5M9 9v6" stroke="#fff" strokeWidth="1.3" opacity=".85"/>
+            <circle cx="9" cy="9" r="2.4" fill="#fff"/>
+            <circle cx="4" cy="4.5" r="1.6" fill="#fff" opacity=".92"/>
+            <circle cx="14" cy="4.5" r="1.6" fill="#fff" opacity=".92"/>
+            <circle cx="9" cy="15" r="1.6" fill="#fff" opacity=".92"/>
+          </svg>
         </div>
         <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter text-gray-900 dark:text-white mb-6">
           Ready to be<br />one of us?
         </h2>
         <p className="text-gray-600 dark:text-gray-400 text-lg font-medium mb-10 max-w-xl mx-auto">
-          Join professionals from every field who are already building careers, not just profiles — regardless of industry or country.
+          Opportunity isn&apos;t scarce — it&apos;s scattered. Join the individuals and institutions bringing it together on one intelligent, verified network.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link href={authLink(session, "/dash")}
-            className="w-full sm:w-auto group flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-2xl text-lg font-black shadow-2xl shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 transition-all duration-200">
+            className="w-full sm:w-auto group flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-500 text-white px-10 py-4 rounded-2xl text-lg font-black shadow-2xl shadow-brand-500/25 hover:shadow-brand-500/40 hover:scale-105 transition-all duration-200">
             {session ? "Go to Dashboard" : "Create Free Account"}
             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
           </Link>
@@ -1569,7 +1575,7 @@ function FinalCTA({ session }) {
 }
 
 const AVATAR_COLORS = [
-  "bg-blue-100 dark:bg-blue-900/40 text-blue-600",
+  "bg-brand-100 dark:bg-brand-900/40 text-brand-600",
   "bg-violet-100 dark:bg-violet-900/40 text-violet-600",
   "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600",
   "bg-amber-100 dark:bg-amber-900/40 text-amber-600",
@@ -1677,7 +1683,7 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
       {/* Heading */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div ref={sectionRef} className={`text-center mb-12 reveal ${visible ? "visible" : ""}`}>
-          <p className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-3">Testimonials</p>
+          <p className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-3">Testimonials</p>
           <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-4">
             Professionals love it here.
           </h2>
@@ -1739,7 +1745,7 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
         <div className={`reveal ${visible ? "visible" : ""} reveal-delay-3`}>
           <div className="max-w-2xl mx-auto bg-white dark:bg-[#0f1723] border border-gray-200 dark:border-white/5 rounded-3xl p-6 sm:p-8 shadow-xl shadow-gray-100/60 dark:shadow-none">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
+              <div className="w-10 h-10 rounded-2xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center text-brand-600">
                 <MessageSquare size={18} />
               </div>
               <div>
@@ -1753,7 +1759,7 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
                 <Lock size={28} className="mx-auto text-gray-300 dark:text-gray-700 mb-3" />
                 <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">Sign in to share your story with the community</p>
                 <Link href="/auth"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:scale-105">
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:scale-105">
                   Sign in <ArrowRight size={14} />
                 </Link>
               </div>
@@ -1765,7 +1771,7 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
                 <p className="font-black text-gray-900 dark:text-white text-lg mb-1">Thank you!</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Your testimonial is under review and will appear soon.</p>
                 <button onClick={() => setSubmitted(false)}
-                  className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                  className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline">
                   Submit another
                 </button>
               </div>
@@ -1801,7 +1807,7 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
                     <input
                       type="text" value={role} onChange={(e) => setRole(e.target.value)}
                       placeholder="e.g. Senior Engineer"
-                      className="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all"
+                      className="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400 transition-all"
                     />
                   </div>
                   <div>
@@ -1809,7 +1815,7 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
                     <input
                       type="text" value={company} onChange={(e) => setCompany(e.target.value)}
                       placeholder="e.g. Stripe"
-                      className="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all"
+                      className="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400 transition-all"
                     />
                   </div>
                 </div>
@@ -1823,7 +1829,7 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
                     value={content} onChange={(e) => setContent(e.target.value)}
                     rows={4} maxLength={400}
                     placeholder="What did beoneofus help you achieve?"
-                    className="w-full px-4 py-3 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all resize-none"
+                    className="w-full px-4 py-3 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400 transition-all resize-none"
                   />
                   <div className="flex justify-between items-center mt-1">
                     <span />
@@ -1841,7 +1847,7 @@ function TestimonialsSection({ testimonials: initial, session, profile }) {
 
                 <button
                   type="submit" disabled={submitting || !content.trim()}
-                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl text-sm transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2">
+                  className="w-full py-3.5 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl text-sm transition-all shadow-lg shadow-brand-500/20 hover:shadow-brand-500/35 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2">
                   {submitting ? (
                     <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting…</>
                   ) : (
@@ -1904,7 +1910,7 @@ function TestimonialCard({ testimonial: t, delay, parentVisible, session, onDele
 
   return (
     <div
-      className={`break-inside-avoid group bg-white dark:bg-[#0f1723] border rounded-3xl p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 card-glow reveal ${editing ? "border-blue-400 dark:border-blue-500/50" : "border-gray-200 dark:border-white/5 hover:border-blue-300 dark:hover:border-blue-700/40"} ${parentVisible ? "visible" : ""}`}
+      className={`break-inside-avoid group bg-white dark:bg-[#0f1723] border rounded-3xl p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 card-glow reveal ${editing ? "border-brand-400 dark:border-brand-500/50" : "border-gray-200 dark:border-white/5 hover:border-brand-300 dark:hover:border-brand-700/40"} ${parentVisible ? "visible" : ""}`}
       style={{ transitionDelay: `${delay}s` }}>
 
       {editing ? (
@@ -1923,15 +1929,15 @@ function TestimonialCard({ testimonial: t, delay, parentVisible, session, onDele
           </div>
           <div className="grid grid-cols-2 gap-2">
             <input value={editRole} onChange={(e) => setEditRole(e.target.value)} placeholder="Role"
-              className="px-3 py-2 text-xs bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+              className="px-3 py-2 text-xs bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
             <input value={editCompany} onChange={(e) => setEditCompany(e.target.value)} placeholder="Company"
-              className="px-3 py-2 text-xs bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+              className="px-3 py-2 text-xs bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
           </div>
           <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={3} maxLength={400}
-            className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/40" />
+            className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
           <div className="flex items-center gap-2">
             <button onClick={handleSave} disabled={saving || !editContent.trim()}
-              className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5">
+              className="flex-1 py-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5">
               {saving ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle2 size={13} />}
               Save
             </button>
@@ -1953,7 +1959,7 @@ function TestimonialCard({ testimonial: t, delay, parentVisible, session, onDele
             {isOwner && (
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => setEditing(true)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all"
                   title="Edit">
                   <Pencil size={13} />
                 </button>
@@ -2037,15 +2043,21 @@ function Footer({ session }) {
           {/* Brand */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4 w-fit">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Terminal size={16} className="text-white" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-brand-500 to-trust-500">
+                <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path d="M9 9 4 4.5M9 9l5-4.5M9 9v6" stroke="#fff" strokeWidth="1.3" opacity=".85"/>
+                  <circle cx="9" cy="9" r="2.4" fill="#fff"/>
+                  <circle cx="4" cy="4.5" r="1.6" fill="#fff" opacity=".92"/>
+                  <circle cx="14" cy="4.5" r="1.6" fill="#fff" opacity=".92"/>
+                  <circle cx="9" cy="15" r="1.6" fill="#fff" opacity=".92"/>
+                </svg>
               </div>
               <span className="font-black text-xl tracking-tight text-gray-900 dark:text-white">
-                beone<span className="text-blue-600">of</span>us
+                beone<span className="text-trust-500">of</span>us
               </span>
             </Link>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed max-w-[220px]">
-              The developer network built for real career growth.
+              The connective layer for global opportunity — one AI-native identity and graph for every participant.
             </p>
           </div>
 
@@ -2055,7 +2067,7 @@ function Footer({ session }) {
               <ul className="space-y-2.5">
                 {col.links.map(({ label, href }) => (
                   <li key={label}>
-                    <Link href={href} className="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">
+                    <Link href={href} className="text-sm text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors font-medium">
                       {label}
                     </Link>
                   </li>

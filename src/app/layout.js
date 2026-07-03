@@ -5,8 +5,8 @@ import ClientShell from './components/ClientShell';
 import { OnlineUsersProvider } from './contexts/OnlineUsersContext';
 
 export const metadata = {
-  title: 'beoneofus - The network for developers',
-  description: 'Connect with developers worldwide. Broadcast your code. Join secure workspaces.',
+  title: 'beoneofus — The Global Opportunity Ecosystem',
+  description: 'An AI-powered network connecting individuals, businesses, governments, schools, healthcare providers, and NGOs — for jobs, mentorship, learning, coaching, and community, through one intelligent, verified graph.',
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -28,8 +28,8 @@ export const metadata = {
     statusBarStyle: 'default',
   },
   openGraph: {
-    title: 'beoneofus',
-    description: 'The network for developers. Connect, broadcast code, and join secure workspaces.',
+    title: 'beoneofus — The Global Opportunity Ecosystem',
+    description: 'One AI-native network connecting individuals and institutions — for jobs, mentorship, learning, coaching, and community, through one verified graph.',
     url: 'https://beoneofus.work',
     siteUrl: 'https://beoneofus.work',
     siteName: 'beoneofus',
@@ -38,8 +38,8 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'beoneofus',
-    description: 'The network for developers.',
+    title: 'beoneofus — The Global Opportunity Ecosystem',
+    description: 'One AI-native network connecting individuals and institutions, through one verified graph.',
   },
 };
 
@@ -48,7 +48,7 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#111827',
+  themeColor: '#0A1024',
 };
 
 export default function RootLayout({ children }) {

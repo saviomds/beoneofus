@@ -54,6 +54,7 @@ const contentMap = {
   jobs:          dynamic(() => import('../content/JobsContent'),           { loading: () => <TabSkeleton /> }),
   mentors:       dynamic(() => import('../content/MentorsContent'),         { loading: () => <TabSkeleton /> }),
   'career-ai':   dynamic(() => import('../content/CareerAIContent'),       { loading: () => <TabSkeleton /> }),
+  matches:       dynamic(() => import('../content/MatchesContent'),        { loading: () => <TabSkeleton /> }),
   projects:      dynamic(() => import('../content/ProjectMarketplaceContent'), { loading: () => <TabSkeleton /> }),
   freelance:     dynamic(() => import('../content/FreelanceContent'),      { loading: () => <TabSkeleton /> }),
   companies:     dynamic(() => import('../content/CompaniesContent'),      { loading: () => <TabSkeleton /> }),

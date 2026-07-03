@@ -106,11 +106,11 @@ export default function HomeDashContent() {
 
   const go = (id) => router.push('/dash/' + id);
 
-  // Assistant-first: hand the query to the AI tab via sessionStorage, then route
+  // Assistant-first: hand the goal to the unified match engine, then route
   const askAi = (query) => {
     const q = (query ?? aiQuery).trim();
-    try { if (q) sessionStorage.setItem('ai_prefill', q); } catch { /* no storage */ }
-    router.push('/dash/ai');
+    try { if (q) sessionStorage.setItem('match_goal', q); } catch { /* no storage */ }
+    router.push('/dash/matches');
   };
 
   useEffect(() => {

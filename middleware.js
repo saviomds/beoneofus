@@ -21,6 +21,24 @@ function isAlwaysAllowed(pathname) {
   return ALWAYS_ALLOW.some(p => pathname.startsWith(p));
 }
 
+// Rolling "last activity" marker used for idle-session timeout.
+const ACTIVITY_COOKIE = 'boo_last_active';
+
+// Delete Supabase auth cookies (incl. chunked `.0`/`.1` variants) from both the
+// incoming request and the outgoing response so a dead session is fully cleared.
+function clearAuthCookies(request, response) {
+  try {
+    for (const { name } of request.cookies.getAll()) {
+      if (/^sb-.*-auth-token/.test(name)) {
+        request.cookies.delete(name);
+        response.cookies.set(name, '', { path: '/', maxAge: 0 });
+      }
+    }
+  } catch {
+    // Never let cookie cleanup crash the request
+  }
+}
+
 export async function middleware(request) {
   try {
     // Redirect bare domain → www.
@@ -77,10 +95,17 @@ export async function middleware(request) {
           },
         }
       );
-      const { data } = await supabase.auth.getUser();
+      const { data, error } = await supabase.auth.getUser();
       user = data?.user ?? null;
+      // If the refresh token is missing/invalid, Supabase can't restore the
+      // session. Purge the stale auth cookies so the client doesn't keep
+      // rendering a broken "signed-in" shell (and retrying failed refreshes).
+      if (error && !user) {
+        clearAuthCookies(request, response);
+      }
     } catch {
-      // Auth check failure — allow request through, don't block
+      // Auth check failure — clear stale auth cookies and let the request through
+      clearAuthCookies(request, response);
     }
 
     if (isAlwaysAllowed(pathname)) {
@@ -142,6 +167,42 @@ export async function middleware(request) {
       response.headers.set('x-registration-closed', '1');
     }
 
+    // ── Rolling idle-session timeout ──────────────────────────────────────────
+    // NOTE: `user.last_sign_in_at` only changes on an actual sign-in — Supabase
+    // does NOT advance it when the access token is silently refreshed. Using it
+    // as a session clock force-logs-out *active* users the moment their token is
+    // N hours older than their last login. Instead we track a rolling
+    // "last activity" cookie that we bump on every authenticated request, so the
+    // window only elapses after genuine inactivity.
+    if (user && sessionTimeoutHours > 0) {
+      const now = Date.now();
+      const raw = request.cookies.get(ACTIVITY_COOKIE)?.value;
+      const lastActive = raw ? Number(raw) : NaN;
+      const timeoutMs = sessionTimeoutHours * 3_600_000;
+
+      if (Number.isFinite(lastActive) && now - lastActive > timeoutMs) {
+        // Genuinely idle past the limit → expire the session.
+        if (pathname.startsWith('/dash') || pathname.startsWith('/u/')) {
+          clearAuthCookies(request, response);
+          const url = request.nextUrl.clone();
+          url.pathname = '/auth';
+          url.searchParams.set('error', 'session_expired');
+          const redirect = NextResponse.redirect(url);
+          clearAuthCookies(request, redirect);
+          return redirect;
+        }
+      } else {
+        // Fresh activity → bump the rolling window.
+        response.cookies.set(ACTIVITY_COOKIE, String(now), {
+          httpOnly: true,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+          path: '/',
+          maxAge: Math.ceil(timeoutMs / 1000),
+        });
+      }
+    }
+
     // ── Per-user auth enforcement ─────────────────────────────────────────────
     // Only applies to protected routes where a logged-in user is expected.
     if (user && (pathname.startsWith('/dash') || pathname.startsWith('/u/'))) {
@@ -151,17 +212,6 @@ export async function middleware(request) {
         url.pathname = '/auth';
         url.searchParams.set('error', 'email_not_verified');
         return NextResponse.redirect(url);
-      }
-
-      // Session age timeout — kick out sessions older than the configured limit
-      if (sessionTimeoutHours > 0 && user.last_sign_in_at) {
-        const ageMs = Date.now() - new Date(user.last_sign_in_at).getTime();
-        if (ageMs > sessionTimeoutHours * 3_600_000) {
-          const url = request.nextUrl.clone();
-          url.pathname = '/auth';
-          url.searchParams.set('error', 'session_expired');
-          return NextResponse.redirect(url);
-        }
       }
     }
 

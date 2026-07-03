@@ -98,12 +98,20 @@ export default function HomeDashContent() {
   const [streak, setStreak]           = useState(0);
   const [pathwayCount, setPathwayCount] = useState(0);
   const [feedPosts, setFeedPosts]     = useState([]);
+  const [aiQuery, setAiQuery]         = useState('');
 
   const greetingHour = new Date().getHours();
   const greeting = greetingHour < 12 ? 'Good morning' : greetingHour < 17 ? 'Good afternoon' : 'Good evening';
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   const go = (id) => router.push('/dash/' + id);
+
+  // Assistant-first: hand the query to the AI tab via sessionStorage, then route
+  const askAi = (query) => {
+    const q = (query ?? aiQuery).trim();
+    try { if (q) sessionStorage.setItem('ai_prefill', q); } catch { /* no storage */ }
+    router.push('/dash/ai');
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -249,6 +257,75 @@ export default function HomeDashContent() {
         </div>
       </div>
 
+      {/* ── AI ASSISTANT BAR (assistant-first) ─────── */}
+      <div>
+        <form onSubmit={(e) => { e.preventDefault(); askAi(); }}>
+          <div className="flex items-center gap-2 bg-white dark:bg-[#18181B] border border-gray-200 dark:border-zinc-800 rounded-2xl p-2 pl-4 shadow-sm focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
+            <Bot size={18} className="text-brand-500 shrink-0" />
+            <input
+              value={aiQuery}
+              onChange={(e) => setAiQuery(e.target.value)}
+              placeholder="Tell me what you're looking for…"
+              className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 min-w-0"
+              aria-label="Ask the AI assistant"
+            />
+            <button type="submit" className="shrink-0 inline-flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-3.5 sm:px-4 py-2 rounded-xl transition-colors active:scale-95">
+              <span className="hidden sm:inline">Ask AI</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        </form>
+        <div className="flex flex-wrap gap-1.5 mt-2.5">
+          {['Find a remote job', 'Match me a mentor', 'Suggest a course', 'Grow my network'].map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => askAi(s)}
+              className="text-[11px] font-semibold px-3 py-1 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-500/15 hover:text-brand-600 dark:hover:text-brand-300 transition-colors"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── YOUR JOURNEY ───────────────────────────── */}
+      <section>
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Your journey</h2>
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+          <span className="text-[10px] font-black text-gray-400 shrink-0">{stepsDone.filter(Boolean).length}/{STEPS.length}</span>
+        </div>
+        <div className="flex items-stretch gap-2 sm:gap-3">
+          {STEPS.map((step, i) => {
+            const done = stepsDone[i];
+            return (
+              <button
+                key={step.n}
+                onClick={() => go(step.key)}
+                title={step.desc}
+                className={`group relative flex-1 min-w-0 text-left p-3 sm:p-4 rounded-2xl border transition-all active:scale-[0.98] ${
+                  done
+                    ? 'bg-emerald-50 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800/40'
+                    : 'bg-white dark:bg-[#18181B] border-gray-200/80 dark:border-zinc-800/80 hover:border-brand-300 dark:hover:border-brand-700'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black mb-2 transition-colors ${
+                  done ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 group-hover:bg-brand-500 group-hover:text-white'
+                }`}>
+                  {done ? <CheckCheck size={15} /> : step.n}
+                </div>
+                <p className={`text-[11px] sm:text-xs font-bold leading-tight line-clamp-2 ${
+                  done ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'
+                }`}>
+                  {step.label}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       {/* ── HUB CARDS ──────────────────────────────── */}
       <section>
         <div className="flex items-center gap-3 mb-4">
@@ -320,62 +397,6 @@ export default function HomeDashContent() {
               </button>
             );
           })}
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS — ONBOARDING STEPS ────────── */}
-      <section>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Getting Started</h2>
-          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-          <span className="text-[10px] font-black text-gray-400 shrink-0">
-            {stepsDone.filter(Boolean).length}/{STEPS.length} done
-          </span>
-        </div>
-
-        <div className="relative">
-          {/* Connector line */}
-          <div className="absolute left-5 top-6 bottom-6 w-px bg-gray-200 dark:bg-gray-800 hidden sm:block" />
-
-          <div className="space-y-3">
-            {STEPS.map((step, i) => {
-              const done = stepsDone[i];
-              return (
-                <button
-                  key={step.n}
-                  onClick={() => go(step.key)}
-                  className="group w-full text-left flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-[#18181B] border border-gray-200/80 dark:border-zinc-800/80 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md transition-all duration-200 active:scale-[0.99]"
-                >
-                  {/* Step number / checkmark */}
-                  <div className={`relative z-10 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-black transition-all duration-200 ${
-                    done
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 group-hover:bg-blue-600 group-hover:text-white'
-                  }`}>
-                    {done ? <CheckCheck size={16} /> : step.n}
-                  </div>
-
-                  <div className="flex-1 min-w-0 pt-0.5">
-                    <p className={`text-sm font-black mb-0.5 transition-colors ${
-                      done
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400'
-                    }`}>
-                      {step.label}
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">{step.desc}</p>
-                  </div>
-
-                  <ChevronRight
-                    size={16}
-                    className={`shrink-0 mt-1 transition-all duration-200 group-hover:translate-x-0.5 ${
-                      done ? 'text-emerald-400' : 'text-gray-300 dark:text-gray-600'
-                    }`}
-                  />
-                </button>
-              );
-            })}
-          </div>
         </div>
       </section>
 

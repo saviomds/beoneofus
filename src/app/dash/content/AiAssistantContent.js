@@ -161,6 +161,18 @@ export default function AiAssistantContent() {
 
   const hasMessages = messages.length > 0;
 
+  // Pre-fill from the dashboard "assistant-first" bar (Home → Ask AI)
+  useEffect(() => {
+    try {
+      const p = sessionStorage.getItem('ai_prefill');
+      if (p) {
+        setInput(p);
+        sessionStorage.removeItem('ai_prefill');
+        setTimeout(() => inputRef.current?.focus(), 60);
+      }
+    } catch { /* sessionStorage unavailable */ }
+  }, []);
+
   const scrollToBottom = useCallback((smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "instant" });
   }, []);

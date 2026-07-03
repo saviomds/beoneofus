@@ -4,10 +4,31 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RefreshCw, Home, AlertTriangle } from 'lucide-react';
 
+// After a deploy, an already-open tab holds stale HTML that points at old
+// content-hashed chunk filenames. The next lazy import 404s and lands here.
+// Auto-reload once so the browser fetches fresh HTML with valid chunk URLs
+// instead of stranding the user on a "please refresh" screen.
+const CHUNK_ERR_RE =
+  /ChunkLoadError|Loading chunk|Loading CSS chunk|dynamically imported module|Importing a module script failed/i;
+
+function tryChunkRecover(error) {
+  const msg = error?.message || error?.name || '';
+  if (!CHUNK_ERR_RE.test(msg)) return false;
+  try {
+    const KEY = 'chunk_reload_at';
+    const last = Number(sessionStorage.getItem(KEY) || 0);
+    if (Date.now() - last < 15000) return false; // already tried recently → avoid loop
+    sessionStorage.setItem(KEY, String(Date.now()));
+  } catch { /* sessionStorage blocked — reload anyway */ }
+  window.location.reload();
+  return true;
+}
+
 export default function SectionError({ error, unstable_retry }) {
   const router = useRouter();
 
   useEffect(() => {
+    if (tryChunkRecover(error)) return;
     console.error('[dash section error]', error);
   }, [error]);
 
@@ -20,7 +41,7 @@ export default function SectionError({ error, unstable_retry }) {
         Something went wrong
       </h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs leading-relaxed">
-        This page failed to load. Try refreshing — it's usually a temporary glitch.
+        This page failed to load. Try refreshing — it&apos;s usually a temporary glitch.
       </p>
       <div className="flex items-center gap-3">
         <button

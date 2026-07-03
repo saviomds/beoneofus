@@ -45,11 +45,30 @@ export async function logError({
   }
 }
 
+// A failed lazy chunk (typically after a new deploy invalidates old hashed
+// filenames) should self-heal with a single reload instead of leaving the user
+// on a broken page they have to refresh by hand. Guarded to never loop.
+const CHUNK_ERR_RE =
+  /ChunkLoadError|Loading chunk|Loading CSS chunk|dynamically imported module|Importing a module script failed/i;
+
+function recoverFromChunkError(message) {
+  if (!message || !CHUNK_ERR_RE.test(String(message))) return false;
+  try {
+    const KEY = 'chunk_reload_at';
+    const last = Number(sessionStorage.getItem(KEY) || 0);
+    if (Date.now() - last < 15000) return false; // reloaded recently → avoid loop
+    sessionStorage.setItem(KEY, String(Date.now()));
+  } catch { /* storage blocked — reload anyway */ }
+  window.location.reload();
+  return true;
+}
+
 export default function ErrorLogger() {
   useEffect(() => {
     const onError = (event) => {
       // Skip opaque cross-origin script errors (no useful info)
       if (event.message === 'Script error.' && !event.filename) return;
+      if (recoverFromChunkError(event.message || event.error?.message)) return;
       logError({
         level: 'error',
         category: 'client',
@@ -61,6 +80,7 @@ export default function ErrorLogger() {
 
     const onUnhandledRejection = (event) => {
       const reason = event.reason;
+      if (recoverFromChunkError(reason?.message || String(reason))) return;
       logError({
         level: 'error',
         category: 'client',

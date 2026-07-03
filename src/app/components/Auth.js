@@ -300,7 +300,27 @@ export default function AuthForm() {
 
           const params = new URLSearchParams(window.location.search);
           const next = params.get('next');
-          window.location.href = next?.startsWith('/') ? next : '/dash';
+          if (next?.startsWith('/')) { window.location.href = next; }
+          else {
+            // Owners/managers → business console; plain individuals → /dash.
+            let dest = '/dash';
+            try {
+              const uid = session.user.id;
+              const [{ data: owned }, { data: memberships }] = await Promise.all([
+                supabase.from('organizations').select('slug').eq('owner_id', uid).limit(1),
+                supabase.from('organization_members').select('role, organizations(slug)').eq('user_id', uid),
+              ]);
+              let slug = owned?.[0]?.slug || null;
+              if (!slug && memberships) {
+                const mgr = memberships.find(
+                  (m) => ['owner', 'admin', 'recruiter', 'program_manager'].includes(m.role) && m.organizations?.slug,
+                );
+                slug = mgr?.organizations?.slug || null;
+              }
+              if (slug) dest = `/business/${slug}`;
+            } catch { /* default to /dash */ }
+            window.location.href = dest;
+          }
         } else {
           if (mounted) setIsCheckingAuth(false);
         }
@@ -354,7 +374,7 @@ export default function AuthForm() {
 
           const isNewUser = Date.now() - new Date(session.user.created_at).getTime() < 120_000;
 
-          const redirect = () => {
+          const redirect = async () => {
             const params = new URLSearchParams(window.location.search);
             const next = params.get('next');
             if (next?.startsWith('/')) { window.location.href = next; return; }
@@ -370,8 +390,26 @@ export default function AuthForm() {
               window.location.href = orgCat ? `/organizations/new?category=${encodeURIComponent(orgCat)}` : '/organizations/new';
               return;
             }
-            // Send new individuals to onboarding, returning users to dashboard
-            window.location.href = isNewUser ? '/onboarding' : '/dash';
+            // New individuals → onboarding.
+            if (isNewUser) { window.location.href = '/onboarding'; return; }
+            // Returning users who OWN or MANAGE an organization land directly on
+            // their business console (company mode). Plain individuals → /dash.
+            try {
+              const uid = session.user.id;
+              const [{ data: owned }, { data: memberships }] = await Promise.all([
+                supabase.from('organizations').select('slug').eq('owner_id', uid).limit(1),
+                supabase.from('organization_members').select('role, organizations(slug)').eq('user_id', uid),
+              ]);
+              let slug = owned?.[0]?.slug || null;
+              if (!slug && memberships) {
+                const mgr = memberships.find(
+                  (m) => ['owner', 'admin', 'recruiter', 'program_manager'].includes(m.role) && m.organizations?.slug,
+                );
+                slug = mgr?.organizations?.slug || null;
+              }
+              if (slug) { window.location.href = `/business/${slug}`; return; }
+            } catch { /* fall through to individual dashboard */ }
+            window.location.href = '/dash';
           };
 
           if (pendingUsername) {

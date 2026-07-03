@@ -202,6 +202,26 @@ export default function OrganizationProfile() {
 
           {/* Sidebar */}
           <aside className="space-y-4">
+            {/* Trust signals */}
+            <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-2xl p-5">
+              <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Trust signals</h3>
+              <ul className="space-y-3 text-sm">
+                <li className="flex items-center gap-2.5">
+                  <ShieldCheck size={15} className={org.is_verified ? 'text-trust-500 shrink-0' : 'text-gray-400 shrink-0'} />
+                  <span className="text-gray-700 dark:text-gray-300">{org.is_verified ? 'Verified organization' : org.verification_status === 'pending' ? 'Verification pending' : 'Not yet verified'}</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Users2 size={15} className="text-gray-400 shrink-0" />
+                  <span className="text-gray-700 dark:text-gray-300">{members.length} team member{members.length === 1 ? '' : 's'}</span>
+                </li>
+                {org.founded_year && (
+                  <li className="flex items-center gap-2.5">
+                    <CalendarDays size={15} className="text-gray-400 shrink-0" />
+                    <span className="text-gray-700 dark:text-gray-300">Established {org.founded_year}</span>
+                  </li>
+                )}
+              </ul>
+            </div>
             <div className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-2xl p-5">
               <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Details</h3>
               <ul className="space-y-3 text-sm">

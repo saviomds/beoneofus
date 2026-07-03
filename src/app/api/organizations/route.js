@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { moderateText } from '../../../lib/moderate';
 
 function makeSupabase() {
   return createClient(
@@ -64,6 +65,15 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Organization name is required.' }, { status: 400 });
   }
   const orgType = ORG_TYPES.includes(type) ? type : 'business';
+
+  // AI-assisted moderation — block only clear, serious violations (fails open).
+  const mod = await moderateText([name, tagline, description].filter(Boolean).join('\n'), 'organization');
+  if (mod.severity === 'high') {
+    return NextResponse.json(
+      { error: 'These details were flagged by moderation. Please revise and remove any prohibited content.', moderation: mod },
+      { status: 422 }
+    );
+  }
 
   const base = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'org';
   const slug = `${base}-${Date.now().toString(36)}`;

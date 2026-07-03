@@ -15,6 +15,7 @@ import {
 import GitHubStats from "../../components/GitHubStats";
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
+import { computeReputation, REP_TONE } from "../../../lib/reputation";
 import PremiumBadge from "../../components/PremiumBadge";
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -631,6 +632,40 @@ export default function PublicProfilePage() {
                   </div>
                 </div>
               )}
+
+              {/* Reputation signal — derived from verified outcomes */}
+              {(reviews.length > 0 || Object.keys(endorsements).length > 0 || profile.is_verified) && (() => {
+                const endorsementCount = Object.values(endorsements).reduce((s, a) => s + (a?.length || 0), 0);
+                const rep = computeReputation({ reviews, endorsementCount, isVerified: profile.is_verified });
+                const tone = REP_TONE[rep.tier.tone] || REP_TONE.slate;
+                const C = 2 * Math.PI * 15.5;
+                return (
+                  <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-16 h-16 shrink-0">
+                        <svg viewBox="0 0 36 36" className="w-16 h-16 -rotate-90">
+                          <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-gray-100 dark:stroke-gray-800" strokeWidth="3" />
+                          <circle cx="18" cy="18" r="15.5" fill="none" className={tone.text} stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(rep.score / 100) * C} ${C}`} />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-lg font-black text-gray-900 dark:text-gray-100 tabular-nums">{rep.score}</span>
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Reputation</h2>
+                          <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${tone.soft} ${tone.text}`}>{rep.tier.label}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {rep.signals.map((sig) => (
+                            <span key={sig} className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">{sig}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Reviews */}
               {reviews.length > 0 && (

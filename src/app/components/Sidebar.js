@@ -122,6 +122,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
   const [unreadNotifs, setUnreadNotifs]         = useState(0);
   const [unreadGroups, setUnreadGroups]         = useState(0);
   const [isProfileLoading, setIsProfileLoading] = useState(() => !getCachedProfile());
+  const [myOrgs, setMyOrgs]                     = useState([]);
   const [isRinging, setIsRinging]               = useState(false);
   const [isGroupRinging, setIsGroupRinging]     = useState(false);
   const [isBouncing, setIsBouncing]             = useState(false);
@@ -234,6 +235,23 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
 
           await fetchCounts(uid);
 
+          // Organizations this user owns or manages → business console shortcuts
+          try {
+            const [{ data: owned }, { data: memberships }] = await Promise.all([
+              supabase.from('organizations').select('id, name, slug, type').eq('owner_id', uid),
+              supabase.from('organization_members')
+                .select('role, organizations(id, name, slug, type)')
+                .eq('user_id', uid),
+            ]);
+            const map = new Map();
+            (owned || []).forEach(o => o && map.set(o.id, o));
+            (memberships || []).forEach(m => {
+              const o = m.organizations;
+              if (o && ['owner', 'admin', 'recruiter', 'program_manager'].includes(m.role)) map.set(o.id, o);
+            });
+            setMyOrgs([...map.values()]);
+          } catch { setMyOrgs([]); }
+
           if (channelRef.current) supabase.removeChannel(channelRef.current);
           channelRef.current = supabase
             .channel(`sidebar-updates-${uid}-${Date.now()}`)
@@ -249,6 +267,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
         } else {
           setProfile(null);
           setUnreadMessages(0); setUnreadNotifs(0); setUnreadGroups(0);
+          setMyOrgs([]);
         }
       } catch (err) {
         console.error("Sidebar init error:", err);
@@ -282,6 +301,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    setMyOrgs([]);
     try { sessionStorage.removeItem(SIDEBAR_CACHE_KEY); } catch {}
     router.push('/auth');
   };
@@ -330,6 +350,18 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
         { id: 'notifications', icon: Bell,            label: t('nav.items.notifications'), badge: unreadNotifs,   onBadge: handleMarkAllNotifsRead,   isRinging  },
       ],
     },
+    ...(myOrgs.length > 0 ? [{
+      label: 'Business',
+      items: [
+        ...myOrgs.map(o => ({
+          id: `org-${o.slug}`,
+          icon: Building2,
+          label: o.name,
+          href: `/business/${o.slug}`,
+        })),
+        { id: 'org-new', icon: UserPlus, label: 'New organization', href: '/organizations/new' },
+      ],
+    }] : []),
     {
       label: t('nav.groups.network'),
       items: [

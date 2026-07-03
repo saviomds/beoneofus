@@ -7,7 +7,7 @@ import { supabase } from '../../supabaseClient';
 import { orgMeta } from '../../../lib/orgTypes';
 import {
   ArrowLeft, ShieldCheck, MapPin, Globe, CalendarDays, Users2,
-  Building2, Mail, ExternalLink,
+  Building2, Mail, ExternalLink, LayoutDashboard,
 } from 'lucide-react';
 
 function VerifiedPill({ status, isVerified }) {
@@ -28,6 +28,7 @@ export default function OrganizationProfile() {
   const { slug } = useParams();
   const [org, setOrg] = useState(null);
   const [members, setMembers] = useState([]);
+  const [canManage, setCanManage] = useState(false);
   const [state, setState] = useState('loading'); // loading | ready | notfound
 
   useEffect(() => {
@@ -49,6 +50,18 @@ export default function OrganizationProfile() {
         .order('created_at', { ascending: true })
         .limit(24);
       if (active) setMembers(m || []);
+
+      // Show a "Manage" entry point if the viewer owns/manages this org
+      const { data: { session } } = await supabase.auth.getSession();
+      if (active && session) {
+        if (o.owner_id === session.user.id) setCanManage(true);
+        else {
+          const { data: mem } = await supabase
+            .from('organization_members').select('role')
+            .eq('organization_id', o.id).eq('user_id', session.user.id).maybeSingle();
+          if (active && mem && ['owner', 'admin', 'recruiter', 'program_manager'].includes(mem.role)) setCanManage(true);
+        }
+      }
     })();
     return () => { active = false; };
   }, [slug]);
@@ -89,10 +102,15 @@ export default function OrganizationProfile() {
     <div className="min-h-screen bg-gray-50 dark:bg-ink text-gray-900 dark:text-gray-100">
       {/* Back bar */}
       <header className="sticky top-0 z-40 bg-white/85 dark:bg-ink/85 backdrop-blur-xl border-b border-gray-100 dark:border-white/10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link href="/organizations" className="flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             <ArrowLeft size={16} /> Organizations
           </Link>
+          {canManage && (
+            <Link href={`/business/${slug}`} className="inline-flex items-center gap-1.5 text-sm font-bold bg-ink dark:bg-white/10 text-white px-3.5 py-1.5 rounded-lg hover:opacity-90 transition-opacity">
+              <LayoutDashboard size={14} /> Manage
+            </Link>
+          )}
         </div>
       </header>
 

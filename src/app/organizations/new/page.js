@@ -58,7 +58,7 @@ export default function NewOrganizationPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Could not create organization.');
-      router.push('/organizations');
+      router.push(data.organization?.slug ? `/business/${data.organization.slug}` : '/organizations');
     } catch (err) {
       setError(err.message);
       setSaving(false);

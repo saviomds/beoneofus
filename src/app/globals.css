@@ -2,6 +2,45 @@
 
 @custom-variant dark (&:is(.dark, .dark *));
 
+/* ─────────────────────────────────────────────────────────────────────────
+   beoneofus brand system — from the Platform Overview & Business Plan (p.27).
+   Roles are deliberate: brand = actions/links, trust = verification (teal),
+   premium = premium/institutional (amber), ink = deep grounds + text.
+   These emit both Tailwind utilities (bg-brand, text-trust, …) and CSS vars
+   (var(--color-brand)) for use in inline styles / canvas.
+   ───────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Primary — #4C5FF5 */
+  --color-brand-50:  #eef0fe;
+  --color-brand-100: #dfe3fd;
+  --color-brand-200: #c2c9fb;
+  --color-brand-300: #9aa6f8;
+  --color-brand-400: #6f80f6;
+  --color-brand-500: #4c5ff5;
+  --color-brand-600: #3a4de0;
+  --color-brand-700: #2f3fc4;
+  --color-brand:     #4c5ff5;
+
+  /* Teal — #17C3A6 — trust & verification */
+  --color-trust-50:  #e6f8f4;
+  --color-trust-100: #c5efe7;
+  --color-trust-500: #17c3a6;
+  --color-trust-600: #0e8a76;
+  --color-trust:     #17c3a6;
+
+  /* Amber — #F0A63A — premium & institutional */
+  --color-premium-50:  #fdf3e2;
+  --color-premium-100: #fbe6c2;
+  --color-premium-500: #f0a63a;
+  --color-premium-600: #c9832a;
+  --color-premium:     #f0a63a;
+
+  /* Ink — #0A1024 — deep navy grounds + text */
+  --color-ink:      #0a1024;
+  --color-ink-soft: #111a33;
+  --color-ink-2:    #1a2440;
+}
+
 @layer base {
   body {
     @apply bg-white dark:bg-[#0D0D0D] text-gray-900 dark:text-gray-100 transition-colors duration-300;

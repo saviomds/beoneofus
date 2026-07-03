@@ -174,7 +174,7 @@ export default function LandingPage() {
   const [heroVisible, setHeroVisible] = useState(false);
   const [navAvatarError, setNavAvatarError] = useState(false);
   const [typeText, setTypeText] = useState("");
-  const words = ["professionals.", "creators.", "founders.", "designers.", "marketers.", "educators.", "engineers.", "builders."];
+  const words = ["individuals.", "businesses.", "governments.", "schools.", "hospitals.", "NGOs.", "mentors.", "communities."];
   const wordIndex = useRef(0);
   const charIndex = useRef(0);
   const deleting = useRef(false);
@@ -444,7 +444,7 @@ export default function LandingPage() {
         .reveal-delay-5 { transition-delay:0.5s; }
 
         .gradient-text {
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
+          background: linear-gradient(135deg, #4C5FF5, #17C3A6, #4C5FF5);
           background-size: 300% 100%;
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -472,11 +472,17 @@ export default function LandingPage() {
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0 group" onClick={() => setActiveDropdown(null)}>
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform">
-                <Terminal size={16} className="text-white" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform bg-gradient-to-br from-brand-500 to-trust-500">
+                <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path d="M9 9 4 4.5M9 9l5-4.5M9 9v6" stroke="#fff" strokeWidth="1.3" opacity=".85"/>
+                  <circle cx="9" cy="9" r="2.4" fill="#fff"/>
+                  <circle cx="4" cy="4.5" r="1.6" fill="#fff" opacity=".92"/>
+                  <circle cx="14" cy="4.5" r="1.6" fill="#fff" opacity=".92"/>
+                  <circle cx="9" cy="15" r="1.6" fill="#fff" opacity=".92"/>
+                </svg>
               </div>
               <span className="font-black text-xl tracking-tight text-gray-900 dark:text-white">
-                beone<span className="text-blue-600">of</span>us
+                beone<span className="text-trust-500">of</span>us
               </span>
             </Link>
 
@@ -1120,34 +1126,34 @@ export default function LandingPage() {
           <div className={`relative text-center max-w-4xl mx-auto transition-all duration-1000 ${heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`} style={{ zIndex: 10 }}>
 
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/40 text-blue-600 dark:text-blue-400 text-xs font-black uppercase tracking-widest mb-8"
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/30 text-brand-600 dark:text-brand-300 text-xs font-black uppercase tracking-widest mb-8"
               style={{ animationDelay: "0.2s" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-              The Global Professional Network
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
+              The Global Opportunity Ecosystem
             </div>
 
             {/* Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[1.1] mb-6">
               <span className="block text-gray-900 dark:text-white">Where the world's</span>
-              <span className="block mt-1"><span className="gradient-text inline-block pb-1">{typeText || " "}</span><span className="cursor-blink text-blue-500 font-light">|</span></span>
-              <span className="block text-gray-900 dark:text-white">actually meet.</span>
+              <span className="block mt-1"><span className="gradient-text inline-block pb-1">{typeText || " "}</span><span className="cursor-blink text-brand-500 font-light">|</span></span>
+              <span className="block text-gray-900 dark:text-white">actually connect.</span>
             </h1>
 
             {/* Sub */}
             <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto font-medium leading-relaxed mb-8">
-              Jobs. Mentorship. AI coaching. Courses. Connections — for every professional, in every field, across every country.
+              Jobs, mentorship, courses, coaching, and community — for individuals, businesses, governments, schools, healthcare, and NGOs, connected through one AI graph.
             </p>
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
               <Link href={authLink(session, "/dash")}
-                className="w-full sm:w-auto group flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-7 py-3.5 rounded-2xl text-sm font-black shadow-xl shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105 transition-all duration-200">
+                className="w-full sm:w-auto group flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-7 py-3.5 rounded-2xl text-sm font-black shadow-xl shadow-brand-500/25 hover:shadow-brand-500/40 hover:scale-105 transition-all duration-200">
                 {session ? "Go to Dashboard" : "Join Free — No Credit Card"}
                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href="/how_it_works"
+              <Link href="/opportunities"
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 text-gray-900 dark:text-white px-7 py-3.5 rounded-2xl text-sm font-bold hover:scale-105 transition-all duration-200 shadow-sm">
-                <Play size={14} className="text-blue-600" /> See how it works
+                <Briefcase size={14} className="text-brand-500" /> For organizations
               </Link>
             </div>
 

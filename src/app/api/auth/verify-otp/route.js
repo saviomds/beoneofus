@@ -35,9 +35,10 @@ export async function POST(request) {
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
+    // auth_otp is keyed by email (its primary key) — there is no `id` column.
     const { data, error } = await supabase
       .from('auth_otp')
-      .select('id')
+      .select('email')
       .eq('email', addr)
       .eq('code', String(code))
       .eq('used', false)
@@ -48,8 +49,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid or expired code.' }, { status: 400 });
     }
 
-    // Mark this exact OTP row used (not all OTPs for the email)
-    await supabase.from('auth_otp').update({ used: true }).eq('id', data.id);
+    // Mark the code used (one row per email, so match on email)
+    await supabase.from('auth_otp').update({ used: true }).eq('email', addr);
 
     return NextResponse.json({ success: true });
   } catch (err) {

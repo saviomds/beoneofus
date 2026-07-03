@@ -375,26 +375,51 @@ function Team({ members, role }) {
 
 function Verification({ org, slug, token, onChanged }) {
   const [busy, setBusy] = useState(false);
+  const [regNumber, setRegNumber] = useState('');
+  const [note, setNote] = useState('');
+  const [file, setFile] = useState(null);
+  const [err, setErr] = useState(null);
   const status = org.is_verified ? 'verified' : (org.verification_status || 'unverified');
 
-  const request = async () => {
-    setBusy(true);
-    await fetch(`/api/business/${slug}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action: 'request_verification' }),
-    });
+  const submit = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not signed in.');
+      let docPath = null;
+      if (file) {
+        if (file.size > 8 * 1024 * 1024) throw new Error('Document must be under 8 MB.');
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
+        docPath = `${org.id}/${Date.now()}_${safe}`;
+        const { error: upErr } = await supabase.storage.from('org-verification').upload(docPath, file, { upsert: false });
+        if (upErr) throw new Error('Upload failed: ' + upErr.message);
+      }
+      const { error: insErr } = await supabase.from('verification_requests').insert({
+        organization_id: org.id,
+        requester_id: session.user.id,
+        registration_number: regNumber || null,
+        document_url: docPath,
+        note: note || null,
+      });
+      if (insErr) throw new Error(insErr.message);
+      await fetch(`/api/business/${slug}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'request_verification' }),
+      });
+      onChanged?.();
+    } catch (e) { setErr(e.message); }
     setBusy(false);
-    onChanged?.();
   };
 
   const STATE = {
     verified:   { icon: CheckCircle2, tone: 'text-trust-500 bg-trust-500/15', title: 'Verified organization', desc: 'Your organization carries the verified trust badge across the network.' },
-    pending:    { icon: Clock,        tone: 'text-premium-500 bg-premium-500/15', title: 'Verification pending', desc: 'Our team is reviewing your organization. Some scaled actions stay limited until approval.' },
+    pending:    { icon: Clock,        tone: 'text-premium-500 bg-premium-500/15', title: 'Verification pending', desc: 'Our team is reviewing your submission. Some scaled actions stay limited until approval.' },
     unverified: { icon: AlertTriangle,tone: 'text-gray-400 bg-white/5', title: 'Not verified', desc: 'Verify your organization to earn a trust badge and unlock scaled outreach — trust is the product, not a feature.' },
   };
   const s = STATE[status] || STATE.unverified;
   const Icon = s.icon;
+  const fld = 'w-full bg-white/[0.06] rounded-xl py-2.5 px-3.5 text-sm text-gray-100 outline-none focus:ring-2 focus:ring-brand-500/40 border-0 placeholder:text-gray-600';
 
   return (
     <div className="max-w-2xl">
@@ -402,13 +427,31 @@ function Verification({ org, slug, token, onChanged }) {
       <div className={`${panel} p-6`}>
         <div className="flex items-start gap-4">
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${s.tone}`}><Icon size={24} /></div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h3 className="font-black text-white">{s.title}</h3>
             <p className="text-sm text-gray-400 mt-1">{s.desc}</p>
+
             {status === 'unverified' && (
-              <button onClick={request} disabled={busy} className="mt-4 inline-flex items-center gap-2 bg-premium-500 hover:bg-premium-600 text-ink px-4 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-60">
-                {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Request verification
-              </button>
+              <div className="mt-5 space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5">Business registration / license number</label>
+                  <input className={fld} value={regNumber} onChange={(e) => setRegNumber(e.target.value)} placeholder="e.g. C12345678" maxLength={60} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5">Registration document <span className="text-gray-600">(PDF or image, ≤ 8 MB)</span></label>
+                  <input type="file" accept=".pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    className="block w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-white/10 file:text-gray-200 hover:file:bg-white/15" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5">Note <span className="text-gray-600">(optional)</span></label>
+                  <textarea className={`${fld} min-h-[70px] resize-y`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything our reviewers should know." maxLength={500} />
+                </div>
+                {err && <p className="text-sm text-red-400">{err}</p>}
+                <button onClick={submit} disabled={busy} className="inline-flex items-center gap-2 bg-premium-500 hover:bg-premium-600 text-ink px-4 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-60">
+                  {busy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Submit for verification
+                </button>
+                <p className="text-[11px] text-gray-500">Or verify from a company-domain email — free-mail addresses take longer to review.</p>
+              </div>
             )}
           </div>
         </div>

@@ -1,23 +1,14 @@
 import Link from 'next/link';
 import {
-  Building2, Landmark, GraduationCap, HeartPulse, HandHeart, Users2,
   ArrowRight, ShieldCheck, BarChart3, Network, CheckCircle2,
 } from 'lucide-react';
+import { orgMeta, ORG_TYPE_ORDER } from '../../lib/orgTypes';
 
 export const metadata = {
   title: 'For Institutions — beoneofus',
   description:
     'Businesses, governments, schools, healthcare providers, and NGOs reach a verified population intelligently — post, hire, and engage at scale on one AI-native graph.',
 };
-
-const TYPES = [
-  { icon: Building2,    label: 'Businesses',   desc: 'Hire, upskill, and engage talent through one verified channel — with AI insight into your talent pool.' },
-  { icon: Landmark,     label: 'Governments',  desc: 'Reach citizens with employment, training, and civic programs on a trusted, measurable channel.' },
-  { icon: GraduationCap,label: 'Education',    desc: 'Connect courses and graduates directly to real-world opportunity and employer demand.' },
-  { icon: HeartPulse,   label: 'Healthcare',   desc: 'Extend access and wellbeing support into the professional network, verified and secure.' },
-  { icon: HandHeart,    label: 'NGOs',         desc: 'Reach and mobilize communities around programs and support, with a verified presence.' },
-  { icon: Users2,       label: 'Communities',  desc: 'Give grassroots groups a verified, connected home inside the wider opportunity graph.' },
-];
 
 const VALUE = [
   { icon: Network,    title: 'One verified channel', desc: 'Post, hire, and engage at scale — reaching individuals through a single AI-native identity instead of a dozen disconnected tools.' },
@@ -90,15 +81,19 @@ export default function ForInstitutionsPage() {
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight">Built for how your institution actually operates.</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {TYPES.map(({ icon: Icon, label, desc }) => (
-            <div key={label} className="group p-6 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-lg transition-all">
-              <div className="w-11 h-11 rounded-xl bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-300 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                <Icon size={20} />
+          {ORG_TYPE_ORDER.map((t) => {
+            const m = orgMeta(t);
+            const Icon = m.icon;
+            return (
+              <div key={t} className={`group p-6 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] ${m.accent.ring} hover:shadow-lg transition-all`}>
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition-transform ${m.accent.icon}`}>
+                  <Icon size={20} />
+                </div>
+                <h3 className="font-bold text-gray-900 dark:text-white mb-1.5">{m.label}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{m.blurb}</p>
               </div>
-              <h3 className="font-bold text-gray-900 dark:text-white mb-1.5">{label}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{desc}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

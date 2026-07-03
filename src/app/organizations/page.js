@@ -3,21 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  Building2, Landmark, GraduationCap, HeartPulse, HandHeart, Users2, Sparkles,
-  ArrowLeft, Plus, Search, ShieldCheck, MapPin, Globe,
+  Building2, ArrowLeft, Plus, Search, ShieldCheck, MapPin, Globe,
 } from 'lucide-react';
+import { orgMeta, ORG_TYPE_ORDER } from '../../lib/orgTypes';
 
-const TYPE_META = {
-  business:   { label: 'Business',   icon: Building2 },
-  government: { label: 'Government', icon: Landmark },
-  education:  { label: 'Education',  icon: GraduationCap },
-  healthcare: { label: 'Healthcare', icon: HeartPulse },
-  ngo:        { label: 'NGO',        icon: HandHeart },
-  community:  { label: 'Community',  icon: Users2 },
-  other:      { label: 'Other',      icon: Sparkles },
-};
-
-const FILTERS = ['all', 'business', 'government', 'education', 'healthcare', 'ngo', 'community'];
+const FILTERS = ['all', ...ORG_TYPE_ORDER];
 
 export default function OrganizationsDirectory() {
   const [orgs, setOrgs] = useState([]);
@@ -87,7 +77,7 @@ export default function OrganizationsDirectory() {
                     : 'bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
-                {f === 'all' ? 'All' : TYPE_META[f]?.label}
+                {f === 'all' ? 'All' : orgMeta(f).label}
               </button>
             ))}
           </div>
@@ -113,34 +103,38 @@ export default function OrganizationsDirectory() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {orgs.map((o) => {
-              const meta = TYPE_META[o.type] || TYPE_META.other;
+              const meta = orgMeta(o.type);
               const Icon = meta.icon;
               return (
-                <div key={o.id} className="group p-5 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-lg transition-all">
+                <Link
+                  key={o.id}
+                  href={`/organizations/${o.slug}`}
+                  className={`group p-5 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] ${meta.accent.ring} hover:shadow-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500`}
+                >
                   <div className="flex items-start gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-300 flex items-center justify-center shrink-0">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${meta.accent.icon}`}>
                       {o.logo_url
                         ? <img src={o.logo_url} alt="" className="w-full h-full object-cover rounded-xl" referrerPolicy="no-referrer" />
                         : <Icon size={20} />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <h3 className="font-bold text-gray-900 dark:text-white truncate">{o.name}</h3>
+                        <h3 className="font-bold text-gray-900 dark:text-white truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{o.name}</h3>
                         {o.is_verified && <ShieldCheck size={15} className="text-trust-500 shrink-0" />}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-300">{meta.label}</span>
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${meta.accent.chip}`}>{meta.label}</span>
                         {o.sector && <span className="text-xs text-gray-400 truncate">{o.sector}</span>}
                       </div>
                       {o.tagline && <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2 leading-relaxed">{o.tagline}</p>}
                       <div className="flex items-center gap-3 mt-3 text-xs text-gray-400">
                         {o.location && <span className="inline-flex items-center gap-1"><MapPin size={12} />{o.location}</span>}
-                        {o.website && <a href={o.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-brand-500 transition-colors"><Globe size={12} />Website</a>}
+                        {o.website && <span className="inline-flex items-center gap-1"><Globe size={12} />Website</span>}
                         {o.hiring && <span className="inline-flex items-center gap-1 text-trust-600 dark:text-trust-500 font-bold">Hiring</span>}
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

@@ -40,6 +40,14 @@ export default function NewOrganizationPage() {
     });
   }, [router]);
 
+  // Prefill the category chosen at business sign-up (?category=…) and clear the flag
+  useEffect(() => {
+    const valid = ['business', 'government', 'education', 'healthcare', 'ngo', 'community', 'other'];
+    const cat = new URLSearchParams(window.location.search).get('category');
+    if (cat && valid.includes(cat)) setType(cat);
+    try { localStorage.removeItem('pending_account_type'); localStorage.removeItem('pending_org_category'); } catch {}
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);

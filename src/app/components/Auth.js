@@ -11,12 +11,77 @@ import {
   ArrowLeft,
   CheckCircle2,
   XCircle,
+  User,
+  Building2,
 } from 'lucide-react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const USERNAME_RE = /^[a-z0-9_-]{3,20}$/;
 const EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+// Free-mail domains — a company-domain email builds more trust for businesses.
+const FREE_MAIL = new Set([
+  'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'aol.com',
+  'proton.me', 'protonmail.com', 'live.com', 'mail.com', 'gmx.com', 'yandex.com',
+]);
+function isFreeMail(email) {
+  const d = email?.split('@')[1]?.toLowerCase().trim();
+  return d ? FREE_MAIL.has(d) : false;
+}
+
+// Business category → organization_type (matches the org enum)
+const ORG_CATEGORIES = [
+  { value: 'business',   label: 'Business / Company' },
+  { value: 'government', label: 'Government Agency' },
+  { value: 'education',  label: 'Educational Institution' },
+  { value: 'healthcare', label: 'Healthcare Provider' },
+  { value: 'ngo',        label: 'NGO' },
+  { value: 'community',  label: 'Community Group' },
+  { value: 'other',      label: 'Mentorship / Coaching Practice' },
+];
+
+// ─── Account-type chooser (step 1 of sign-up) ──────────────────────────────────
+function AccountTypeChooser({ onIndividual, onBusiness, onSignIn }) {
+  return (
+    <div className="animate-in fade-in slide-in-from-right-6 duration-300">
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Create your account</h1>
+        <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">How will you use beoneofus?</p>
+      </div>
+      <div className="space-y-3">
+        {/* Individual — indigo, human, opportunity-focused */}
+        <button
+          type="button"
+          onClick={onIndividual}
+          className="group w-full text-left p-4 rounded-2xl border-2 border-gray-200 dark:border-gray-700 hover:border-[#4C5FF5] hover:bg-[#4C5FF5]/[0.04] transition-all flex items-start gap-3.5"
+        >
+          <div className="w-11 h-11 rounded-xl bg-[#4C5FF5]/10 text-[#4C5FF5] flex items-center justify-center shrink-0"><User size={20} /></div>
+          <div className="min-w-0">
+            <p className="font-bold text-gray-900 dark:text-white">Join as an Individual</p>
+            <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">One profile, every opportunity — jobs, mentors, courses, and community.</p>
+          </div>
+        </button>
+        {/* Business — ink-dark, teal, authoritative enterprise feel */}
+        <button
+          type="button"
+          onClick={onBusiness}
+          className="group w-full text-left p-4 rounded-2xl border-2 border-transparent bg-[#0A1024] hover:ring-2 hover:ring-[#17C3A6]/60 transition-all flex items-start gap-3.5"
+        >
+          <div className="w-11 h-11 rounded-xl bg-[#17C3A6]/15 text-[#17C3A6] flex items-center justify-center shrink-0"><Building2 size={20} /></div>
+          <div className="min-w-0">
+            <p className="font-bold text-white">Join as a Business / Organization</p>
+            <p className="text-[13px] text-gray-300 mt-0.5 leading-snug">Hire, upskill, and engage talent through one verified channel.</p>
+          </div>
+        </button>
+      </div>
+      <p className="mt-6 text-center text-[13px] text-gray-500 dark:text-gray-400">
+        Already have an account?{' '}
+        <button type="button" onClick={onSignIn} className="text-[#0071e3] font-medium hover:underline">Sign in</button>
+      </p>
+    </div>
+  );
+}
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
@@ -94,6 +159,10 @@ export default function AuthForm() {
   // sign-in steps: 'email' | 'password' | 'otp'
   // sign-up steps: 'email' | 'details'
   const [signInStep, setSignInStep] = useState('email');
+
+  // sign-up account type: null (show chooser) | 'individual' | 'business'
+  const [accountType, setAccountType] = useState(null);
+  const [orgCategory, setOrgCategory] = useState('business');
 
   // username async check: 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
   const [usernameStatus, setUsernameStatus] = useState('idle');
@@ -255,7 +324,19 @@ export default function AuthForm() {
             const params = new URLSearchParams(window.location.search);
             const next = params.get('next');
             if (next?.startsWith('/')) { window.location.href = next; return; }
-            // Send new users to onboarding, returning users to dashboard
+            // Business signups continue into organization onboarding (create org
+            // + verification). The account-type flag is set at sign-up time.
+            let acctType = null, orgCat = null;
+            try {
+              acctType = localStorage.getItem('pending_account_type');
+              orgCat = localStorage.getItem('pending_org_category');
+            } catch {}
+            if (isNewUser && acctType === 'business') {
+              try { localStorage.removeItem('pending_account_type'); localStorage.removeItem('pending_org_category'); } catch {}
+              window.location.href = orgCat ? `/organizations/new?category=${encodeURIComponent(orgCat)}` : '/organizations/new';
+              return;
+            }
+            // Send new individuals to onboarding, returning users to dashboard
             window.location.href = isNewUser ? '/onboarding' : '/dash';
           };
 
@@ -342,7 +423,11 @@ export default function AuthForm() {
   }, []);
 
   const switchView = useCallback(
-    (next) => { resetForm(); setSuccessInfo(null); setView(next); },
+    (next) => {
+      resetForm(); setSuccessInfo(null); setView(next);
+      setAccountType(null); setOrgCategory('business');
+      try { localStorage.removeItem('pending_account_type'); localStorage.removeItem('pending_org_category'); } catch {}
+    },
     [resetForm],
   );
 
@@ -409,11 +494,16 @@ export default function AuthForm() {
         } else {
           localStorage.setItem('pending_username', username);
           if (referralCode.trim()) localStorage.setItem('pending_referral_code', referralCode.trim().toUpperCase());
+          // Business signups carry their org-onboarding destination through the
+          // email-confirmation round-trip (the server callback reads ?next=).
+          const bizNext = accountType === 'business'
+            ? `?next=${encodeURIComponent(`/organizations/new?category=${orgCategory}`)}`
+            : '';
           const { error: err } = await supabase.auth.signUp({
             email: email.trim(),
             password,
             options: {
-              emailRedirectTo: `${window.location.origin}/auth/callback`,
+              emailRedirectTo: `${window.location.origin}/auth/callback${bizNext}`,
               data: { username },
             },
           });
@@ -558,9 +648,12 @@ export default function AuthForm() {
     setLoading(true);
     setError(null);
     try {
+      const bizNext = accountType === 'business'
+        ? `?next=${encodeURIComponent(`/organizations/new?category=${orgCategory}`)}`
+        : '';
       const { error: err } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: { redirectTo: `${window.location.origin}/auth/callback${bizNext}` },
       });
       if (err) throw err;
     } catch (err) {
@@ -929,12 +1022,38 @@ export default function AuthForm() {
         </div>
       )}
 
+      {/* ── Sign-up: account-type chooser (step 0) ──────────────────────── */}
+      {view === 'sign-up' && !accountType && (
+        <AccountTypeChooser
+          onIndividual={() => {
+            setAccountType('individual');
+            try { localStorage.removeItem('pending_account_type'); localStorage.removeItem('pending_org_category'); } catch {}
+          }}
+          onBusiness={() => {
+            setAccountType('business');
+            try { localStorage.setItem('pending_account_type', 'business'); localStorage.setItem('pending_org_category', orgCategory); } catch {}
+          }}
+          onSignIn={() => switchView('sign-in')}
+        />
+      )}
+
       {/* ── Sign-up: step 1 — email ─────────────────────────────────────── */}
-      {view === 'sign-up' && signInStep === 'email' && (
+      {view === 'sign-up' && accountType && signInStep === 'email' && (
         <div className="animate-in fade-in slide-in-from-right-6 duration-300">
           <div className="text-center mb-7">
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Create Account</h1>
-            <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Join the beoneofus community</p>
+            <button
+              type="button"
+              onClick={() => setAccountType(null)}
+              className="mb-3 inline-flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              <ArrowLeft size={12} /> Change account type
+            </button>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
+              {accountType === 'business' ? 'Create a business account' : 'Create Account'}
+            </h1>
+            <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
+              {accountType === 'business' ? 'Set up your verified organization presence' : 'Join the beoneofus community'}
+            </p>
           </div>
 
           {!registrationOpen && (
@@ -954,6 +1073,17 @@ export default function AuthForm() {
           {registrationOpen && <OAuthBlock />}
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            {accountType === 'business' && (
+              <select
+                value={orgCategory}
+                onChange={(e) => { setOrgCategory(e.target.value); try { localStorage.setItem('pending_org_category', e.target.value); } catch {} }}
+                className={iCls}
+                aria-label="Organization category"
+                disabled={!registrationOpen}
+              >
+                {ORG_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            )}
             <input
               id="auth-email"
               type="email"
@@ -962,10 +1092,16 @@ export default function AuthForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={iCls}
-              placeholder="Email"
+              placeholder={accountType === 'business' ? 'Business email' : 'Email'}
               autoComplete="email"
               disabled={!registrationOpen}
             />
+            {accountType === 'business' && isFreeMail(email) && (
+              <p className="text-[12px] text-amber-600 dark:text-amber-500 flex items-start gap-1.5 px-1">
+                <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                A company-domain email builds more trust and speeds up verification.
+              </p>
+            )}
             <ErrBanner />
             <button
               type="submit"

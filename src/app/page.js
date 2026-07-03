@@ -1151,7 +1151,7 @@ export default function LandingPage() {
                 {session ? "Go to Dashboard" : "Join Free — No Credit Card"}
                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href="/opportunities"
+              <Link href="/for-institutions"
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 text-gray-900 dark:text-white px-7 py-3.5 rounded-2xl text-sm font-bold hover:scale-105 transition-all duration-200 shadow-sm">
                 <Briefcase size={14} className="text-brand-500" /> For organizations
               </Link>
@@ -2024,6 +2024,8 @@ function Footer({ session }) {
       { label: "Coaching", href: authLink(session, "/dash/coaching") },
     ]},
     { title: "Company", links: [
+      { label: "For Institutions", href: "/for-institutions" },
+      { label: "Organizations", href: "/organizations" },
       { label: "How It Works", href: "/how_it_works" },
       { label: "Partnerships", href: authLink(session, "/dash/partnerships") },
       { label: "Docs", href: "/docs" },

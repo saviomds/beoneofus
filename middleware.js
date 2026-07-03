@@ -95,17 +95,14 @@ export async function middleware(request) {
           },
         }
       );
-      const { data, error } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getUser();
       user = data?.user ?? null;
-      // If the refresh token is missing/invalid, Supabase can't restore the
-      // session. Purge the stale auth cookies so the client doesn't keep
-      // rendering a broken "signed-in" shell (and retrying failed refreshes).
-      if (error && !user) {
-        clearAuthCookies(request, response);
-      }
+      // NOTE: do NOT clear auth cookies here. getUser() can throw a transient
+      // "fetch failed" at the edge, and clearing cookies on that would destroy a
+      // perfectly valid, freshly-created session — bouncing signed-in users from
+      // /dash back to /auth. A stale/dead session is handled client-side instead.
     } catch {
-      // Auth check failure — clear stale auth cookies and let the request through
-      clearAuthCookies(request, response);
+      // Transient auth check failure — let the request through, keep cookies.
     }
 
     if (isAlwaysAllowed(pathname)) {

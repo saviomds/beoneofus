@@ -138,6 +138,40 @@ function PasswordStrength({ password }) {
   );
 }
 
+// Shared input style token
+const iCls =
+  'w-full bg-gray-100/80 dark:bg-white/[0.07] rounded-2xl py-3.5 px-4 text-[15px] text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 border-0';
+
+// Password field with show/hide. Defined at MODULE scope (not inside AuthForm)
+// so it keeps a stable component identity — otherwise React remounts the input
+// on every render and the field loses focus after each keystroke.
+function PwField({ id, value, onChange, placeholder, autoFocus, showPw, setShowPw }) {
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type={showPw ? 'text' : 'password'}
+        required
+        value={value}
+        onChange={onChange}
+        autoFocus={autoFocus}
+        placeholder={placeholder}
+        autoComplete={id === 'confirm-password' ? 'new-password' : 'current-password'}
+        className={`${iCls} pr-12`}
+      />
+      <button
+        type="button"
+        onClick={() => setShowPw((s) => !s)}
+        tabIndex={-1}
+        aria-label={showPw ? 'Hide password' : 'Show password'}
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+      >
+        {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AuthForm() {
@@ -662,11 +696,6 @@ export default function AuthForm() {
     }
   };
 
-  // ── Shared style tokens ────────────────────────────────────────────────────
-
-  const iCls =
-    'w-full bg-gray-100/80 dark:bg-white/[0.07] rounded-2xl py-3.5 px-4 text-[15px] text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-[#0071e3]/30 focus:bg-white dark:focus:bg-gray-800 transition-all duration-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 border-0';
-
   // ── Sub-renders ────────────────────────────────────────────────────────────
 
   const PrimaryBtn = ({ label }) => (
@@ -677,31 +706,6 @@ export default function AuthForm() {
     >
       {loading ? <><Loader2 size={16} className="animate-spin" /> Please wait…</> : label}
     </button>
-  );
-
-  const PwField = ({ id, value, onChange, placeholder, autoFocus: af }) => (
-    <div className="relative">
-      <input
-        id={id}
-        type={showPw ? 'text' : 'password'}
-        required
-        value={value}
-        onChange={onChange}
-        autoFocus={af}
-        placeholder={placeholder}
-        autoComplete={id === 'confirm-password' ? 'new-password' : 'current-password'}
-        className={`${iCls} pr-12`}
-      />
-      <button
-        type="button"
-        onClick={() => setShowPw((s) => !s)}
-        tabIndex={-1}
-        aria-label={showPw ? 'Hide password' : 'Show password'}
-        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-      >
-        {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-      </button>
-    </div>
   );
 
   const ErrBanner = () =>
@@ -957,7 +961,7 @@ export default function AuthForm() {
             </button>
           </div>
           <form onSubmit={handleSubmit} className="space-y-3">
-            <PwField id="auth-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" autoFocus />
+            <PwField showPw={showPw} setShowPw={setShowPw} id="auth-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" autoFocus />
             <ErrBanner />
             <PrimaryBtn label="Sign in" />
           </form>
@@ -1172,10 +1176,10 @@ export default function AuthForm() {
               <p className="text-xs text-red-500 px-1">Username already taken</p>
             )}
             <div>
-              <PwField id="auth-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+              <PwField showPw={showPw} setShowPw={setShowPw} id="auth-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
               <PasswordStrength password={password} />
             </div>
-            <PwField id="confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" />
+            <PwField showPw={showPw} setShowPw={setShowPw} id="confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" />
             <input
               id="referral-code"
               type="text"
@@ -1290,10 +1294,10 @@ export default function AuthForm() {
           </div>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <PwField id="auth-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password" autoFocus />
+              <PwField showPw={showPw} setShowPw={setShowPw} id="auth-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New password" autoFocus />
               <PasswordStrength password={password} />
             </div>
-            <PwField id="confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" />
+            <PwField showPw={showPw} setShowPw={setShowPw} id="confirm-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" />
             <ErrBanner />
             <PrimaryBtn label="Update password" />
           </form>

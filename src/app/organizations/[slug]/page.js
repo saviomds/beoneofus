@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../supabaseClient';
 import { orgMeta } from '../../../lib/orgTypes';
+import { consolePathFor } from '../../../lib/orgVerticals';
 import {
   ArrowLeft, ShieldCheck, MapPin, Globe, CalendarDays, Users2,
   Building2, Mail, ExternalLink, LayoutDashboard, Briefcase, ArrowUpRight,
@@ -117,7 +118,7 @@ export default function OrganizationProfile() {
             <ArrowLeft size={16} /> Organizations
           </Link>
           {canManage && (
-            <Link href={`/business/${slug}`} className="inline-flex items-center gap-1.5 text-sm font-bold bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg shadow-sm shadow-brand-500/25 transition-colors">
+            <Link href={consolePathFor(org.type, slug)} className="inline-flex items-center gap-1.5 text-sm font-bold bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg shadow-sm shadow-brand-500/25 transition-colors">
               <LayoutDashboard size={14} /> Manage console
             </Link>
           )}

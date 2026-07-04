@@ -79,7 +79,11 @@ export default function BusinessConsole() {
     if (res.status === 403) { setState('denied'); return; }
     if (res.status === 404) { setState('notfound'); return; }
     if (!res.ok) { setState('denied'); return; }
-    setData(await res.json());
+    const d = await res.json();
+    // Institutions (government, education, healthcare, NGO, community) get their
+    // own dedicated console — only businesses stay on the hiring-centric one.
+    if (d.org?.type && d.org.type !== 'business') { router.replace(`/console/${slug}`); return; }
+    setData(d);
     setState('ready');
   }, [slug, router]);
 

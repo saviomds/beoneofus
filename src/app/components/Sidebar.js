@@ -17,6 +17,7 @@ import VerifiedBadge from './VerifiedBadge';
 import PremiumBadge from './PremiumBadge';
 import { getAvatarSrc } from '../../lib/avatar';
 import { useLanguage } from '../../lib/i18n';
+import { consolePathFor } from '../../lib/orgVerticals';
 import { usePlatformVersion } from '../../hooks/usePlatformVersion';
 
 /* ── Collapsed nav item (icon + tooltip) ─────────────────────── */
@@ -414,7 +415,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
 
   /* ── Collapsed sidebar ───────────────────────────────────────── */
   if (isCollapsed) {
-    const orgItems = myOrgs.map(o => ({ id: `org-${o.slug}`, icon: Building2, label: o.name, href: `/business/${o.slug}` }));
+    const orgItems = myOrgs.map(o => ({ id: `org-${o.slug}`, icon: Building2, label: o.name, href: consolePathFor(o.type, o.slug) }));
     const allItems = [...navGroups.flatMap(g => g.items), ...orgItems];
     return (
       <>
@@ -578,7 +579,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
                   {myOrgs.map(o => (
                     <button
                       key={o.slug}
-                      onClick={() => { router.push(`/business/${o.slug}`); onClose?.(); }}
+                      onClick={() => { router.push(consolePathFor(o.type, o.slug)); onClose?.(); }}
                       className="w-full flex items-center gap-2.5 py-1.5 px-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left group"
                     >
                       <div className="w-9 h-9 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../supabaseClient';
+import { consolePathFor } from '../../lib/orgVerticals';
 import {
   AlertTriangle,
   ShieldCheck,
@@ -307,17 +308,18 @@ export default function AuthForm() {
             try {
               const uid = session.user.id;
               const [{ data: owned }, { data: memberships }] = await Promise.all([
-                supabase.from('organizations').select('slug').eq('owner_id', uid).limit(1),
-                supabase.from('organization_members').select('role, organizations(slug)').eq('user_id', uid),
+                supabase.from('organizations').select('slug, type').eq('owner_id', uid).limit(1),
+                supabase.from('organization_members').select('role, organizations(slug, type)').eq('user_id', uid),
               ]);
-              let slug = owned?.[0]?.slug || null;
-              if (!slug && memberships) {
+              let mgOrg = owned?.[0] || null;
+              if (!mgOrg && memberships) {
                 const mgr = memberships.find(
                   (m) => ['owner', 'admin', 'recruiter', 'program_manager'].includes(m.role) && m.organizations?.slug,
                 );
-                slug = mgr?.organizations?.slug || null;
+                mgOrg = mgr?.organizations || null;
               }
-              if (slug) dest = `/business/${slug}`;
+              const slug = mgOrg?.slug || null;
+              if (slug) dest = consolePathFor(mgOrg.type, slug);
             } catch { /* default to /dash */ }
             window.location.href = dest;
           }
@@ -397,17 +399,18 @@ export default function AuthForm() {
             try {
               const uid = session.user.id;
               const [{ data: owned }, { data: memberships }] = await Promise.all([
-                supabase.from('organizations').select('slug').eq('owner_id', uid).limit(1),
-                supabase.from('organization_members').select('role, organizations(slug)').eq('user_id', uid),
+                supabase.from('organizations').select('slug, type').eq('owner_id', uid).limit(1),
+                supabase.from('organization_members').select('role, organizations(slug, type)').eq('user_id', uid),
               ]);
-              let slug = owned?.[0]?.slug || null;
-              if (!slug && memberships) {
+              let mgOrg = owned?.[0] || null;
+              if (!mgOrg && memberships) {
                 const mgr = memberships.find(
                   (m) => ['owner', 'admin', 'recruiter', 'program_manager'].includes(m.role) && m.organizations?.slug,
                 );
-                slug = mgr?.organizations?.slug || null;
+                mgOrg = mgr?.organizations || null;
               }
-              if (slug) { window.location.href = `/business/${slug}`; return; }
+              const slug = mgOrg?.slug || null;
+              if (slug) { window.location.href = consolePathFor(mgOrg.type, slug); return; }
             } catch { /* fall through to individual dashboard */ }
             window.location.href = '/dash';
           };

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../supabaseClient';
+import { consolePathFor } from '../../../lib/orgVerticals';
 import {
   Building2, Landmark, GraduationCap, HeartPulse, HandHeart, Users2, Sparkles,
   ArrowLeft, Loader2, AlertTriangle, CheckCircle2,
@@ -66,7 +67,8 @@ export default function NewOrganizationPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Could not create organization.');
-      router.push(data.organization?.slug ? `/business/${data.organization.slug}` : '/organizations');
+      const created = data.organization;
+      router.push(created?.slug ? consolePathFor(created.type || type, created.slug) : '/organizations');
     } catch (err) {
       setError(err.message);
       setSaving(false);

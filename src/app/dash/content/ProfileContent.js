@@ -248,6 +248,38 @@ export default function ProfileContent({ viewUserId }) {
     };
   }, [viewUserId]);
 
+  // Upload an image and persist it to the profile IMMEDIATELY — no need to enter
+  // edit mode or press the big Save (which also gates on username). Mirrors the
+  // org-console flow. Returns true on success.
+  const commitImage = async (kind, file) => {
+    if (!file || !currentUser) return false;
+    if (!file.type?.startsWith('image/')) { setToast({ message: 'Please choose an image file.', type: 'error' }); setTimeout(() => setToast({ message: '' }), 3000); return false; }
+    if (file.size > 6 * 1024 * 1024) { setToast({ message: 'Image must be under 6 MB.', type: 'error' }); setTimeout(() => setToast({ message: '' }), 3000); return false; }
+    setSaving(true);
+    try {
+      const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const fileName = `${kind}-${currentUser.id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      const col = kind === 'avatar' ? 'avatar_url' : 'banner_url';
+      const { error: updErr } = await supabase.from('profiles').update({ [col]: urlData.publicUrl }).eq('id', currentUser.id);
+      if (updErr) throw updErr;
+      setProfile((prev) => ({ ...prev, [col]: urlData.publicUrl }));
+      if (kind === 'avatar') { setImageFile(null); setImagePreview(null); } else { setBannerFile(null); setBannerPreview(null); }
+      setToast({ message: kind === 'avatar' ? 'Photo updated' : 'Cover updated', type: 'success' });
+      setTimeout(() => setToast({ message: '' }), 2500);
+      return true;
+    } catch (err) {
+      console.error('Image upload error:', err?.message || err);
+      setToast({ message: err?.message || 'Upload failed. Please try again.', type: 'error' });
+      setTimeout(() => setToast({ message: '' }), 3500);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -255,6 +287,8 @@ export default function ProfileContent({ viewUserId }) {
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
+      // Persist immediately so the photo saves without the full-form Save.
+      commitImage('avatar', file);
     }
   };
 
@@ -273,13 +307,15 @@ export default function ProfileContent({ viewUserId }) {
   const handleCropComplete = async () => {
     try {
       const croppedImageBlob = await getCroppedImg(bannerPreview, croppedAreaPixels);
-      setBannerFile(new File([croppedImageBlob], "banner.jpg", { type: "image/jpeg" }));
+      const croppedFile = new File([croppedImageBlob], "banner.jpg", { type: "image/jpeg" });
       setBannerPreview(URL.createObjectURL(croppedImageBlob));
       setShowBannerCropper(false);
+      // Persist the cover immediately — no need to press the form Save afterwards.
+      await commitImage('banner', croppedFile);
     } catch (e) {
       console.error(e);
-      setToast("Failed to crop image");
-      setTimeout(() => setToast(""), 3000);
+      setToast({ message: "Failed to crop image", type: "error" });
+      setTimeout(() => setToast({ message: "" }), 3000);
     }
   };
 
@@ -763,14 +799,24 @@ export default function ProfileContent({ viewUserId }) {
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 mix-blend-overlay"></div>
           )}
           
-          {isEditing && (
-            <div 
+          {isOwnProfile && (
+            <div
               onClick={() => bannerInputRef.current?.click()}
               className="absolute inset-0 bg-gray-900/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
             >
               <Camera size={32} className="text-white mb-2" />
               <span className="text-xs font-bold uppercase tracking-widest text-white bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/20">Change Cover</span>
             </div>
+          )}
+          {/* Always-visible cover button (mobile has no hover) */}
+          {isOwnProfile && (
+            <button
+              onClick={() => bannerInputRef.current?.click()}
+              disabled={saving}
+              className="absolute top-3 right-3 z-20 inline-flex items-center gap-1.5 text-xs font-bold text-white bg-black/45 hover:bg-black/60 backdrop-blur-sm border border-white/20 px-3 py-1.5 rounded-full transition-colors disabled:opacity-60"
+            >
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} Cover
+            </button>
           )}
         </div>
         <input type="file" ref={bannerInputRef} onChange={handleBannerFileChange} accept="image/*" className="hidden" />
@@ -809,6 +855,14 @@ export default function ProfileContent({ viewUserId }) {
               {isOwnProfile ? (
                 !isEditing && (
                   <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={saving}
+                      title="Change profile photo"
+                      className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-3 sm:px-4 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95 disabled:opacity-60"
+                    >
+                      {saving ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />} <span className="hidden sm:inline">Photo</span>
+                    </button>
                     <button
                       onClick={() => setIsEditing(true)}
                       className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-3 sm:px-5 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"

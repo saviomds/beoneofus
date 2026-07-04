@@ -592,7 +592,49 @@ const REC_STATUS = {
   in_progress: { label: 'In Progress', chip: 'bg-premium-500/10 text-premium-600 dark:text-premium-500' },
   completed:   { label: 'Completed',   chip: 'bg-trust-500/10 text-trust-600 dark:text-trust-500' },
   resolved:    { label: 'Resolved',    chip: 'bg-trust-500/10 text-trust-600 dark:text-trust-500' },
+  dismissed:   { label: 'Dismissed',   chip: 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-gray-400' },
+  archived:    { label: 'Archived',    chip: 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-gray-400' },
 };
+
+// One-line summary of what became of a recommendation, from stored state.
+function recJourney(h) {
+  const prog = h.linkedProgram;
+  const lp = prog ? `"${prog.title}"` : (h.createdProgramId ? 'a program (since removed)' : null);
+  switch (h.status) {
+    case 'suggested':   return 'Awaiting a decision.';
+    case 'accepted':    return 'Accepted — not yet linked to a program.';
+    case 'in_progress': return lp ? `Accepted → created ${lp}, now running.` : 'Accepted → program in progress.';
+    case 'completed':   return prog ? `Created ${lp} → completed with ${(prog.participants || 0).toLocaleString()} participants (${prog.completionPct || 0}%).` : 'Marked completed.';
+    case 'resolved':    return h.resolutionNote || 'Resolved — the underlying issue was solved.';
+    case 'dismissed':   return 'Dismissed by a manager.';
+    case 'archived':    return 'Archived.';
+    default:            return '';
+  }
+}
+
+function HistoryRow({ h }) {
+  const st = REC_STATUS[h.status] || REC_STATUS.suggested;
+  const prio = REC_PRIORITY[h.priority] || REC_PRIORITY.medium;
+  const terminal = ['completed', 'resolved', 'dismissed', 'archived'].includes(h.status);
+  const imp = h.linkedProgram?.impact ? IMPACT[h.linkedProgram.impact] : null;
+  return (
+    <div className={`${panel} p-4`}>
+      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${st.chip}`}>{st.label}</span>
+        <span className={`text-[10px] font-mono uppercase tracking-wider ${faint}`}>{REC_TYPE_LABEL[h.type] || h.type}</span>
+        {!terminal && <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${prio.chip}`}>{prio.label}</span>}
+        {h.source === 'ai' && <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-brand-600 dark:text-brand-400"><Sparkles size={10} /> AI</span>}
+        {imp && <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${imp.cls}`}>{imp.label}</span>}
+      </div>
+      <p className={`font-bold text-sm ${heading}`}>{h.title}</p>
+      <p className={`text-sm ${muted} mt-0.5`}>{recJourney(h)}</p>
+      <p className={`text-[11px] ${faint} mt-2`}>
+        Generated {timeAgo(h.createdAt)}
+        {h.status !== 'suggested' && h.updatedAt ? ` · last activity ${timeAgo(h.updatedAt)}` : ''}
+      </p>
+    </div>
+  );
+}
 const IMPACT = {
   high:   { label: 'High impact',   cls: 'bg-trust-500/10 text-trust-600 dark:text-trust-500' },
   medium: { label: 'Medium impact', cls: 'bg-premium-500/10 text-premium-600 dark:text-premium-500' },
@@ -699,6 +741,9 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
   const [genAt, setGenAt] = useState(null);
   const [err, setErr] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [tab, setTab] = useState('board'); // board | history
+  const [history, setHistory] = useState(null);
+  const [histState, setHistState] = useState('idle'); // idle | loading | ready
   const programsTab = v.nav.find((n) => n.component === 'programs' && !n.filter)?.id || 'programs';
 
   const apply = (d) => {
@@ -744,17 +789,44 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
     setBusyId(null);
   };
 
+  const loadHistory = useCallback(async () => {
+    setHistState('loading');
+    try {
+      const res = await fetch(`/api/console/${slug}/recommendations?scope=history`, { headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) setHistory(d.history || []);
+    } catch { /* keep prior */ }
+    setHistState('ready');
+  }, [slug, token]);
+
+  const switchTab = (t) => {
+    setTab(t);
+    if (t === 'history' && history === null) loadHistory();
+  };
+
   const genBtn = (
-    <button onClick={generate} disabled={state === 'generating'}
+    <button onClick={tab === 'history' ? loadHistory : generate} disabled={state === 'generating' || histState === 'loading'}
       className="inline-flex items-center gap-1.5 text-sm font-bold bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-xl disabled:opacity-60 transition-colors shrink-0">
-      {state === 'generating' ? <Loader2 size={15} className="animate-spin" /> : metrics.generated ? <RefreshCw size={15} /> : <Sparkles size={15} />}
-      {metrics.generated ? 'Refresh' : 'Generate'}
+      {(state === 'generating' || (tab === 'history' && histState === 'loading')) ? <Loader2 size={15} className="animate-spin" /> : (tab === 'history' || metrics.generated) ? <RefreshCw size={15} /> : <Sparkles size={15} />}
+      {tab === 'history' ? 'Refresh' : metrics.generated ? 'Refresh' : 'Generate'}
     </button>
+  );
+
+  const toggle = (
+    <div className="inline-flex rounded-xl bg-slate-100 dark:bg-white/5 p-0.5">
+      {['board', 'history'].map((t) => (
+        <button key={t} onClick={() => switchTab(t)}
+          className={`text-xs font-bold px-3 py-1.5 rounded-lg capitalize transition-colors ${tab === t ? 'bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200'}`}>
+          {t}
+        </button>
+      ))}
+    </div>
   );
 
   return (
     <div>
-      <SectionHead tag="Prescriptive" title="Recommended actions" desc="Detected from your real program data — accept to act, and track outcomes as programs run." action={genBtn} />
+      <SectionHead tag="Prescriptive" title="Recommended actions" desc="Detected from your real program data — accept to act, and track outcomes as programs run."
+        action={<div className="flex items-center gap-2">{toggle}{(tab === 'board' && metrics.generated > 0) && genBtn}</div>} />
 
       {err && (
         <div className="flex items-start gap-2 text-sm text-red-500 dark:text-red-400 mb-4">
@@ -762,7 +834,7 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
         </div>
       )}
 
-      {state === 'generating' && (
+      {tab === 'board' && state === 'generating' && (
         <div className="space-y-2.5">
           {[0, 1, 2].map((i) => (
             <div key={i} className={`${panel} p-4 animate-pulse`}>
@@ -774,13 +846,13 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
         </div>
       )}
 
-      {state !== 'generating' && metrics.generated === 0 && (
+      {tab === 'board' && state !== 'generating' && metrics.generated === 0 && (
         <Empty icon={Target} title="No recommendations yet"
           desc="Generate to scan your programs and participants for concrete, prioritized actions."
           onAction={generate} actionLabel="Generate recommendations" />
       )}
 
-      {state !== 'generating' && metrics.generated > 0 && (
+      {tab === 'board' && state !== 'generating' && metrics.generated > 0 && (
         <>
           {/* AI-impact metrics — does AI actually drive outcomes? */}
           <div className="mb-4">
@@ -834,6 +906,30 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
 
           {genAt && <p className={`text-xs ${faint} mt-4`}>Updated {timeAgo(genAt)} · AI re-checks resolved status on every load</p>}
         </>
+      )}
+
+      {tab === 'history' && (
+        histState === 'loading' && history === null ? (
+          <div className="space-y-2.5">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className={`${panel} p-4 animate-pulse`}>
+                <div className="h-3 w-28 rounded bg-slate-100 dark:bg-white/5 mb-3" />
+                <div className="h-4 w-1/2 rounded bg-slate-100 dark:bg-white/5 mb-2" />
+                <div className="h-3 w-3/4 rounded bg-slate-100 dark:bg-white/5" />
+              </div>
+            ))}
+          </div>
+        ) : !history || history.length === 0 ? (
+          <Empty icon={Target} title="No history yet"
+            desc="Once you generate recommendations, every suggestion and what became of it is logged here." />
+        ) : (
+          <>
+            <p className={`text-sm ${muted} mb-3`}>Everything AI has suggested for this organization, most recent first — and what was done about it.</p>
+            <div className="space-y-2.5">
+              {history.map((h) => <HistoryRow key={h.id} h={h} />)}
+            </div>
+          </>
+        )
       )}
     </div>
   );

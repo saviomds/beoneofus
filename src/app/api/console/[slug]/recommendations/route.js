@@ -139,12 +139,58 @@ async function buildBoard(supabase, orgId, orgType) {
   };
 }
 
-// GET — board + metrics (instant, no AI).
+// Read-only chronological history — every recommendation ever generated for this
+// org and what became of it (accepted, created program X, completed, resolved,
+// dismissed). Uses stored statuses/timestamps; does not mutate.
+async function buildHistory(supabase, orgId) {
+  const { data: recRows } = await supabase.from('org_recommendations')
+    .select('*').eq('organization_id', orgId).order('updated_at', { ascending: false });
+  const recs = recRows || [];
+
+  const linkedIds = [...new Set(recs.map((r) => r.created_program_id).filter(Boolean))];
+  const programsById = {};
+  const outcomeById = {};
+  if (linkedIds.length) {
+    const [{ data: progs }, { data: parts }] = await Promise.all([
+      supabase.from('org_programs').select('id, title, status').in('id', linkedIds),
+      supabase.from('program_participants').select('program_id, status').in('program_id', linkedIds),
+    ]);
+    for (const p of progs || []) programsById[p.id] = p;
+    const agg = {};
+    for (const pt of parts || []) {
+      const a = agg[pt.program_id] || (agg[pt.program_id] = { total: 0, done: 0 });
+      a.total += 1;
+      if (DONE_STATUS.has((pt.status || '').toLowerCase())) a.done += 1;
+    }
+    for (const id of linkedIds) {
+      const a = agg[id] || { total: 0, done: 0 };
+      const completionPct = a.total ? Math.round((a.done / a.total) * 100) : 0;
+      outcomeById[id] = { participants: a.total, completionPct, impact: programImpact({ participants: a.total, completionPct }) };
+    }
+  }
+
+  const history = recs.map((r) => {
+    const prog = r.created_program_id ? programsById[r.created_program_id] : null;
+    const linked = prog ? { id: prog.id, title: prog.title, status: prog.status, ...(outcomeById[r.created_program_id] || {}) } : null;
+    return {
+      id: r.id, title: r.title, type: r.type, priority: r.priority, status: r.status, source: r.source,
+      rationale: r.rationale, resolutionNote: r.resolution_note || null,
+      createdProgramId: r.created_program_id || null, linkedProgram: linked,
+      createdAt: r.created_at, actedAt: r.acted_at, resolvedAt: r.resolved_at, updatedAt: r.updated_at,
+    };
+  });
+  return { history };
+}
+
+// GET — board + metrics (default), or ?scope=history for the timeline.
 export async function GET(req, { params }) {
   const { slug } = await params;
   const supabase = admin();
   const gate = await authManager(req, supabase, slug);
   if (gate.error) return NextResponse.json({ error: gate.error }, { status: gate.status });
+  if (new URL(req.url).searchParams.get('scope') === 'history') {
+    return NextResponse.json(await buildHistory(supabase, gate.org.id));
+  }
   return NextResponse.json(await buildBoard(supabase, gate.org.id, gate.org.type));
 }
 

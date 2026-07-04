@@ -7,6 +7,7 @@ const PUBLIC_API_ROUTES = [
   '/api/auth/',
   '/api/otp-email',
   '/api/public-settings',
+  '/api/organizations',   // public org directory (GET); POST checks its own token
 ];
 
 // Page routes that require a valid session (redirect to /auth if missing)

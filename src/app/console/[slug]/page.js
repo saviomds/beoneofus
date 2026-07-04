@@ -10,7 +10,7 @@ import {
   ArrowLeft, Loader2, Lock, Building2, Sun, Moon, Plus, ExternalLink,
   Save, ShieldCheck, CheckCircle2, Clock, AlertTriangle, TrendingUp, Trash2,
   X, MapPin, Users2, Image as ImageIcon, Calendar, Sparkles, RefreshCw,
-  ArrowUp, ArrowDown, Minus, Lightbulb,
+  ArrowUp, ArrowDown, Minus, Lightbulb, Target, Check,
 } from 'lucide-react';
 
 // ── Theme-aware surface tokens (mirror the business console) ─────────────────
@@ -537,6 +537,154 @@ function Impact({ v, data, slug, token }) {
   );
 }
 
+// ── Recommendations — prescriptive, trackable action cards ───────────────────
+const REC_TYPE_LABEL = {
+  capacity_gap: 'Enrolment', empty_program: 'Empty program', declining_completion: 'At-risk',
+  regional_coverage: 'Regional gap', volunteer_shortage: 'Volunteers', placement_gap: 'Placements',
+  reengagement: 'Re-engagement', event_gap: 'Events', new_program: 'Pipeline',
+};
+const REC_PRIORITY = {
+  high:   { chip: 'bg-red-500/10 text-red-600 dark:text-red-400', label: 'High' },
+  medium: { chip: 'bg-premium-500/10 text-premium-600 dark:text-premium-500', label: 'Medium' },
+  low:    { chip: 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-gray-400', label: 'Low' },
+};
+
+function RecCard({ rec, busy, onAct, onCreate }) {
+  const prio = REC_PRIORITY[rec.priority] || REC_PRIORITY.medium;
+  const accepted = rec.status === 'accepted';
+  return (
+    <div className={`${panel} p-4 ${accepted ? 'ring-1 ring-brand-500/30' : ''}`}>
+      <div className="flex items-center gap-2 flex-wrap mb-2">
+        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${prio.chip}`}>{prio.label}</span>
+        <span className={`text-[10px] font-mono uppercase tracking-wider ${faint}`}>{REC_TYPE_LABEL[rec.type] || rec.type}</span>
+        {rec.source === 'ai' && <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-brand-600 dark:text-brand-400"><Sparkles size={10} /> AI</span>}
+        {accepted && <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-trust-600 dark:text-trust-500"><Check size={11} /> Accepted</span>}
+      </div>
+      <p className={`font-bold ${heading}`}>{rec.title}</p>
+      {rec.rationale && <p className={`text-sm ${muted} mt-1`}>{rec.rationale}</p>}
+      <div className={`flex items-center gap-1.5 mt-3 pt-3 border-t ${hairline}`}>
+        {!accepted && (
+          <button disabled={busy} onClick={() => onAct(rec.id, 'accepted')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />} Accept
+          </button>
+        )}
+        {accepted && (
+          <button disabled={busy} onClick={() => onAct(rec.id, 'done')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold bg-trust-500 hover:bg-trust-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={13} />} Mark done
+          </button>
+        )}
+        {rec.suggestedKind && (
+          <button onClick={() => onCreate(rec)} className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg ${muted} hover:bg-slate-100 dark:hover:bg-white/10 transition-colors`}>
+            <Plus size={13} /> Create {rec.suggestedKind}
+          </button>
+        )}
+        <button disabled={busy} onClick={() => onAct(rec.id, 'dismissed')} title="Dismiss"
+          className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 ml-auto transition-colors">
+          <X size={13} /> Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Recommendations({ v, slug, token, go }) {
+  const [state, setState] = useState('init'); // init | ready | generating
+  const [cards, setCards] = useState([]);
+  const [counts, setCounts] = useState({});
+  const [genAt, setGenAt] = useState(null);
+  const [err, setErr] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const programsTab = v.nav.find((n) => n.component === 'programs')?.id || 'programs';
+
+  const loadCache = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/console/${slug}/recommendations`, { headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { setCards(d.recommendations || []); setCounts(d.counts || {}); setGenAt(d.generatedAt); }
+    } catch { /* keep prior */ }
+    setState('ready');
+  }, [slug, token]);
+
+  useEffect(() => { loadCache(); }, [loadCache]);
+
+  const generate = async () => {
+    setState('generating'); setErr(null);
+    try {
+      const res = await fetch(`/api/console/${slug}/recommendations`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(d.error || 'Could not generate recommendations.'); setState('ready'); return; }
+      setCards(d.recommendations || []); setCounts(d.counts || {}); setGenAt(d.generatedAt);
+    } catch { setErr('Network error. Try again.'); }
+    setState('ready');
+  };
+
+  const act = async (id, status) => {
+    setBusyId(id);
+    setCards((c) => c.filter((r) => r.id !== id || status === 'accepted')); // optimistic
+    try {
+      await fetch(`/api/console/${slug}/recommendations`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id, status }),
+      });
+      await loadCache();
+    } catch { await loadCache(); }
+    setBusyId(null);
+  };
+
+  const genBtn = (
+    <button onClick={generate} disabled={state === 'generating'}
+      className="inline-flex items-center gap-1.5 text-sm font-bold bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-xl disabled:opacity-60 transition-colors shrink-0">
+      {state === 'generating' ? <Loader2 size={15} className="animate-spin" /> : cards.length ? <RefreshCw size={15} /> : <Sparkles size={15} />}
+      {cards.length ? 'Refresh' : 'Generate'}
+    </button>
+  );
+
+  return (
+    <div>
+      <SectionHead tag="Prescriptive" title="Recommended actions" desc="Concrete next steps detected from your real program data — accept to act, dismiss to hide." action={genBtn} />
+
+      {err && (
+        <div className="flex items-start gap-2 text-sm text-red-500 dark:text-red-400 mb-4">
+          <AlertTriangle size={15} className="shrink-0 mt-0.5" /><span>{err}</span>
+        </div>
+      )}
+
+      {state === 'generating' && (
+        <div className="space-y-2.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={`${panel} p-4 animate-pulse`}>
+              <div className="h-3 w-24 rounded bg-slate-100 dark:bg-white/5 mb-3" />
+              <div className="h-4 w-2/3 rounded bg-slate-100 dark:bg-white/5 mb-2" />
+              <div className="h-3 w-full rounded bg-slate-100 dark:bg-white/5" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {state !== 'generating' && cards.length === 0 && (
+        <Empty icon={Target} title="No open recommendations"
+          desc="Generate to scan your programs and participants for concrete, prioritized actions."
+          onAction={generate} actionLabel="Generate recommendations" />
+      )}
+
+      {state !== 'generating' && cards.length > 0 && (
+        <>
+          <div className="space-y-2.5">
+            {cards.map((rec) => (
+              <RecCard key={rec.id} rec={rec} busy={busyId === rec.id} onAct={act} onCreate={() => go(programsTab)} />
+            ))}
+          </div>
+          <p className={`text-xs ${faint} mt-4`}>
+            {(counts.done || 0)} done · {(counts.dismissed || 0)} dismissed{genAt ? ` · updated ${timeAgo(genAt)}` : ''}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Overview — vertical KPIs + snapshot ──────────────────────────────────────
 function Overview({ v, data, go }) {
   const k = data.kpis;
@@ -822,6 +970,7 @@ export default function InstitutionConsole() {
   const renderSection = () => {
     switch (current.component) {
       case 'overview':     return <Overview v={v} data={data} go={setSection} />;
+      case 'recommendations': return <Recommendations v={v} slug={slug} token={token} go={setSection} />;
       case 'programs':     return <Programs v={v} data={data} slug={slug} token={token} reload={load} filter={current.filter} />;
       case 'directory':    return <Directory v={v} data={data} slug={slug} token={token} reload={load} filter={current.filter} label={current.label} />;
       case 'impact':       return <Impact v={v} data={data} slug={slug} token={token} />;

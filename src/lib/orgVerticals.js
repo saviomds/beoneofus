@@ -1,7 +1,7 @@
 import {
   Landmark, GraduationCap, HeartPulse, HandHeart, Users2,
   LayoutDashboard, Users, LineChart, Building2, ShieldCheck, CreditCard,
-  CalendarDays, HeartHandshake, Megaphone, Briefcase, Stethoscope, Sprout,
+  CalendarDays, HeartHandshake, Megaphone, Briefcase, Stethoscope, Sprout, Target,
 } from 'lucide-react';
 import { orgMeta } from './orgTypes';
 
@@ -24,7 +24,8 @@ import { orgMeta } from './orgTypes';
 // several type-specific tabs (e.g. NGO "Volunteers" = directory filtered to role).
 
 const SECTION = {
-  overview:     { id: 'overview',     component: 'overview',     icon: LayoutDashboard, label: 'Overview' },
+  overview:       { id: 'overview',       component: 'overview',       icon: LayoutDashboard, label: 'Overview' },
+  recommendations:{ id: 'recommendations',component: 'recommendations',icon: Target,         label: 'Actions' },
   orgpage:      { id: 'orgpage',      component: 'orgpage',      icon: Building2,       label: 'Public Page' },
   team:         { id: 'team',         component: 'team',         icon: Users2,          label: 'Team' },
   verification: { id: 'verification', component: 'verification', icon: ShieldCheck,     label: 'Verification' },
@@ -49,7 +50,7 @@ export const ORG_VERTICALS = {
       { id: 'programs',  component: 'programs',  icon: Landmark,   label: 'Civic programs' },
       { id: 'citizens',  component: 'directory', icon: Users,      label: 'Citizens reached' },
       { id: 'impact',    component: 'impact',    icon: LineChart,  label: 'Impact & reach' },
-      SECTION.orgpage, SECTION.team, SECTION.verification, SECTION.billing,
+      SECTION.recommendations, SECTION.orgpage, SECTION.team, SECTION.verification, SECTION.billing,
     ],
     kpis: [
       { key: 'activePrograms', label: 'Active programs', tone: 'brand' },
@@ -77,7 +78,7 @@ export const ORG_VERTICALS = {
       { id: 'learners',   component: 'directory', icon: Users,         label: 'Learners' },
       { id: 'placements', component: 'directory', icon: Briefcase,     label: 'Placements', filter: { status: 'placed' } },
       { id: 'impact',     component: 'impact',    icon: LineChart,     label: 'Outcomes' },
-      SECTION.orgpage, SECTION.team, SECTION.verification, SECTION.billing,
+      SECTION.recommendations, SECTION.orgpage, SECTION.team, SECTION.verification, SECTION.billing,
     ],
     kpis: [
       { key: 'activePrograms', label: 'Active cohorts',  tone: 'brand' },
@@ -104,7 +105,7 @@ export const ORG_VERTICALS = {
       { id: 'programs', component: 'programs',  icon: Stethoscope, label: 'Access programs' },
       { id: 'people',   component: 'directory', icon: HeartHandshake, label: 'People supported' },
       { id: 'impact',   component: 'impact',    icon: LineChart,   label: 'Wellbeing reach' },
-      SECTION.orgpage, SECTION.team, SECTION.verification, SECTION.billing,
+      SECTION.recommendations, SECTION.orgpage, SECTION.team, SECTION.verification, SECTION.billing,
     ],
     kpis: [
       { key: 'activePrograms', label: 'Active programs',  tone: 'trust' },
@@ -132,7 +133,7 @@ export const ORG_VERTICALS = {
       { id: 'beneficiaries', component: 'directory', icon: HeartHandshake, label: 'Beneficiaries' },
       { id: 'volunteers',   component: 'directory', icon: HandHeart,      label: 'Volunteers', filter: { role: 'volunteer' } },
       { id: 'impact',       component: 'impact',    icon: LineChart,      label: 'Impact' },
-      SECTION.orgpage, SECTION.team, SECTION.verification, SECTION.billing,
+      SECTION.recommendations, SECTION.orgpage, SECTION.team, SECTION.verification, SECTION.billing,
     ],
     kpis: [
       { key: 'activePrograms', label: 'Active campaigns', tone: 'premium' },
@@ -160,7 +161,7 @@ export const ORG_VERTICALS = {
       { id: 'members', component: 'directory', icon: Users,           label: 'Members' },
       { id: 'events',  component: 'programs',  icon: CalendarDays,    label: 'Events', filter: { kind: 'event' } },
       { id: 'impact',  component: 'impact',    icon: LineChart,       label: 'Engagement' },
-      SECTION.orgpage, SECTION.verification, SECTION.billing,
+      SECTION.recommendations, SECTION.orgpage, SECTION.verification, SECTION.billing,
     ],
     kpis: [
       { key: 'members',        label: 'Members',        tone: 'premium', format: 'number' },

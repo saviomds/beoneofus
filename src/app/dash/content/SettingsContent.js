@@ -607,11 +607,14 @@ export default function SettingsContent() {
 
   const handleApproveVerification = async (userId) => {
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_verified: true, verification_status: "approved" })
-        .eq("id", userId);
-      if (error) throw error;
+      // is_verified is DB-protected; write it through the admin-gated API.
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/user-flags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ userId, flags: { is_verified: true, verification_status: "approved" } }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Failed to verify user"); }
       sendNotif('verification_approved', userId);
       showToast("User verified successfully!");
       fetchRecentUsers();

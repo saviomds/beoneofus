@@ -151,9 +151,23 @@ export default function AdminContent() {
     loadUsers();
   }, [isAdmin, activeTab]);
 
+  // Privileged profile columns are DB-protected; only the service role may write
+  // them. Route admin actions through the admin-gated API.
+  const setUserFlags = async (userId, flags) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { error: { message: "Not signed in" } };
+    const res = await fetch("/api/admin/user-flags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ userId, flags }),
+    });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); return { error: { message: d.error || "Request failed" } }; }
+    return { error: null };
+  };
+
   const handleVerify = async (userId) => {
     setProcessing(userId);
-    const { error } = await supabase.from("profiles").update({ is_verified: true }).eq("id", userId);
+    const { error } = await setUserFlags(userId, { is_verified: true });
     if (!error) {
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, is_verified: true } : u));
       showToast("User verified");
@@ -166,7 +180,7 @@ export default function AdminContent() {
   const handleBan = async (userId) => {
     if (!confirm("Suspend this user? They will lose access until reinstated.")) return;
     setProcessing(userId);
-    const { error } = await supabase.from("profiles").update({ is_suspended: true }).eq("id", userId);
+    const { error } = await setUserFlags(userId, { is_suspended: true });
     if (!error) {
       setUsers((prev) => prev.filter((u) => u.id !== userId));
       showToast("User suspended");

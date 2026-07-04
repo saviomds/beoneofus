@@ -914,14 +914,27 @@ const AdminPanelTool = ({ currentUserId }) => {
     finally { setActionProcessing(false); setShowBulkDeleteConfirm(false); }
   };
 
+  // Privileged profile columns are DB-protected — only the service role may write
+  // them. Admin actions go through the admin-gated API. Pass a single id or an array.
+  const setUserFlags = async (target, flags) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { error: { message: "Not signed in" } };
+    const body = Array.isArray(target) ? { userIds: target, flags } : { userId: target, flags };
+    const res = await fetch("/api/admin/user-flags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); return { error: { message: d.error || "Request failed" } }; }
+    return { error: null };
+  };
+
   // Moved to the top of handlers to resolve ReferenceError
   const handleRemoveVerification = async (userId, username) => {
     if (actionProcessing) return;
     setActionProcessing(true);
     try {
-      const { error } = await supabase.from("profiles")
-        .update({ is_verified: false, verification_status: "unverified" })
-        .eq("id", userId);
+      const { error } = await setUserFlags(userId, { is_verified: false, verification_status: "unverified" });
       if (error) throw error;
       setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_verified: false, verification_status: "unverified" } : u));
       showToast(`Verification removed from @${username}.`);
@@ -935,9 +948,7 @@ const AdminPanelTool = ({ currentUserId }) => {
     setActionProcessing(true);
     try {
       const ids = Array.from(selectedUserIds);
-      const { error } = await supabase.from("profiles")
-        .update({ is_verified: true, verification_status: "verified" })
-        .in("id", ids);
+      const { error } = await setUserFlags(ids, { is_verified: true, verification_status: "verified" });
       if (error) throw error;
       showToast(`Verified ${ids.length} users successfully.`);
       setAllUsers(prev => prev.map(u => ids.includes(u.id) ? { ...u, is_verified: true, verification_status: "verified" } : u));
@@ -962,7 +973,7 @@ const AdminPanelTool = ({ currentUserId }) => {
       const updates = action === "approve"
         ? { is_verified: true, verification_status: "verified" }
         : { is_verified: false, verification_status: "unverified" };
-      const { error } = await supabase.from("profiles").update(updates).eq("id", userId);
+      const { error } = await setUserFlags(userId, updates);
       if (error) throw error;
       setRequests(prev => prev.filter(r => r.id !== userId));
       await supabase.from("notifications").insert({
@@ -978,7 +989,7 @@ const AdminPanelTool = ({ currentUserId }) => {
   const handleToggleAdmin = async (userId, isAdm, username) => {
     setActionProcessing(true);
     try {
-      const { error } = await supabase.from("profiles").update({ is_admin: !isAdm }).eq("id", userId);
+      const { error } = await setUserFlags(userId, { is_admin: !isAdm });
       if (error) throw error;
       setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_admin: !isAdm } : u));
       showToast(`Admin ${isAdm ? "revoked" : "granted"} for @${username}.`);
@@ -989,9 +1000,7 @@ const AdminPanelTool = ({ currentUserId }) => {
   const handleTogglePremium = async (userId, isPrem, username) => {
     setActionProcessing(true);
     try {
-      const { error } = await supabase.from("profiles")
-        .update({ is_premium: !isPrem, premium_requested: false })
-        .eq("id", userId);
+      const { error } = await setUserFlags(userId, { is_premium: !isPrem, premium_requested: false });
       if (error) throw error;
       setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, is_premium: !isPrem, premium_requested: false } : u));
       showToast(`Premium ${isPrem ? "revoked" : "granted"} for @${username}.`);

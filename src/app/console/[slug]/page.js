@@ -105,8 +105,16 @@ function Pill({ value }) {
 }
 
 // ── Program create form (the core institution workflow) ──────────────────────
-function ProgramForm({ v, slug, token, onDone, onClose }) {
-  const [f, setF] = useState({ title: '', kind: v.kinds[0], summary: '', location: '', capacity: '', starts_at: '', status: 'active' });
+function ProgramForm({ v, slug, token, onDone, onClose, initial }) {
+  const [f, setF] = useState({
+    title: initial?.title || '',
+    kind: initial?.kind && v.kinds.includes(initial.kind) ? initial.kind : v.kinds[0],
+    summary: initial?.summary || '',
+    location: initial?.location || '',
+    capacity: '',
+    starts_at: '',
+    status: initial?.status || 'active',
+  });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -182,11 +190,20 @@ function ProgramForm({ v, slug, token, onDone, onClose }) {
 }
 
 // ── Programs section — list + create + manage status + add participants ──────
-function Programs({ v, data, slug, token, reload, filter }) {
+function Programs({ v, data, slug, token, reload, filter, prefill, onPrefillConsumed }) {
   const [creating, setCreating] = useState(false);
+  const [initial, setInitial] = useState(null);
   const [openId, setOpenId] = useState(null);
   let programs = data.programs;
   if (filter?.kind) programs = programs.filter((p) => p.kind === filter.kind);
+
+  // Opened from a recommendation → open the create form pre-filled with its context.
+  useEffect(() => {
+    if (prefill) { setInitial(prefill); setCreating(true); onPrefillConsumed?.(); }
+  }, [prefill, onPrefillConsumed]);
+
+  const openCreate = () => { setInitial(null); setCreating(true); };
+  const closeCreate = () => { setCreating(false); setInitial(null); };
 
   const noun = filter?.kind === 'event' ? { noun: 'Event', plural: 'Events', verb: 'Create event' } : v.program;
 
@@ -205,9 +222,9 @@ function Programs({ v, data, slug, token, reload, filter }) {
   return (
     <div>
       <SectionHead tag="Workflow" title={noun.plural} desc={`Create and run the ${noun.plural.toLowerCase()} your organization delivers.`}
-        action={<button onClick={() => setCreating(true)} className="inline-flex items-center gap-1.5 text-sm font-bold bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-xl transition-colors shrink-0"><Plus size={15} /> {noun.verb}</button>} />
+        action={<button onClick={openCreate} className="inline-flex items-center gap-1.5 text-sm font-bold bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-xl transition-colors shrink-0"><Plus size={15} /> {noun.verb}</button>} />
       {programs.length === 0 ? (
-        <Empty icon={Calendar} title={`No ${noun.plural.toLowerCase()} yet`} desc={`Launch your first ${noun.noun.toLowerCase()} to start tracking reach and outcomes — everything here runs on real data.`} onAction={() => setCreating(true)} actionLabel={noun.verb} />
+        <Empty icon={Calendar} title={`No ${noun.plural.toLowerCase()} yet`} desc={`Launch your first ${noun.noun.toLowerCase()} to start tracking reach and outcomes — everything here runs on real data.`} onAction={openCreate} actionLabel={noun.verb} />
       ) : (
         <div className="space-y-2.5">
           {programs.map((p) => (
@@ -241,7 +258,7 @@ function Programs({ v, data, slug, token, reload, filter }) {
           ))}
         </div>
       )}
-      {creating && <ProgramForm v={{ ...v, program: noun, kinds: filter?.kind ? [filter.kind] : v.kinds }} slug={slug} token={token} onClose={() => setCreating(false)} onDone={() => { setCreating(false); reload(); }} />}
+      {creating && <ProgramForm v={{ ...v, program: noun, kinds: filter?.kind ? [filter.kind] : v.kinds }} slug={slug} token={token} initial={initial} onClose={closeCreate} onDone={() => { closeCreate(); reload(); }} />}
     </div>
   );
 }
@@ -549,6 +566,24 @@ const REC_PRIORITY = {
   low:    { chip: 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-gray-400', label: 'Low' },
 };
 
+// Map a recommendation → sensible starting values for the program-create form.
+function prefillFromRec(rec) {
+  const loc = rec.evidence?.location || '';
+  const TITLE = {
+    regional_coverage: loc ? `${loc} outreach` : 'Outreach program',
+    volunteer_shortage: 'Volunteer drive',
+    event_gap: 'Community event',
+    reengagement: rec.suggestedKind === 'event' ? 'Re-engagement event' : '',
+  };
+  return {
+    kind: rec.suggestedKind || undefined,
+    title: TITLE[rec.type] || '',
+    location: loc,
+    summary: rec.title || '',
+    status: 'active',
+  };
+}
+
 function RecCard({ rec, busy, onAct, onCreate }) {
   const prio = REC_PRIORITY[rec.priority] || REC_PRIORITY.medium;
   const accepted = rec.status === 'accepted';
@@ -589,14 +624,13 @@ function RecCard({ rec, busy, onAct, onCreate }) {
   );
 }
 
-function Recommendations({ v, slug, token, go }) {
+function Recommendations({ v, slug, token, go, onCreateProgram }) {
   const [state, setState] = useState('init'); // init | ready | generating
   const [cards, setCards] = useState([]);
   const [counts, setCounts] = useState({});
   const [genAt, setGenAt] = useState(null);
   const [err, setErr] = useState(null);
   const [busyId, setBusyId] = useState(null);
-  const programsTab = v.nav.find((n) => n.component === 'programs')?.id || 'programs';
 
   const loadCache = useCallback(async () => {
     try {
@@ -673,7 +707,7 @@ function Recommendations({ v, slug, token, go }) {
         <>
           <div className="space-y-2.5">
             {cards.map((rec) => (
-              <RecCard key={rec.id} rec={rec} busy={busyId === rec.id} onAct={act} onCreate={() => go(programsTab)} />
+              <RecCard key={rec.id} rec={rec} busy={busyId === rec.id} onAct={act} onCreate={() => onCreateProgram(rec)} />
             ))}
           </div>
           <p className={`text-xs ${faint} mt-4`}>
@@ -971,6 +1005,7 @@ export default function InstitutionConsole() {
   const [data, setData] = useState(null);
   const [token, setToken] = useState(null);
   const [section, setSection] = useState('overview');
+  const [programPrefill, setProgramPrefill] = useState(null);
 
   const load = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -1008,11 +1043,19 @@ export default function InstitutionConsole() {
   const current = nav.find((n) => n.id === section) || nav[0];
   const meta = v.meta;
 
+  // Accepting a recommendation's "Create" → jump to the main Programs tab with the
+  // form pre-filled from the recommendation's context.
+  const createFromRec = (rec) => {
+    const mainPrograms = nav.find((n) => n.component === 'programs' && !n.filter);
+    setProgramPrefill(prefillFromRec(rec));
+    setSection(mainPrograms?.id || 'programs');
+  };
+
   const renderSection = () => {
     switch (current.component) {
       case 'overview':     return <Overview v={v} data={data} slug={slug} token={token} go={setSection} />;
-      case 'recommendations': return <Recommendations v={v} slug={slug} token={token} go={setSection} />;
-      case 'programs':     return <Programs v={v} data={data} slug={slug} token={token} reload={load} filter={current.filter} />;
+      case 'recommendations': return <Recommendations v={v} slug={slug} token={token} go={setSection} onCreateProgram={createFromRec} />;
+      case 'programs':     return <Programs v={v} data={data} slug={slug} token={token} reload={load} filter={current.filter} prefill={current.filter ? null : programPrefill} onPrefillConsumed={() => setProgramPrefill(null)} />;
       case 'directory':    return <Directory v={v} data={data} slug={slug} token={token} reload={load} filter={current.filter} label={current.label} />;
       case 'impact':       return <Impact v={v} data={data} slug={slug} token={token} />;
       case 'orgpage':      return <OrgPageEditor org={org} slug={slug} token={token} reload={load} />;

@@ -10,7 +10,7 @@ import {
   ArrowLeft, Loader2, Lock, Building2, Sun, Moon, Plus, ExternalLink,
   Save, ShieldCheck, CheckCircle2, Clock, AlertTriangle, TrendingUp, Trash2,
   X, MapPin, Users2, Image as ImageIcon, Calendar, Sparkles, RefreshCw,
-  ArrowUp, ArrowDown, Minus, Lightbulb, Target, Check,
+  ArrowUp, ArrowDown, ArrowRight, Minus, Lightbulb, Target, Check,
 } from 'lucide-react';
 
 // ── Theme-aware surface tokens (mirror the business console) ─────────────────
@@ -685,8 +685,48 @@ function Recommendations({ v, slug, token, go }) {
   );
 }
 
+// Top recommendation surfaced on Overview — pulls the #1 active action (cached GET).
+function TopRecommendation({ slug, token, go }) {
+  const [rec, setRec] = useState(null);
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/console/${slug}/recommendations`, { headers: { Authorization: `Bearer ${token}` } });
+        const d = await res.json().catch(() => ({}));
+        if (active && res.ok && d.recommendations?.length) { setRec(d.recommendations[0]); setCount(d.recommendations.length); }
+      } catch { /* silent — Overview stays clean if unavailable */ }
+    })();
+    return () => { active = false; };
+  }, [slug, token]);
+
+  if (!rec) return null;
+  const prio = REC_PRIORITY[rec.priority] || REC_PRIORITY.medium;
+  return (
+    <button onClick={() => go('recommendations')}
+      className={`${panel} p-5 mb-4 w-full text-left ring-1 ring-brand-500/25 hover:ring-brand-500/50 transition-all block`}>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center"><Target size={15} /></div>
+          <h3 className={`text-sm font-black ${heading}`}>Top recommended action</h3>
+        </div>
+        <span className={`inline-flex items-center gap-1 text-xs font-bold ${accentTx}`}>
+          {count > 1 ? `${count} actions` : 'View'} <ArrowRight size={13} />
+        </span>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${prio.chip}`}>{prio.label}</span>
+        <span className={`text-[10px] font-mono uppercase tracking-wider ${faint}`}>{REC_TYPE_LABEL[rec.type] || rec.type}</span>
+      </div>
+      <p className={`font-bold ${heading}`}>{rec.title}</p>
+      {rec.rationale && <p className={`text-sm ${muted} mt-0.5`}>{rec.rationale}</p>}
+    </button>
+  );
+}
+
 // ── Overview — vertical KPIs + snapshot ──────────────────────────────────────
-function Overview({ v, data, go }) {
+function Overview({ v, data, slug, token, go }) {
   const k = data.kpis;
   return (
     <div>
@@ -694,6 +734,7 @@ function Overview({ v, data, go }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         {v.kpis.map((kp) => <Stat key={kp.key} label={kp.label} value={fmt(k[kp.key], kp.format)} tone={kp.tone} />)}
       </div>
+      <TopRecommendation slug={slug} token={token} go={go} />
       <div className={`${panel} p-5 mb-4`}>
         <div className="flex items-center justify-between mb-4">
           <h3 className={`text-sm font-black ${heading}`}>Recent {v.program.plural.toLowerCase()}</h3>
@@ -969,7 +1010,7 @@ export default function InstitutionConsole() {
 
   const renderSection = () => {
     switch (current.component) {
-      case 'overview':     return <Overview v={v} data={data} go={setSection} />;
+      case 'overview':     return <Overview v={v} data={data} slug={slug} token={token} go={setSection} />;
       case 'recommendations': return <Recommendations v={v} slug={slug} token={token} go={setSection} />;
       case 'programs':     return <Programs v={v} data={data} slug={slug} token={token} reload={load} filter={current.filter} />;
       case 'directory':    return <Directory v={v} data={data} slug={slug} token={token} reload={load} filter={current.filter} label={current.label} />;
@@ -978,7 +1019,7 @@ export default function InstitutionConsole() {
       case 'team':         return <Team data={data} />;
       case 'verification': return <Verification org={org} slug={slug} token={token} reload={load} />;
       case 'billing':      return <Billing v={v} />;
-      default:             return <Overview v={v} data={data} go={setSection} />;
+      default:             return <Overview v={v} data={data} slug={slug} token={token} go={setSection} />;
     }
   };
 

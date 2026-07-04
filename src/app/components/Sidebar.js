@@ -6,7 +6,7 @@ import {
   GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
   ShoppingBag, User, BookOpen, Sparkles, Zap, Compass, BarChart2, Briefcase,
   Map, Trophy, ScrollText, Building2, Library, TrendingUp, Globe,
-  Search, ChevronLeft, ChevronRight,
+  Search, ChevronLeft, ChevronRight, ChevronDown, LayoutGrid, Plus,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -123,6 +123,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
   const [unreadGroups, setUnreadGroups]         = useState(0);
   const [isProfileLoading, setIsProfileLoading] = useState(() => !getCachedProfile());
   const [myOrgs, setMyOrgs]                     = useState([]);
+  const [resourcesOpen, setResourcesOpen]       = useState(false);
   const [isRinging, setIsRinging]               = useState(false);
   const [isGroupRinging, setIsGroupRinging]     = useState(false);
   const [isBouncing, setIsBouncing]             = useState(false);
@@ -139,7 +140,14 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
     if (typeof window !== "undefined") {
       messagePopAudioRef.current = new Audio("/sounds/pop.ogg");
     }
+    try { setResourcesOpen(localStorage.getItem('sidebar_resources_open') === '1'); } catch {}
   }, []);
+
+  const toggleResources = () => setResourcesOpen(prev => {
+    const next = !prev;
+    try { localStorage.setItem('sidebar_resources_open', next ? '1' : '0'); } catch {}
+    return next;
+  });
 
   useEffect(() => {
     if (unreadNotifs > prevNotifsRef.current) {
@@ -340,77 +348,49 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
 
   const handleNavClick = (id) => { router.push('/dash/' + id); onClose?.(); };
 
-  const navGroups = [
-    {
-      label: t('nav.groups.core'),
-      items: [
-        { id: 'home',          icon: LayoutDashboard, label: t('nav.items.dashboard')     },
-        { id: 'feed',          icon: Home,            label: t('nav.items.feed')           },
-        { id: 'messages',      icon: MessageSquare,   label: t('nav.items.messages'),      badge: unreadMessages, onBadge: handleMarkAllMessagesRead, isBouncing },
-        { id: 'notifications', icon: Bell,            label: t('nav.items.notifications'), badge: unreadNotifs,   onBadge: handleMarkAllNotifsRead,   isRinging  },
-      ],
-    },
-    ...(myOrgs.length > 0 ? [{
-      label: 'Business',
-      items: [
-        ...myOrgs.map(o => ({
-          id: `org-${o.slug}`,
-          icon: Building2,
-          label: o.name,
-          href: `/business/${o.slug}`,
-        })),
-        { id: 'org-new', icon: UserPlus, label: 'New organization', href: '/organizations/new' },
-      ],
-    }] : []),
-    {
-      label: t('nav.groups.network'),
-      items: [
-        { id: 'connections', icon: UserPlus,      label: t('nav.items.connections') },
-        { id: 'groups',      icon: Users,         label: t('nav.items.groups'),      badge: unreadGroups, onBadge: handleMarkAllGroupsRead, isRinging: isGroupRinging },
-        { id: 'pages',       icon: Building2,     label: t('nav.items.pages')        },
-        { id: 'events',      icon: CalendarDays,  label: t('nav.items.events')       },
-      ],
-    },
-    {
-      label: 'Explore',
-      items: [
-        { id: 'discover',   icon: Compass,   label: 'Discover', isNew: true       },
-        { id: 'career-ai',  icon: TrendingUp,label: 'Career AI', isNew: true       },
-        { id: 'jobs',       icon: Briefcase, label: 'Jobs'                         },
-        { id: 'freelance',  icon: Globe,     label: 'Remote Work', isNew: true     },
-        { id: 'companies',  icon: Building2, label: 'Companies'                    },
-        { id: 'contents',   icon: Library,   label: 'Contents', href: '/contents'  },
-      ],
-    },
-    {
-      label: t('nav.groups.tools'),
-      items: [
-        { id: 'ai',          icon: Sparkles,      label: t('nav.items.ai'), isNew: true },
-        { id: 'mentors',     icon: Users,         label: 'Mentors',         isNew: true },
-        { id: 'projects',    icon: Map,           label: 'Build Together',  isNew: true },
-        { id: 'startups',    icon: Zap,           label: 'Startup Match',   isNew: true },
-        { id: 'tech-hub',    icon: Newspaper,     label: 'Tech Mauritius',  isNew: true },
-        { id: 'skills',      icon: CheckCheck,    label: 'Verified Skills', isNew: true },
-        { id: 'interview',   icon: HeartHandshake,label: 'Interview AI',    isNew: true },
-        { id: 'analytics',   icon: BarChart2,     label: 'Analytics',       isNew: true },
-        { id: 'leaderboard', icon: Trophy,        label: 'Leaderboard',     isNew: true },
-        { id: 'resume',      icon: FileText,      label: 'Resume Builder',  isNew: true },
-      ],
-    },
-    {
-      label: t('nav.groups.account'),
-      items: [
-        { id: 'profile',  icon: User,     label: t('nav.items.profile')  },
-        { id: 'premium',  icon: Crown,    label: t('nav.items.premium')  },
-        { id: 'settings', icon: Settings, label: t('nav.items.settings') },
-        { id: 'more',     icon: Terminal, label: 'More'                  },
-      ],
-    },
+  // Lean, always-visible daily items (LinkedIn-style short rail).
+  const primaryItems = [
+    { id: 'home',          icon: LayoutDashboard, label: t('nav.items.dashboard')     },
+    { id: 'feed',          icon: Home,            label: t('nav.items.feed')           },
+    { id: 'messages',      icon: MessageSquare,   label: t('nav.items.messages'),      badge: unreadMessages, onBadge: handleMarkAllMessagesRead, isBouncing },
+    { id: 'notifications', icon: Bell,            label: t('nav.items.notifications'), badge: unreadNotifs,   onBadge: handleMarkAllNotifsRead,   isRinging  },
+    { id: 'connections',   icon: UserPlus,        label: t('nav.items.connections') },
+    { id: 'groups',        icon: Users,           label: t('nav.items.groups'),        badge: unreadGroups,   onBadge: handleMarkAllGroupsRead, isRinging: isGroupRinging },
+  ];
+
+  // Everything else lives under a single collapsible "Resources" entry so the
+  // rail stays uncluttered and professional.
+  const resourceItems = [
+    { id: 'discover',    icon: Compass,       label: 'Discover' },
+    { id: 'career-ai',   icon: TrendingUp,    label: 'Career AI' },
+    { id: 'jobs',        icon: Briefcase,     label: 'Jobs' },
+    { id: 'freelance',   icon: Globe,         label: 'Remote Work' },
+    { id: 'companies',   icon: Building2,     label: 'Companies' },
+    { id: 'contents',    icon: Library,       label: 'Contents', href: '/contents' },
+    { id: 'ai',          icon: Sparkles,      label: t('nav.items.ai') },
+    { id: 'mentors',     icon: Users,         label: 'Mentors' },
+    { id: 'projects',    icon: Map,           label: 'Build Together' },
+    { id: 'startups',    icon: Zap,           label: 'Startup Match' },
+    { id: 'tech-hub',    icon: Newspaper,     label: 'Tech Mauritius' },
+    { id: 'skills',      icon: CheckCheck,    label: 'Verified Skills' },
+    { id: 'interview',   icon: HeartHandshake,label: 'Interview AI' },
+    { id: 'analytics',   icon: BarChart2,     label: 'Analytics' },
+    { id: 'leaderboard', icon: Trophy,        label: 'Leaderboard' },
+    { id: 'resume',      icon: FileText,      label: 'Resume Builder' },
+    { id: 'pages',       icon: Building2,     label: t('nav.items.pages') },
+    { id: 'events',      icon: CalendarDays,  label: t('nav.items.events') },
+  ];
+
+  const accountItems = [
+    { id: 'premium',  icon: Crown,    label: t('nav.items.premium')  },
+    { id: 'settings', icon: Settings, label: t('nav.items.settings') },
+    { id: 'more',     icon: Terminal, label: 'More'                  },
   ];
 
   /* ── Collapsed sidebar ───────────────────────────────────────── */
   if (isCollapsed) {
-    const allItems = navGroups.flatMap(g => g.items);
+    const orgItems = myOrgs.map(o => ({ id: `org-${o.slug}`, icon: Building2, label: o.name, href: `/business/${o.slug}` }));
+    const allItems = [...primaryItems, ...orgItems, ...resourceItems, ...accountItems];
     return (
       <>
         <style>{`
@@ -531,41 +511,138 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
         </div>
 
         {/* ── Navigation ── */}
-        <nav className="flex-1 overflow-y-auto custom-scrollbar pb-2 space-y-4 px-3">
-          {navGroups.map((group, gi) => {
-            let itemIndex = 0;
-            for (let g = 0; g < gi; g++) itemIndex += navGroups[g].items.length;
-            return (
-              <div key={group.label}>
-                <div className="flex items-center gap-2 mb-1.5 px-3">
-                  <p className="text-[9px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[2px] shrink-0">
-                    {group.label}
-                  </p>
-                  <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
-                </div>
-                <div className="space-y-0.5">
-                  {group.items.map((item, i) => (
-                    <NavItemExpanded
-                      key={item.id}
-                      index={itemIndex + i}
-                      icon={item.icon}
-                      label={item.label}
-                      badge={item.badge}
-                      active={activeSection === item.id}
-                      onClick={() => {
-                        if (item.href) { router.push(item.href); onClose?.(); }
-                        else handleNavClick(item.id);
-                      }}
-                      onBadgeAction={item.onBadge}
-                      isBouncing={item.isBouncing || false}
-                      isRinging={item.isRinging || false}
-                      isNew={item.isNew}
-                    />
-                  ))}
-                </div>
+        <nav className="flex-1 overflow-y-auto custom-scrollbar pb-2 px-3 space-y-1.5">
+
+          {/* Identity: your profile + pages you manage (LinkedIn-style) */}
+          {isProfileLoading ? (
+            <div className="flex items-center gap-3 p-2.5 rounded-2xl animate-pulse">
+              <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-gray-800 shrink-0" />
+              <div className="space-y-1.5 flex-1">
+                <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-24" />
+                <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded w-16" />
               </div>
-            );
-          })}
+            </div>
+          ) : profile ? (
+            <div className="space-y-1">
+              <button
+                onClick={() => { router.push('/dash/profile'); onClose?.(); }}
+                className="w-full flex items-center gap-3 p-2.5 rounded-2xl bg-gray-50 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left group"
+              >
+                <div className="w-11 h-11 rounded-full ring-2 ring-blue-500/30 overflow-hidden shrink-0 relative bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white font-bold text-sm uppercase">
+                  {getAvatarSrc(profile, authSession)
+                    ? <Image src={getAvatarSrc(profile, authSession)} alt="Avatar" fill sizes="44px" className="object-cover" referrerPolicy="no-referrer" />
+                    : (profile.username?.substring(0, 2) || '??')}
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-white dark:border-[#111115]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-1">
+                    <span className="truncate">{profile.full_name || `@${profile.username}`}</span>
+                    {profile.is_verified && <VerifiedBadge size={12} />}
+                    {(profile.is_premium || profile.is_admin) && profile.profile_visibility?.premium_badge !== false && (
+                      <PremiumBadge size={12} isTrial={!!profile.is_trial_premium} />
+                    )}
+                  </p>
+                  <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 group-hover:underline">View your page</p>
+                </div>
+              </button>
+
+              {/* Pages you manage / company */}
+              {myOrgs.map(o => (
+                <button
+                  key={o.slug}
+                  onClick={() => { router.push(`/business/${o.slug}`); onClose?.(); }}
+                  className="w-full flex items-center gap-2.5 py-1.5 px-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white shrink-0 overflow-hidden">
+                    {o.logo_url ? <img src={o.logo_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <Building2 size={14} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-200 truncate">{o.name}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide font-bold">Company · Manage</p>
+                  </div>
+                </button>
+              ))}
+              <button
+                onClick={() => { router.push('/organizations/new'); onClose?.(); }}
+                className="w-full flex items-center gap-2.5 py-1.5 px-2.5 rounded-xl text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left"
+              >
+                <div className="w-7 h-7 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center shrink-0"><Plus size={13} /></div>
+                <span className="text-[12px] font-semibold">Create a company page</span>
+              </button>
+            </div>
+          ) : (
+            <Link href="/auth" onClick={onClose} className="flex items-center gap-3 p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white shrink-0"><User size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Sign in</p>
+                <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">Access your account</p>
+              </div>
+            </Link>
+          )}
+
+          <div className="h-px bg-gray-100 dark:bg-gray-800 mx-1 my-1.5" />
+
+          {/* Primary */}
+          <div className="space-y-0.5">
+            {primaryItems.map((item, i) => (
+              <NavItemExpanded
+                key={item.id}
+                index={i}
+                icon={item.icon}
+                label={item.label}
+                badge={item.badge}
+                active={activeSection === item.id}
+                onClick={() => handleNavClick(item.id)}
+                onBadgeAction={item.onBadge}
+                isBouncing={item.isBouncing || false}
+                isRinging={item.isRinging || false}
+              />
+            ))}
+          </div>
+
+          {/* Resources (collapsible) — everything else lives here */}
+          <div className="pt-0.5">
+            <button
+              onClick={toggleResources}
+              className="w-full flex items-center justify-between py-2 px-3 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100 transition-colors select-none"
+            >
+              <span className="flex items-center gap-3">
+                <LayoutGrid size={16} strokeWidth={1.8} />
+                <span className="text-[13px] font-medium">Resources</span>
+              </span>
+              <ChevronDown size={14} className={`transition-transform ${resourcesOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {resourcesOpen && (
+              <div className="space-y-0.5 mt-0.5 pl-1">
+                {resourceItems.map((item, i) => (
+                  <NavItemExpanded
+                    key={item.id}
+                    index={i}
+                    icon={item.icon}
+                    label={item.label}
+                    active={activeSection === item.id}
+                    onClick={() => { if (item.href) { router.push(item.href); onClose?.(); } else handleNavClick(item.id); }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="h-px bg-gray-100 dark:bg-gray-800 mx-1 my-1.5" />
+
+          {/* Account */}
+          <div className="space-y-0.5">
+            {accountItems.map((item, i) => (
+              <NavItemExpanded
+                key={item.id}
+                index={i}
+                icon={item.icon}
+                label={item.label}
+                active={activeSection === item.id}
+                onClick={() => handleNavClick(item.id)}
+              />
+            ))}
+          </div>
         </nav>
 
         {/* ── User profile footer ── */}
@@ -584,71 +661,15 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
             </div>
           )}
 
-          {/* Profile card skeleton */}
-          {isProfileLoading ? (
-            <div className="flex items-center gap-3 mx-3 my-2 py-2.5 px-3 rounded-xl animate-pulse">
-              <div className="w-9 h-9 rounded-xl bg-gray-200 dark:bg-gray-800 shrink-0" />
-              <div className="space-y-1.5 flex-1">
-                <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-24" />
-                <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded w-16" />
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Profile row */}
-              <div
-                className="flex items-center gap-3 mx-3 mt-2 py-2.5 px-3 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors select-none min-w-0 group"
-                onClick={() => { if (profile) { router.push('/dash/profile'); onClose?.(); } }}
-              >
-                {/* Avatar */}
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 p-[1.5px] shadow-sm shadow-blue-500/20 shrink-0">
-                  <div className="relative w-full h-full rounded-[9px] bg-white dark:bg-gray-900 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200 uppercase overflow-hidden">
-                    {getAvatarSrc(profile, authSession) ? (
-                      <Image src={getAvatarSrc(profile, authSession)} alt="Avatar" fill sizes="36px" className="object-cover" referrerPolicy="no-referrer" />
-                    ) : (
-                      profile ? profile.username?.substring(0, 2) : '??'
-                    )}
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  {profile ? (
-                    <>
-                      <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-1 max-w-full">
-                        <span className="truncate">@{profile.username}</span>
-                        {profile.is_verified && <VerifiedBadge size={12} />}
-                        {(profile.is_premium || profile.is_admin) && profile.profile_visibility?.premium_badge !== false && (
-                          <PremiumBadge size={12} isTrial={!!profile.is_trial_premium} />
-                        )}
-                      </p>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shrink-0" />
-                        <p className="text-[9px] text-emerald-500 font-bold uppercase tracking-widest truncate">
-                          {profile.status || t('nav.active_node')}
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <Link href="/auth" className="block hover:opacity-80 transition-opacity min-w-0" onClick={e => e.stopPropagation()}>
-                      <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100 uppercase italic truncate">Guest_Node</p>
-                      <p className="text-[9px] text-blue-500 font-bold uppercase tracking-widest truncate">{t('nav.authorize_access')}</p>
-                    </Link>
-                  )}
-                </div>
-              </div>
-
-              {/* Sign out */}
-              {profile && (
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 py-2 px-3 mx-3 mb-3 mt-0.5 w-[calc(100%-24px)] rounded-xl text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group select-none min-w-0"
-                >
-                  <LogOut size={14} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
-                  <span className="text-[11px] font-bold uppercase tracking-wide truncate">{t('nav.sign_out')}</span>
-                </button>
-              )}
-            </>
+          {/* Sign out (profile identity now lives at the top of the rail) */}
+          {profile && (
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 py-2 px-3 mx-3 my-2 w-[calc(100%-24px)] rounded-xl text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group select-none min-w-0"
+            >
+              <LogOut size={14} className="group-hover:translate-x-0.5 transition-transform shrink-0" />
+              <span className="text-[11px] font-bold uppercase tracking-wide truncate">{t('nav.sign_out')}</span>
+            </button>
           )}
         </div>
       </aside>

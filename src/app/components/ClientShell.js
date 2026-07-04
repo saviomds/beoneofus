@@ -12,9 +12,42 @@ export default function ClientShell() {
   const { setTheme } = useTheme();
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    if (!('serviceWorker' in navigator)) return;
+
+    // In development the served /sw.js is a no-op "kill switch"; registering it
+    // causes reload loops (blank/skeleton flashes) on localhost. Instead, make
+    // sure no stale worker is controlling the dev page.
+    if (process.env.NODE_ENV !== 'production') {
+      navigator.serviceWorker.getRegistrations()
+        .then((regs) => regs.forEach((r) => r.unregister()))
+        .catch(() => {});
+      return;
     }
+
+    // Production: register, and auto-refresh ONCE when a new deployment's worker
+    // takes control — so users get fresh assets without a manual reload. Guard
+    // against the first-install control change and against reload loops.
+    let refreshing = false;
+    let hadController = !!navigator.serviceWorker.controller;
+
+    const onControllerChange = () => {
+      if (!hadController) { hadController = true; return; } // first claim, not an update
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => {
+        reg.update().catch(() => {});
+        // Check for a new deployment whenever the tab regains focus.
+        const onVisible = () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); };
+        document.addEventListener('visibilitychange', onVisible);
+      })
+      .catch(() => {});
+
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
   }, []);
 
   // Sync DB theme only if this device has no saved theme preference.

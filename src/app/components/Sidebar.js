@@ -135,6 +135,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
   const pathname         = usePathname();
   const activeSection    = pathname?.split('/')[2] || 'feed';
   const channelRef       = useRef(null);
+  const profileLoadedRef = useRef(!!getCachedProfile());
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -229,9 +230,11 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
       setUnreadGroups(groupsCount);
     };
 
-    const initData = async () => {
+    const initData = async (event) => {
       try {
-        setIsProfileLoading(true);
+        // Skeleton only on the very first load — never flash it again on a
+        // background auth refresh (that made the profile "disappear").
+        if (!profileLoadedRef.current) setIsProfileLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setAuthSession(session);
@@ -239,7 +242,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
 
           const { data: profileData } = await supabase
             .from('profiles').select('*').eq('id', uid).single();
-          if (profileData) { setProfile(profileData); setCachedProfile(profileData); }
+          if (profileData) { setProfile(profileData); setCachedProfile(profileData); profileLoadedRef.current = true; }
 
           await fetchCounts(uid);
 
@@ -273,10 +276,14 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
               if (up) { setProfile(up); setCachedProfile(up); }
             })
             .subscribe();
-        } else {
+        } else if (event === 'SIGNED_OUT') {
+          // Only wipe identity on an explicit sign-out — not on a transient
+          // "no session" blip during token refresh, which would blank the rail.
+          profileLoadedRef.current = false;
           setProfile(null);
           setUnreadMessages(0); setUnreadNotifs(0); setUnreadGroups(0);
           setMyOrgs([]);
+          try { sessionStorage.removeItem(SIDEBAR_CACHE_KEY); } catch {}
         }
       } catch (err) {
         console.error("Sidebar init error:", err);
@@ -286,7 +293,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
     };
 
     initData();
-    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(() => initData());
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((event) => initData(event));
     return () => {
       authSub.unsubscribe();
       if (channelRef.current) supabase.removeChannel(channelRef.current);

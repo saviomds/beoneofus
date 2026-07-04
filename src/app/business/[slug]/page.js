@@ -111,7 +111,7 @@ export default function BusinessConsole() {
     );
   }
 
-  const { org, kpis, role, members, postings } = data;
+  const { org, kpis, role, members, postings, applicants } = data;
   const meta = orgMeta(org.type);
 
   return (
@@ -169,7 +169,7 @@ export default function BusinessConsole() {
         <main className="flex-1 min-w-0 px-4 sm:px-6 py-6 pb-24 md:pb-6">
           {section === 'overview'     && <Overview kpis={kpis} org={org} onGo={setSection} />}
           {section === 'postings'     && <Postings postings={postings} kpis={kpis} />}
-          {section === 'pipeline'     && <Pipeline kpis={kpis} />}
+          {section === 'pipeline'     && <Pipeline kpis={kpis} applicants={applicants} slug={slug} token={token} onChanged={load} />}
           {section === 'insights'     && <Insights kpis={kpis} />}
           {section === 'orgpage'      && <OrgPage org={org} slug={slug} token={token} onSaved={load} />}
           {section === 'team'         && <Team members={members} role={role} />}
@@ -294,22 +294,85 @@ function Postings({ postings, kpis }) {
   );
 }
 
-function Pipeline({ kpis }) {
+function CandidateCard({ app, stageId, onMove, busy }) {
+  const p = app.applicant;
+  const name = p?.full_name || p?.username || 'Applicant';
+  const idx = STAGES.findIndex((s) => s.id === stageId);
+  const prev = STAGES[idx - 1];
+  const next = STAGES[idx + 1];
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.02] p-2.5">
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex items-center justify-center text-[11px] font-black text-slate-500 dark:text-gray-300 shrink-0">
+          {p?.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : (name[0] || '?').toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={`text-[13px] font-bold ${heading} truncate`}>{name}</p>
+          <p className={`text-[10px] ${faint} truncate`}>{app.jobTitle}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 mt-2">
+        <button disabled={busy || !prev} onClick={() => prev && onMove(app.id, prev.id)} title={prev ? `Move to ${prev.label}` : ''}
+          className="flex-1 text-[10px] font-bold py-1 rounded-md bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-300 hover:bg-slate-200 dark:hover:bg-white/10 disabled:opacity-40 transition-colors">
+          {busy ? '…' : `← ${prev ? prev.label : ''}`}
+        </button>
+        <button disabled={busy || !next} onClick={() => next && onMove(app.id, next.id)} title={next ? `Move to ${next.label}` : ''}
+          className="flex-1 text-[10px] font-bold py-1 rounded-md bg-brand-500/10 dark:bg-brand-500/15 text-brand-600 dark:text-brand-300 hover:bg-brand-500/20 disabled:opacity-40 transition-colors">
+          {next ? `${next.label} →` : ''}
+        </button>
+        <button disabled={busy} onClick={() => onMove(app.id, 'rejected')} title="Reject"
+          className="text-[11px] font-bold px-1.5 py-1 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 transition-colors">✕</button>
+      </div>
+    </div>
+  );
+}
+
+function Pipeline({ kpis, applicants = [], slug, token, onChanged }) {
+  const [busyId, setBusyId] = useState(null);
+
+  const byStage = Object.fromEntries(STAGES.map((s) => [s.id, []]));
+  for (const a of applicants) {
+    const st = STAGES.some((s) => s.id === a.stage) ? a.stage : 'new';
+    byStage[st].push(a);
+  }
+
+  const move = async (applicationId, status) => {
+    setBusyId(applicationId);
+    try {
+      await fetch(`/api/business/${slug}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'move_applicant', applicationId, status }),
+      });
+      await onChanged?.();
+    } catch { /* noop */ }
+    setBusyId(null);
+  };
+
   return (
     <div>
-      <SectionHead tag="Talent" title="Applicant pipeline" desc="Candidates by stage across all your postings." />
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {STAGES.map((s) => (
-          <div key={s.id} className={`${panel} p-4 min-h-[140px]`}>
-            <div className="flex items-center justify-between mb-3">
-              <span className={`text-[11px] font-mono uppercase tracking-wider ${faint}`}>{s.label}</span>
-              <span className={`text-xs font-black ${heading} tabular-nums bg-slate-100 dark:bg-white/5 rounded-full px-2 py-0.5`}>{kpis.pipeline[s.id] || 0}</span>
+      <SectionHead tag="Talent" title="Applicant pipeline" desc="Move candidates through your hiring stages." />
+      {applicants.length === 0 ? (
+        <Empty icon={KanbanSquare} title="No applicants yet" desc="Candidates appear here as people apply to your postings." />
+      ) : (
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+          {STAGES.map((s) => (
+            <div key={s.id} className={`${panel} p-3 w-64 shrink-0`}>
+              <div className="flex items-center justify-between mb-3 px-1">
+                <span className={`text-[11px] font-mono uppercase tracking-wider ${faint}`}>{s.label}</span>
+                <span className={`text-xs font-black ${heading} tabular-nums bg-slate-100 dark:bg-white/5 rounded-full px-2 py-0.5`}>{byStage[s.id].length}</span>
+              </div>
+              <div className="space-y-2 min-h-[80px]">
+                {byStage[s.id].length === 0 && <p className="text-xs text-slate-400 dark:text-gray-600 px-1 py-3">Empty</p>}
+                {byStage[s.id].map((a) => (
+                  <CandidateCard key={a.id} app={a} stageId={s.id} onMove={move} busy={busyId === a.id} />
+                ))}
+              </div>
             </div>
-            {(kpis.pipeline[s.id] || 0) === 0 && <p className="text-xs text-slate-400 dark:text-gray-600">Empty</p>}
-          </div>
-        ))}
-      </div>
-      <p className={`text-xs ${faint} mt-4`}>Stage totals reflect application status on your postings. Per-candidate drag-and-drop management activates next.</p>
+          ))}
+        </div>
+      )}
+      {kpis.rejected > 0 && <p className={`text-xs ${faint} mt-3`}>{kpis.rejected} rejected application{kpis.rejected === 1 ? '' : 's'} not shown.</p>}
     </div>
   );
 }

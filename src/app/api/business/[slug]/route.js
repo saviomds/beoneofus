@@ -60,8 +60,9 @@ export async function GET(req, { params }) {
   if (jobIds.length) {
     const { data: apps } = await supabase
       .from('job_applications')
-      .select('id, job_id, status, created_at')
-      .in('job_id', jobIds);
+      .select('id, job_id, user_id, status, created_at')
+      .in('job_id', jobIds)
+      .order('created_at', { ascending: false });
     applications = apps || [];
   }
 
@@ -106,12 +107,34 @@ export async function GET(req, { params }) {
     rejected,
   };
 
+  // Per-candidate pipeline: attach applicant profile + posting title to each app.
+  const applicantIds = [...new Set(applications.map((a) => a.user_id).filter(Boolean))];
+  let profilesById = {};
+  if (applicantIds.length) {
+    const { data: profs } = await supabase
+      .from('profiles')
+      .select('id, username, full_name, avatar_url, headline')
+      .in('id', applicantIds);
+    profilesById = Object.fromEntries((profs || []).map((p) => [p.id, p]));
+  }
+  const jobTitleById = Object.fromEntries(jobList.map((j) => [j.id, j.title]));
+  const applicants = applications.map((a) => ({
+    id: a.id,
+    jobId: a.job_id,
+    jobTitle: jobTitleById[a.job_id] || 'Posting',
+    status: a.status,
+    stage: stageOf(a.status),
+    createdAt: a.created_at,
+    applicant: profilesById[a.user_id] || null,
+  }));
+
   return NextResponse.json({
     org,
     role,
     kpis,
     postings: jobList.slice(0, 20),
     members: members || [],
+    applicants,
   });
 }
 
@@ -124,6 +147,28 @@ export async function PATCH(req, { params }) {
   const { org } = gate;
 
   const body = await req.json().catch(() => ({}));
+
+  // Move a candidate between pipeline stages (updates the application status).
+  if (body.action === 'move_applicant') {
+    const { applicationId, status } = body;
+    const STAGES = ['new', 'shortlisted', 'interviewed', 'offer', 'hired', 'rejected'];
+    if (!applicationId || !STAGES.includes(status)) {
+      return NextResponse.json({ error: 'applicationId and a valid status are required.' }, { status: 400 });
+    }
+    // The application must belong to a job owned by THIS organization.
+    const { data: appRow } = await supabase
+      .from('job_applications').select('id, job_id').eq('id', applicationId).maybeSingle();
+    if (!appRow) return NextResponse.json({ error: 'Application not found.' }, { status: 404 });
+    const { data: jobRow } = await supabase
+      .from('jobs').select('id, user_id').eq('id', appRow.job_id).maybeSingle();
+    if (!jobRow || jobRow.user_id !== org.owner_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    const { error } = await supabase.from('job_applications').update({ status }).eq('id', applicationId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
   const patch = {};
 
   if (body.action === 'request_verification') {

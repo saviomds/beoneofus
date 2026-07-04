@@ -792,7 +792,7 @@ export default function ProfileContent({ viewUserId }) {
 
       <div className="max-w-6xl w-full mx-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl sm:rounded-[2.5rem] relative overflow-visible shadow-lg sm:shadow-xl shadow-gray-200/50 dark:shadow-black/50 mb-10 transition-all duration-300">
         {/* Banner Section */}
-        <div className="h-28 sm:h-40 md:h-48 w-full bg-gradient-to-tr from-indigo-600 via-violet-600 to-fuchsia-600 rounded-t-2xl sm:rounded-t-[2.5rem] relative overflow-hidden group">
+        <div className="h-28 sm:h-40 md:h-48 w-full bg-gradient-to-tr from-brand-500 via-brand-600 to-trust-500 rounded-t-2xl sm:rounded-t-[2.5rem] relative overflow-hidden group">
           {displayBanner ? (
             <Image src={displayBanner} alt="Profile Banner" fill priority quality={75} className="object-cover object-center" />
           ) : (
@@ -2238,7 +2238,7 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
   return (
     <div className="w-full mt-6 space-y-4">
       {/* Gradient stats band — reputation summary + key metrics (no avatar/name; merged with the card above) */}
-      <div className="relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20">
+      <div className="relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-brand-500 via-brand-600 to-trust-500 shadow-lg shadow-brand-500/20">
         <div className="absolute -top-16 -right-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
         <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex items-center gap-2.5 shrink-0">
@@ -2265,7 +2265,7 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
             <div className="relative w-16 h-16 shrink-0">
               <svg viewBox="0 0 64 64" className="w-16 h-16 -rotate-90">
                 <circle cx="32" cy="32" r={R} fill="none" strokeWidth="7" className="stroke-gray-200 dark:stroke-gray-800" />
-                <circle cx="32" cy="32" r={R} fill="none" strokeWidth="7" strokeLinecap="round" className="stroke-indigo-500" strokeDasharray={CIRC} strokeDashoffset={CIRC - (pct / 100) * CIRC} />
+                <circle cx="32" cy="32" r={R} fill="none" strokeWidth="7" strokeLinecap="round" className="stroke-brand-500" strokeDasharray={CIRC} strokeDashoffset={CIRC - (pct / 100) * CIRC} />
               </svg>
               <span className="absolute inset-0 flex items-center justify-center text-sm font-black text-gray-900 dark:text-gray-100">{pct}%</span>
             </div>
@@ -2303,7 +2303,7 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
 
         {/* Analytics */}
         <div className="rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5">
-          <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5 mb-3"><Activity size={15} className="text-indigo-500" /> Analytics</p>
+          <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5 mb-3"><Activity size={15} className="text-brand-500" /> Analytics</p>
           <div className="grid grid-cols-2 gap-2.5">
             {[['Views', views, Eye], ['Posts', postCount, FileText], ['Likes', totalLikes, Heart], ['Comments', totalComments, MessageSquare]].map(([l, v, Ic]) => (
               <div key={l} className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-2.5">
@@ -2318,7 +2318,7 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
       {/* Featured / pinned */}
       <div className="rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><Award size={15} className="text-fuchsia-500" /> Featured</p>
+          <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><Award size={15} className="text-premium-500" /> Featured</p>
           {profilePosts.length > 0 && (
             <button onClick={() => setManageFeatured((v) => !v)} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">{manageFeatured ? 'Done' : 'Manage'}</button>
           )}
@@ -2337,7 +2337,7 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
               const on = pinned.includes(p.id);
               return (
                 <button key={p.id} onClick={() => togglePin(p.id)} className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-colors ${on ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
-                  <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${on ? 'bg-indigo-500 text-white' : 'border border-gray-300 dark:border-gray-700'}`}>{on && <Check size={12} />}</span>
+                  <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${on ? 'bg-brand-500 text-white' : 'border border-gray-300 dark:border-gray-700'}`}>{on && <Check size={12} />}</span>
                   <span className="text-sm text-gray-700 dark:text-gray-200 truncate flex-1">{p.title || p.content?.slice(0, 60) || 'Untitled post'}</span>
                   <span className="text-[10px] text-gray-400 shrink-0 inline-flex items-center gap-1"><Heart size={10} />{p.likes?.length || 0}</span>
                 </button>

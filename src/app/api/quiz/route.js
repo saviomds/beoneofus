@@ -2,14 +2,12 @@ import { NextResponse } from 'next/server';
 import { checkRateLimit } from '../../../lib/rateLimit';
 import { stripDangerousHtml } from '../../../lib/sanitize';
 import OpenAI from 'openai';
-import Groq from 'groq-sdk';
+import { aiClient } from '../../../lib/aiClient';
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
-const groq = process.env.GROQ_API_KEY
-  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
-  : null;
+const groq = aiClient; // Groq when a real gsk_ key exists, else Anthropic fallback
 
 let openaiSkipUntil = 0;
 

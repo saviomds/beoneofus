@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import Groq from 'groq-sdk';
+import { aiClient } from '../../../../lib/aiClient';
 import OpenAI from 'openai';
 
-export const runtime = 'edge';
 
-const groq   = process.env.GROQ_API_KEY   ? new Groq({ apiKey: process.env.GROQ_API_KEY })   : null;
+const groq   = aiClient; // Groq when a real gsk_ key exists, else Anthropic fallback
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 const CACHE_TTL_HOURS = 24;

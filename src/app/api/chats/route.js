@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '../../../lib/rateLimit';
 import OpenAI from 'openai';
-import Groq from 'groq-sdk';
+import { aiClient } from '../../../lib/aiClient';
 
 /* Fail fast: bail out well before Vercel's 10 s serverless limit */
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 20_000, maxRetries: 0 })
   : null;
 
-const groq = process.env.GROQ_API_KEY
-  ? new Groq({ apiKey: process.env.GROQ_API_KEY, timeout: 15_000, maxRetries: 0 })
-  : null;
+const groq = aiClient; // Groq when a real gsk_ key exists, else Anthropic fallback
 
 const SYSTEM_PROMPT = `You are beoneofus AI, a highly skilled career assistant and software engineering mentor for the beoneofus developer network.
 You help users with: coding problems, system design, career advice, CV/resume reviews, job search strategies, interview prep, and project ideas.

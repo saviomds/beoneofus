@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
+import { requireRole } from '../../../../lib/rbac';
 
 // GET /api/admin/orders — fetch all shop orders with buyer info
-// Middleware already enforces is_admin check before this handler runs.
+// Auth is enforced here (middleware does NOT gate /api/admin/*).
 export async function GET(request) {
+  const { error: authError, status: authStatus } = await requireRole(request, 'admin');
+  if (authError) return NextResponse.json({ error: authError }, { status: authStatus });
+
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status') || '';
   const limit  = Math.min(parseInt(searchParams.get('limit') || '100', 10), 500);
@@ -31,6 +35,9 @@ export async function GET(request) {
 // PATCH /api/admin/orders — update an order's status or tracking
 export async function PATCH(request) {
   try {
+    const { error: authError, status: authStatus } = await requireRole(request, 'admin');
+    if (authError) return NextResponse.json({ error: authError }, { status: authStatus });
+
     const { orderId, status, tracking, eta } = await request.json();
 
     if (!orderId) {

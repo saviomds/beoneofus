@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
@@ -173,7 +173,7 @@ function TrackingModal({ order, onClose }) {
   );
 }
 
-export default function OrdersPage() {
+function OrdersPageInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const isCheckout   = searchParams.get('checkout') === '1';
@@ -467,5 +467,15 @@ export default function OrdersPage() {
 
       <TrackingModal order={tracking} onClose={() => setTracking(null)} />
     </div>
+  );
+}
+
+// useSearchParams() must be inside a Suspense boundary in Next 16 or the
+// route deopts to fully client-side rendering / fails `next build`.
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={null}>
+      <OrdersPageInner />
+    </Suspense>
   );
 }

@@ -709,8 +709,11 @@ export default function ServicesContent() {
     try {
       const initRes = await fetch('/api/paystack/services/initiate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order.id, userId, email, priceUsd: order.amount_usd }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ orderId: order.id, email }),
       });
       const initData = await initRes.json();
       if (!initRes.ok) throw new Error(initData.error || 'Failed to start payment');
@@ -728,8 +731,11 @@ export default function ServicesContent() {
             try {
               const verifyRes = await fetch('/api/paystack/services/verify', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reference: response.reference, orderId: order.id, userId }),
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session?.access_token}`,
+                },
+                body: JSON.stringify({ reference: response.reference, orderId: order.id }),
               });
               const verifyData = await verifyRes.json();
               if (!verifyRes.ok) throw new Error(verifyData.error || 'Verification failed');

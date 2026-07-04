@@ -70,6 +70,19 @@ export async function PATCH(req) {
   const { id, status, notes, rating } = await req.json();
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
+  // Ownership: the caller must be a participant (mentee, or the mentor) of
+  // this session — otherwise anyone could edit any session's status/rating.
+  const { data: sess } = await supabase
+    .from('mentor_sessions')
+    .select('mentee_id, mentors!mentor_sessions_mentor_id_fkey(user_id)')
+    .eq('id', id)
+    .single();
+  if (!sess) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+  const mentorUserId = sess.mentors?.user_id;
+  if (sess.mentee_id !== user.id && mentorUserId !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const updates = {};
   if (status) updates.status = status;
   if (notes) updates.notes = notes;

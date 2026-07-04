@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import Groq from 'groq-sdk';
+import { aiClient } from '../../../../lib/aiClient';
 import { sendNotificationEmail } from '../../../../lib/sendNotificationEmail';
 
-export const runtime = 'edge';
 
-const groq = process.env.GROQ_API_KEY
-  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
-  : null;
+const groq = aiClient; // Groq when a real gsk_ key exists, else Anthropic fallback
 
 const DEFAULT_CHALLENGE = {
   title: 'Two Sum',

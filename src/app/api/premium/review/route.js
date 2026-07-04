@@ -1,25 +1,23 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import Groq from 'groq-sdk';
+import { aiClient } from '../../../../lib/aiClient';
 import { sendNotificationEmail } from '../../../../lib/sendNotificationEmail';
+import { requireRole } from '../../../../lib/rbac';
 
 export async function POST(req) {
   try {
+    // Authorize the CALLER via their Bearer token — never trust a body adminId.
+    const { user, error: authError, status: authStatus } = await requireRole(req, 'admin');
+    if (authError) return NextResponse.json({ error: authError }, { status: authStatus });
+    const adminId = user.id;
+
     const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
-    const groq = process.env.GROQ_API_KEY
-      ? new Groq({ apiKey: process.env.GROQ_API_KEY })
-      : null;
+    const groq = aiClient; // Groq when a real gsk_ key exists, else Anthropic fallback
 
-    const { subscriptionId, action, adminId, note } = await req.json();
-
-    const { data: adminProfile } = await supabase
-      .from('profiles').select('is_admin').eq('id', adminId).single();
-    if (!adminProfile?.is_admin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    const { subscriptionId, action, note } = await req.json();
 
     /* Fetch full subscription + user profile */
     const { data: sub, error: fetchErr } = await supabase
@@ -34,7 +32,7 @@ export async function POST(req) {
 
     /* ── AI Review ─────────────────────────────────────────────────────────── */
     if (action === 'ai_review') {
-      if (!groq) {
+      if (!groq.available) {
         return NextResponse.json({ error: 'AI service unavailable' }, { status: 503 });
       }
 
@@ -158,6 +156,6 @@ Write 2-3 sentences assessing legitimacy (account age, profile completeness, any
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (err) {
     console.error('Premium review error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

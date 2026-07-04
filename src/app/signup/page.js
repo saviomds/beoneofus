@@ -5,9 +5,11 @@ export const metadata = {
   description: 'Join beoneofus — the professional network for builders.',
 };
 
-export default function SignupPage({ searchParams }) {
-  const ref = searchParams?.ref;
-  const next = searchParams?.next;
+export default async function SignupPage({ searchParams }) {
+  // Next 16: searchParams is a Promise and must be awaited before use.
+  const sp = await searchParams;
+  const ref = sp?.ref;
+  const next = sp?.next;
   const params = new URLSearchParams({ mode: 'sign-up' });
   if (ref) params.set('ref', ref);
   if (next) params.set('next', next);

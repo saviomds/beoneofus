@@ -37,7 +37,7 @@ export async function POST(request) {
     }
 
     if (!reporterId) {
-      const cookieStore = cookies();
+      const cookieStore = await cookies();
       const accessToken = cookieStore.get('sb-access-token')?.value
         ?? cookieStore.get(`sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token`)?.value;
       if (accessToken) {

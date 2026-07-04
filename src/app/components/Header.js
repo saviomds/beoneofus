@@ -13,9 +13,13 @@ import { useTheme } from 'next-themes';
 import VerifiedBadge from './VerifiedBadge';
 import { useLanguage } from '../../lib/i18n';
 
+// Escape regex metacharacters so queries containing ( [ \ etc. don't throw
+// a SyntaxError and blank the search results.
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const HighlightMatch = ({ text, query }) => {
   if (!query || !text) return text || null;
-  const parts = text.toString().split(new RegExp(`(${query})`, 'gi'));
+  const parts = text.toString().split(new RegExp(`(${escapeRegExp(query)})`, 'gi'));
   return (
     <>
       {parts.map((part, i) => 

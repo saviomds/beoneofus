@@ -1109,7 +1109,11 @@ export default function LearnContent() {
     const { error } = await supabase.from("learn_content").delete().eq("id", id);
     if(error){
       // If RLS blocks the delete (e.g. not the uploader), call admin API route instead
-      const res = await fetch(`/api/admin/content/${id}`, { method:"DELETE" });
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/admin/content/${id}`, {
+        method:"DELETE",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
       if(!res.ok){ console.error("Admin delete failed:", await res.text()); return; }
     }
     setDbContent(prev=>prev.filter(i=>i.id!==id));

@@ -42,6 +42,87 @@
   --color-ink:      #0a1024;
   --color-ink-soft: #111a33;
   --color-ink-2:    #1a2440;
+
+  /* ─────────────────────────────────────────────────────────────────────
+     Premium Marketplace design system (mkt-*). Dark-first palette from the
+     Marketplace spec. Namespaced so it never collides with brand/trust/ink.
+     ───────────────────────────────────────────────────────────────────── */
+  /* Accent tokens — identical in light & dark */
+  --color-mkt-primary:    #6d5df6;   /* electric indigo — primary actions   */
+  --color-mkt-primary-600:#5b4be6;
+  --color-mkt-secondary:  #3b82f6;   /* blue — secondary / links            */
+  --color-mkt-success:    #22c55e;
+  --color-mkt-warning:    #f59e0b;
+  --color-mkt-gold:       #ffd166;   /* premium gold                        */
+
+  /* Surface/text tokens — LIGHT defaults here; `.dark` overrides below.
+     Utilities (bg-mkt-card, text-mkt-text …) resolve var() live, so flipping
+     the custom property under `.dark` re-themes every component for free. */
+  --color-mkt-bg:         #f6f7fb;   /* app background (light)              */
+  --color-mkt-bg-2:       #eceff5;   /* elevated background                 */
+  --color-mkt-card:       #ffffff;   /* card surface                        */
+  --color-mkt-card-2:     #f2f4f9;   /* raised card / hover surface         */
+  --color-mkt-border:     #e4e8f0;   /* hairline borders                    */
+  --color-mkt-text:       #0b0f19;   /* primary text                        */
+  --color-mkt-muted:      #5a6478;   /* muted text                          */
+
+  /* Motion + shape tokens */
+  --radius-mkt:      20px;
+  --radius-mkt-lg:   24px;
+  --ease-mkt:        cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Dark-mode surface overrides for the marketplace tokens ─────────────── */
+.dark {
+  --color-mkt-bg:     #0b0f19;
+  --color-mkt-bg-2:   #0e1320;
+  --color-mkt-card:   #151b26;
+  --color-mkt-card-2: #1b2230;
+  --color-mkt-border: #232b3a;
+  --color-mkt-text:   #f5f7fa;
+  --color-mkt-muted:  #a0aec0;
+}
+
+/* ── Marketplace keyframes & utilities ──────────────────────────────────── */
+@keyframes mkt-shimmer {
+  100% { transform: translateX(100%); }
+}
+@keyframes mkt-blob {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33%     { transform: translate(3%, -4%) scale(1.08); }
+  66%     { transform: translate(-3%, 3%) scale(0.96); }
+}
+@keyframes mkt-border-spin {
+  100% { transform: rotate(360deg); }
+}
+@keyframes mkt-ripple {
+  from { transform: scale(0); opacity: 0.5; }
+  to   { transform: scale(2.4); opacity: 0; }
+}
+@layer utilities {
+  .mkt-shimmer::after {
+    content: "";
+    position: absolute; inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    animation: mkt-shimmer 1.6s infinite;
+  }
+  .mkt-blob { animation: mkt-blob 18s var(--ease-mkt) infinite; }
+  .mkt-gradient-text {
+    /* light-mode default: ink → indigo (legible on white) */
+    background: linear-gradient(120deg, #0b0f19 0%, #4c3fd8 55%, #6d5df6 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .dark .mkt-gradient-text {
+    /* dark-mode: near-white → periwinkle → indigo */
+    background: linear-gradient(120deg, #f5f7fa 0%, #b7c0ff 45%, #6d5df6 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  /* Focus ring for WCAG-AA keyboard nav on dark surfaces */
+  .mkt-focus:focus-visible {
+    outline: 2px solid var(--color-mkt-primary);
+    outline-offset: 2px;
+  }
 }
 
 @layer base {

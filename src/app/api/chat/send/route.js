@@ -20,6 +20,26 @@ export async function POST(req) {
   const { project_id, text, attachment_type, attachment_url, attachment_name, attachment_size, reply_to_id, reply_preview } = body;
   if (!project_id) return NextResponse.json({ error: 'project_id required' }, { status: 400 });
 
+  // Membership: only the project owner or an accepted member may post — stops
+  // any authenticated user from writing into an arbitrary project's chat.
+  const { data: proj } = await supabase
+    .from('projects')
+    .select('created_by')
+    .eq('id', project_id)
+    .single();
+  if (!proj) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  let isMember = proj.created_by === user.id;
+  if (!isMember) {
+    const { data: mem } = await supabase
+      .from('project_members')
+      .select('user_id')
+      .eq('project_id', project_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    isMember = !!mem;
+  }
+  if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   const { data, error } = await supabase
     .from('project_messages')
     .insert({

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireRole } from '../../../../../lib/rbac';
 
 function getSupabaseAdmin() {
   return createClient(
@@ -9,24 +10,11 @@ function getSupabaseAdmin() {
   );
 }
 
-async function getCallerProfile(request) {
-  const supabaseAdmin = getSupabaseAdmin();
-  const userId = request.headers.get('x-user-id');
-  if (!userId) return null;
-  const { data } = await supabaseAdmin
-    .from('profiles')
-    .select('is_admin, role')
-    .eq('id', userId)
-    .single();
-  return data;
-}
-
 // DELETE /api/admin/content/[id]
 export async function DELETE(request, { params }) {
-  const profile = await getCallerProfile(request);
-  if (!profile?.is_admin && !['admin', 'founder'].includes(profile?.role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  // Authorize via verified Bearer token, not a spoofable x-user-id header.
+  const { error: authError, status: authStatus } = await requireRole(request, 'admin');
+  if (authError) return NextResponse.json({ error: authError }, { status: authStatus });
 
   const { id } = await params;
   const { error } = await getSupabaseAdmin()
@@ -40,15 +28,16 @@ export async function DELETE(request, { params }) {
 
 // PATCH /api/admin/content/[id]  — admin edit
 export async function PATCH(request, { params }) {
-  const profile = await getCallerProfile(request);
-  if (!profile?.is_admin && !['admin', 'founder'].includes(profile?.role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const { error: authError, status: authStatus } = await requireRole(request, 'admin');
+  if (authError) return NextResponse.json({ error: authError }, { status: authStatus });
 
   const { id } = await params;
   const body = await request.json();
   const allowed = ['title', 'description', 'topic', 'level', 'tags', 'featured'];
   const updates = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No updatable fields provided' }, { status: 400 });
+  }
 
   const { error } = await getSupabaseAdmin()
     .from('learn_content')

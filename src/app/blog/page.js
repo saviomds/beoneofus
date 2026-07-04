@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -55,7 +55,7 @@ const SELECT = `
 `;
 
 /* ─── main component ────────────────────────────── */
-export default function BlogPage() {
+function BlogPageInner() {
   const searchParams = useSearchParams();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -360,6 +360,16 @@ export default function BlogPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// useSearchParams() must be inside a Suspense boundary in Next 16 or the
+// route deopts to fully client-side rendering / fails `next build`.
+export default function BlogPage() {
+  return (
+    <Suspense fallback={null}>
+      <BlogPageInner />
+    </Suspense>
   );
 }
 

@@ -6,7 +6,7 @@ import {
   GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
   ShoppingBag, User, BookOpen, Sparkles, Zap, Compass, BarChart2, Briefcase,
   Map, Trophy, ScrollText, Building2, Library, TrendingUp, Globe,
-  Search, ChevronLeft, ChevronRight, ChevronDown, LayoutGrid, Plus,
+  Search, ChevronLeft, ChevronRight, Plus, Store,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
@@ -123,7 +123,6 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
   const [unreadGroups, setUnreadGroups]         = useState(0);
   const [isProfileLoading, setIsProfileLoading] = useState(() => !getCachedProfile());
   const [myOrgs, setMyOrgs]                     = useState([]);
-  const [resourcesOpen, setResourcesOpen]       = useState(false);
   const [isRinging, setIsRinging]               = useState(false);
   const [isGroupRinging, setIsGroupRinging]     = useState(false);
   const [isBouncing, setIsBouncing]             = useState(false);
@@ -141,14 +140,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
     if (typeof window !== "undefined") {
       messagePopAudioRef.current = new Audio("/sounds/pop.ogg");
     }
-    try { setResourcesOpen(localStorage.getItem('sidebar_resources_open') === '1'); } catch {}
   }, []);
-
-  const toggleResources = () => setResourcesOpen(prev => {
-    const next = !prev;
-    try { localStorage.setItem('sidebar_resources_open', next ? '1' : '0'); } catch {}
-    return next;
-  });
 
   useEffect(() => {
     if (unreadNotifs > prevNotifsRef.current) {
@@ -356,53 +348,74 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
 
   const handleNavClick = (id) => { router.push('/dash/' + id); onClose?.(); };
 
-  // Lean, always-visible daily items (LinkedIn-style short rail).
-  const primaryItems = [
-    { id: 'home',          icon: LayoutDashboard, label: t('nav.items.dashboard')     },
-    { id: 'feed',          icon: Home,            label: t('nav.items.feed')           },
-    { id: 'messages',      icon: MessageSquare,   label: t('nav.items.messages'),      badge: unreadMessages, onBadge: handleMarkAllMessagesRead, isBouncing },
-    { id: 'notifications', icon: Bell,            label: t('nav.items.notifications'), badge: unreadNotifs,   onBadge: handleMarkAllNotifsRead,   isRinging  },
-    { id: 'connections',   icon: UserPlus,        label: t('nav.items.connections') },
-    { id: 'groups',        icon: Users,           label: t('nav.items.groups'),        badge: unreadGroups,   onBadge: handleMarkAllGroupsRead, isRinging: isGroupRinging },
-  ];
-
-  // Everything else lives under a single collapsible "Resources" entry so the
-  // rail stays uncluttered and professional.
-  const resourceItems = [
-    { id: 'discover',    icon: Compass,       label: 'Discover' },
-    { id: 'career-ai',   icon: TrendingUp,    label: 'Career AI' },
-    { id: 'jobs',        icon: Briefcase,     label: 'Jobs' },
-    { id: 'freelance',   icon: Globe,         label: 'Remote Work' },
-    { id: 'companies',   icon: Building2,     label: 'Companies' },
-    { id: 'contents',    icon: Library,       label: 'Contents', href: '/contents' },
-    { id: 'ai',          icon: Sparkles,      label: t('nav.items.ai') },
-    { id: 'mentors',     icon: Users,         label: 'Mentors' },
-    { id: 'mentorship',  icon: Handshake,     label: 'Mentorship' },
-    { id: 'coaching',    icon: HeartHandshake,label: 'Coaching' },
-    { id: 'learn',       icon: GraduationCap, label: 'Courses' },
-    { id: 'services',    icon: ShoppingBag,   label: 'Services' },
-    { id: 'projects',    icon: Map,           label: 'Build Together' },
-    { id: 'startups',    icon: Zap,           label: 'Startup Match' },
-    { id: 'tech-hub',    icon: Newspaper,     label: 'Tech Mauritius' },
-    { id: 'skills',      icon: CheckCheck,    label: 'Verified Skills' },
-    { id: 'interview',   icon: HeartHandshake,label: 'Interview AI' },
-    { id: 'analytics',   icon: BarChart2,     label: 'Analytics' },
-    { id: 'leaderboard', icon: Trophy,        label: 'Leaderboard' },
-    { id: 'resume',      icon: FileText,      label: 'Resume Builder' },
-    { id: 'pages',       icon: Building2,     label: t('nav.items.pages') },
-    { id: 'events',      icon: CalendarDays,  label: t('nav.items.events') },
-  ];
-
-  const accountItems = [
-    { id: 'premium',  icon: Crown,    label: t('nav.items.premium')  },
-    { id: 'settings', icon: Settings, label: t('nav.items.settings') },
-    { id: 'more',     icon: Terminal, label: 'More'                  },
+  // Navigation as a JOURNEY — visible, labeled sections ordered by how a user
+  // actually moves through the platform: Home → Discover → Act → Connect →
+  // Grow → Account. No hidden bucket; every destination sits under a purpose.
+  const navGroups = [
+    {
+      label: 'Home',
+      items: [
+        { id: 'home',          icon: LayoutDashboard, label: t('nav.items.dashboard')     },
+        { id: 'feed',          icon: Home,            label: t('nav.items.feed')           },
+        { id: 'messages',      icon: MessageSquare,   label: t('nav.items.messages'),      badge: unreadMessages, onBadge: handleMarkAllMessagesRead, isBouncing },
+        { id: 'notifications', icon: Bell,            label: t('nav.items.notifications'), badge: unreadNotifs,   onBadge: handleMarkAllNotifsRead,   isRinging  },
+      ],
+    },
+    {
+      label: 'Discover',
+      items: [
+        { id: 'ai',        icon: Sparkles,   label: 'AI Assistant' },
+        { id: 'discover',  icon: Compass,    label: 'Discover' },
+        { id: 'matches',   icon: Zap,        label: 'Matches' },
+        { id: 'career-ai', icon: TrendingUp, label: 'Career AI' },
+      ],
+    },
+    {
+      label: 'Opportunities',
+      items: [
+        { id: 'jobs',       icon: Briefcase,     label: 'Jobs' },
+        { id: 'freelance',  icon: Globe,         label: 'Remote Work' },
+        { id: 'services',   icon: ShoppingBag,   label: 'Services' },
+        { id: 'market',     icon: Store,         label: 'Marketplace', href: '/market', isNew: true },
+        { id: 'companies',  icon: Building2,     label: 'Companies' },
+        { id: 'learn',      icon: GraduationCap, label: 'Courses' },
+        { id: 'mentorship', icon: Handshake,     label: 'Mentorship' },
+        { id: 'coaching',   icon: HeartHandshake,label: 'Coaching' },
+      ],
+    },
+    {
+      label: 'Network',
+      items: [
+        { id: 'connections', icon: UserPlus,     label: t('nav.items.connections') },
+        { id: 'groups',      icon: Users,        label: t('nav.items.groups'), badge: unreadGroups, onBadge: handleMarkAllGroupsRead, isRinging: isGroupRinging },
+        { id: 'events',      icon: CalendarDays, label: t('nav.items.events') },
+        { id: 'projects',    icon: Map,          label: 'Build Together' },
+      ],
+    },
+    {
+      label: 'Grow',
+      items: [
+        { id: 'skills',      icon: CheckCheck, label: 'Verified Skills' },
+        { id: 'interview',   icon: HeartHandshake, label: 'Interview AI' },
+        { id: 'resume',      icon: FileText,   label: 'Resume Builder' },
+        { id: 'analytics',   icon: BarChart2,  label: 'Analytics' },
+        { id: 'leaderboard', icon: Trophy,     label: 'Leaderboard' },
+        { id: 'premium',     icon: Crown,      label: t('nav.items.premium') },
+      ],
+    },
+    {
+      label: 'Account',
+      items: [
+        { id: 'settings', icon: Settings, label: t('nav.items.settings') },
+        { id: 'more',     icon: Terminal, label: 'More' },
+      ],
+    },
   ];
 
   /* ── Collapsed sidebar ───────────────────────────────────────── */
   if (isCollapsed) {
     const orgItems = myOrgs.map(o => ({ id: `org-${o.slug}`, icon: Building2, label: o.name, href: `/business/${o.slug}` }));
-    const allItems = [...primaryItems, ...orgItems, ...resourceItems, ...accountItems];
+    const allItems = [...navGroups.flatMap(g => g.items), ...orgItems];
     return (
       <>
         <style>{`
@@ -615,67 +628,29 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
 
           <div className="h-px bg-gray-100 dark:bg-gray-800 mx-1 my-1.5" />
 
-          {/* Primary */}
-          <div className="space-y-0.5">
-            {primaryItems.map((item, i) => (
-              <NavItemExpanded
-                key={item.id}
-                index={i}
-                icon={item.icon}
-                label={item.label}
-                badge={item.badge}
-                active={activeSection === item.id}
-                onClick={() => handleNavClick(item.id)}
-                onBadgeAction={item.onBadge}
-                isBouncing={item.isBouncing || false}
-                isRinging={item.isRinging || false}
-              />
-            ))}
-          </div>
-
-          {/* Resources (collapsible) — everything else lives here */}
-          <div className="pt-0.5">
-            <button
-              onClick={toggleResources}
-              className="w-full flex items-center justify-between py-2 px-3 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100 transition-colors select-none"
-            >
-              <span className="flex items-center gap-3">
-                <LayoutGrid size={16} strokeWidth={1.8} />
-                <span className="text-[13px] font-medium">Resources</span>
-              </span>
-              <ChevronDown size={14} className={`transition-transform ${resourcesOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {resourcesOpen && (
-              <div className="space-y-0.5 mt-0.5 pl-1">
-                {resourceItems.map((item, i) => (
+          {/* Journey sections — every destination visible under a clear purpose */}
+          {navGroups.map((group) => (
+            <div key={group.label} className="pt-1">
+              <p className="text-[9px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[2px] px-3 mb-1">{group.label}</p>
+              <div className="space-y-0.5">
+                {group.items.map((item, i) => (
                   <NavItemExpanded
                     key={item.id}
                     index={i}
                     icon={item.icon}
                     label={item.label}
+                    badge={item.badge}
                     active={activeSection === item.id}
                     onClick={() => { if (item.href) { router.push(item.href); onClose?.(); } else handleNavClick(item.id); }}
+                    onBadgeAction={item.onBadge}
+                    isBouncing={item.isBouncing || false}
+                    isRinging={item.isRinging || false}
+                    isNew={item.isNew}
                   />
                 ))}
               </div>
-            )}
-          </div>
-
-          <div className="h-px bg-gray-100 dark:bg-gray-800 mx-1 my-1.5" />
-
-          {/* Account */}
-          <div className="space-y-0.5">
-            {accountItems.map((item, i) => (
-              <NavItemExpanded
-                key={item.id}
-                index={i}
-                icon={item.icon}
-                label={item.label}
-                active={activeSection === item.id}
-                onClick={() => handleNavClick(item.id)}
-              />
-            ))}
-          </div>
+            </div>
+          ))}
         </nav>
 
         {/* ── User profile footer ── */}

@@ -131,7 +131,7 @@ export async function PATCH(req, { params }) {
     patch.verification_status = 'pending';
   }
   // Allow editing a safe subset of public fields
-  const EDITABLE = ['name', 'tagline', 'description', 'website', 'location', 'country', 'sector', 'size', 'contact_email', 'remote_policy', 'hiring'];
+  const EDITABLE = ['name', 'tagline', 'description', 'website', 'location', 'country', 'sector', 'size', 'contact_email', 'remote_policy', 'hiring', 'logo_url', 'banner_url', 'founded_year'];
   for (const k of EDITABLE) if (k in body) patch[k] = body[k];
 
   if (Object.keys(patch).length === 0) {

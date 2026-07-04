@@ -7,7 +7,7 @@ import { supabase } from '../../supabaseClient';
 import { orgMeta } from '../../../lib/orgTypes';
 import {
   ArrowLeft, ShieldCheck, MapPin, Globe, CalendarDays, Users2,
-  Building2, Mail, ExternalLink, LayoutDashboard,
+  Building2, Mail, ExternalLink, LayoutDashboard, Briefcase, ArrowUpRight,
 } from 'lucide-react';
 
 function VerifiedPill({ status, isVerified }) {
@@ -28,6 +28,7 @@ export default function OrganizationProfile() {
   const { slug } = useParams();
   const [org, setOrg] = useState(null);
   const [members, setMembers] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [canManage, setCanManage] = useState(false);
   const [state, setState] = useState('loading'); // loading | ready | notfound
 
@@ -50,6 +51,15 @@ export default function OrganizationProfile() {
         .order('created_at', { ascending: true })
         .limit(24);
       if (active) setMembers(m || []);
+
+      // Open positions / posts published by this organization (jobs are per-owner)
+      const { data: j } = await supabase
+        .from('jobs')
+        .select('id, title, type, location, salary, created_at, external_url, status, department, tags')
+        .eq('user_id', o.owner_id)
+        .order('created_at', { ascending: false })
+        .limit(12);
+      if (active) setPosts((j || []).filter((x) => (x.status || 'active') !== 'closed'));
 
       // Show a "Manage" entry point if the viewer owns/manages this org
       const { data: { session } } = await supabase.auth.getSession();
@@ -115,27 +125,27 @@ export default function OrganizationProfile() {
       </header>
 
       {/* Banner */}
-      <div className="relative h-40 sm:h-52 bg-gradient-to-br from-ink-soft to-ink overflow-hidden">
+      <div className="relative h-44 sm:h-60 overflow-hidden bg-gradient-to-br from-brand-500 via-brand-600 to-trust-600">
         {org.banner_url
           ? <img src={org.banner_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-          : <div className="absolute inset-0" style={{ background: 'radial-gradient(60% 120% at 80% 0%, rgba(76,95,245,.35), transparent 60%)' }} />}
+          : <div className="absolute inset-0" style={{ background: 'radial-gradient(70% 130% at 15% 0%, rgba(255,255,255,.18), transparent 55%), radial-gradient(60% 120% at 90% 10%, rgba(23,195,166,.35), transparent 55%)' }} />}
+        {/* Bottom fade so an overlapping logo/text always stays legible */}
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent" />
       </div>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 pb-20">
-        {/* Header card */}
-        <div className="relative -mt-12 flex flex-col sm:flex-row sm:items-end gap-4">
-          <div className="w-24 h-24 rounded-2xl border-4 border-gray-50 dark:border-ink bg-white dark:bg-white/5 shadow-lg flex items-center justify-center overflow-hidden shrink-0">
+        {/* Header — logo overlaps banner; all text sits BELOW it (no overlap) */}
+        <div className="-mt-12 sm:-mt-14">
+          <div className="w-24 h-24 rounded-2xl border-4 border-gray-50 dark:border-ink bg-white dark:bg-white/5 shadow-lg flex items-center justify-center overflow-hidden">
             {org.logo_url
               ? <img src={org.logo_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               : <span className={`w-full h-full flex items-center justify-center ${meta.accent.icon}`}><Icon size={34} /></span>}
           </div>
-          <div className="flex-1 min-w-0 pb-1">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">{org.name}</h1>
-              <VerifiedPill status={org.verification_status} isVerified={org.is_verified} />
-            </div>
-            {org.tagline && <p className="text-gray-600 dark:text-gray-300 mt-1.5">{org.tagline}</p>}
+          <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">{org.name}</h1>
+            <VerifiedPill status={org.verification_status} isVerified={org.is_verified} />
           </div>
+          {org.tagline && <p className="text-gray-600 dark:text-gray-300 mt-1.5 max-w-2xl">{org.tagline}</p>}
         </div>
 
         {/* Meta row */}
@@ -152,6 +162,44 @@ export default function OrganizationProfile() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
           {/* Main */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Open positions / posts */}
+            {posts.length > 0 && (
+              <section className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 flex items-center gap-2">
+                    <Briefcase size={14} /> Open positions
+                  </h2>
+                  <span className="text-xs font-black text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-white/5 rounded-full px-2 py-0.5">{posts.length}</span>
+                </div>
+                <div className="space-y-2.5">
+                  {posts.map((p) => {
+                    const external = !!p.external_url;
+                    const href = p.external_url || '/dash/jobs';
+                    return (
+                      <a
+                        key={p.id}
+                        href={href}
+                        target={external ? '_blank' : undefined}
+                        rel={external ? 'noreferrer' : undefined}
+                        className="flex items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 dark:border-white/10 hover:border-brand-400 dark:hover:border-brand-500/50 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-all group"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-bold text-gray-900 dark:text-white truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{p.title}</p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {p.type && <span className="capitalize">{p.type}</span>}
+                            {p.location && <span className="inline-flex items-center gap-1"><MapPin size={11} />{p.location}</span>}
+                            {p.department && <span>{p.department}</span>}
+                            {p.salary && <span className="text-trust-600 dark:text-trust-500 font-semibold">{p.salary}</span>}
+                          </div>
+                        </div>
+                        <ArrowUpRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-brand-500 shrink-0 transition-colors" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
             {org.description && (
               <section className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
                 <h2 className="text-sm font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">About</h2>

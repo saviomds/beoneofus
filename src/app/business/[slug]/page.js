@@ -10,6 +10,7 @@ import {
   LayoutDashboard, Megaphone, KanbanSquare, LineChart, Building2, Users2,
   ShieldCheck, CreditCard, ArrowLeft, ExternalLink, Eye, Loader2, Lock,
   TrendingUp, Save, AlertTriangle, CheckCircle2, Clock, Sun, Moon,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 const NAV = [
@@ -337,6 +338,30 @@ function OrgPage({ org, slug, token, onSaved }) {
   });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [uploading, setUploading] = useState(null); // 'logo' | 'banner' | null
+
+  const uploadAsset = async (kind, file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setMsg({ type: 'err', text: 'Please choose an image file.' }); return; }
+    if (file.size > 5 * 1024 * 1024) { setMsg({ type: 'err', text: 'Image must be under 5 MB.' }); return; }
+    setUploading(kind); setMsg(null);
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const path = `${org.id}/${kind}_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('org-assets').upload(path, file, { upsert: true });
+      if (upErr) throw new Error(upErr.message);
+      const { data: pub } = supabase.storage.from('org-assets').getPublicUrl(path);
+      const res = await fetch(`/api/business/${slug}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(kind === 'logo' ? { logo_url: pub.publicUrl } : { banner_url: pub.publicUrl }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Could not save image.'); }
+      setMsg({ type: 'ok', text: `${kind === 'logo' ? 'Logo' : 'Banner'} updated.` });
+      onSaved?.();
+    } catch (e) { setMsg({ type: 'err', text: e.message }); }
+    setUploading(null);
+  };
 
   const save = async () => {
     setSaving(true); setMsg(null);
@@ -356,6 +381,34 @@ function OrgPage({ org, slug, token, onSaved }) {
     <div className="max-w-2xl">
       <SectionHead tag="Presence" title="Organization page" desc="Your public, verified presence on the network." />
       <Link href={`/organizations/${slug}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 mb-5"><ExternalLink size={14} /> View public page</Link>
+
+      {/* Brand assets: banner + logo */}
+      <div className="mb-5">
+        <label className={`block text-xs font-bold ${muted} mb-1.5`}>Banner &amp; logo</label>
+        <div className="relative h-32 rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 bg-gradient-to-br from-brand-500/25 to-trust-500/25">
+          {org.banner_url && <img src={org.banner_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+          <label className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 text-xs font-bold bg-white/90 dark:bg-ink/80 text-slate-800 dark:text-white px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-white shadow-sm transition-colors">
+            {uploading === 'banner' ? <Loader2 size={13} className="animate-spin" /> : <ImageIcon size={13} />} Upload banner
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadAsset('banner', e.target.files?.[0])} />
+          </label>
+          {/* Logo overlay */}
+          <div className="absolute -bottom-0 left-4 top-0 flex items-end pb-3">
+            <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white dark:border-ink bg-white dark:bg-white/10 shadow-lg flex items-center justify-center shrink-0">
+              {org.logo_url
+                ? <img src={org.logo_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                : <Building2 size={24} className="text-slate-300 dark:text-gray-500" />}
+            </div>
+          </div>
+        </div>
+        <div className="mt-2">
+          <label className="inline-flex items-center gap-1.5 text-sm font-bold bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white px-3 py-2 rounded-xl cursor-pointer hover:bg-slate-200 dark:hover:bg-white/15 transition-colors">
+            {uploading === 'logo' ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />} Upload logo
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadAsset('logo', e.target.files?.[0])} />
+          </label>
+          <p className={`text-[11px] ${faint} mt-1.5`}>Square logo (min 200×200) and a wide banner (1200×300) look best. Max 5&nbsp;MB each.</p>
+        </div>
+      </div>
+
       <div className="space-y-4">
         <div><label className={`block text-xs font-bold ${muted} mb-1.5`}>Tagline</label><input className={field} value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} maxLength={140} /></div>
         <div><label className={`block text-xs font-bold ${muted} mb-1.5`}>About</label><textarea className={`${field} min-h-[110px] resize-y`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={1000} /></div>

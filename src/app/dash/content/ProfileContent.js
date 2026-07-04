@@ -723,17 +723,6 @@ export default function ProfileContent({ viewUserId }) {
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your professional identity and network status." : "Viewing professional network identity."}</p>
       </div>
 
-      {/* Premium command center — owner-only overview: strength, reputation, analytics, featured */}
-      {isOwnProfile && profile && !isEditing && (
-        <ProfileCommandCenter
-          profile={profile}
-          followersCount={followersCount}
-          profilePosts={profilePosts}
-          displayAvatar={displayAvatar}
-          userInitial={userInitial}
-          onEdit={() => setIsEditing(true)}
-        />
-      )}
 
       {/* --- BANNER CROPPER MODAL --- */}
       {showBannerCropper && bannerPreview && (
@@ -1151,6 +1140,17 @@ export default function ProfileContent({ viewUserId }) {
                   </a>
                 )}
               </div>
+
+              {/* Premium insights — unified into the profile: strength, reputation, analytics, featured */}
+              {isOwnProfile && (
+                <ProfileInsights
+                  profile={profile}
+                  followersCount={followersCount}
+                  profilePosts={profilePosts}
+                  onEdit={() => setIsEditing(true)}
+                />
+              )}
+
               {Array.isArray(profile?.skills) && profile.skills.length > 0 && (
                 <div className="mt-4">
                   <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Skills</p>
@@ -2114,9 +2114,9 @@ const fmtNum = (n) => Intl.NumberFormat('en-US', { notation: 'compact', maximumF
 
 function StatTile({ icon: Icon, label, value }) {
   return (
-    <div className="flex-1 min-w-[74px] rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-3 py-2.5">
-      <div className="flex items-center gap-1.5 text-white/70"><Icon size={13} /><span className="text-[10px] font-bold uppercase tracking-wider">{label}</span></div>
-      <p className="text-xl font-black text-white mt-0.5 tabular-nums">{value}</p>
+    <div className="min-w-0 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-3 py-2">
+      <div className="flex items-center gap-1.5 text-white/70"><Icon size={12} className="shrink-0" /><span className="text-[10px] font-bold uppercase tracking-wider truncate">{label}</span></div>
+      <p className="text-lg font-black text-white mt-0.5 tabular-nums">{value}</p>
     </div>
   );
 }
@@ -2137,7 +2137,7 @@ function FeaturedCard({ post }) {
   );
 }
 
-function ProfileCommandCenter({ profile, followersCount, profilePosts, displayAvatar, userInitial, onEdit }) {
+function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
   const [manageFeatured, setManageFeatured] = useState(false);
   const [pinned, setPinned] = useState(() => Array.isArray(profile?.preferences?.pinned_posts) ? profile.preferences.pinned_posts : []);
   const [savingPins, setSavingPins] = useState(false);
@@ -2182,31 +2182,19 @@ function ProfileCommandCenter({ profile, followersCount, profilePosts, displayAv
   const R = 26, CIRC = 2 * Math.PI * R;
 
   return (
-    <div className="max-w-6xl w-full mx-auto mb-8 space-y-4">
-      {/* Glass gradient hero */}
-      <div className="relative overflow-hidden rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 shadow-xl shadow-indigo-500/20">
-        <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-10 w-56 h-56 rounded-full bg-fuchsia-400/20 blur-2xl pointer-events-none" />
-        <div className="relative flex flex-col lg:flex-row lg:items-center gap-5">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-white/40 bg-white/10 flex items-center justify-center text-2xl font-black text-white shrink-0">
-              {displayAvatar ? <Image src={displayAvatar} alt="" width={64} height={64} className="w-full h-full object-cover" /> : userInitial}
-            </div>
+    <div className="w-full mt-6 space-y-4">
+      {/* Gradient stats band — reputation summary + key metrics (no avatar/name; merged with the card above) */}
+      <div className="relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 shadow-lg shadow-indigo-500/20">
+        <div className="absolute -top-16 -right-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center shrink-0"><Award size={20} className="text-white" /></div>
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-xl font-black text-white truncate">{profile?.full_name || `@${profile?.username}`}</h2>
-                {profile?.is_verified && <VerifiedBadge size={15} />}
-                {(profile?.is_premium || profile?.is_admin) && <PremiumBadge size={15} isTrial={!!profile?.is_trial_premium} />}
-              </div>
-              {profile?.headline
-                ? <p className="text-white/85 text-sm truncate">{profile.headline}</p>
-                : <button onClick={onEdit} className="text-white/70 text-sm hover:text-white underline underline-offset-2">Add a headline</button>}
-              <span className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-white/15 rounded-full px-2 py-0.5">
-                <Award size={11} /> Reputation: {repTier} · {rep}
-              </span>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/70">Reputation</p>
+              <p className="text-lg font-black text-white leading-none mt-0.5 truncate">{repTier} <span className="text-white/70 font-bold">· {rep}</span></p>
             </div>
           </div>
-          <div className="flex gap-2 lg:ml-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto sm:ml-auto sm:max-w-md">
             <StatTile icon={Users} label="Network" value={fmtNum(followersCount)} />
             <StatTile icon={Eye} label="Views" value={fmtNum(views)} />
             <StatTile icon={Heart} label="Likes" value={fmtNum(totalLikes)} />

@@ -245,10 +245,11 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
 
           // Organizations this user owns or manages → business console shortcuts
           try {
+            const orgCols = 'id, name, slug, type, logo_url, is_verified';
             const [{ data: owned }, { data: memberships }] = await Promise.all([
-              supabase.from('organizations').select('id, name, slug, type').eq('owner_id', uid),
+              supabase.from('organizations').select(orgCols).eq('owner_id', uid),
               supabase.from('organization_members')
-                .select('role, organizations(id, name, slug, type)')
+                .select(`role, organizations(${orgCols})`)
                 .eq('user_id', uid),
             ]);
             const map = new Map();
@@ -546,29 +547,50 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
                 </div>
               </button>
 
-              {/* Pages you manage / company */}
-              {myOrgs.map(o => (
+              {/* ── Organization section — logo + name, like LinkedIn Pages ── */}
+              {myOrgs.length > 0 && (
+                <div className="pt-2">
+                  <p className="text-[9px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[2px] px-2 mb-1">Organization</p>
+                  {myOrgs.map(o => (
+                    <button
+                      key={o.slug}
+                      onClick={() => { router.push(`/business/${o.slug}`); onClose?.(); }}
+                      className="w-full flex items-center gap-2.5 py-1.5 px-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left group"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+                        {o.logo_url
+                          ? <img src={o.logo_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          : <span className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase">{(o.name || '?').slice(0, 2)}</span>}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-200 truncate flex items-center gap-1">
+                          <span className="truncate">{o.name}</span>
+                          {o.is_verified && <VerifiedBadge size={11} />}
+                        </p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide font-bold truncate">
+                          {(o.type || 'business')} · Manage
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => { router.push('/organizations/new'); onClose?.(); }}
+                    className="w-full flex items-center gap-2.5 py-1.5 px-2.5 rounded-xl text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left"
+                  >
+                    <div className="w-9 h-9 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center shrink-0"><Plus size={14} /></div>
+                    <span className="text-[12px] font-semibold">Add another page</span>
+                  </button>
+                </div>
+              )}
+              {myOrgs.length === 0 && (
                 <button
-                  key={o.slug}
-                  onClick={() => { router.push(`/business/${o.slug}`); onClose?.(); }}
-                  className="w-full flex items-center gap-2.5 py-1.5 px-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
+                  onClick={() => { router.push('/organizations/new'); onClose?.(); }}
+                  className="w-full flex items-center gap-2.5 py-1.5 px-2.5 rounded-xl text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white shrink-0 overflow-hidden">
-                    {o.logo_url ? <img src={o.logo_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <Building2 size={14} />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-200 truncate">{o.name}</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide font-bold">Company · Manage</p>
-                  </div>
+                  <div className="w-9 h-9 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center shrink-0"><Plus size={14} /></div>
+                  <span className="text-[12px] font-semibold">Create a company page</span>
                 </button>
-              ))}
-              <button
-                onClick={() => { router.push('/organizations/new'); onClose?.(); }}
-                className="w-full flex items-center gap-2.5 py-1.5 px-2.5 rounded-xl text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left"
-              >
-                <div className="w-7 h-7 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center shrink-0"><Plus size={13} /></div>
-                <span className="text-[12px] font-semibold">Create a company page</span>
-              </button>
+              )}
             </div>
           ) : (
             <Link href="/auth" onClick={onClose} className="flex items-center gap-3 p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">

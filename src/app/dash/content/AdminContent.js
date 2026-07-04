@@ -102,10 +102,51 @@ export default function AdminContent() {
   const [stats, setStats] = useState({ total: 0, premium: 0, verified: 0, new_today: 0 });
   const [toast, setToast] = useState(null);
   const [processing, setProcessing] = useState(null);
+  const [modal, setModal] = useState(null); // 'broadcast' | 'trial'
+  const [bc, setBc] = useState({ subject: "", message: "", audience: "all", sending: false });
+  const [trialBusy, setTrialBusy] = useState(false);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const authHeader = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session ? { Authorization: `Bearer ${session.access_token}` } : {};
+  };
+
+  const sendBroadcast = async () => {
+    if (!bc.subject.trim() || !bc.message.trim()) { showToast("Subject and message are required", "error"); return; }
+    setBc((s) => ({ ...s, sending: true }));
+    try {
+      const res = await fetch("/api/admin/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ subject: bc.subject, message: bc.message, audience: bc.audience }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Failed to send broadcast");
+      showToast(`Broadcast sent to ${d.sent}/${d.total} recipients`);
+      setModal(null);
+      setBc({ subject: "", message: "", audience: "all", sending: false });
+    } catch (e) { showToast(e.message, "error"); setBc((s) => ({ ...s, sending: false })); }
+  };
+
+  const runTrial = async (action) => {
+    setTrialBusy(true);
+    try {
+      const res = await fetch("/api/admin/premium-trial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ action }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Failed");
+      showToast(action === "enable" ? `Premium trial enabled for ${d.trialMode?.user_count ?? 0} users` : "Premium trial ended");
+      setModal(null);
+    } catch (e) { showToast(e.message, "error"); }
+    finally { setTrialBusy(false); }
   };
 
   useEffect(() => {
@@ -267,8 +308,8 @@ export default function AdminContent() {
             <h3 className="text-sm font-black text-gray-900 dark:text-gray-100 mb-3">Quick Actions</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: "Broadcast Message", icon: Bell, color: "bg-blue-600", action: () => alert("Broadcast coming soon") },
-                { label: "Premium Trial", icon: Zap, color: "bg-amber-500", action: () => alert("Grant trial coming soon") },
+                { label: "Broadcast Message", icon: Bell, color: "bg-blue-600", action: () => setModal("broadcast") },
+                { label: "Premium Trial", icon: Zap, color: "bg-amber-500", action: () => setModal("trial") },
                 { label: "View Reports", icon: Flag, color: "bg-red-600", action: () => setActiveTab("reports") },
                 { label: "Manage Settings", icon: Settings, color: "bg-gray-700", action: () => setActiveTab("settings") },
               ].map(({ label, icon: Icon, color, action }) => (
@@ -390,6 +431,62 @@ export default function AdminContent() {
           toast.type === "error" ? "bg-red-600 text-white" : "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
         }`}>
           {toast.msg}
+        </div>
+      )}
+
+      {/* Broadcast modal */}
+      {modal === "broadcast" && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" onClick={() => !bc.sending && setModal(null)}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-gray-900 dark:text-gray-100 flex items-center gap-2"><Bell size={18} className="text-blue-600" /> Broadcast email</h3>
+              <button onClick={() => !bc.sending && setModal(null)} className="text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><X size={18} /></button>
+            </div>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Audience</label>
+            <select value={bc.audience} onChange={(e) => setBc((s) => ({ ...s, audience: e.target.value }))}
+              className="w-full mb-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/30">
+              <option value="all">All users</option>
+              <option value="verified">Verified users</option>
+              <option value="premium">Premium users</option>
+              <option value="member">Members</option>
+              <option value="admin">Admins &amp; founders</option>
+            </select>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Subject</label>
+            <input value={bc.subject} onChange={(e) => setBc((s) => ({ ...s, subject: e.target.value }))} maxLength={140}
+              className="w-full mb-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/30" placeholder="A short subject line" />
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Message</label>
+            <textarea value={bc.message} onChange={(e) => setBc((s) => ({ ...s, message: e.target.value }))} rows={5} maxLength={4000}
+              className="w-full mb-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/30 resize-y" placeholder="Write your announcement…" />
+            <button onClick={sendBroadcast} disabled={bc.sending}
+              className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-colors">
+              {bc.sending ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} />} {bc.sending ? "Sending…" : "Send broadcast"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Premium trial modal */}
+      {modal === "trial" && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" onClick={() => !trialBusy && setModal(null)}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-black text-gray-900 dark:text-gray-100 flex items-center gap-2"><Zap size={18} className="text-amber-500" /> Premium trial</h3>
+              <button onClick={() => !trialBusy && setModal(null)} className="text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"><X size={18} /></button>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Enable a platform-wide premium trial (grants premium to all non-paying users) or end an active trial and revert trial users.</p>
+            <div className="flex gap-2">
+              <button onClick={() => runTrial("enable")} disabled={trialBusy}
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl transition-colors">
+                {trialBusy ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />} Enable
+              </button>
+              <button onClick={() => runTrial("disable")} disabled={trialBusy}
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-60 text-gray-700 dark:text-gray-200 font-bold py-2.5 rounded-xl transition-colors">
+                End trial
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

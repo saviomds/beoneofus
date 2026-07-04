@@ -52,7 +52,8 @@ async function callOpenAI(messages) {
 /* ── Groq — use vision model when images present ── */
 async function callGroq(messages, withImages) {
   if (withImages) {
-    /* llama-3.2-11b-vision-preview: only accepts image in the last user message */
+    /* Groq's current multimodal model. Keep images only on the last user turn
+       for reliability; aiClient falls back to Anthropic vision if Groq errors. */
     const lastIdx = [...messages].map((m, i) => m.role === 'user' ? i : -1).filter(i => i >= 0).at(-1);
     const prepared = messages.map((m, i) => {
       if (!Array.isArray(m.content)) return m;
@@ -61,7 +62,7 @@ async function callGroq(messages, withImages) {
       return { ...m, content: text };
     });
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.2-11b-vision-preview',
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
       messages: prepared,
       temperature: 0.7,
       max_tokens: 1024,

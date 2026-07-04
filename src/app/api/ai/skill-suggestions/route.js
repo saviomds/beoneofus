@@ -4,7 +4,6 @@ import { aiClient } from '../../../../lib/aiClient';
 import OpenAI from 'openai';
 
 
-const groq   = aiClient; // Groq when a real gsk_ key exists, else Anthropic fallback
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 const CACHE_TTL_HOURS = 24;
@@ -16,28 +15,30 @@ The JSON must be an array of exactly 6 objects with this shape:
 [{ "skill": "string", "reason": "string (max 12 words)", "priority": "high"|"medium"|"low", "category": "string" }]`;
 
 async function callAI(prompt) {
-  if (groq) {
-    const res = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.6,
-      max_tokens: 600,
-    });
-    return res.choices[0]?.message?.content;
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: prompt },
+  ];
+
+  // Prefer the shared client (Groq → Anthropic) when a provider is configured;
+  // fall back to OpenAI on absence OR failure.
+  if (aiClient.available) {
+    try {
+      const res = await aiClient.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages, temperature: 0.6, max_tokens: 600,
+      });
+      const content = res.choices[0]?.message?.content;
+      if (content) return content;
+    } catch (err) {
+      if (!openai) throw err; // no fallback → surface the error
+    }
   }
 
   if (openai) {
     const res = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.6,
-      max_tokens: 600,
+      messages, temperature: 0.6, max_tokens: 600,
     });
     return res.choices[0]?.message?.content;
   }
@@ -98,7 +99,7 @@ export async function POST(request) {
       .eq('id', user.id)
       .single();
 
-    if (!groq && !openai) {
+    if (!aiClient.available && !openai) {
       return NextResponse.json({ error: 'AI service not configured' }, { status: 503 });
     }
 

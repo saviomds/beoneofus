@@ -718,10 +718,22 @@ export default function ProfileContent({ viewUserId }) {
 
   return (
     <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 pt-4 px-2 sm:px-4 md:px-6">
-      <div className="mb-8 max-w-6xl w-full mx-auto">
+      <div className="mb-6 max-w-6xl w-full mx-auto">
         <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Profile</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your professional identity and network status." : "Viewing professional network identity."}</p>
       </div>
+
+      {/* Premium command center — owner-only overview: strength, reputation, analytics, featured */}
+      {isOwnProfile && profile && !isEditing && (
+        <ProfileCommandCenter
+          profile={profile}
+          followersCount={followersCount}
+          profilePosts={profilePosts}
+          displayAvatar={displayAvatar}
+          userInitial={userInitial}
+          onEdit={() => setIsEditing(true)}
+        />
+      )}
 
       {/* --- BANNER CROPPER MODAL --- */}
       {showBannerCropper && bannerPreview && (
@@ -755,7 +767,7 @@ export default function ProfileContent({ viewUserId }) {
 
       <div className="max-w-6xl w-full mx-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl sm:rounded-[2.5rem] relative overflow-visible shadow-lg sm:shadow-xl shadow-gray-200/50 dark:shadow-black/50 mb-10 transition-all duration-300">
         {/* Banner Section */}
-        <div className="h-28 sm:h-40 md:h-48 w-full bg-gradient-to-tr from-slate-900 via-indigo-900 to-slate-800 rounded-t-2xl sm:rounded-t-[2.5rem] relative overflow-hidden group">
+        <div className="h-28 sm:h-40 md:h-48 w-full bg-gradient-to-tr from-indigo-600 via-violet-600 to-fuchsia-600 rounded-t-2xl sm:rounded-t-[2.5rem] relative overflow-hidden group">
           {displayBanner ? (
             <Image src={displayBanner} alt="Profile Banner" fill priority quality={75} className="object-cover object-center" />
           ) : (
@@ -2092,6 +2104,207 @@ export default function ProfileContent({ viewUserId }) {
           <span className="text-sm font-bold tracking-tight">{toast.message}</span>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ───────────────────────── Premium command center ───────────────────────── */
+
+const fmtNum = (n) => Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(n || 0);
+
+function StatTile({ icon: Icon, label, value }) {
+  return (
+    <div className="flex-1 min-w-[74px] rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 px-3 py-2.5">
+      <div className="flex items-center gap-1.5 text-white/70"><Icon size={13} /><span className="text-[10px] font-bold uppercase tracking-wider">{label}</span></div>
+      <p className="text-xl font-black text-white mt-0.5 tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function FeaturedCard({ post }) {
+  return (
+    <div className="rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-gray-50 dark:bg-gray-800/40">
+      {post.image_url && <div className="h-24 w-full overflow-hidden"><img src={post.image_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /></div>}
+      <div className="p-3">
+        <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1">{post.title || 'Post'}</p>
+        {post.content && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">{post.content}</p>}
+        <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
+          <span className="inline-flex items-center gap-1"><Heart size={11} />{post.likes?.length || 0}</span>
+          <span className="inline-flex items-center gap-1"><MessageSquare size={11} />{post.comments?.length || 0}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileCommandCenter({ profile, followersCount, profilePosts, displayAvatar, userInitial, onEdit }) {
+  const [manageFeatured, setManageFeatured] = useState(false);
+  const [pinned, setPinned] = useState(() => Array.isArray(profile?.preferences?.pinned_posts) ? profile.preferences.pinned_posts : []);
+  const [savingPins, setSavingPins] = useState(false);
+
+  const postCount = profilePosts.length;
+  const totalLikes = profilePosts.reduce((s, p) => s + (p.likes?.length || 0), 0);
+  const totalComments = profilePosts.reduce((s, p) => s + (p.comments?.length || 0), 0);
+  const views = profile?.profile_views || 0;
+
+  const checks = [
+    { key: 'avatar',     label: 'Add a profile photo',   done: !!profile?.avatar_url },
+    { key: 'banner',     label: 'Add a cover banner',    done: !!profile?.banner_url },
+    { key: 'headline',   label: 'Write a headline',      done: !!profile?.headline },
+    { key: 'bio',        label: 'Write your bio',        done: !!profile?.bio },
+    { key: 'location',   label: 'Add your location',     done: !!profile?.location },
+    { key: 'skills',     label: 'List your skills',      done: Array.isArray(profile?.skills) && profile.skills.length > 0 },
+    { key: 'experience', label: 'Add work experience',   done: Array.isArray(profile?.experience) && profile.experience.length > 0 },
+    { key: 'links',      label: 'Link GitHub or website',done: !!(profile?.github || profile?.website) },
+  ];
+  const doneCount = checks.filter((c) => c.done).length;
+  const pct = Math.round((doneCount / checks.length) * 100);
+
+  let rep = (profile?.is_verified ? 25 : 0)
+    + Math.min(20, followersCount * 2)
+    + Math.min(20, postCount * 3)
+    + Math.min(15, totalLikes)
+    + Math.round((pct / 100) * 20);
+  rep = Math.min(100, Math.round(rep));
+  const repTier = rep >= 80 ? 'Excellent' : rep >= 60 ? 'Strong' : rep >= 35 ? 'Building' : 'New';
+
+  const togglePin = async (id) => {
+    const next = pinned.includes(id) ? pinned.filter((x) => x !== id) : [...pinned, id].slice(-6);
+    setPinned(next); setSavingPins(true);
+    try {
+      const prefs = { ...(profile.preferences || {}), pinned_posts: next };
+      await supabase.from('profiles').update({ preferences: prefs }).eq('id', profile.id);
+    } catch { /* non-fatal */ }
+    setSavingPins(false);
+  };
+  const pinnedPosts = pinned.map((id) => profilePosts.find((p) => p.id === id)).filter(Boolean);
+
+  const R = 26, CIRC = 2 * Math.PI * R;
+
+  return (
+    <div className="max-w-6xl w-full mx-auto mb-8 space-y-4">
+      {/* Glass gradient hero */}
+      <div className="relative overflow-hidden rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 shadow-xl shadow-indigo-500/20">
+        <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-10 w-56 h-56 rounded-full bg-fuchsia-400/20 blur-2xl pointer-events-none" />
+        <div className="relative flex flex-col lg:flex-row lg:items-center gap-5">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-white/40 bg-white/10 flex items-center justify-center text-2xl font-black text-white shrink-0">
+              {displayAvatar ? <Image src={displayAvatar} alt="" width={64} height={64} className="w-full h-full object-cover" /> : userInitial}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-xl font-black text-white truncate">{profile?.full_name || `@${profile?.username}`}</h2>
+                {profile?.is_verified && <VerifiedBadge size={15} />}
+                {(profile?.is_premium || profile?.is_admin) && <PremiumBadge size={15} isTrial={!!profile?.is_trial_premium} />}
+              </div>
+              {profile?.headline
+                ? <p className="text-white/85 text-sm truncate">{profile.headline}</p>
+                : <button onClick={onEdit} className="text-white/70 text-sm hover:text-white underline underline-offset-2">Add a headline</button>}
+              <span className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-white/15 rounded-full px-2 py-0.5">
+                <Award size={11} /> Reputation: {repTier} · {rep}
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-2 lg:ml-auto">
+            <StatTile icon={Users} label="Network" value={fmtNum(followersCount)} />
+            <StatTile icon={Eye} label="Views" value={fmtNum(views)} />
+            <StatTile icon={Heart} label="Likes" value={fmtNum(totalLikes)} />
+            <StatTile icon={FileText} label="Posts" value={fmtNum(postCount)} />
+          </div>
+        </div>
+      </div>
+
+      {/* Strength · Reputation · Analytics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Profile strength */}
+        <div className="rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5">
+          <div className="flex items-center gap-4">
+            <div className="relative w-16 h-16 shrink-0">
+              <svg viewBox="0 0 64 64" className="w-16 h-16 -rotate-90">
+                <circle cx="32" cy="32" r={R} fill="none" strokeWidth="7" className="stroke-gray-200 dark:stroke-gray-800" />
+                <circle cx="32" cy="32" r={R} fill="none" strokeWidth="7" strokeLinecap="round" className="stroke-indigo-500" strokeDasharray={CIRC} strokeDashoffset={CIRC - (pct / 100) * CIRC} />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-sm font-black text-gray-900 dark:text-gray-100">{pct}%</span>
+            </div>
+            <div>
+              <p className="text-sm font-black text-gray-900 dark:text-gray-100">Profile strength</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{doneCount}/{checks.length} completed</p>
+            </div>
+          </div>
+          <div className="mt-3 space-y-1.5">
+            {checks.filter((c) => !c.done).slice(0, 3).map((c) => (
+              <button key={c.key} onClick={onEdit} className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                <Plus size={12} /> {c.label}
+              </button>
+            ))}
+            {doneCount === checks.length && <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Check size={13} /> All set — great profile!</p>}
+          </div>
+        </div>
+
+        {/* Reputation */}
+        <div className="rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><Award size={15} className="text-amber-500" /> Reputation</p>
+            <span className="text-2xl font-black text-gray-900 dark:text-gray-100 tabular-nums">{rep}</span>
+          </div>
+          <div className="mt-2 h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+            <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-500 transition-all" style={{ width: `${rep}%` }} />
+          </div>
+          <ul className="mt-3 space-y-1.5 text-xs text-gray-600 dark:text-gray-300">
+            <li className="flex items-center gap-2"><Shield size={12} className={profile?.is_verified ? 'text-emerald-500' : 'text-gray-400'} /> {profile?.is_verified ? 'Verified identity' : 'Not verified yet'}</li>
+            <li className="flex items-center gap-2"><Users size={12} className="text-blue-500" /> {fmtNum(followersCount)} connections</li>
+            <li className="flex items-center gap-2"><FileText size={12} className="text-violet-500" /> {postCount} contributions</li>
+            <li className="flex items-center gap-2"><Heart size={12} className="text-rose-500" /> {fmtNum(totalLikes)} likes earned</li>
+          </ul>
+        </div>
+
+        {/* Analytics */}
+        <div className="rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5">
+          <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5 mb-3"><Activity size={15} className="text-indigo-500" /> Analytics</p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {[['Views', views, Eye], ['Posts', postCount, FileText], ['Likes', totalLikes, Heart], ['Comments', totalComments, MessageSquare]].map(([l, v, Ic]) => (
+              <div key={l} className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-2.5">
+                <div className="flex items-center gap-1 text-gray-400"><Ic size={11} /><span className="text-[9px] font-bold uppercase tracking-wide">{l}</span></div>
+                <p className="text-lg font-black text-gray-900 dark:text-gray-100 tabular-nums">{fmtNum(v)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Featured / pinned */}
+      <div className="rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><Award size={15} className="text-fuchsia-500" /> Featured</p>
+          {profilePosts.length > 0 && (
+            <button onClick={() => setManageFeatured((v) => !v)} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">{manageFeatured ? 'Done' : 'Manage'}</button>
+          )}
+        </div>
+        {pinnedPosts.length === 0 && !manageFeatured && (
+          <p className="text-sm text-gray-400 dark:text-gray-500">Pin your best posts to showcase them here. {profilePosts.length > 0 ? 'Tap Manage to choose.' : 'Create a post first.'}</p>
+        )}
+        {pinnedPosts.length > 0 && !manageFeatured && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {pinnedPosts.map((p) => <FeaturedCard key={p.id} post={p} />)}
+          </div>
+        )}
+        {manageFeatured && (
+          <div className="space-y-1.5 max-h-72 overflow-y-auto">
+            {profilePosts.map((p) => {
+              const on = pinned.includes(p.id);
+              return (
+                <button key={p.id} onClick={() => togglePin(p.id)} className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-colors ${on ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
+                  <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${on ? 'bg-indigo-500 text-white' : 'border border-gray-300 dark:border-gray-700'}`}>{on && <Check size={12} />}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-200 truncate flex-1">{p.title || p.content?.slice(0, 60) || 'Untitled post'}</span>
+                  <span className="text-[10px] text-gray-400 shrink-0 inline-flex items-center gap-1"><Heart size={10} />{p.likes?.length || 0}</span>
+                </button>
+              );
+            })}
+            <p className="text-[11px] text-gray-400 pt-1">Up to 6 posts.{savingPins ? ' Saving…' : ''}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -130,7 +130,7 @@ function ProgramForm({ v, slug, token, onDone, onClose, initial }) {
     const d = await res.json().catch(() => ({}));
     setSaving(false);
     if (!res.ok) { setErr(d.error || 'Could not create.'); return; }
-    onDone?.();
+    onDone?.(d.program?.id);
   };
 
   return (
@@ -190,7 +190,7 @@ function ProgramForm({ v, slug, token, onDone, onClose, initial }) {
 }
 
 // ── Programs section — list + create + manage status + add participants ──────
-function Programs({ v, data, slug, token, reload, filter, prefill, onPrefillConsumed }) {
+function Programs({ v, data, slug, token, reload, filter, prefill, onPrefillConsumed, onLinkRec }) {
   const [creating, setCreating] = useState(false);
   const [initial, setInitial] = useState(null);
   const [openId, setOpenId] = useState(null);
@@ -258,7 +258,9 @@ function Programs({ v, data, slug, token, reload, filter, prefill, onPrefillCons
           ))}
         </div>
       )}
-      {creating && <ProgramForm v={{ ...v, program: noun, kinds: filter?.kind ? [filter.kind] : v.kinds }} slug={slug} token={token} initial={initial} onClose={closeCreate} onDone={() => { closeCreate(); reload(); }} />}
+      {creating && <ProgramForm v={{ ...v, program: noun, kinds: filter?.kind ? [filter.kind] : v.kinds }} slug={slug} token={token} initial={initial}
+        onClose={closeCreate}
+        onDone={(newId) => { const rid = initial?.recId; closeCreate(); reload(); if (rid && newId) onLinkRec?.(rid, newId); }} />}
     </div>
   );
 }
@@ -584,42 +586,90 @@ function prefillFromRec(rec) {
   };
 }
 
-function RecCard({ rec, busy, onAct, onCreate }) {
-  const prio = REC_PRIORITY[rec.priority] || REC_PRIORITY.medium;
-  const accepted = rec.status === 'accepted';
+const REC_STATUS = {
+  suggested:   { label: 'New',         chip: 'bg-brand-500/10 text-brand-600 dark:text-brand-400' },
+  accepted:    { label: 'Accepted',    chip: 'bg-trust-500/10 text-trust-600 dark:text-trust-500' },
+  in_progress: { label: 'In Progress', chip: 'bg-premium-500/10 text-premium-600 dark:text-premium-500' },
+  completed:   { label: 'Completed',   chip: 'bg-trust-500/10 text-trust-600 dark:text-trust-500' },
+};
+const IMPACT = {
+  high:   { label: 'High impact',   cls: 'bg-trust-500/10 text-trust-600 dark:text-trust-500' },
+  medium: { label: 'Medium impact', cls: 'bg-premium-500/10 text-premium-600 dark:text-premium-500' },
+  low:    { label: 'Low impact',    cls: 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-gray-400' },
+};
+
+function LinkedProgram({ lp }) {
+  if (!lp) return null;
+  const imp = lp.impact ? IMPACT[lp.impact] : null;
   return (
-    <div className={`${panel} p-4 ${accepted ? 'ring-1 ring-brand-500/30' : ''}`}>
+    <div className={`mt-3 rounded-xl border ${hairline} bg-slate-50 dark:bg-white/[0.02] p-3`}>
+      <div className="flex items-center gap-1.5">
+        <CheckCircle2 size={13} className="text-trust-500 shrink-0" />
+        <span className={`text-sm font-bold ${heading} truncate`}>{lp.title}</span>
+        <span className={`text-[10px] font-mono uppercase ${faint} capitalize`}>{lp.status}</span>
+      </div>
+      <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs ${muted}`}>
+        <span><span className={`font-bold ${heading} tabular-nums`}>{(lp.participants || 0).toLocaleString()}</span> participants</span>
+        <span><span className={`font-bold ${heading} tabular-nums`}>{lp.completionPct || 0}%</span> completion</span>
+        {imp && <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${imp.cls}`}>{imp.label}</span>}
+      </div>
+    </div>
+  );
+}
+
+function RecCard({ rec, busy, onAct, onCreate, onView }) {
+  const prio = REC_PRIORITY[rec.priority] || REC_PRIORITY.medium;
+  const st = REC_STATUS[rec.status] || REC_STATUS.suggested;
+  const isNew = rec.status === 'suggested';
+  const linked = rec.status === 'in_progress' || rec.status === 'completed';
+  return (
+    <div className={`${panel} p-4 ${rec.status === 'in_progress' ? 'ring-1 ring-premium-500/25' : ''}`}>
       <div className="flex items-center gap-2 flex-wrap mb-2">
+        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${st.chip}`}>{st.label}</span>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${prio.chip}`}>{prio.label}</span>
         <span className={`text-[10px] font-mono uppercase tracking-wider ${faint}`}>{REC_TYPE_LABEL[rec.type] || rec.type}</span>
         {rec.source === 'ai' && <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-brand-600 dark:text-brand-400"><Sparkles size={10} /> AI</span>}
-        {accepted && <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-trust-600 dark:text-trust-500"><Check size={11} /> Accepted</span>}
       </div>
       <p className={`font-bold ${heading}`}>{rec.title}</p>
       {rec.rationale && <p className={`text-sm ${muted} mt-1`}>{rec.rationale}</p>}
+
+      {linked && <LinkedProgram lp={rec.linkedProgram} />}
+
       <div className={`flex items-center gap-1.5 mt-3 pt-3 border-t ${hairline}`}>
-        {!accepted && (
+        {isNew && (
           <button disabled={busy} onClick={() => onAct(rec.id, 'accepted')}
             className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
             {busy ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />} Accept
           </button>
         )}
-        {accepted && (
-          <button disabled={busy} onClick={() => onAct(rec.id, 'done')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold bg-trust-500 hover:bg-trust-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
-            {busy ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={13} />} Mark done
-          </button>
-        )}
-        {rec.suggestedKind && (
-          <button onClick={() => onCreate(rec)} className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg ${muted} hover:bg-slate-100 dark:hover:bg-white/10 transition-colors`}>
+        {(isNew || rec.status === 'accepted') && rec.suggestedKind && (
+          <button onClick={() => onCreate(rec)}
+            className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${rec.status === 'accepted' ? 'bg-brand-500 hover:bg-brand-600 text-white' : `${muted} hover:bg-slate-100 dark:hover:bg-white/10`}`}>
             <Plus size={13} /> Create {rec.suggestedKind}
           </button>
         )}
-        <button disabled={busy} onClick={() => onAct(rec.id, 'dismissed')} title="Dismiss"
-          className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 ml-auto transition-colors">
-          <X size={13} /> Dismiss
-        </button>
+        {linked && rec.linkedProgram && (
+          <button onClick={() => onView?.()}
+            className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg ${muted} hover:bg-slate-100 dark:hover:bg-white/10 transition-colors`}>
+            <ArrowRight size={13} /> View program
+          </button>
+        )}
+        {rec.status !== 'completed' && (
+          <button disabled={busy} onClick={() => onAct(rec.id, rec.status === 'in_progress' ? 'archived' : 'dismissed')}
+            className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 ml-auto transition-colors">
+            <X size={13} /> {rec.status === 'in_progress' ? 'Archive' : 'Dismiss'}
+          </button>
+        )}
       </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value, tone }) {
+  return (
+    <div className={`${panel} p-3 text-center`}>
+      <p className={`text-2xl font-black tabular-nums ${tone === 'trust' ? 'text-trust-600 dark:text-trust-500' : heading}`}>{value}</p>
+      <p className={`text-[10px] font-mono uppercase tracking-wider ${faint} mt-0.5`}>{label}</p>
     </div>
   );
 }
@@ -627,16 +677,25 @@ function RecCard({ rec, busy, onAct, onCreate }) {
 function Recommendations({ v, slug, token, go, onCreateProgram }) {
   const [state, setState] = useState('init'); // init | ready | generating
   const [cards, setCards] = useState([]);
-  const [counts, setCounts] = useState({});
+  const [done, setDone] = useState([]);
+  const [metrics, setMetrics] = useState({ generated: 0 });
   const [genAt, setGenAt] = useState(null);
   const [err, setErr] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const programsTab = v.nav.find((n) => n.component === 'programs' && !n.filter)?.id || 'programs';
+
+  const apply = (d) => {
+    setCards(d.recommendations || []);
+    setDone(d.completed || []);
+    setMetrics(d.metrics || { generated: 0 });
+    setGenAt(d.generatedAt);
+  };
 
   const loadCache = useCallback(async () => {
     try {
       const res = await fetch(`/api/console/${slug}/recommendations`, { headers: { Authorization: `Bearer ${token}` } });
       const d = await res.json().catch(() => ({}));
-      if (res.ok) { setCards(d.recommendations || []); setCounts(d.counts || {}); setGenAt(d.generatedAt); }
+      if (res.ok) apply(d);
     } catch { /* keep prior */ }
     setState('ready');
   }, [slug, token]);
@@ -649,20 +708,20 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
       const res = await fetch(`/api/console/${slug}/recommendations`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(d.error || 'Could not generate recommendations.'); setState('ready'); return; }
-      setCards(d.recommendations || []); setCounts(d.counts || {}); setGenAt(d.generatedAt);
+      apply(d);
     } catch { setErr('Network error. Try again.'); }
     setState('ready');
   };
 
   const act = async (id, status) => {
     setBusyId(id);
-    setCards((c) => c.filter((r) => r.id !== id || status === 'accepted')); // optimistic
     try {
-      await fetch(`/api/console/${slug}/recommendations`, {
+      const res = await fetch(`/api/console/${slug}/recommendations`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ id, status }),
       });
-      await loadCache();
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) apply(d);
     } catch { await loadCache(); }
     setBusyId(null);
   };
@@ -670,14 +729,14 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
   const genBtn = (
     <button onClick={generate} disabled={state === 'generating'}
       className="inline-flex items-center gap-1.5 text-sm font-bold bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-xl disabled:opacity-60 transition-colors shrink-0">
-      {state === 'generating' ? <Loader2 size={15} className="animate-spin" /> : cards.length ? <RefreshCw size={15} /> : <Sparkles size={15} />}
-      {cards.length ? 'Refresh' : 'Generate'}
+      {state === 'generating' ? <Loader2 size={15} className="animate-spin" /> : metrics.generated ? <RefreshCw size={15} /> : <Sparkles size={15} />}
+      {metrics.generated ? 'Refresh' : 'Generate'}
     </button>
   );
 
   return (
     <div>
-      <SectionHead tag="Prescriptive" title="Recommended actions" desc="Concrete next steps detected from your real program data — accept to act, dismiss to hide." action={genBtn} />
+      <SectionHead tag="Prescriptive" title="Recommended actions" desc="Detected from your real program data — accept to act, and track outcomes as programs run." action={genBtn} />
 
       {err && (
         <div className="flex items-start gap-2 text-sm text-red-500 dark:text-red-400 mb-4">
@@ -697,22 +756,52 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
         </div>
       )}
 
-      {state !== 'generating' && cards.length === 0 && (
-        <Empty icon={Target} title="No open recommendations"
+      {state !== 'generating' && metrics.generated === 0 && (
+        <Empty icon={Target} title="No recommendations yet"
           desc="Generate to scan your programs and participants for concrete, prioritized actions."
           onAction={generate} actionLabel="Generate recommendations" />
       )}
 
-      {state !== 'generating' && cards.length > 0 && (
+      {state !== 'generating' && metrics.generated > 0 && (
         <>
-          <div className="space-y-2.5">
-            {cards.map((rec) => (
-              <RecCard key={rec.id} rec={rec} busy={busyId === rec.id} onAct={act} onCreate={() => onCreateProgram(rec)} />
-            ))}
+          {/* AI-impact metrics — does AI actually drive outcomes? */}
+          <div className="mb-4">
+            <p className={`text-[11px] font-mono uppercase tracking-widest ${accentTx} mb-2`}>AI impact</p>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              <MiniStat label="Generated" value={metrics.generated} />
+              <MiniStat label="Accepted" value={metrics.accepted || 0} />
+              <MiniStat label="Programs" value={metrics.programsCreated || 0} />
+              <MiniStat label="Completed" value={metrics.completed || 0} tone="trust" />
+              <MiniStat label="Success" value={`${metrics.successRate || 0}%`} tone="trust" />
+            </div>
           </div>
-          <p className={`text-xs ${faint} mt-4`}>
-            {(counts.done || 0)} done · {(counts.dismissed || 0)} dismissed{genAt ? ` · updated ${timeAgo(genAt)}` : ''}
-          </p>
+
+          {cards.length > 0 ? (
+            <div className="space-y-2.5">
+              {cards.map((rec) => (
+                <RecCard key={rec.id} rec={rec} busy={busyId === rec.id}
+                  onAct={act} onCreate={() => onCreateProgram(rec)} onView={() => go(programsTab)} />
+              ))}
+            </div>
+          ) : (
+            <div className={`${panel} p-6 text-center`}>
+              <p className={`text-sm ${muted}`}>You&apos;ve actioned every open recommendation. Refresh to scan for new ones as your data grows.</p>
+            </div>
+          )}
+
+          {done.length > 0 && (
+            <div className="mt-6">
+              <p className={`text-[11px] font-mono uppercase tracking-widest ${faint} mb-2`}>Completed · outcomes</p>
+              <div className="space-y-2.5">
+                {done.map((rec) => (
+                  <RecCard key={rec.id} rec={rec} busy={busyId === rec.id}
+                    onAct={act} onCreate={() => onCreateProgram(rec)} onView={() => go(programsTab)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {genAt && <p className={`text-xs ${faint} mt-4`}>Updated {timeAgo(genAt)}</p>}
         </>
       )}
     </div>
@@ -1047,15 +1136,25 @@ export default function InstitutionConsole() {
   // form pre-filled from the recommendation's context.
   const createFromRec = (rec) => {
     const mainPrograms = nav.find((n) => n.component === 'programs' && !n.filter);
-    setProgramPrefill(prefillFromRec(rec));
+    setProgramPrefill({ ...prefillFromRec(rec), recId: rec.id });
     setSection(mainPrograms?.id || 'programs');
+  };
+
+  // After a program is created from a recommendation, forge the permanent link.
+  const linkRecToProgram = async (recId, programId) => {
+    try {
+      await fetch(`/api/console/${slug}/recommendations`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'link', id: recId, programId }),
+      });
+    } catch { /* link is best-effort; the board reconciles on next load */ }
   };
 
   const renderSection = () => {
     switch (current.component) {
       case 'overview':     return <Overview v={v} data={data} slug={slug} token={token} go={setSection} />;
       case 'recommendations': return <Recommendations v={v} slug={slug} token={token} go={setSection} onCreateProgram={createFromRec} />;
-      case 'programs':     return <Programs v={v} data={data} slug={slug} token={token} reload={load} filter={current.filter} prefill={current.filter ? null : programPrefill} onPrefillConsumed={() => setProgramPrefill(null)} />;
+      case 'programs':     return <Programs v={v} data={data} slug={slug} token={token} reload={load} filter={current.filter} prefill={current.filter ? null : programPrefill} onPrefillConsumed={() => setProgramPrefill(null)} onLinkRec={linkRecToProgram} />;
       case 'directory':    return <Directory v={v} data={data} slug={slug} token={token} reload={load} filter={current.filter} label={current.label} />;
       case 'impact':       return <Impact v={v} data={data} slug={slug} token={token} />;
       case 'orgpage':      return <OrgPageEditor org={org} slug={slug} token={token} reload={load} />;

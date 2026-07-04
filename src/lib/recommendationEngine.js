@@ -191,3 +191,37 @@ export function generateRecommendations(type, { programs = [], participants = []
 
   return recs.sort((a, b) => (PRIORITY_SCORE[b.priority] || 0) - (PRIORITY_SCORE[a.priority] || 0));
 }
+
+// ── Lifecycle helpers ────────────────────────────────────────────────────────
+
+// Effective status of a recommendation given the live state of its linked program.
+// Manual states (dismissed/archived/suggested) are authoritative; a linked
+// program drives In Progress → Completed automatically.
+export function deriveRecStatus(rec, program) {
+  if (['dismissed', 'archived', 'suggested'].includes(rec.status)) return rec.status;
+  if (rec.created_program_id) {
+    if (!program) return 'accepted';            // linked program was deleted
+    return program.status === 'completed' ? 'completed' : 'in_progress';
+  }
+  return rec.status;                            // accepted (no program yet) or manually completed
+}
+
+// Outcome grade for a completed/in-progress program a recommendation produced.
+export function programImpact({ participants = 0, completionPct = 0 } = {}) {
+  if (!participants) return null;               // no signal yet
+  if (completionPct >= 70 && participants >= 8) return 'high';
+  if (completionPct >= 40 || participants >= 8) return 'medium';
+  return 'low';
+}
+
+// AI-impact rollup across all of an org's recommendations.
+export function recommendationMetrics(rows) {
+  const acted = new Set(['accepted', 'in_progress', 'completed']);
+  const generated = rows.length;
+  const accepted = rows.filter((r) => acted.has(r.status)).length;
+  const programsCreated = rows.filter((r) => r.created_program_id).length;
+  const completed = rows.filter((r) => r.status === 'completed').length;
+  const dismissed = rows.filter((r) => r.status === 'dismissed').length;
+  const successRate = programsCreated ? Math.round((completed / programsCreated) * 100) : 0;
+  return { generated, accepted, programsCreated, completed, dismissed, successRate };
+}

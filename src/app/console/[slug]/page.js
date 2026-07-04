@@ -591,6 +591,7 @@ const REC_STATUS = {
   accepted:    { label: 'Accepted',    chip: 'bg-trust-500/10 text-trust-600 dark:text-trust-500' },
   in_progress: { label: 'In Progress', chip: 'bg-premium-500/10 text-premium-600 dark:text-premium-500' },
   completed:   { label: 'Completed',   chip: 'bg-trust-500/10 text-trust-600 dark:text-trust-500' },
+  resolved:    { label: 'Resolved',    chip: 'bg-trust-500/10 text-trust-600 dark:text-trust-500' },
 };
 const IMPACT = {
   high:   { label: 'High impact',   cls: 'bg-trust-500/10 text-trust-600 dark:text-trust-500' },
@@ -621,46 +622,61 @@ function RecCard({ rec, busy, onAct, onCreate, onView }) {
   const prio = REC_PRIORITY[rec.priority] || REC_PRIORITY.medium;
   const st = REC_STATUS[rec.status] || REC_STATUS.suggested;
   const isNew = rec.status === 'suggested';
-  const linked = rec.status === 'in_progress' || rec.status === 'completed';
+  const resolved = rec.status === 'resolved';
+  const hasLink = !!rec.linkedProgram;
+  const canCreate = (isNew || rec.status === 'accepted') && rec.suggestedKind;
+  const canDismiss = !['completed', 'resolved'].includes(rec.status);
+  const anyAction = isNew || canCreate || hasLink || canDismiss;
   return (
-    <div className={`${panel} p-4 ${rec.status === 'in_progress' ? 'ring-1 ring-premium-500/25' : ''}`}>
+    <div className={`${panel} p-4 ${rec.status === 'in_progress' ? 'ring-1 ring-premium-500/25' : ''} ${resolved ? 'opacity-90' : ''}`}>
       <div className="flex items-center gap-2 flex-wrap mb-2">
-        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${st.chip}`}>{st.label}</span>
-        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${prio.chip}`}>{prio.label}</span>
+        <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${st.chip}`}>
+          {resolved && <CheckCircle2 size={11} />}{st.label}
+        </span>
+        {!resolved && <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${prio.chip}`}>{prio.label}</span>}
         <span className={`text-[10px] font-mono uppercase tracking-wider ${faint}`}>{REC_TYPE_LABEL[rec.type] || rec.type}</span>
         {rec.source === 'ai' && <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-brand-600 dark:text-brand-400"><Sparkles size={10} /> AI</span>}
       </div>
-      <p className={`font-bold ${heading}`}>{rec.title}</p>
-      {rec.rationale && <p className={`text-sm ${muted} mt-1`}>{rec.rationale}</p>}
+      <p className={`font-bold ${heading} ${resolved ? 'line-through decoration-slate-300 dark:decoration-white/20' : ''}`}>{rec.title}</p>
+      {!resolved && rec.rationale && <p className={`text-sm ${muted} mt-1`}>{rec.rationale}</p>}
 
-      {linked && <LinkedProgram lp={rec.linkedProgram} />}
+      {resolved && rec.resolutionNote && (
+        <div className="mt-2.5 flex items-start gap-2 text-sm bg-trust-500/[0.08] border border-trust-500/20 rounded-xl p-3">
+          <CheckCircle2 size={15} className="text-trust-600 dark:text-trust-500 shrink-0 mt-0.5" />
+          <span className={body}>{rec.resolutionNote}</span>
+        </div>
+      )}
 
-      <div className={`flex items-center gap-1.5 mt-3 pt-3 border-t ${hairline}`}>
-        {isNew && (
-          <button disabled={busy} onClick={() => onAct(rec.id, 'accepted')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
-            {busy ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />} Accept
-          </button>
-        )}
-        {(isNew || rec.status === 'accepted') && rec.suggestedKind && (
-          <button onClick={() => onCreate(rec)}
-            className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${rec.status === 'accepted' ? 'bg-brand-500 hover:bg-brand-600 text-white' : `${muted} hover:bg-slate-100 dark:hover:bg-white/10`}`}>
-            <Plus size={13} /> Create {rec.suggestedKind}
-          </button>
-        )}
-        {linked && rec.linkedProgram && (
-          <button onClick={() => onView?.()}
-            className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg ${muted} hover:bg-slate-100 dark:hover:bg-white/10 transition-colors`}>
-            <ArrowRight size={13} /> View program
-          </button>
-        )}
-        {rec.status !== 'completed' && (
-          <button disabled={busy} onClick={() => onAct(rec.id, rec.status === 'in_progress' ? 'archived' : 'dismissed')}
-            className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 ml-auto transition-colors">
-            <X size={13} /> {rec.status === 'in_progress' ? 'Archive' : 'Dismiss'}
-          </button>
-        )}
-      </div>
+      {hasLink && <LinkedProgram lp={rec.linkedProgram} />}
+
+      {anyAction && (
+        <div className={`flex items-center gap-1.5 mt-3 pt-3 border-t ${hairline}`}>
+          {isNew && (
+            <button disabled={busy} onClick={() => onAct(rec.id, 'accepted')}
+              className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand-500 hover:bg-brand-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors">
+              {busy ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />} Accept
+            </button>
+          )}
+          {canCreate && (
+            <button onClick={() => onCreate(rec)}
+              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${rec.status === 'accepted' ? 'bg-brand-500 hover:bg-brand-600 text-white' : `${muted} hover:bg-slate-100 dark:hover:bg-white/10`}`}>
+              <Plus size={13} /> Create {rec.suggestedKind}
+            </button>
+          )}
+          {hasLink && (
+            <button onClick={() => onView?.()}
+              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg ${muted} hover:bg-slate-100 dark:hover:bg-white/10 transition-colors`}>
+              <ArrowRight size={13} /> View program
+            </button>
+          )}
+          {canDismiss && (
+            <button disabled={busy} onClick={() => onAct(rec.id, rec.status === 'in_progress' ? 'archived' : 'dismissed')}
+              className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 ml-auto transition-colors">
+              <X size={13} /> {rec.status === 'in_progress' ? 'Archive' : 'Dismiss'}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -678,6 +694,7 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
   const [state, setState] = useState('init'); // init | ready | generating
   const [cards, setCards] = useState([]);
   const [done, setDone] = useState([]);
+  const [resolvedList, setResolvedList] = useState([]);
   const [metrics, setMetrics] = useState({ generated: 0 });
   const [genAt, setGenAt] = useState(null);
   const [err, setErr] = useState(null);
@@ -687,6 +704,7 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
   const apply = (d) => {
     setCards(d.recommendations || []);
     setDone(d.completed || []);
+    setResolvedList(d.resolved || []);
     setMetrics(d.metrics || { generated: 0 });
     setGenAt(d.generatedAt);
   };
@@ -767,11 +785,12 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
           {/* AI-impact metrics — does AI actually drive outcomes? */}
           <div className="mb-4">
             <p className={`text-[11px] font-mono uppercase tracking-widest ${accentTx} mb-2`}>AI impact</p>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               <MiniStat label="Generated" value={metrics.generated} />
               <MiniStat label="Accepted" value={metrics.accepted || 0} />
               <MiniStat label="Programs" value={metrics.programsCreated || 0} />
               <MiniStat label="Completed" value={metrics.completed || 0} tone="trust" />
+              <MiniStat label="Resolved" value={metrics.resolved || 0} tone="trust" />
               <MiniStat label="Success" value={`${metrics.successRate || 0}%`} tone="trust" />
             </div>
           </div>
@@ -801,7 +820,19 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
             </div>
           )}
 
-          {genAt && <p className={`text-xs ${faint} mt-4`}>Updated {timeAgo(genAt)}</p>}
+          {resolvedList.length > 0 && (
+            <div className="mt-6">
+              <p className={`text-[11px] font-mono uppercase tracking-widest ${faint} mb-2`}>Resolved · AI re-evaluated</p>
+              <div className="space-y-2.5">
+                {resolvedList.map((rec) => (
+                  <RecCard key={rec.id} rec={rec} busy={busyId === rec.id}
+                    onAct={act} onCreate={() => onCreateProgram(rec)} onView={() => go(programsTab)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {genAt && <p className={`text-xs ${faint} mt-4`}>Updated {timeAgo(genAt)} · AI re-checks resolved status on every load</p>}
         </>
       )}
     </div>

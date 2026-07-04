@@ -218,10 +218,103 @@ export function programImpact({ participants = 0, completionPct = 0 } = {}) {
 export function recommendationMetrics(rows) {
   const acted = new Set(['accepted', 'in_progress', 'completed']);
   const generated = rows.length;
-  const accepted = rows.filter((r) => acted.has(r.status)).length;
+  // A rec that was acted on then resolved still counts as accepted (acted_at set).
+  const accepted = rows.filter((r) => acted.has(r.status) || r.acted_at).length;
   const programsCreated = rows.filter((r) => r.created_program_id).length;
   const completed = rows.filter((r) => r.status === 'completed').length;
+  const resolved = rows.filter((r) => r.status === 'resolved').length;
   const dismissed = rows.filter((r) => r.status === 'dismissed').length;
   const successRate = programsCreated ? Math.round((completed / programsCreated) * 100) : 0;
-  return { generated, accepted, programsCreated, completed, dismissed, successRate };
+  return { generated, accepted, programsCreated, completed, resolved, dismissed, successRate };
+}
+
+// AI re-evaluation: has an open recommendation's underlying problem been solved?
+// Deterministic per-type check against the SAME thresholds generateRecommendations
+// uses, comparing current data to the numbers stored in the rec's evidence.
+// Returns { resolved, note } — the note carries real before→after figures.
+export function evaluateResolution(rec, { type, programs = [], participants = [], snapshot = {}, regionStats = [], now = Date.now() } = {}) {
+  const v = vocabFor(type);
+  const ev = rec.evidence || {};
+  const NR = { resolved: false, note: null };
+  const activePrograms = programs.filter((p) => p.status === 'active').length;
+  const byProg = perProgram(programs, participants);
+  const stat = (id) => {
+    const e = byProg.get(id);
+    if (!e) return null;
+    return { total: e.total, completionPct: e.total ? Math.round((e.done / e.total) * 100) : 0, program: e.program };
+  };
+
+  switch (rec.type) {
+    case 'volunteer_shortage': {
+      const vols = snapshot.volunteers || 0;
+      const need = Math.max(1, ev.activePrograms || activePrograms || 1);
+      return vols >= need
+        ? { resolved: true, note: `Resolved — ${vols} volunteer${vols === 1 ? '' : 's'} now cover your active ${v.units}.` }
+        : NR;
+    }
+    case 'regional_coverage': {
+      const loc = (ev.location || '').toLowerCase();
+      const cur = regionStats.find((r) => (r.location || '').toLowerCase() === loc);
+      if (!cur) return { resolved: true, note: `No longer flagged — ${ev.location || 'that area'} has no active participants to track.` };
+      if (cur.completionPct >= 30) {
+        const delta = cur.completionPct - (ev.completionPct ?? 0);
+        return { resolved: true, note: `Improved — ${cur.location} completion rose ${ev.completionPct ?? 0}% → ${cur.completionPct}%${delta > 0 ? ` (+${delta} pts)` : ''}.` };
+      }
+      return NR;
+    }
+    case 'capacity_gap': {
+      const s = rec.target_program_id ? stat(rec.target_program_id) : null;
+      if (!s) return { resolved: true, note: 'No longer applicable — the program was removed.' };
+      if (s.program.status !== 'active') return { resolved: true, note: `Resolved — "${s.program.title}" is no longer active.` };
+      const cap = s.program.capacity;
+      const fill = cap ? Math.round((s.total / cap) * 100) : 100;
+      return (!cap || fill >= 50)
+        ? { resolved: true, note: `Resolved — "${s.program.title}" is now ${fill}% full (${s.total}${cap ? `/${cap}` : ''}).` }
+        : NR;
+    }
+    case 'empty_program': {
+      const s = rec.target_program_id ? stat(rec.target_program_id) : null;
+      if (!s) return { resolved: true, note: 'No longer applicable — the program was removed.' };
+      if (s.total > 0) return { resolved: true, note: `Resolved — "${s.program.title}" now has ${s.total} ${v.people}.` };
+      if (s.program.status !== 'active') return { resolved: true, note: `Resolved — "${s.program.title}" is no longer active.` };
+      return NR;
+    }
+    case 'declining_completion': {
+      const s = rec.target_program_id ? stat(rec.target_program_id) : null;
+      if (!s) return { resolved: true, note: 'No longer applicable — the program was removed.' };
+      const avg = snapshot.completionPct || 0;
+      return (avg === 0 || s.completionPct >= avg - 20)
+        ? { resolved: true, note: `Resolved — "${s.program.title}" completion recovered to ${s.completionPct}% (org avg ${avg}%).` }
+        : NR;
+    }
+    case 'placement_gap': {
+      const completed = participants.filter((p) => DONE.has((p.status || '').toLowerCase())).length;
+      const placed = participants.filter((p) => (p.status || '').toLowerCase() === 'placed').length;
+      if (completed === 0) return NR;
+      const pct = Math.round((placed / completed) * 100);
+      return pct >= 30
+        ? { resolved: true, note: `Improved — ${placed} of ${completed} graduates now placed (${pct}%).` }
+        : NR;
+    }
+    case 'reengagement': {
+      const inactive = participants.filter((p) => (p.status || '').toLowerCase() === 'enrolled' && p.joined_at && now - new Date(p.joined_at).getTime() > 30 * DAY).length;
+      return inactive < 3
+        ? { resolved: true, note: `Resolved — inactive ${v.people} dropped from ${ev.inactive ?? inactive} to ${inactive}.` }
+        : NR;
+    }
+    case 'event_gap': {
+      const upcoming = programs.filter((p) => p.kind === 'event' && p.starts_at && new Date(p.starts_at).getTime() > now).length;
+      return upcoming > 0
+        ? { resolved: true, note: `Resolved — ${upcoming} upcoming event${upcoming === 1 ? '' : 's'} now scheduled.` }
+        : NR;
+    }
+    case 'new_program': {
+      const recent = programs.filter((p) => p.created_at && now - new Date(p.created_at).getTime() < 60 * DAY).length;
+      return recent > 0
+        ? { resolved: true, note: `Resolved — you've launched a new ${v.unit} recently.` }
+        : NR;
+    }
+    default:
+      return NR;
+  }
 }

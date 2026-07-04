@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { aiClient } from '../../../../../lib/aiClient';
 import { computeSnapshot, computeRegionStats, buildAllowedNumbers, numbersVerified } from '../../../../../lib/insightAnalytics';
-import { generateRecommendations, vocabFor, deriveRecStatus, programImpact, recommendationMetrics } from '../../../../../lib/recommendationEngine';
+import { generateRecommendations, vocabFor, deriveRecStatus, programImpact, recommendationMetrics, evaluateResolution } from '../../../../../lib/recommendationEngine';
 
 export const maxDuration = 30;
 
@@ -61,69 +61,82 @@ function serialize(row, linkedProgram) {
     source: row.source,
     createdProgramId: row.created_program_id || null,
     linkedProgram: linkedProgram || null,
+    resolutionNote: row.resolution_note || null,
   };
 }
 
-// Load the full board: derive lifecycle statuses from linked programs (writing
-// through any transitions), attach outcomes, and roll up AI-impact metrics.
-async function buildBoard(supabase, orgId) {
-  const { data: recRows } = await supabase.from('org_recommendations').select('*').eq('organization_id', orgId);
+// Load the full board:
+//   1. derive lifecycle status from each rec's linked program (In Progress/Completed)
+//   2. RE-EVALUATE still-open recs — auto-resolve any whose problem is now solved
+//   3. write through every transition, attach outcomes, roll up AI-impact metrics
+async function buildBoard(supabase, orgId, orgType) {
+  const [{ data: recRows }, { data: programs }, { data: participants }] = await Promise.all([
+    supabase.from('org_recommendations').select('*').eq('organization_id', orgId),
+    supabase.from('org_programs').select('id, kind, status, title, location, capacity, starts_at, created_at').eq('organization_id', orgId),
+    supabase.from('program_participants').select('program_id, role, status, joined_at').eq('organization_id', orgId),
+  ]);
   const recs = recRows || [];
+  const progList = programs || [];
+  const partList = participants || [];
+  const programsById = Object.fromEntries(progList.map((p) => [p.id, p]));
 
-  const linkedIds = [...new Set(recs.map((r) => r.created_program_id).filter(Boolean))];
-  const programsById = {};
-  const outcomeById = {};
-  if (linkedIds.length) {
-    const [{ data: progs }, { data: parts }] = await Promise.all([
-      supabase.from('org_programs').select('id, title, status').in('id', linkedIds),
-      supabase.from('program_participants').select('program_id, status').in('program_id', linkedIds),
-    ]);
-    for (const p of progs || []) programsById[p.id] = p;
-    const agg = {};
-    for (const pt of parts || []) {
-      const a = agg[pt.program_id] || (agg[pt.program_id] = { total: 0, done: 0 });
-      a.total += 1;
-      if (DONE_STATUS.has((pt.status || '').toLowerCase())) a.done += 1;
-    }
-    for (const id of linkedIds) {
-      const a = agg[id] || { total: 0, done: 0 };
-      const completionPct = a.total ? Math.round((a.done / a.total) * 100) : 0;
-      outcomeById[id] = { participants: a.total, completionPct, impact: programImpact({ participants: a.total, completionPct }) };
-    }
+  // Current-state context for re-evaluation + linked-program outcomes.
+  const snapshot = computeSnapshot(progList, partList);
+  const regionStats = computeRegionStats(progList, partList);
+  const agg = {};
+  for (const pt of partList) {
+    const a = agg[pt.program_id] || (agg[pt.program_id] = { total: 0, done: 0 });
+    a.total += 1;
+    if (DONE_STATUS.has((pt.status || '').toLowerCase())) a.done += 1;
   }
+  const outcomeOf = (id) => {
+    const a = agg[id] || { total: 0, done: 0 };
+    const completionPct = a.total ? Math.round((a.done / a.total) * 100) : 0;
+    return { participants: a.total, completionPct, impact: programImpact({ participants: a.total, completionPct }) };
+  };
 
-  // Derive effective status; persist transitions so metrics/history stay accurate.
   const enriched = [];
   const writes = [];
   for (const r of recs) {
     const prog = r.created_program_id ? programsById[r.created_program_id] : null;
-    const derived = deriveRecStatus(r, prog);
-    if (derived !== r.status) writes.push({ id: r.id, status: derived });
-    const effective = { ...r, status: derived };
-    const linked = prog ? { id: prog.id, title: prog.title, status: prog.status, ...(outcomeById[r.created_program_id] || {}) } : null;
-    enriched.push({ row: effective, linked });
-  }
-  for (const w of writes) {
-    await supabase.from('org_recommendations')
-      .update({ status: w.status, ...(w.status === 'completed' ? { acted_at: new Date().toISOString() } : {}) })
-      .eq('id', w.id);
-  }
+    let status = deriveRecStatus(r, prog);
+    let note = r.resolution_note || null;
 
-  const metrics = recommendationMetrics(enriched.map((e) => ({ status: e.row.status, created_program_id: e.row.created_program_id })));
+    // Re-evaluate OPEN recommendations — did the underlying problem get solved?
+    if (['suggested', 'accepted', 'in_progress'].includes(status)) {
+      const resu = evaluateResolution(r, { type: orgType, programs: progList, participants: partList, snapshot, regionStats });
+      if (resu.resolved) { status = 'resolved'; note = resu.note; }
+    }
 
-  const active = enriched
-    .filter((e) => ['suggested', 'accepted', 'in_progress'].includes(e.row.status))
+    if (status !== r.status || note !== (r.resolution_note || null)) {
+      const patch = { status };
+      if (status === 'resolved') { patch.resolution_note = note; patch.resolved_at = new Date().toISOString(); }
+      if (status === 'completed') patch.acted_at = new Date().toISOString();
+      writes.push({ id: r.id, patch });
+    }
+    const linked = prog ? { id: prog.id, title: prog.title, status: prog.status, ...outcomeOf(prog.id) } : null;
+    enriched.push({ row: { ...r, status, resolution_note: note }, linked });
+  }
+  for (const w of writes) await supabase.from('org_recommendations').update(w.patch).eq('id', w.id);
+
+  const metrics = recommendationMetrics(enriched.map((e) => ({ status: e.row.status, created_program_id: e.row.created_program_id, acted_at: e.row.acted_at })));
+
+  const bucket = (statuses) => enriched
+    .filter((e) => statuses.includes(e.row.status))
     .sort((a, b) =>
-      (STATUS_RANK[a.row.status] - STATUS_RANK[b.row.status]) ||
+      ((STATUS_RANK[a.row.status] ?? 9) - (STATUS_RANK[b.row.status] ?? 9)) ||
       ((PRIORITY_SCORE[b.row.priority] || 0) - (PRIORITY_SCORE[a.row.priority] || 0))
     )
     .map((e) => serialize(e.row, e.linked));
-  const completed = enriched
-    .filter((e) => e.row.status === 'completed')
-    .map((e) => serialize(e.row, e.linked));
 
   const lastGen = recs.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), '');
-  return { recommendations: active, completed, metrics, generatedAt: lastGen || null };
+  return {
+    recommendations: bucket(['suggested', 'accepted', 'in_progress']),
+    completed: bucket(['completed']),
+    resolved: bucket(['resolved']),
+    metrics,
+    generatedAt: lastGen || null,
+  };
 }
 
 // GET — board + metrics (instant, no AI).
@@ -132,7 +145,7 @@ export async function GET(req, { params }) {
   const supabase = admin();
   const gate = await authManager(req, supabase, slug);
   if (gate.error) return NextResponse.json({ error: gate.error }, { status: gate.status });
-  return NextResponse.json(await buildBoard(supabase, gate.org.id));
+  return NextResponse.json(await buildBoard(supabase, gate.org.id, gate.org.type));
 }
 
 // Optional AI polish — sharpen rationales, strictly guarded to the real numbers.
@@ -190,7 +203,6 @@ export async function POST(req, { params }) {
   candidates = await aiPolish(org.type, candidates.map((c) => ({ ...c, source: 'rules' })));
 
   const bySig = Object.fromEntries((existing || []).map((r) => [r.signature, r]));
-  const candSigs = new Set(candidates.map((c) => c.signature));
   const inserts = [];
   // Never re-touch a card the manager has already moved down the funnel.
   const LOCKED = new Set(['dismissed', 'archived', 'in_progress', 'completed']);
@@ -209,11 +221,9 @@ export async function POST(req, { params }) {
   }
   if (inserts.length) await supabase.from('org_recommendations').insert(inserts);
 
-  // Only NEW (never-acted) cards that vanish get archived — accepted/linked stay.
-  const toArchive = (existing || []).filter((r) => r.status === 'suggested' && !candSigs.has(r.signature)).map((r) => r.id);
-  if (toArchive.length) await supabase.from('org_recommendations').update({ status: 'archived' }).in('id', toArchive);
-
-  return NextResponse.json(await buildBoard(supabase, org.id));
+  // (Vanished-problem cleanup is handled by re-evaluation in buildBoard, which
+  // resolves solved recs with an explanatory note rather than silently archiving.)
+  return NextResponse.json(await buildBoard(supabase, org.id, org.type));
 }
 
 // PATCH — lifecycle transitions + link to a created program.
@@ -236,7 +246,7 @@ export async function PATCH(req, { params }) {
       .update({ created_program_id: prog.id, status: 'in_progress', acted_at: new Date().toISOString() })
       .eq('id', body.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json(await buildBoard(supabase, org.id));
+    return NextResponse.json(await buildBoard(supabase, org.id, org.type));
   }
 
   // Status transition.

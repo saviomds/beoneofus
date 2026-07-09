@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { createClient } from '@supabase/supabase-js';
 import { getSettingOr } from '../../../../../lib/platformSettings';
 
@@ -42,7 +43,7 @@ async function priceUsd(plan) {
 
 async function getKesRate() {
   try {
-    const res = await fetch('https://open.er-api.com/v6/latest/USD', { next: { revalidate: 3600 } });
+    const res = await fetchWithTimeout('https://open.er-api.com/v6/latest/USD', { next: { revalidate: 3600 } });
     const data = await res.json();
     return data.result === 'success' && data.rates?.KES ? data.rates.KES : 130;
   } catch { return 130; }
@@ -110,7 +111,7 @@ export async function POST(req, { params }) {
       purpose: 'org_subscription', plan_id: plan, amount: kesAmount, currency: 'KES', status: 'pending',
     }).then(() => {}, () => {});
 
-    const psRes = await fetch('https://api.paystack.co/transaction/initialize', {
+    const psRes = await fetchWithTimeout('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: { Authorization: `Bearer ${paystackKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: user.email, amount: kesAmount, currency: 'KES', reference, callback_url: callbackUrl }),
@@ -135,7 +136,7 @@ export async function POST(req, { params }) {
       return NextResponse.json({ ok: true, plan: sub.plan, alreadyActive: true });
     }
 
-    const psRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+    const psRes = await fetchWithTimeout(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
       headers: { Authorization: `Bearer ${paystackKey}` },
     });
     const psData = await psRes.json();

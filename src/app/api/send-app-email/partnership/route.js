@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../../lib/escapeHtml';
 
@@ -27,7 +28,7 @@ export async function POST(request) {
     const statusColor = isAccepted ? '#059669' : '#dc2626';
     const statusBg = isAccepted ? '#ecfdf5' : '#fef2f2';
 
-    const emailResponse = await fetch('https://api.resend.com/emails', {
+    const emailResponse = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,

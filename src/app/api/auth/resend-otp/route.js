@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit } from '../../../../lib/rateLimit';
 import { escapeHtml } from '../../../../lib/escapeHtml';
@@ -68,7 +69,7 @@ export async function POST(request) {
     const safeEmail = escapeHtml(addr);
     if (!process.env.RESEND_API_KEY) throw new Error('Email service not configured');
 
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

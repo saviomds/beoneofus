@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { checkRateLimit } from '../../../../lib/rateLimit';
 import { createClient } from '@supabase/supabase-js';
 import { getSettingOr } from '../../../../lib/platformSettings';
@@ -17,7 +18,7 @@ async function getPlans() {
 
 async function getKesRate() {
   try {
-    const res = await fetch('https://open.er-api.com/v6/latest/USD', {
+    const res = await fetchWithTimeout('https://open.er-api.com/v6/latest/USD', {
       next: { revalidate: 3600 },
     });
     const data = await res.json();
@@ -106,7 +107,7 @@ export async function POST(req) {
     if (error) throw error;
 
     /* Initialize transaction on Paystack to get hosted checkout URL */
-    const psRes = await fetch('https://api.paystack.co/transaction/initialize', {
+    const psRes = await fetchWithTimeout('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${paystackKey}`,

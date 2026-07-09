@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../../lib/escapeHtml';
 
@@ -111,7 +112,7 @@ async function sendBatch(emails, subject, html, text) {
     }));
 
     try {
-      const res = await fetch('https://api.resend.com/emails/batch', {
+      const res = await fetchWithTimeout('https://api.resend.com/emails/batch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -126,7 +127,7 @@ async function sendBatch(emails, subject, html, text) {
         // Fallback: send one-by-one for this chunk
         for (const email of chunk) {
           try {
-            const r = await fetch('https://api.resend.com/emails', {
+            const r = await fetchWithTimeout('https://api.resend.com/emails', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
               body: JSON.stringify({ from: FROM, to: email, subject, html, text, headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>`, 'Precedence': 'bulk' } }),

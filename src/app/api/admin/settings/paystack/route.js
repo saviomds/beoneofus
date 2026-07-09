@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { createClient } from '@supabase/supabase-js';
 import { invalidatePlatformSettingsCache } from '../../../../../lib/platformSettings';
 
@@ -40,7 +41,7 @@ export async function POST(request) {
 
     // Validate secret key against Paystack API (if provided and not masked)
     if (secret_key && !secret_key.includes('•')) {
-      const testRes = await fetch('https://api.paystack.co/bank', {
+      const testRes = await fetchWithTimeout('https://api.paystack.co/bank', {
         headers: { Authorization: `Bearer ${secret_key}` },
       });
       if (!testRes.ok) {

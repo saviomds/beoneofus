@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { escapeHtml } from '../../../lib/escapeHtml';
 
 // Supabase signs hook requests with HMAC-SHA256 of the raw body.
@@ -119,7 +120,7 @@ function buildOtpHtml(toEmail, code) {
 
 async function sendOtpEmail(to, code) {
   const from = `BeOneOfUs <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`;
-  const res = await fetch('https://api.resend.com/emails', {
+  const res = await fetchWithTimeout('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

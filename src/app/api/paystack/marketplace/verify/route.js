@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '../../../../../lib/requireAuth';
 
 async function getKesRate() {
   try {
-    const res = await fetch('https://open.er-api.com/v6/latest/USD', { next: { revalidate: 3600 } });
+    const res = await fetchWithTimeout('https://open.er-api.com/v6/latest/USD', { next: { revalidate: 3600 } });
     const data = await res.json();
     return data.result === 'success' && data.rates?.KES ? data.rates.KES : 130;
   } catch {
@@ -57,7 +58,7 @@ export async function POST(req) {
     }
 
     // Verify with Paystack.
-    const psRes = await fetch(
+    const psRes = await fetchWithTimeout(
       `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
       { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } },
     );

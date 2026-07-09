@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../../lib/escapeHtml';
 
@@ -89,7 +90,7 @@ export async function POST(request) {
       });
       const setupLink = linkData?.properties?.action_link || `${siteUrl}/auth`;
 
-      const emailRes = await fetch('https://api.resend.com/emails', {
+      const emailRes = await fetchWithTimeout('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

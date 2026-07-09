@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { checkRateLimit } from '../../../../lib/rateLimit';
 import { createClient } from '@supabase/supabase-js';
 import { getSettingOr } from '../../../../lib/platformSettings';
@@ -34,7 +35,7 @@ export async function POST(req) {
     const paystackKey = await getSettingOr('paystack_secret_key', process.env.PAYSTACK_SECRET_KEY);
 
     /* Verify with Paystack */
-    const paystackRes = await fetch(
+    const paystackRes = await fetchWithTimeout(
       `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
       { headers: { Authorization: `Bearer ${paystackKey}` } }
     );

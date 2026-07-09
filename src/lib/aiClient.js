@@ -24,9 +24,16 @@ const groqUsable = GROQ_KEY.startsWith('gsk_');
 const anthropicUsable = ANTHROPIC_KEY.startsWith('sk-ant-');
 const openaiUsable = OPENAI_KEY.startsWith('sk-') && !OPENAI_KEY.startsWith('sk-ant-');
 
-const _groq = groqUsable ? new Groq({ apiKey: GROQ_KEY, maxRetries: 1 }) : null;
-const _anthropic = anthropicUsable ? new Anthropic({ apiKey: ANTHROPIC_KEY }) : null;
-const _openai = openaiUsable ? new OpenAI({ apiKey: OPENAI_KEY, maxRetries: 1 }) : null;
+// Per-provider hard timeout. create() tries providers in sequence, so the
+// worst case is roughly (number of usable providers × this) — kept well under
+// Vercel's function limit so a stalled provider can never cause a 504. Retries
+// are disabled here because our cross-provider fallback already covers outages;
+// leaving them on would multiply the worst-case wall-clock.
+const AI_TIMEOUT_MS = 12_000;
+
+const _groq = groqUsable ? new Groq({ apiKey: GROQ_KEY, maxRetries: 0, timeout: AI_TIMEOUT_MS }) : null;
+const _anthropic = anthropicUsable ? new Anthropic({ apiKey: ANTHROPIC_KEY, maxRetries: 0, timeout: AI_TIMEOUT_MS }) : null;
+const _openai = openaiUsable ? new OpenAI({ apiKey: OPENAI_KEY, maxRetries: 0, timeout: AI_TIMEOUT_MS }) : null;
 
 // Small, fast, cheap fallback models per provider.
 const FALLBACK_MODEL = 'claude-haiku-4-5';

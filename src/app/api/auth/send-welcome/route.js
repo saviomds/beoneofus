@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { escapeHtml } from '../../../../lib/escapeHtml';
 
 export async function POST(request) {
@@ -84,7 +85,7 @@ export async function POST(request) {
 </table>
 </body></html>`;
 
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

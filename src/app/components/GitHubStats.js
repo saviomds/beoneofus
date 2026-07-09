@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Star, ExternalLink } from "lucide-react";
 
 const LANG_COLORS = {
@@ -24,13 +25,13 @@ export default function GitHubStats({ githubField }) {
   const [user, setUser] = useState(null);
   const [repos, setRepos] = useState([]);
   const [languages, setLanguages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(parseGithubUsername(githubField)));
   const [error, setError] = useState(null);
 
   const username = parseGithubUsername(githubField);
 
   useEffect(() => {
-    if (!username) { setLoading(false); return; }
+    if (!username) return;
 
     const fetchData = async () => {
       setLoading(true);
@@ -110,11 +111,14 @@ export default function GitHubStats({ githubField }) {
 
       {/* Contribution graph */}
       <div className="px-4 pt-4 pb-2">
-        <img
+        <Image
           src={`https://ghchart.rshah.org/2563eb/${username}`}
           alt={`${username}'s contributions`}
-          className="w-full rounded-lg"
+          width={720}
+          height={112}
+          className="w-full h-auto rounded-lg"
           loading="lazy"
+          unoptimized
           onError={(e) => { e.currentTarget.style.display = "none"; }}
         />
       </div>

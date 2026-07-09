@@ -226,7 +226,7 @@ export default function ExamPage() {
         <BookOpen size={48} className="text-gray-300 dark:text-gray-700 mb-4" />
         <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2">Complete all lessons first</h1>
         <p className="text-gray-500 dark:text-gray-400 mb-2 max-w-sm">
-          You've completed <strong>{completedCount}</strong> of <strong>{totalLessons}</strong> lessons.
+          You&apos;ve completed <strong>{completedCount}</strong> of <strong>{totalLessons}</strong> lessons.
           {error && <span className="block text-red-500 text-xs mt-2">{error}</span>}
         </p>
         <button onClick={() => router.push(`/LearnPage/${courseId}`)} className="mt-4 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all">

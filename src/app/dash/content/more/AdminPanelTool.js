@@ -11,10 +11,11 @@ import {
   ShieldCheck, ShieldAlert, UserCog, Bot, Layers, Bell, Plus, Copy,
   Clock, MoreHorizontal, Video, Sparkles, Heart, Zap, Code2,
   Settings, Key, Globe, CreditCard, DollarSign, Save, ToggleLeft, ToggleRight,
-  Webhook, Lock, Package, Star, Wrench, AlertOctagon, ExternalLink,
+  Webhook, Lock, Package, Star, Wrench, AlertOctagon, ExternalLink, Send,
 } from "lucide-react";
 import { supabase } from "../../../supabaseClient";
 import SponsorsAdminContent from "../SponsorsAdminContent";
+import ProfileContent from "../ProfileContent";
 import VerifiedBadge from "../../../components/VerifiedBadge";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -63,8 +64,13 @@ function SystemLogsView() {
   }, []);
 
   useEffect(() => {
-    fetchLogs();
-    fetchLogStats();
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      fetchLogs();
+      fetchLogStats();
+    })();
 
     supabase.from("notifications")
       .select("type, content, created_at")
@@ -86,7 +92,7 @@ function SystemLogsView() {
       })
       .subscribe();
 
-    return () => supabase.removeChannel(ch);
+    return () => { cancelled = true; supabase.removeChannel(ch); };
   }, [fetchLogs, fetchLogStats]);
 
   const handleResolve = async (logId) => {
@@ -322,7 +328,7 @@ function SystemLogsView() {
         {eventsLoading ? (
           <div className="py-6 flex justify-center"><Loader2 size={14} className="animate-spin text-cyan-500" /></div>
         ) : events.length === 0 ? (
-          <p className="text-[9px] text-gray-700 text-center py-8">// no recent activity</p>
+          <p className="text-[9px] text-gray-700 text-center py-8">{"// no recent activity"}</p>
         ) : (
           <div className="divide-y divide-white/[0.02] max-h-44 overflow-y-auto">
             {events.map((ev, i) => (
@@ -439,7 +445,7 @@ const AdminPanelTool = ({ currentUserId }) => {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [trialMode.active, trialMode.expires_at]);
+  }, [trialMode.active, trialMode.expires_at, showToast]);
   const [taskForm, setTaskForm] = useState({ assignee_id: "", title: "", description: "", priority: "Medium", linked_to: "" });
   const [taskFilter, setTaskFilter] = useState("All");
   const [teamMembers, setTeamMembers] = useState([]);
@@ -473,11 +479,14 @@ const AdminPanelTool = ({ currentUserId }) => {
     if (!validQs.length) { showToast("Add at least one question.", "error"); return; }
     setFreeInterviewCreating(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/interview/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
-          adminId: currentUserId,
           applicantId: freeInterviewSelectedUser.id,
           jobTitle: freeInterviewJobTitle || "Interview",
           company: freeInterviewCompany,
@@ -519,8 +528,11 @@ const AdminPanelTool = ({ currentUserId }) => {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/interview/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminId: currentUserId, applicantId: interviewTarget.applicantId, jobId: interviewTarget.jobId, jobTitle: interviewTarget.jobTitle, company: interviewTarget.company, questions: validQs }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ applicantId: interviewTarget.applicantId, jobId: interviewTarget.jobId, jobTitle: interviewTarget.jobTitle, company: interviewTarget.company, questions: validQs }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed");
@@ -847,7 +859,8 @@ const AdminPanelTool = ({ currentUserId }) => {
 
   useEffect(() => {
     if (adminTab !== "interviews" || !isAdmin) return;
-    fetchRooms();
+    let cancelled = false;
+    (async () => { await Promise.resolve(); if (!cancelled) fetchRooms(); })();
     const channel = supabase
       .channel("admin-interview-rooms")
       .on("postgres_changes", { event: "*", schema: "public", table: "interview_rooms" }, (payload) => {
@@ -858,7 +871,7 @@ const AdminPanelTool = ({ currentUserId }) => {
         }
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [adminTab, isAdmin]);
 
   const fetchRoomAnswers = async (roomId) => {
@@ -1066,7 +1079,11 @@ const AdminPanelTool = ({ currentUserId }) => {
       // Email hooks
       const endpoint = type === "job" ? "/api/send-app-email" : "/api/notify-applicant";
       try {
-        await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
+        const { data: { session } } = await supabase.auth.getSession();
+        await fetch(endpoint, { method: "POST", headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
           body: JSON.stringify({ applicationId: appId, applicantId, status: newStatus, jobTitle: title, role: title, customMessage }) });
       } catch { /* non-blocking */ }
 
@@ -1181,10 +1198,11 @@ const AdminPanelTool = ({ currentUserId }) => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full overflow-hidden bg-gray-50/80 dark:bg-[#08080f]">
-      {/* Navigation Sidebar */}
-      <div className="w-full md:w-60 shrink-0 bg-white dark:bg-[#0d0d1a] border-b md:border-b-0 md:border-r border-gray-100 dark:border-white/[0.04] p-3 flex flex-row md:flex-col gap-0.5 overflow-x-auto md:overflow-y-auto no-scrollbar">
-        <div className="hidden md:flex items-center gap-2.5 px-3 mb-5 mt-2">
+    <div className="flex flex-col lg:flex-row h-full overflow-hidden bg-gray-50/80 dark:bg-[#08080f]">
+      {/* Navigation Sidebar — stacks as a horizontal tab bar until there's real
+          horizontal room (lg); avoids the sidebar+content squeeze in narrow columns. */}
+      <div className="w-full lg:w-60 shrink-0 bg-white dark:bg-[#0d0d1a] border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-white/[0.04] p-3 flex flex-row lg:flex-col gap-0.5 overflow-x-auto lg:overflow-y-auto no-scrollbar">
+        <div className="hidden lg:flex items-center gap-2.5 px-3 mb-5 mt-2">
           <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
             <ShieldAlert size={13} className="text-white" />
           </div>
@@ -1212,8 +1230,8 @@ const AdminPanelTool = ({ currentUserId }) => {
         })}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar">
+        <div className="max-w-5xl mx-auto space-y-6">
 
         {/* ── OVERVIEW ── */}
         {adminTab === "overview" && (
@@ -3040,7 +3058,7 @@ function AdminSettingsPanel({ showToast, currentUserId }) {
       setLoading(false);
     };
     load();
-  }, []);
+  }, [showToast]);
 
   const getToken = async () => {
     const { data: { session } } = await supabase.auth.getSession();

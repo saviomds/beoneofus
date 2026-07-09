@@ -1,10 +1,14 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Globe, Send, Hash, Users, User, MessageSquare, Loader2, Check,
   X, Plus, Smile, Heart, Code2, Briefcase, Award, HelpCircle,
+  AlertCircle, Menu, Copy,
 } from "lucide-react";
+import Image from "next/image";
 import { supabase } from "../../../supabaseClient";
+import VerifiedBadge from "../../../components/VerifiedBadge";
+import ProfileContent from "../ProfileContent";
 import { Toast, useToast } from "./shared";
 
 // ─── Community Hub ───────────────────────────────────────────────────────────
@@ -191,7 +195,7 @@ const CommunityHubTool = ({ currentUserId }) => {
       <AlertCircle size={40} className="text-red-400/40 mb-4" />
       <p className="text-red-500 dark:text-red-400 font-bold text-sm mb-1">Community Hub Not Initialized</p>
       <p className="text-gray-400 text-xs max-w-xs leading-relaxed">
-        The <code className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded font-mono">community_messages</code> table doesn't exist yet. Run the setup SQL migration to enable global chat.
+        The <code className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded font-mono">community_messages</code> table doesn&apos;t exist yet. Run the setup SQL migration to enable global chat.
       </p>
     </div>
   );
@@ -249,7 +253,7 @@ const CommunityHubTool = ({ currentUserId }) => {
                   <div className="relative shrink-0">
                     <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-[8px] font-black text-gray-500">
                       {u.avatar_url
-                        ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ? <Image src={u.avatar_url} alt="" width={20} height={20} className="w-full h-full object-cover" unoptimized />
                         : (u.username?.[0] || "?").toUpperCase()}
                     </div>
                     <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full border border-white dark:border-gray-900" />

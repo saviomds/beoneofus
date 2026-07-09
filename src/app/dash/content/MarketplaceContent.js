@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   ShoppingBag, Award, Shield, Copy, Check, Share2, Plus, Search,
   Loader2, AlertTriangle, Crown, BadgeCheck, X,
@@ -12,6 +13,7 @@ import {
   ArrowLeftRight,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
 import PartnershipsContent from "./PartnershipsContent";
 
 const CATEGORIES = ["All", "Course", "Credential", "Service", "Template", "Asset"];
@@ -49,6 +51,7 @@ function generateHash(userId, credId) {
 
 /* ── Toast ─────────────────────────────────────────── */
 function ToastCard({ item, onClose, onViewLibrary }) {
+  const { t } = useLanguage();
   useEffect(() => {
     const t = setTimeout(onClose, 5000);
     return () => clearTimeout(t);
@@ -72,7 +75,7 @@ function ToastCard({ item, onClose, onViewLibrary }) {
             <div className="flex items-start justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 size={14} className="text-green-500 shrink-0" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-400">Added to Library</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-400">{t('marketplace.dash.toast_added')}</span>
               </div>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0">
                 <X size={14} />
@@ -80,7 +83,7 @@ function ToastCard({ item, onClose, onViewLibrary }) {
             </div>
             <p className="text-xs font-bold text-gray-900 dark:text-gray-100 line-clamp-2 leading-tight mb-2">{item.title}</p>
             <button onClick={onViewLibrary} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:gap-2 transition-all">
-              View Library <ArrowRight size={10} />
+              {t('marketplace.dash.toast_view_library')} <ArrowRight size={10} />
             </button>
           </div>
         </div>
@@ -91,6 +94,7 @@ function ToastCard({ item, onClose, onViewLibrary }) {
 
 /* ── Credential Card ──────────────────────────────── */
 function CredentialCard({ cred, onShare, onListTrade, showActions = true }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
 
   const handleCopyHash = async () => {
@@ -145,14 +149,14 @@ function CredentialCard({ cred, onShare, onListTrade, showActions = true }) {
 
         <div className="flex items-center gap-2 flex-wrap">
           <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 px-2.5 py-1 rounded-lg">
-            <Shield size={11} /> Verified on Chain
+            <Shield size={11} /> {t('marketplace.dash.cred_verified_chain')}
           </span>
           {showActions && onShare && (
             <button
               onClick={() => onShare(cred.blockchain_hash)}
               className="flex items-center gap-1.5 text-[10px] font-bold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-gray-900 px-2.5 py-1 rounded-lg transition-all"
             >
-              <Share2 size={11} /> Share
+              <Share2 size={11} /> {t('marketplace.dash.cred_share')}
             </button>
           )}
           {showActions && cred.is_tradeable && onListTrade && (
@@ -160,12 +164,12 @@ function CredentialCard({ cred, onShare, onListTrade, showActions = true }) {
               onClick={() => onListTrade(cred)}
               className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 px-2.5 py-1 rounded-lg transition-all"
             >
-              <Tag size={11} /> List for Trade
+              <Tag size={11} /> {t('marketplace.dash.cred_list_trade')}
             </button>
           )}
           {cred.expires_at && (
             <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
-              Expires {new Date(cred.expires_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+              {t('marketplace.dash.cred_expires', { date: new Date(cred.expires_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) })}
             </span>
           )}
         </div>
@@ -176,6 +180,7 @@ function CredentialCard({ cred, onShare, onListTrade, showActions = true }) {
 
 /* ── Contact Owner Modal ──────────────────────────── */
 function ContactOwnerModal({ listing, currentUserId, onClose }) {
+  const { t } = useLanguage();
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -193,7 +198,7 @@ function ContactOwnerModal({ listing, currentUserId, onClose }) {
       if (err) throw err;
       setSent(true);
     } catch (err) {
-      setError(err.message || 'Failed to send message.');
+      setError(err.message || t('marketplace.dash.contact_error'));
     } finally { setSending(false); }
   };
 
@@ -226,21 +231,21 @@ function ContactOwnerModal({ listing, currentUserId, onClose }) {
                 <CheckCircle2 size={26} className="text-green-500" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">Message sent!</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">@{listing.profiles?.username} will see your message in their inbox.</p>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{t('marketplace.dash.contact_sent_title')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('marketplace.dash.contact_sent_body', { name: listing.profiles?.username })}</p>
               </div>
               <button onClick={onClose} className="mt-2 px-5 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-bold text-sm rounded-xl hover:bg-blue-600 transition-all">
-                Done
+                {t('marketplace.dash.done')}
               </button>
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Send a note about this listing</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('marketplace.dash.contact_note_label')}</p>
               <textarea
                 autoFocus
                 value={message}
                 onChange={e => setMessage(e.target.value)}
-                placeholder={`Hi @${listing.profiles?.username}, I'm interested in "${listing.title}"…`}
+                placeholder={t('marketplace.dash.contact_placeholder', { name: listing.profiles?.username, title: listing.title })}
                 rows={4}
                 className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all resize-none placeholder-gray-400 dark:placeholder-gray-500"
               />
@@ -251,7 +256,7 @@ function ContactOwnerModal({ listing, currentUserId, onClose }) {
               )}
               <div className="flex gap-2 pt-1">
                 <button onClick={onClose} className="flex-1 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all">
-                  Cancel
+                  {t('marketplace.dash.cancel')}
                 </button>
                 <button
                   onClick={handleSend}
@@ -259,7 +264,7 @@ function ContactOwnerModal({ listing, currentUserId, onClose }) {
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-bold text-sm rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all disabled:opacity-50 active:scale-95"
                 >
                   {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                  {sending ? 'Sending…' : 'Send Message'}
+                  {sending ? t('marketplace.dash.contact_sending') : t('marketplace.dash.contact_send')}
                 </button>
               </div>
             </div>
@@ -272,6 +277,7 @@ function ContactOwnerModal({ listing, currentUserId, onClose }) {
 
 /* ── Listing Detail Modal ─────────────────────────── */
 function ListingDetailModal({ listing, currentUserId, inLibrary, onClose, onAddToLibrary }) {
+  const { t } = useLanguage();
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
   const [showContact, setShowContact] = useState(false);
@@ -279,7 +285,7 @@ function ListingDetailModal({ listing, currentUserId, inLibrary, onClose, onAddT
   const isOwner = currentUserId && listing.profiles?.id && listing.profiles.id === currentUserId;
 
   const handleGet = async () => {
-    if (!currentUserId) { setAddError('Sign in to continue.'); return; }
+    if (!currentUserId) { setAddError(t('marketplace.dash.signin_continue')); return; }
     if (inLibrary) return;
     setAdding(true);
     setAddError('');
@@ -306,7 +312,7 @@ function ListingDetailModal({ listing, currentUserId, inLibrary, onClose, onAddT
             </span>
             {inLibrary && (
               <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-green-500 text-white flex items-center gap-1">
-                <Check size={9} /> Owned
+                <Check size={9} /> {t('marketplace.dash.owned')}
               </span>
             )}
           </div>
@@ -332,7 +338,7 @@ function ListingDetailModal({ listing, currentUserId, inLibrary, onClose, onAddT
               </span>
               {listing.purchases > 0 && (
                 <span className="ml-auto text-[10px] text-gray-400 dark:text-gray-500">
-                  {listing.purchases} {listing.category === 'Course' ? 'enrolled' : 'saved'}
+                  {listing.purchases} {listing.category === 'Course' ? t('marketplace.dash.enrolled') : t('marketplace.dash.saved')}
                 </span>
               )}
             </div>
@@ -363,17 +369,17 @@ function ListingDetailModal({ listing, currentUserId, inLibrary, onClose, onAddT
         <div className="shrink-0 p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 space-y-2">
           {inLibrary ? (
             <button onClick={onClose} className="w-full flex items-center justify-center gap-2 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50 font-semibold text-sm rounded-xl">
-              <Check size={15} /> Already in your library
+              <Check size={15} /> {t('marketplace.dash.already_in_library')}
             </button>
           ) : !currentUserId ? (
-            <p className="text-center text-sm text-gray-400 py-1">Sign in to get this item.</p>
+            <p className="text-center text-sm text-gray-400 py-1">{t('marketplace.dash.signin_get_item')}</p>
           ) : (
             <button
               onClick={handleGet}
               disabled={adding}
               className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-semibold text-sm rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all active:scale-95 disabled:opacity-60"
             >
-              {adding ? <><Loader2 size={15} className="animate-spin" /> Adding…</> : <><BookOpen size={15} /> Get Free</>}
+              {adding ? <><Loader2 size={15} className="animate-spin" /> {t('marketplace.dash.adding')}</> : <><BookOpen size={15} /> {t('marketplace.dash.get_free')}</>}
             </button>
           )}
           {currentUserId && !isOwner && listing.profiles?.id && (
@@ -381,7 +387,7 @@ function ListingDetailModal({ listing, currentUserId, inLibrary, onClose, onAddT
               onClick={() => setShowContact(true)}
               className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-600 dark:hover:text-blue-400 transition-all"
             >
-              <MessageCircle size={15} /> Message Owner
+              <MessageCircle size={15} /> {t('marketplace.dash.message_owner')}
             </button>
           )}
         </div>
@@ -395,6 +401,7 @@ function ListingDetailModal({ listing, currentUserId, inLibrary, onClose, onAddT
 
 /* ── Library Item Modal ───────────────────────────── */
 function LibraryItemModal({ item, onClose }) {
+  const { t } = useLanguage();
   const { listing, acquired_at } = item;
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -411,7 +418,7 @@ function LibraryItemModal({ item, onClose }) {
               {CATEGORY_ICON[listing.category]} {listing.category}
             </span>
             <span className="text-[9px] font-black uppercase bg-green-500 text-white px-2 py-1 rounded-lg flex items-center gap-1">
-              <Check size={9} /> Owned
+              <Check size={9} /> {t('marketplace.dash.owned')}
             </span>
           </div>
         </div>
@@ -427,22 +434,22 @@ function LibraryItemModal({ item, onClose }) {
           )}
           {listing.profiles && (
             <div className="flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500">
-              by @{listing.profiles.username}
+              {t('marketplace.dash.by')} @{listing.profiles.username}
               {listing.profiles.is_verified && <BadgeCheck size={9} className="text-blue-500" fill="currentColor" stroke="white" />}
             </div>
           )}
           <p className="text-[10px] text-gray-400 dark:text-gray-500">
-            Added {new Date(acquired_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            {t('marketplace.dash.added_date', { date: new Date(acquired_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })}
           </p>
         </div>
         <div className="shrink-0 p-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
           {listing.category === 'Course' ? (
             <a href="/Academy" className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm rounded-xl hover:bg-blue-600 transition-all">
-              <BookOpen size={16} /> Open in Academy
+              <BookOpen size={16} /> {t('marketplace.dash.open_academy')}
             </a>
           ) : (
             <button onClick={onClose} className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-              Done
+              {t('marketplace.dash.done')}
             </button>
           )}
         </div>
@@ -453,6 +460,7 @@ function LibraryItemModal({ item, onClose }) {
 
 /* ── Credential Detail Modal ──────────────────────── */
 function CredentialDetailModal({ cred, onClose, currentUserId }) {
+  const { t } = useLanguage();
   const [urlCopied,   setUrlCopied]   = useState(false);
   const [showTrade,   setShowTrade]   = useState(false);
   const [tradePrice,  setTradePrice]  = useState(cred.price ? String(cred.price) : '');
@@ -489,7 +497,7 @@ function CredentialDetailModal({ cred, onClose, currentUserId }) {
       <div className="relative w-full sm:max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <h3 className="font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Award size={16} className="text-amber-500" /> Credential Detail
+            <Award size={16} className="text-amber-500" /> {t('marketplace.dash.cred_detail_title')}
           </h3>
           <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
             <X size={16} />
@@ -502,17 +510,17 @@ function CredentialDetailModal({ cred, onClose, currentUserId }) {
           {showTrade && !tradeDone && (
             <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/10 p-4 space-y-3 animate-in fade-in duration-200">
               <p className="text-sm font-black text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                <ArrowLeftRight size={14} /> List for Trade
+                <ArrowLeftRight size={14} /> {t('marketplace.dash.cred_list_trade')}
               </p>
               <input
                 type="number" min="0" step="0.01"
-                placeholder="Asking price in USD (optional)"
+                placeholder={t('marketplace.dash.trade_price_ph')}
                 value={tradePrice}
                 onChange={e => setTradePrice(e.target.value)}
                 className={inputCls}
               />
               <textarea
-                placeholder="What are you looking for in exchange? (optional)"
+                placeholder={t('marketplace.dash.trade_desc_ph')}
                 rows={2}
                 value={tradeDesc}
                 onChange={e => setTradeDesc(e.target.value)}
@@ -521,27 +529,27 @@ function CredentialDetailModal({ cred, onClose, currentUserId }) {
               {tradeError && <p className="text-xs text-red-500">{tradeError}</p>}
               <div className="flex gap-2">
                 <button onClick={() => setShowTrade(false)} className="flex-1 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                  Cancel
+                  {t('marketplace.dash.cancel')}
                 </button>
                 <button onClick={submitListing} disabled={tradeSaving} className="flex-1 py-2 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 rounded-lg transition-all disabled:opacity-50">
-                  {tradeSaving ? 'Listing…' : 'Confirm Listing'}
+                  {tradeSaving ? t('marketplace.dash.trade_listing') : t('marketplace.dash.trade_confirm')}
                 </button>
               </div>
             </div>
           )}
           {tradeDone && (
             <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl text-sm text-green-700 dark:text-green-400 font-bold">
-              <CheckCircle2 size={16} /> Listed in Trade Market! Others can now request it.
+              <CheckCircle2 size={16} /> {t('marketplace.dash.trade_listed_success')}
             </div>
           )}
 
           {cred.blockchain_hash && (
             <a href={`/verify/${cred.blockchain_hash}`} target="_blank" rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-xl transition-all">
-              <ExternalLink size={14} /> Open Public Verification Page
+              <ExternalLink size={14} /> {t('marketplace.dash.open_verify_page')}
             </a>
           )}
-          {urlCopied && <p className="text-center text-xs text-green-600 dark:text-green-400 font-bold">Verification link copied!</p>}
+          {urlCopied && <p className="text-center text-xs text-green-600 dark:text-green-400 font-bold">{t('marketplace.dash.verify_link_copied')}</p>}
         </div>
       </div>
     </div>
@@ -550,6 +558,7 @@ function CredentialDetailModal({ cred, onClose, currentUserId }) {
 
 /* ── Browse Tab ───────────────────────────────────── */
 function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing }) {
+  const { t } = useLanguage();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("All");
@@ -557,6 +566,9 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
   const [authError, setAuthError] = useState(false);
   const [sortBy, setSortBy] = useState("popular");
   const [viewMode, setViewMode] = useState("grid");
+  // "New" badge threshold. Date.now() is impure, so it's read once after mount
+  // (in the effect below) instead of during render.
+  const [freshnessCutoff, setFreshnessCutoff] = useState(0);
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -579,6 +591,9 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
   }, []);
 
   useEffect(() => {
+    // Shared loader also driven by realtime handlers below; its leading
+    // setLoading(true) just mirrors the already-true initial state on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchListings();
     const ch = supabase.channel('mkt-listings-browse')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'marketplace_listings' }, () => fetchListings())
@@ -589,6 +604,11 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [fetchListings]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFreshnessCutoff(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  }, []);
 
   const filtered = listings
     .filter(l => {
@@ -627,7 +647,7 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
           <input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search courses, templates, services…"
+            placeholder={t('marketplace.dash.browse_search_ph')}
             className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-9 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
           />
           {searchQuery && (
@@ -644,9 +664,9 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
             onChange={e => setSortBy(e.target.value)}
             className="appearance-none bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-3 pr-7 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer transition-all"
           >
-            <option value="popular">Most Popular</option>
-            <option value="newest">Newest First</option>
-            <option value="alpha">A → Z</option>
+            <option value="popular">{t('marketplace.dash.sort_popular')}</option>
+            <option value="newest">{t('marketplace.dash.sort_newest')}</option>
+            <option value="alpha">{t('marketplace.dash.sort_alpha')}</option>
           </select>
           <SlidersHorizontal size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
@@ -681,7 +701,7 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
 
       {authError && (
         <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl px-4 py-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
-          <AlertTriangle size={14} className="shrink-0" /> Sign in to add items to your library.
+          <AlertTriangle size={14} className="shrink-0" /> {t('marketplace.dash.browse_auth_error')}
         </div>
       )}
 
@@ -702,7 +722,7 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
           <div className="absolute inset-0 flex flex-col justify-between p-5 sm:p-7">
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1 text-[10px] font-semibold bg-white/15 border border-white/20 text-white backdrop-blur-sm px-2.5 py-1 rounded-full">
-                <Star size={9} fill="currentColor" /> Editor's Pick
+                <Star size={9} fill="currentColor" /> {t('marketplace.dash.editors_pick')}
               </span>
               <span className={`text-[10px] font-medium px-2.5 py-1 rounded-full backdrop-blur-sm ${CATEGORY_BADGE[featuredListing.category] || CATEGORY_BADGE.Asset}`}>
                 {CATEGORY_ICON[featuredListing.category]} {featuredListing.category}
@@ -725,13 +745,13 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
                     </div>
                     <span className="text-[11px] text-white/70">@{featuredListing.profiles.username}</span>
                     {(featuredListing.purchases || 0) > 0 && (
-                      <span className="text-[10px] text-white/50 flex items-center gap-1">· <Users size={9} /> {featuredListing.purchases} {featuredListing.category === 'Course' ? 'enrolled' : 'saved'}</span>
+                      <span className="text-[10px] text-white/50 flex items-center gap-1">· <Users size={9} /> {featuredListing.purchases} {featuredListing.category === 'Course' ? t('marketplace.dash.enrolled') : t('marketplace.dash.saved')}</span>
                     )}
                   </div>
                 )}
               </div>
               <span className="shrink-0 flex items-center gap-1.5 text-[11px] font-semibold bg-white text-gray-900 px-4 py-2 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
-                View <ChevronRight size={12} />
+                {t('marketplace.dash.view')} <ChevronRight size={12} />
               </span>
             </div>
           </div>
@@ -743,13 +763,13 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
         <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {searchQuery
-              ? <><span className="font-semibold text-gray-900 dark:text-gray-100">{filtered.length}</span> result{filtered.length !== 1 ? 's' : ''} for "<em>{searchQuery}</em>"</>
-              : <><span className="font-semibold text-gray-900 dark:text-gray-100">{filtered.length}</span> item{filtered.length !== 1 ? 's' : ''}{activeFilter !== 'All' ? ` in ${activeFilter}` : ''}</>
+              ? <><span className="font-semibold text-gray-900 dark:text-gray-100">{filtered.length}</span> {t(filtered.length !== 1 ? 'marketplace.dash.browse_results_many' : 'marketplace.dash.browse_results_one', { n: filtered.length })} {t('marketplace.dash.browse_for')} &quot;<em>{searchQuery}</em>&quot;</>
+              : <><span className="font-semibold text-gray-900 dark:text-gray-100">{filtered.length}</span> {t(filtered.length !== 1 ? 'marketplace.dash.browse_items_many' : 'marketplace.dash.browse_items_one', { n: filtered.length })}{activeFilter !== 'All' ? ` ${t('marketplace.dash.browse_in')} ${activeFilter}` : ''}</>
             }
           </p>
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
-              Clear
+              {t('marketplace.dash.clear')}
             </button>
           )}
         </div>
@@ -775,14 +795,14 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
             {searchQuery ? '🔍' : '🛒'}
           </div>
           <h3 className="font-bold text-gray-800 dark:text-gray-200 text-base mb-1">
-            {searchQuery ? 'No results found' : 'Nothing here yet'}
+            {searchQuery ? t('marketplace.dash.empty_no_results') : t('marketplace.dash.empty_nothing')}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-            {searchQuery ? 'Try different keywords or browse all categories.' : 'Be the first to list something.'}
+            {searchQuery ? t('marketplace.dash.empty_search_hint') : t('marketplace.dash.empty_nothing_hint')}
           </p>
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} className="mt-4 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
-              Clear search
+              {t('marketplace.dash.clear_search')}
             </button>
           )}
         </div>
@@ -792,7 +812,7 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
           {filtered.map(listing => {
             const inLibrary = libraryIds.has(listing.id);
             const isTrending = (listing.purchases || 0) >= 5;
-            const isNew = listing.created_at && new Date(listing.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const isNew = listing.created_at && freshnessCutoff > 0 && new Date(listing.created_at).getTime() > freshnessCutoff;
             return (
               <div
                 key={listing.id}
@@ -805,26 +825,26 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{listing.title}</h3>
-                    {isTrending && <span className="shrink-0 text-[9px] font-bold bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded-md">Hot</span>}
-                    {!isTrending && isNew && <span className="shrink-0 text-[9px] font-bold bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 px-1.5 py-0.5 rounded-md">New</span>}
+                    {isTrending && <span className="shrink-0 text-[9px] font-bold bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded-md">{t('marketplace.dash.badge_hot')}</span>}
+                    {!isTrending && isNew && <span className="shrink-0 text-[9px] font-bold bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 px-1.5 py-0.5 rounded-md">{t('marketplace.dash.badge_new')}</span>}
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
                     <span className={`px-1.5 py-0.5 rounded-md font-medium ${CATEGORY_BADGE[listing.category] || CATEGORY_BADGE.Asset}`}>{listing.category}</span>
                     {listing.profiles && <span>@{listing.profiles.username}</span>}
-                    {(listing.purchases || 0) > 0 && <span>· {listing.purchases} saved</span>}
+                    {(listing.purchases || 0) > 0 && <span>· {listing.purchases} {t('marketplace.dash.saved')}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {inLibrary ? (
                     <span className="flex items-center gap-1 text-[11px] font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-3 py-1.5 rounded-lg">
-                      <Check size={11} /> Owned
+                      <Check size={11} /> {t('marketplace.dash.owned')}
                     </span>
                   ) : (
                     <button
                       onClick={e => handleQuickGet(e, listing)}
                       className="text-[11px] font-semibold text-white bg-gray-900 dark:bg-gray-100 dark:text-gray-900 px-3 py-1.5 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all active:scale-95"
                     >
-                      Get Free
+                      {t('marketplace.dash.get_free')}
                     </button>
                   )}
                   <ChevronRight size={14} className="text-gray-300 dark:text-gray-600 group-hover:text-gray-500 transition-colors" />
@@ -839,7 +859,7 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
           {filtered.map(listing => {
             const inLibrary = libraryIds.has(listing.id);
             const isTrending = (listing.purchases || 0) >= 5;
-            const isNew = listing.created_at && new Date(listing.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const isNew = listing.created_at && freshnessCutoff > 0 && new Date(listing.created_at).getTime() > freshnessCutoff;
 
             return (
               <div
@@ -864,17 +884,17 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
                   <div className="absolute top-2.5 right-2.5 flex flex-col items-end gap-1">
                     {inLibrary && (
                       <span className="flex items-center gap-1 text-[9px] font-semibold bg-green-500 text-white px-2 py-0.5 rounded-full shadow">
-                        <Check size={8} /> Owned
+                        <Check size={8} /> {t('marketplace.dash.owned')}
                       </span>
                     )}
                     {!inLibrary && isTrending && (
                       <span className="flex items-center gap-1 text-[9px] font-semibold bg-rose-500 text-white px-2 py-0.5 rounded-full shadow">
-                        <TrendingUp size={8} /> Hot
+                        <TrendingUp size={8} /> {t('marketplace.dash.badge_hot')}
                       </span>
                     )}
                     {!inLibrary && !isTrending && isNew && (
                       <span className="flex items-center gap-1 text-[9px] font-semibold bg-violet-500 text-white px-2 py-0.5 rounded-full shadow">
-                        <Zap size={8} /> New
+                        <Zap size={8} /> {t('marketplace.dash.badge_new')}
                       </span>
                     )}
                   </div>
@@ -913,7 +933,7 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
                   {/* Action */}
                   <div className="pt-2.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
                     <span className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                      <BookOpen size={10} /> Free
+                      <BookOpen size={10} /> {t('marketplace.dash.free')}
                     </span>
                     <button
                       onClick={e => { if (inLibrary) return; handleQuickGet(e, listing); }}
@@ -924,7 +944,7 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
                           : 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 dark:hover:bg-blue-500 dark:hover:text-white'
                       }`}
                     >
-                      {inLibrary ? <><Check size={11} /> Owned</> : <><Plus size={11} /> Get Free</>}
+                      {inLibrary ? <><Check size={11} /> {t('marketplace.dash.owned')}</> : <><Plus size={11} /> {t('marketplace.dash.get_free')}</>}
                     </button>
                   </div>
                 </div>
@@ -939,10 +959,14 @@ function BrowseTab({ currentUserId, libraryIds, onAddToLibrary, onSelectListing 
 
 /* ── My Library Tab ───────────────────────────────── */
 function MyLibraryTab({ currentUserId, onSelectItem }) {
+  const { t } = useLanguage();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Guard clears the loading state synchronously when signed out — an
+    // intentional state sync, not a data fetch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!currentUserId) { setLoading(false); return; }
     const fetchItems = async () => {
       setLoading(true);
@@ -960,8 +984,8 @@ function MyLibraryTab({ currentUserId, onSelectItem }) {
   if (!currentUserId) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5 text-4xl">📚</div>
-      <h3 className="font-black text-gray-700 dark:text-gray-300 text-lg mb-2">Your Library</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to see your saved items.</p>
+      <h3 className="font-black text-gray-700 dark:text-gray-300 text-lg mb-2">{t('marketplace.dash.library_signedout_title')}</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{t('marketplace.dash.library_signedout_hint')}</p>
     </div>
   );
 
@@ -980,9 +1004,9 @@ function MyLibraryTab({ currentUserId, onSelectItem }) {
   if (items.length === 0) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5 text-4xl">📭</div>
-      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">Your library is empty</h3>
+      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">{t('marketplace.dash.library_empty_title')}</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-        Browse the marketplace and click <strong>Get</strong> on any course, template, or asset to save it here.
+        {t('marketplace.dash.library_empty_hint_before')}<strong>{t('marketplace.dash.library_empty_hint_get')}</strong>{t('marketplace.dash.library_empty_hint_after')}
       </p>
     </div>
   );
@@ -993,7 +1017,7 @@ function MyLibraryTab({ currentUserId, onSelectItem }) {
         <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
           <Library size={14} className="text-blue-600 dark:text-blue-400" />
         </div>
-        <p className="text-sm font-black text-gray-800 dark:text-gray-200">{items.length} item{items.length !== 1 ? 's' : ''} in your library</p>
+        <p className="text-sm font-black text-gray-800 dark:text-gray-200">{t(items.length !== 1 ? 'marketplace.dash.library_count_many' : 'marketplace.dash.library_count_one', { n: items.length })}</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {items.map(item => (
@@ -1015,7 +1039,7 @@ function MyLibraryTab({ currentUserId, onSelectItem }) {
                 </span>
               </div>
               <div className="absolute top-3 right-3 bg-green-500 text-white text-[9px] font-black uppercase px-2 py-1 rounded-lg flex items-center gap-1 shadow-md">
-                <Check size={9} /> Owned
+                <Check size={9} /> {t('marketplace.dash.owned')}
               </div>
             </div>
             <div className="p-4 flex-1 flex flex-col">
@@ -1044,10 +1068,14 @@ function MyLibraryTab({ currentUserId, onSelectItem }) {
 
 /* ── My Credentials Tab ───────────────────────────── */
 function MyCredentialsTab({ currentUserId, onSelectCred }) {
+  const { t } = useLanguage();
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Guard clears the loading state synchronously when signed out — an
+    // intentional state sync, not a data fetch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!currentUserId) { setLoading(false); return; }
     const fetchCreds = async () => {
       setLoading(true);
@@ -1065,8 +1093,8 @@ function MyCredentialsTab({ currentUserId, onSelectCred }) {
   if (!currentUserId) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-5 text-4xl">🏅</div>
-      <h3 className="font-black text-gray-700 dark:text-gray-300 text-lg mb-2">Your Credentials</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to view your blockchain credentials.</p>
+      <h3 className="font-black text-gray-700 dark:text-gray-300 text-lg mb-2">{t('marketplace.dash.creds_signedout_title')}</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{t('marketplace.dash.creds_signedout_hint')}</p>
     </div>
   );
 
@@ -1084,8 +1112,8 @@ function MyCredentialsTab({ currentUserId, onSelectCred }) {
   if (credentials.length === 0) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-5 text-4xl">🎖️</div>
-      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">No credentials yet</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400">Complete achievements or receive credentials from others.</p>
+      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">{t('marketplace.dash.creds_empty_title')}</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{t('marketplace.dash.creds_empty_hint')}</p>
     </div>
   );
 
@@ -1095,7 +1123,7 @@ function MyCredentialsTab({ currentUserId, onSelectCred }) {
         <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
           <Award size={14} className="text-amber-600 dark:text-amber-400" />
         </div>
-        <p className="text-sm font-black text-gray-800 dark:text-gray-200">{credentials.length} credential{credentials.length !== 1 ? 's' : ''} earned</p>
+        <p className="text-sm font-black text-gray-800 dark:text-gray-200">{t(credentials.length !== 1 ? 'marketplace.dash.creds_count_many' : 'marketplace.dash.creds_count_one', { n: credentials.length })}</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {credentials.map(cred => (
@@ -1110,6 +1138,7 @@ function MyCredentialsTab({ currentUserId, onSelectCred }) {
 
 /* ── Issue Credential Tab ─────────────────────────── */
 function IssueCredentialTab({ currentUserId, currentProfile }) {
+  const { t } = useLanguage();
   const canIssue = currentProfile?.role === 'founder' || currentProfile?.is_admin === true;
   const emptyForm = { title: '', description: '', credential_type: 'Certificate', is_tradeable: false, price: '', expires_at: '' };
   const [form, setForm] = useState(emptyForm);
@@ -1133,7 +1162,7 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedRecipient) { setError('Select a recipient.'); return; }
+    if (!selectedRecipient) { setError(t('marketplace.dash.error_select_recipient')); return; }
     setSubmitting(true); setError('');
     try {
       const { data: newCred, error: insertError } = await supabase
@@ -1146,31 +1175,31 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
       setSuccess({ hash, title: form.title, recipient: selectedRecipient.username });
       setForm(emptyForm); setSelectedRecipient(null); setRecipientSearch('');
     } catch (err) {
-      setError(err.message || 'Failed to issue credential.');
+      setError(err.message || t('marketplace.dash.error_issue_failed'));
     } finally { setSubmitting(false); }
   };
 
   if (!canIssue) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5 text-4xl">🔒</div>
-      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">Access Restricted</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400">Only founders and admins can issue credentials.</p>
+      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">{t('marketplace.dash.issue_restricted_title')}</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{t('marketplace.dash.issue_restricted_hint')}</p>
     </div>
   );
 
   if (success) return (
     <div className="max-w-md mx-auto flex flex-col items-center text-center gap-4 py-8">
       <div className="w-20 h-20 rounded-3xl bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800/50 flex items-center justify-center text-4xl">🎉</div>
-      <h3 className="font-black text-gray-900 dark:text-gray-100 text-xl">Credential Issued!</h3>
+      <h3 className="font-black text-gray-900 dark:text-gray-100 text-xl">{t('marketplace.dash.issue_success_title')}</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        <strong>"{success.title}"</strong> was issued to <strong>@{success.recipient}</strong>.
+        <strong>&quot;{success.title}&quot;</strong> {t('marketplace.dash.issue_success_middle')} <strong>@{success.recipient}</strong>.
       </p>
       <div className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-left">
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Blockchain Hash</p>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">{t('marketplace.dash.blockchain_hash')}</p>
         <p className="font-mono text-xs text-gray-700 dark:text-gray-300 break-all">{success.hash}</p>
       </div>
       <button onClick={() => setSuccess(null)} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
-        Issue Another
+        {t('marketplace.dash.issue_another')}
       </button>
     </div>
   );
@@ -1182,7 +1211,7 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
           <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
             <Award size={18} className="text-amber-600 dark:text-amber-400" />
           </div>
-          <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Issue a Credential</h2>
+          <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">{t('marketplace.dash.issue_form_title')}</h2>
         </div>
 
         {error && (
@@ -1192,15 +1221,15 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
         )}
 
         <div className="space-y-1">
-          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Title *</label>
-          <input required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Full-Stack Developer Certificate" className={inputCls} />
+          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_title')}</label>
+          <input required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder={t('marketplace.dash.issue_title_ph')} className={inputCls} />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Description</label>
-          <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Describe what this credential represents…" rows={3} className={inputCls + " resize-none"} />
+          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_description')}</label>
+          <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder={t('marketplace.dash.issue_desc_ph')} rows={3} className={inputCls + " resize-none"} />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Type *</label>
+          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_type')}</label>
           <select value={form.credential_type} onChange={e => setForm(p => ({ ...p, credential_type: e.target.value }))} className={inputCls}>
             <option value="Certificate">Certificate</option>
             <option value="Badge">Badge</option>
@@ -1208,7 +1237,7 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
           </select>
         </div>
         <div className="space-y-1 relative">
-          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Recipient *</label>
+          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_recipient')}</label>
           {selectedRecipient ? (
             <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl px-3 py-2.5">
               <div className="relative w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0">
@@ -1221,7 +1250,7 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
             <>
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input value={recipientSearch} onChange={e => setRecipientSearch(e.target.value)} placeholder="Search by username…" className={inputCls + " pl-8"} />
+                <input value={recipientSearch} onChange={e => setRecipientSearch(e.target.value)} placeholder={t('marketplace.dash.recipient_search_ph')} className={inputCls + " pl-8"} />
               </div>
               {recipientResults.length > 0 && (
                 <div className="absolute z-20 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg mt-1 overflow-hidden">
@@ -1242,16 +1271,16 @@ function IssueCredentialTab({ currentUserId, currentProfile }) {
           <button type="button" onClick={() => setForm(p => ({ ...p, is_tradeable: !p.is_tradeable }))} className={`relative w-9 h-5 rounded-full transition-colors ${form.is_tradeable ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
             <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.is_tradeable ? 'translate-x-4' : 'translate-x-0.5'}`} />
           </button>
-          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Tradeable</label>
-          {form.is_tradeable && <input type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} placeholder="Price (USD)" className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all" />}
+          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_tradeable')}</label>
+          {form.is_tradeable && <input type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} placeholder={t('marketplace.dash.price_usd_ph')} className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 transition-all" />}
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Expires (optional)</label>
+          <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_expires')}</label>
           <input type="date" value={form.expires_at} onChange={e => setForm(p => ({ ...p, expires_at: e.target.value }))} className={inputCls} />
         </div>
         <button type="submit" disabled={submitting} className="w-full flex items-center justify-center gap-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm py-3 rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all disabled:opacity-60 active:scale-95">
           {submitting ? <Loader2 size={16} className="animate-spin" /> : <Award size={16} />}
-          {submitting ? 'Issuing…' : 'Issue Credential'}
+          {submitting ? t('marketplace.dash.issuing') : t('marketplace.dash.issue_submit')}
         </button>
       </form>
     </div>
@@ -1263,6 +1292,7 @@ const SELL_CATEGORIES = ["Service", "Template", "Asset"];
 const emptyListingForm = { title: '', description: '', category: 'Service', price: '', image_url: '', tags: '' };
 
 function SellTab({ currentUserId, isPremium, isAdmin }) {
+  const { t } = useLanguage();
   const canSell = isPremium || isAdmin;
   const [myListings, setMyListings] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -1285,7 +1315,7 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
     setLoadingList(false);
   }, [currentUserId]);
 
-  useEffect(() => { fetchMyListings(); }, [fetchMyListings]);
+  useEffect(() => { (() => { fetchMyListings(); })(); }, [fetchMyListings]);
 
   const openNew = () => { setEditItem(null); setForm(emptyListingForm); setFormError(''); setShowForm(true); };
   const openEdit = (listing) => {
@@ -1303,11 +1333,11 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
       if (editItem) {
         const { error } = await supabase.from('marketplace_listings').update(payload).eq('id', editItem.id);
         if (error) throw error;
-        setSuccessMsg('Listing updated!');
+        setSuccessMsg(t('marketplace.dash.sell_updated'));
       } else {
         const { error } = await supabase.from('marketplace_listings').insert({ ...payload, purchases: 0 });
         if (error) throw error;
-        setSuccessMsg("Listing published! It's now live in Browse.");
+        setSuccessMsg(t('marketplace.dash.sell_published'));
       }
       setShowForm(false); setEditItem(null); setForm(emptyListingForm);
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -1322,7 +1352,7 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this listing permanently?')) return;
+    if (!window.confirm(t('marketplace.dash.confirm_delete'))) return;
     await supabase.from('marketplace_listings').delete().eq('id', id);
     setMyListings(prev => prev.filter(l => l.id !== id));
   };
@@ -1330,21 +1360,21 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
   if (!currentUserId) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-5 text-4xl">🏪</div>
-      <h3 className="font-black text-gray-700 dark:text-gray-300 text-lg mb-2">Start Selling</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to list your items in the marketplace.</p>
+      <h3 className="font-black text-gray-700 dark:text-gray-300 text-lg mb-2">{t('marketplace.dash.sell_signedout_title')}</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{t('marketplace.dash.sell_signedout_hint')}</p>
     </div>
   );
 
   if (!canSell) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-5 text-4xl">👑</div>
-      <h3 className="font-black text-gray-900 dark:text-gray-100 text-xl mb-2">Premium Required to Sell</h3>
+      <h3 className="font-black text-gray-900 dark:text-gray-100 text-xl mb-2">{t('marketplace.dash.sell_premium_title')}</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mb-6">
-        Upgrade to Premium to list your services, templates, and assets and earn from the community.
+        {t('marketplace.dash.sell_premium_hint')}
       </p>
-      <a href="/dash/premium" className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black text-sm rounded-xl transition-all shadow-lg shadow-amber-500/30 hover:shadow-amber-500/40 hover:-translate-y-0.5 active:scale-95">
-        <Crown size={14} /> Upgrade to Premium
-      </a>
+      <Link href="/dash/premium" className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black text-sm rounded-xl transition-all shadow-lg shadow-amber-500/30 hover:shadow-amber-500/40 hover:-translate-y-0.5 active:scale-95">
+        <Crown size={14} /> {t('marketplace.dash.sell_upgrade')}
+      </Link>
     </div>
   );
 
@@ -1356,13 +1386,13 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
             <Store size={16} className="text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <h2 className="font-black text-gray-900 dark:text-gray-100 text-sm">My Listings</h2>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400">{myListings.length} listing{myListings.length !== 1 ? 's' : ''} published</p>
+            <h2 className="font-black text-gray-900 dark:text-gray-100 text-sm">{t('marketplace.dash.sell_my_listings')}</h2>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400">{t(myListings.length !== 1 ? 'marketplace.dash.sell_count_many' : 'marketplace.dash.sell_count_one', { n: myListings.length })}</p>
           </div>
         </div>
         {!showForm && (
           <button onClick={openNew} className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest px-4 py-2.5 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 transition-all shadow-md hover:shadow-lg active:scale-95">
-            <Plus size={13} /> New Listing
+            <Plus size={13} /> {t('marketplace.dash.sell_new_listing')}
           </button>
         )}
       </div>
@@ -1376,7 +1406,7 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200 shadow-sm">
           <div className="flex items-center justify-between">
-            <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm">{editItem ? 'Edit Listing' : 'New Listing'}</h3>
+            <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm">{editItem ? t('marketplace.dash.sell_edit_title') : t('marketplace.dash.sell_new_listing')}</h3>
             <button type="button" onClick={() => { setShowForm(false); setEditItem(null); }} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
               <X size={15} />
             </button>
@@ -1388,26 +1418,26 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
           )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Category *</label>
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_category')}</label>
               <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className={inputCls}>
                 {SELL_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_ICON[c]} {c}</option>)}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Price USD (0 = free)</label>
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_price_usd')}</label>
               <input type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} placeholder="0" className={inputCls} />
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Title *</label>
-            <input required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. React Dashboard Template" className={inputCls} />
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_title')}</label>
+            <input required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder={t('marketplace.dash.sell_title_ph')} className={inputCls} />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Description</label>
-            <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="What does this include? Who is it for?" rows={3} className={`${inputCls} resize-none`} />
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_description')}</label>
+            <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder={t('marketplace.dash.sell_desc_ph')} rows={3} className={`${inputCls} resize-none`} />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Cover Image URL</label>
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_cover_image')}</label>
             <input value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://images.unsplash.com/…" className={inputCls} />
             {form.image_url && (
               <div className="relative w-full h-24 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 mt-1.5">
@@ -1416,16 +1446,16 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
             )}
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Tags (comma-separated)</label>
-            <input value={form.tags} onChange={e => setForm(p => ({ ...p, tags: e.target.value }))} placeholder="React, Tailwind, Next.js" className={inputCls} />
+            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{t('marketplace.dash.label_tags')}</label>
+            <input value={form.tags} onChange={e => setForm(p => ({ ...p, tags: e.target.value }))} placeholder={t('marketplace.dash.sell_tags_ph')} className={inputCls} />
           </div>
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={() => { setShowForm(false); setEditItem(null); }} className="flex-1 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all">
-              Cancel
+              {t('marketplace.dash.cancel')}
             </button>
             <button type="submit" disabled={submitting} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm rounded-xl hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all disabled:opacity-60 active:scale-95">
               {submitting ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-              {submitting ? 'Publishing…' : editItem ? 'Save Changes' : 'Publish Listing'}
+              {submitting ? t('marketplace.dash.publishing') : editItem ? t('marketplace.dash.save_changes') : t('marketplace.dash.publish_listing')}
             </button>
           </div>
         </form>
@@ -1438,10 +1468,10 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
       ) : myListings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-14 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
           <div className="text-4xl mb-3">📦</div>
-          <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">No listings yet</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Click "New Listing" to publish your first item.</p>
+          <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">{t('marketplace.dash.sell_empty_title')}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">{t('marketplace.dash.sell_empty_hint', { action: t('marketplace.dash.sell_new_listing') })}</p>
           <button onClick={openNew} className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 transition-all">
-            <Plus size={12} /> Create Listing
+            <Plus size={12} /> {t('marketplace.dash.sell_create_listing')}
           </button>
         </div>
       ) : (
@@ -1457,7 +1487,7 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
                 </div>
                 <div className="absolute top-2 right-2">
                   <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${listing.is_active ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'}`}>
-                    {listing.is_active ? 'Live' : 'Hidden'}
+                    {listing.is_active ? t('marketplace.dash.status_live') : t('marketplace.dash.status_hidden')}
                   </span>
                 </div>
               </div>
@@ -1465,17 +1495,17 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
                 <p className="font-black text-sm text-gray-900 dark:text-gray-100 line-clamp-1 mb-2">{listing.title}</p>
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 shrink-0 flex items-center gap-2">
-                    <span>{listing.price === 0 ? 'Free' : `$${listing.price}`}</span>
+                    <span>{listing.price === 0 ? t('marketplace.dash.free') : `$${listing.price}`}</span>
                     <span className="flex items-center gap-0.5 text-gray-400"><Users size={9} /> {listing.purchases || 0}</span>
                   </span>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => handleToggleActive(listing)} title={listing.is_active ? 'Hide' : 'Show'} className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all">
+                    <button onClick={() => handleToggleActive(listing)} title={listing.is_active ? t('marketplace.dash.tip_hide') : t('marketplace.dash.tip_show')} className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all">
                       {listing.is_active ? <EyeOff size={13} /> : <Eye size={13} />}
                     </button>
-                    <button onClick={() => openEdit(listing)} title="Edit" className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all">
+                    <button onClick={() => openEdit(listing)} title={t('marketplace.dash.tip_edit')} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all">
                       <Pencil size={13} />
                     </button>
-                    <button onClick={() => handleDelete(listing.id)} title="Delete" className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all">
+                    <button onClick={() => handleDelete(listing.id)} title={t('marketplace.dash.tip_delete')} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all">
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -1491,6 +1521,7 @@ function SellTab({ currentUserId, isPremium, isAdmin }) {
 
 /* ── Verify Tab ───────────────────────────────────── */
 function VerifyTab() {
+  const { t } = useLanguage();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -1515,19 +1546,19 @@ function VerifyTab() {
             <Shield size={18} className="text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">Verify a Credential</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Paste a blockchain hash or verification URL</p>
+            <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">{t('marketplace.dash.verify_title')}</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('marketplace.dash.verify_subtitle')}</p>
           </div>
         </div>
         <form onSubmit={handleVerify} className="flex gap-2">
           <input
             value={input}
             onChange={e => { setInput(e.target.value); setNotFound(false); setResult(null); }}
-            placeholder="e.g. a3f8b2c1… or /verify/…"
+            placeholder={t('marketplace.dash.verify_input_ph')}
             className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
           />
           <button type="submit" disabled={!input || loading} className="flex items-center gap-1.5 text-sm font-black uppercase tracking-widest px-4 py-2.5 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-blue-600 transition-all disabled:opacity-60 active:scale-95">
-            {loading ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />} Verify
+            {loading ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />} {t('marketplace.dash.verify_button')}
           </button>
         </form>
       </div>
@@ -1535,20 +1566,20 @@ function VerifyTab() {
       {notFound && (
         <div className="flex flex-col items-center justify-center py-12 text-center bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-2xl">
           <div className="text-4xl mb-3">❌</div>
-          <h3 className="font-black text-red-700 dark:text-red-400 text-lg mb-1">Not Found or Revoked</h3>
-          <p className="text-sm text-red-500 dark:text-red-400/70">This credential hash does not exist or has been revoked.</p>
+          <h3 className="font-black text-red-700 dark:text-red-400 text-lg mb-1">{t('marketplace.dash.verify_notfound_title')}</h3>
+          <p className="text-sm text-red-500 dark:text-red-400/70">{t('marketplace.dash.verify_notfound_hint')}</p>
         </div>
       )}
 
       {result && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl px-4 py-3">
-            <CheckCircle2 size={16} /> Credential verified successfully
+            <CheckCircle2 size={16} /> {t('marketplace.dash.verify_success')}
           </div>
           <CredentialCard cred={result} showActions={false} />
           {result.profiles && (
             <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-              Held by <strong className="text-gray-700 dark:text-gray-300">@{result.profiles.username}</strong>
+              {t('marketplace.dash.verify_held_by')} <strong className="text-gray-700 dark:text-gray-300">@{result.profiles.username}</strong>
             </p>
           )}
         </div>
@@ -1559,6 +1590,7 @@ function VerifyTab() {
 
 /* ── Trade Market Tab ─────────────────────────────── */
 function TradeMarketTab({ currentUserId }) {
+  const { t } = useLanguage();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [requested, setRequested] = useState(new Set());
@@ -1599,8 +1631,8 @@ function TradeMarketTab({ currentUserId }) {
   if (!listings.length) return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-5 text-4xl">🔄</div>
-      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">No active trade listings</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400">List a tradeable credential from the Credentials tab to appear here.</p>
+      <h3 className="font-black text-gray-800 dark:text-gray-200 text-lg mb-2">{t('marketplace.dash.trade_empty_title')}</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{t('marketplace.dash.trade_empty_hint')}</p>
     </div>
   );
 
@@ -1632,7 +1664,7 @@ function TradeMarketTab({ currentUserId }) {
           <div className="px-4 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               {listing.seller?.avatar_url ? (
-                <img src={listing.seller.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                <Image unoptimized src={listing.seller.avatar_url} alt="" width={24} height={24} className="w-6 h-6 rounded-full object-cover shrink-0" />
               ) : (
                 <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 text-[10px] font-bold text-gray-500">
                   {listing.seller?.username?.[0]?.toUpperCase() || '?'}
@@ -1652,7 +1684,7 @@ function TradeMarketTab({ currentUserId }) {
                   : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50'
               }`}
             >
-              {requested.has(listing.id) ? <><Check size={11} /> Requested</> : <><ArrowLeftRight size={11} /> Request Trade</>}
+              {requested.has(listing.id) ? <><Check size={11} /> {t('marketplace.dash.trade_requested')}</> : <><ArrowLeftRight size={11} /> {t('marketplace.dash.trade_request')}</>}
             </button>
           </div>
         </div>
@@ -1663,18 +1695,19 @@ function TradeMarketTab({ currentUserId }) {
 
 /* ── Tab definitions ──────────────────────────────── */
 const TABS = [
-  { key: 'browse',       label: 'Browse',          icon: ShoppingBag },
-  { key: 'library',      label: 'My Library',       icon: Library },
-  { key: 'credentials',  label: 'Credentials',      icon: Award },
-  { key: 'trades',       label: 'Trade Market',     icon: ArrowLeftRight },
-  { key: 'sell',         label: 'Sell',             icon: Store },
-  { key: 'issue',        label: 'Issue',            icon: Plus },
-  { key: 'verify',       label: 'Verify',           icon: Shield },
-  { key: 'partnerships', label: 'Partnerships',     icon: Handshake },
+  { key: 'browse',       labelKey: 'marketplace.dash.tab_browse',       icon: ShoppingBag },
+  { key: 'library',      labelKey: 'marketplace.dash.tab_library',      icon: Library },
+  { key: 'credentials',  labelKey: 'marketplace.dash.tab_credentials',  icon: Award },
+  { key: 'trades',       labelKey: 'marketplace.dash.tab_trades',       icon: ArrowLeftRight },
+  { key: 'sell',         labelKey: 'marketplace.dash.tab_sell',         icon: Store },
+  { key: 'issue',        labelKey: 'marketplace.dash.tab_issue',        icon: Plus },
+  { key: 'verify',       labelKey: 'marketplace.dash.tab_verify',       icon: Shield },
+  { key: 'partnerships', labelKey: 'marketplace.dash.tab_partnerships', icon: Handshake },
 ];
 
 /* ── Root Component ───────────────────────────────── */
 export default function MarketplaceContent() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('browse');
   const [currentUserId, setCurrentUserId] = useState(null);
   const [currentProfile, setCurrentProfile] = useState(null);
@@ -1718,19 +1751,19 @@ export default function MarketplaceContent() {
               <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
                 <ShoppingBag size={15} className="text-white" />
               </div>
-              <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 tracking-wide uppercase">Community Marketplace</span>
+              <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 tracking-wide uppercase">{t('marketplace.dash.hero_eyebrow')}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
-              Discover &amp; Share
+              {t('marketplace.dash.hero_title')}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 max-w-lg leading-relaxed">
-              Courses, credentials, templates, and services — all free from the beoneofus community.
+              {t('marketplace.dash.hero_subtitle')}
             </p>
           </div>
           {isPremium && (
             <div className="shrink-0 hidden sm:flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl px-3.5 py-2">
               <Crown size={13} className="text-amber-500" />
-              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">Premium Member</span>
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">{t('marketplace.dash.premium_member')}</span>
             </div>
           )}
         </div>
@@ -1738,22 +1771,22 @@ export default function MarketplaceContent() {
         <div className="flex items-center gap-6 mt-5 pt-5 border-t border-gray-100 dark:border-gray-800">
           <div>
             <p className="text-lg font-black text-gray-900 dark:text-white leading-none">5</p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Categories</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('marketplace.dash.stat_categories')}</p>
           </div>
           <div className="w-px h-8 bg-gray-200 dark:bg-gray-800" />
           <div>
-            <p className="text-lg font-black text-gray-900 dark:text-white leading-none">Free</p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">All items</p>
+            <p className="text-lg font-black text-gray-900 dark:text-white leading-none">{t('marketplace.dash.free')}</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('marketplace.dash.stat_all_items')}</p>
           </div>
           <div className="w-px h-8 bg-gray-200 dark:bg-gray-800" />
           <div>
             <p className="text-lg font-black text-gray-900 dark:text-white leading-none flex items-center gap-1"><Shield size={14} className="text-green-500" /></p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Verified creds</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('marketplace.dash.stat_verified')}</p>
           </div>
           <div className="w-px h-8 bg-gray-200 dark:bg-gray-800" />
           <div>
-            <p className="text-lg font-black text-gray-900 dark:text-white leading-none">Open</p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Anyone can list</p>
+            <p className="text-lg font-black text-gray-900 dark:text-white leading-none">{t('marketplace.dash.open')}</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{t('marketplace.dash.stat_anyone')}</p>
           </div>
         </div>
       </div>
@@ -1775,7 +1808,7 @@ export default function MarketplaceContent() {
                 }`}
               >
                 <Icon size={13} />
-                {tab.label}
+                {t(tab.labelKey)}
                 {tab.key === 'library' && libraryIds.size > 0 && (
                   <span className="ml-0.5 text-[9px] font-bold bg-blue-600 text-white rounded-full px-1.5 py-0.5 leading-none">
                     {libraryIds.size}

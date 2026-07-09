@@ -5,22 +5,24 @@ import { Trophy, Award, Star, Loader2, Medal, Crown, Users, TrendingUp, BookOpen
 import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
 
 const MEDAL_COLORS = ["text-yellow-500", "text-gray-400", "text-orange-600"];
 const MEDAL_BG    = ["bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800/30",
                       "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700",
                       "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800/30"];
 
-function timeAgo(d) {
+function timeAgo(d, t) {
   if (!d) return "";
   const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days}d ago`;
+  if (days === 0) return t("leaderboard.today");
+  if (days === 1) return t("leaderboard.yesterday");
+  if (days < 30) return t("leaderboard.days_ago", { n: days });
   return new Date(d).toLocaleDateString("en", { month: "short", year: "numeric" });
 }
 
 export default function LeaderboardContent() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState("pathways");
   const [pathwayLeaders, setPathwayLeaders] = useState([]);
   const [topUsers, setTopUsers] = useState([]);
@@ -68,9 +70,9 @@ export default function LeaderboardContent() {
             <Trophy size={26} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Leaderboard</h1>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{t("leaderboard.title")}</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mt-0.5">
-              Top members by pathways completed and certificates earned.
+              {t("leaderboard.subtitle")}
             </p>
           </div>
         </div>
@@ -79,9 +81,9 @@ export default function LeaderboardContent() {
       {/* Tabs */}
       <div className="flex gap-2">
         {[
-          { id: "pathways", label: "Pathway Completions", icon: TrendingUp },
-          { id: "certificates", label: "Top Certificates", icon: Award },
-        ].map(({ id, label, icon: Icon }) => (
+          { id: "pathways", labelKey: "tab_pathways", icon: TrendingUp },
+          { id: "certificates", labelKey: "tab_certificates", icon: Award },
+        ].map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -91,7 +93,7 @@ export default function LeaderboardContent() {
                 : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
-            <Icon size={13} /> {label}
+            <Icon size={13} /> {t(`leaderboard.${labelKey}`)}
           </button>
         ))}
       </div>
@@ -103,14 +105,14 @@ export default function LeaderboardContent() {
       ) : tab === "pathways" ? (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-            <h2 className="font-black text-sm text-gray-900 dark:text-white">Pathway Completions</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{pathwayLeaders.length} recorded completions</p>
+            <h2 className="font-black text-sm text-gray-900 dark:text-white">{t("leaderboard.tab_pathways")}</h2>
+            <p className="text-xs text-gray-500 mt-0.5">{t("leaderboard.recorded_completions", { n: pathwayLeaders.length })}</p>
           </div>
           {pathwayLeaders.length === 0 ? (
             <div className="py-16 text-center text-gray-400 dark:text-gray-600">
               <Trophy size={32} className="mx-auto mb-3 opacity-30" />
-              <p className="font-bold text-sm">No completions yet</p>
-              <p className="text-xs mt-1">Be the first to finish a pathway!</p>
+              <p className="font-bold text-sm">{t("leaderboard.empty_pathways_title")}</p>
+              <p className="text-xs mt-1">{t("leaderboard.empty_pathways_subtitle")}</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -139,7 +141,7 @@ export default function LeaderboardContent() {
                       </Link>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{entry.pathways?.title}</p>
                     </div>
-                    <span className="text-[10px] font-bold text-gray-400 shrink-0">{timeAgo(entry.completed_at)}</span>
+                    <span className="text-[10px] font-bold text-gray-400 shrink-0">{timeAgo(entry.completed_at, t)}</span>
                   </div>
                 );
               })}
@@ -149,12 +151,12 @@ export default function LeaderboardContent() {
       ) : (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-            <h2 className="font-black text-sm text-gray-900 dark:text-white">Top Certificate Earners</h2>
+            <h2 className="font-black text-sm text-gray-900 dark:text-white">{t("leaderboard.cert_earners_title")}</h2>
           </div>
           {topUsers.length === 0 ? (
             <div className="py-16 text-center text-gray-400 dark:text-gray-600">
               <Award size={32} className="mx-auto mb-3 opacity-30" />
-              <p className="font-bold text-sm">No data yet</p>
+              <p className="font-bold text-sm">{t("leaderboard.empty_certs")}</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">

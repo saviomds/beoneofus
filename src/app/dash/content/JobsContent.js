@@ -8,6 +8,7 @@ import {
   Send, Zap, XCircle, Building2, RefreshCw, ImagePlus,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -16,12 +17,12 @@ const DEPARTMENTS  = ["Engineering", "Design", "Marketing", "Sales", "Infrastruc
 const EXP_LEVELS   = ["Entry-level", "Mid-level", "Senior-level", "Lead", "Executive"];
 const STATUS_FILTERS = ["active", "draft", "expired", "closed"];
 
-function timeAgo(iso) {
+function timeAgo(iso, t) {
   const s = Math.floor((Date.now() - new Date(iso)) / 1000);
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+  if (s < 60) return t("jobs.time.just_now");
+  if (s < 3600) return t("jobs.time.minutes_ago", { n: Math.floor(s / 60) });
+  if (s < 86400) return t("jobs.time.hours_ago", { n: Math.floor(s / 3600) });
+  return t("jobs.time.days_ago", { n: Math.floor(s / 86400) });
 }
 
 function formatDate(iso) {
@@ -31,18 +32,19 @@ function formatDate(iso) {
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  active:  { label: "Active",  dot: "bg-emerald-500", cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/40" },
-  draft:   { label: "Draft",   dot: "bg-gray-400",    cls: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700" },
-  expired: { label: "Expired", dot: "bg-orange-500",  cls: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/40" },
-  closed:  { label: "Closed",  dot: "bg-gray-600",    cls: "bg-gray-800 text-gray-100 border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-700" },
+  active:  { labelKey: "jobs.status.active",  dot: "bg-emerald-500", cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/40" },
+  draft:   { labelKey: "jobs.status.draft",   dot: "bg-gray-400",    cls: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700" },
+  expired: { labelKey: "jobs.status.expired", dot: "bg-orange-500",  cls: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/40" },
+  closed:  { labelKey: "jobs.status.closed",  dot: "bg-gray-600",    cls: "bg-gray-800 text-gray-100 border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-700" },
 };
 
 function StatusBadge({ status }) {
+  const { t } = useLanguage();
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
   return (
     <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${cfg.cls}`}>
       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
-      {cfg.label}
+      {t(cfg.labelKey)}
     </span>
   );
 }
@@ -50,6 +52,7 @@ function StatusBadge({ status }) {
 // ─── Action Menu ──────────────────────────────────────────────────────────────
 
 function ActionMenu({ job, onView, onEdit, onDuplicate, onDelete }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -60,10 +63,10 @@ function ActionMenu({ job, onView, onEdit, onDuplicate, onDelete }) {
   }, []);
 
   const items = [
-    { label: "View job",  icon: Eye,    fn: () => { onView(job);      setOpen(false); } },
-    { label: "Edit job",  icon: Edit2,  fn: () => { onEdit(job);      setOpen(false); } },
-    { label: "Duplicate", icon: Copy,   fn: () => { onDuplicate(job); setOpen(false); } },
-    { label: "Delete",    icon: Trash2, fn: () => { onDelete(job);    setOpen(false); }, danger: true },
+    { label: t("jobs.actions.view"),      icon: Eye,    fn: () => { onView(job);      setOpen(false); } },
+    { label: t("jobs.actions.edit"),      icon: Edit2,  fn: () => { onEdit(job);      setOpen(false); } },
+    { label: t("jobs.actions.duplicate"), icon: Copy,   fn: () => { onDuplicate(job); setOpen(false); } },
+    { label: t("jobs.actions.delete"),    icon: Trash2, fn: () => { onDelete(job);    setOpen(false); }, danger: true },
   ];
 
   return (
@@ -131,6 +134,7 @@ function inpCls(err) {
 // ─── Job Form Modal ───────────────────────────────────────────────────────────
 
 function JobFormModal({ job = null, onClose, onSave }) {
+  const { t } = useLanguage();
   const isEdit = !!job;
   const fileInputRef = useRef(null);
 
@@ -185,7 +189,7 @@ function JobFormModal({ job = null, onClose, onSave }) {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setErrors((prev) => ({ ...prev, image: "Only image files are allowed" }));
+      setErrors((prev) => ({ ...prev, image: t("jobs.form.onlyImages") }));
       return;
     }
 
@@ -211,13 +215,13 @@ function JobFormModal({ job = null, onClose, onSave }) {
       setImgPreview(publicUrl);
       setForm((f) => ({ ...f, image_url: publicUrl }));
     } catch (err) {
-      setErrors((prev) => ({ ...prev, image: err.message || "Upload failed" }));
+      setErrors((prev) => ({ ...prev, image: err.message || t("jobs.form.uploadFailed") }));
       setImgPreview(job?.image_url || "");
     } finally {
       URL.revokeObjectURL(localUrl);
       setImgUploading(false);
     }
-  }, [job?.image_url, compressImage]);
+  }, [job?.image_url, compressImage, t]);
 
   const removeImage = useCallback(() => {
     setImgPreview("");
@@ -227,12 +231,12 @@ function JobFormModal({ job = null, onClose, onSave }) {
 
   const validate = useCallback(() => {
     const e = {};
-    if (!form.title.trim())    e.title    = "Required";
-    if (!form.company.trim())  e.company  = "Required";
-    if (!form.location.trim()) e.location = "Required";
+    if (!form.title.trim())    e.title    = t("jobs.form.required");
+    if (!form.company.trim())  e.company  = t("jobs.form.required");
+    if (!form.location.trim()) e.location = t("jobs.form.required");
     setErrors((prev) => ({ ...prev, ...e }));
     return Object.keys(e).length === 0;
-  }, [form.title, form.company, form.location]);
+  }, [form.title, form.company, form.location, t]);
 
   const handleSave = useCallback(async (publishNow = false) => {
     if (!validate()) return;
@@ -258,14 +262,14 @@ function JobFormModal({ job = null, onClose, onSave }) {
         { method: isEdit ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
       );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save");
+      if (!res.ok) throw new Error(data.error || t("jobs.form.failedToSave"));
 
       onSave({
         ...data.job,
         applicants:  job?.applicants  ?? data.job.applicants  ?? 0,
         shortlisted: job?.shortlisted ?? data.job.shortlisted ?? 0,
         rejected:    job?.rejected    ?? data.job.rejected    ?? 0,
-        posted_by:   job?.posted_by   ?? data.job.posted_by   ?? "You",
+        posted_by:   job?.posted_by   ?? data.job.posted_by   ?? t("jobs.you"),
       });
       onClose();
     } catch (err) {
@@ -273,7 +277,7 @@ function JobFormModal({ job = null, onClose, onSave }) {
     } finally {
       setSaving(false);
     }
-  }, [form, isEdit, job, validate, onSave, onClose]);
+  }, [form, isEdit, job, validate, onSave, onClose, t]);
 
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-3 py-4">
@@ -287,9 +291,9 @@ function JobFormModal({ job = null, onClose, onSave }) {
             </div>
             <div>
               <h2 className="font-black text-gray-900 dark:text-gray-100 text-base">
-                {isEdit ? "Edit Job" : "Create New Job"}
+                {isEdit ? t("jobs.form.editTitle") : t("jobs.form.createTitle")}
               </h2>
-              <p className="text-xs text-gray-400">Fill in the details below</p>
+              <p className="text-xs text-gray-400">{t("jobs.form.subtitle")}</p>
             </div>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">
@@ -307,7 +311,7 @@ function JobFormModal({ job = null, onClose, onSave }) {
 
           {/* ── Cover image upload ── */}
           <div>
-            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Job / Company Image</p>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{t("jobs.form.image")}</p>
             <input
               ref={fileInputRef}
               type="file"
@@ -321,7 +325,7 @@ function JobFormModal({ job = null, onClose, onSave }) {
                 <img src={imgPreview} alt="Job cover" className="w-full aspect-[3/1] object-cover object-center" />
                 {imgUploading && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2 text-white text-xs font-semibold">
-                    <Loader2 size={14} className="animate-spin" /> Uploading…
+                    <Loader2 size={14} className="animate-spin" /> {t("jobs.form.uploading")}
                   </div>
                 )}
                 {!imgUploading && (
@@ -331,14 +335,14 @@ function JobFormModal({ job = null, onClose, onSave }) {
                       onClick={() => fileInputRef.current?.click()}
                       className="flex items-center gap-1.5 bg-white text-gray-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
                     >
-                      <ImagePlus size={12} /> Change
+                      <ImagePlus size={12} /> {t("jobs.form.change")}
                     </button>
                     <button
                       type="button"
                       onClick={removeImage}
                       className="flex items-center gap-1.5 bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-red-500 transition-colors"
                     >
-                      <Trash2 size={12} /> Remove
+                      <Trash2 size={12} /> {t("jobs.form.remove")}
                     </button>
                   </div>
                 )}
@@ -351,8 +355,8 @@ function JobFormModal({ job = null, onClose, onSave }) {
                 className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 rounded-xl p-6 flex flex-col items-center gap-2 text-gray-400 hover:text-purple-500 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {imgUploading
-                  ? <><Loader2 size={20} className="animate-spin" /><span className="text-xs">Uploading…</span></>
-                  : <><ImagePlus size={20} /><span className="text-sm font-medium">Click to upload cover image</span><span className="text-xs">PNG, JPG, WEBP · max 5 MB</span></>
+                  ? <><Loader2 size={20} className="animate-spin" /><span className="text-xs">{t("jobs.form.uploading")}</span></>
+                  : <><ImagePlus size={20} /><span className="text-sm font-medium">{t("jobs.form.uploadCta")}</span><span className="text-xs">{t("jobs.form.uploadHint")}</span></>
                 }
               </button>
             )}
@@ -361,65 +365,65 @@ function JobFormModal({ job = null, onClose, onSave }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <FormField label="Job Title" required error={errors.title}>
-                <input name="title" value={form.title} onChange={handleChange} placeholder="e.g. Senior Frontend Engineer" className={inpCls(errors.title)} />
+              <FormField label={t("jobs.form.jobTitle")} required error={errors.title}>
+                <input name="title" value={form.title} onChange={handleChange} placeholder={t("jobs.form.jobTitlePh")} className={inpCls(errors.title)} />
               </FormField>
             </div>
-            <FormField label="Company Name" required error={errors.company}>
+            <FormField label={t("jobs.form.companyName")} required error={errors.company}>
               <div className="relative">
                 <Building2 size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input name="company" value={form.company} onChange={handleChange} placeholder="e.g. TechFlow Inc." className={`${inpCls(errors.company)} pl-8`} />
+                <input name="company" value={form.company} onChange={handleChange} placeholder={t("jobs.form.companyNamePh")} className={`${inpCls(errors.company)} pl-8`} />
               </div>
             </FormField>
-            <FormField label="Department / Category">
+            <FormField label={t("jobs.form.department")}>
               <select name="department" value={form.department} onChange={handleChange} className={inpCls()}>
-                <option value="">Select department</option>
+                <option value="">{t("jobs.form.selectDepartment")}</option>
                 {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
               </select>
             </FormField>
-            <FormField label="Employment Type">
+            <FormField label={t("jobs.form.employmentType")}>
               <select name="type" value={form.type} onChange={handleChange} className={inpCls()}>
-                {JOB_TYPES.map((t) => <option key={t}>{t}</option>)}
+                {JOB_TYPES.map((jt) => <option key={jt}>{jt}</option>)}
               </select>
             </FormField>
-            <FormField label="Experience Level">
+            <FormField label={t("jobs.form.experienceLevel")}>
               <select name="experience_level" value={form.experience_level} onChange={handleChange} className={inpCls()}>
                 {EXP_LEVELS.map((l) => <option key={l}>{l}</option>)}
               </select>
             </FormField>
-            <FormField label="Location" required error={errors.location}>
+            <FormField label={t("jobs.form.location")} required error={errors.location}>
               <div className="relative">
                 <MapPin size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input name="location" value={form.location} onChange={handleChange} placeholder="Remote, Nairobi KE…" className={`${inpCls(errors.location)} pl-8`} />
+                <input name="location" value={form.location} onChange={handleChange} placeholder={t("jobs.form.locationPh")} className={`${inpCls(errors.location)} pl-8`} />
               </div>
             </FormField>
-            <FormField label="Salary Range">
+            <FormField label={t("jobs.form.salaryRange")}>
               <div className="relative">
                 <DollarSign size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input name="salary" value={form.salary} onChange={handleChange} placeholder="$80k–$120k/yr" className={`${inpCls()} pl-8`} />
+                <input name="salary" value={form.salary} onChange={handleChange} placeholder={t("jobs.form.salaryPh")} className={`${inpCls()} pl-8`} />
               </div>
             </FormField>
           </div>
 
-          <FormField label="Job Description">
-            <textarea name="description" value={form.description} onChange={handleChange} placeholder="Describe the role, team, and what you're looking for…" rows={4} className={`${inpCls()} resize-none`} />
+          <FormField label={t("jobs.form.description")}>
+            <textarea name="description" value={form.description} onChange={handleChange} placeholder={t("jobs.form.descriptionPh")} rows={4} className={`${inpCls()} resize-none`} />
           </FormField>
 
-          <FormField label="Requirements (one per line)">
-            <textarea name="requirements" value={form.requirements} onChange={handleChange} placeholder={"5+ years React experience\nTypeScript proficiency\nRemote-first mindset"} rows={3} className={`${inpCls()} resize-none font-mono text-xs leading-5`} />
+          <FormField label={t("jobs.form.requirements")}>
+            <textarea name="requirements" value={form.requirements} onChange={handleChange} placeholder={t("jobs.form.requirementsPh")} rows={3} className={`${inpCls()} resize-none font-mono text-xs leading-5`} />
           </FormField>
 
-          <FormField label="Skills (comma-separated)">
+          <FormField label={t("jobs.form.skills")}>
             <div className="relative">
               <Tag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <input name="skills" value={form.skills} onChange={handleChange} placeholder="React, TypeScript, Node.js" className={`${inpCls()} pl-8`} />
+              <input name="skills" value={form.skills} onChange={handleChange} placeholder={t("jobs.form.skillsPh")} className={`${inpCls()} pl-8`} />
             </div>
           </FormField>
 
-          <FormField label="Initial Status">
+          <FormField label={t("jobs.form.initialStatus")}>
             <select name="status" value={form.status} onChange={handleChange} className={inpCls()}>
-              <option value="draft">Draft — save privately</option>
-              <option value="active">Active — visible to all</option>
+              <option value="draft">{t("jobs.form.statusDraft")}</option>
+              <option value="active">{t("jobs.form.statusActive")}</option>
             </select>
           </FormField>
         </div>
@@ -427,14 +431,14 @@ function JobFormModal({ job = null, onClose, onSave }) {
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex gap-3 shrink-0 bg-gray-50/50 dark:bg-gray-900/30">
           <button onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
-            Cancel
+            {t("jobs.form.cancel")}
           </button>
           <button
             onClick={() => handleSave(false)}
             disabled={saving || imgUploading}
             className="px-4 py-2.5 rounded-xl border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 text-sm font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-100 transition-all disabled:opacity-50"
           >
-            Save Draft
+            {t("jobs.form.saveDraft")}
           </button>
           <button
             onClick={() => handleSave(true)}
@@ -442,8 +446,8 @@ function JobFormModal({ job = null, onClose, onSave }) {
             className="flex-1 flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-purple-500/20"
           >
             {saving
-              ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
-              : <><Send size={13} /> {isEdit ? "Update Job" : "Publish Job"}</>
+              ? <><Loader2 size={14} className="animate-spin" /> {t("jobs.form.saving")}</>
+              : <><Send size={13} /> {isEdit ? t("jobs.form.updateJob") : t("jobs.form.publishJob")}</>
             }
           </button>
         </div>
@@ -455,19 +459,20 @@ function JobFormModal({ job = null, onClose, onSave }) {
 // ─── View Job Drawer ──────────────────────────────────────────────────────────
 
 function JobDetailDrawer({ job, onEdit, onClose }) {
+  const { t } = useLanguage();
   return (
     <div className="fixed inset-0 z-[150] flex justify-end">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white dark:bg-gray-950 w-full max-w-md h-full overflow-y-auto border-l border-gray-200 dark:border-gray-800 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
         {/* Sticky header */}
         <div className="sticky top-0 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800 px-5 py-4 flex items-center justify-between z-10 shrink-0">
-          <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm">Job Details</h3>
+          <h3 className="font-black text-gray-900 dark:text-gray-100 text-sm">{t("jobs.detail.title")}</h3>
           <div className="flex items-center gap-2">
             <button
               onClick={() => onEdit(job)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-500 transition-colors"
             >
-              <Edit2 size={11} /> Edit
+              <Edit2 size={11} /> {t("jobs.detail.edit")}
             </button>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
               <X size={15} />
@@ -501,7 +506,7 @@ function JobDetailDrawer({ job, onEdit, onClose }) {
             {[
               { icon: MapPin,    v: job.location || "—" },
               { icon: Briefcase, v: job.type || "—" },
-              { icon: DollarSign,v: job.salary || "Not specified" },
+              { icon: DollarSign,v: job.salary || t("jobs.detail.notSpecified") },
               { icon: Calendar,  v: formatDate(job.created_at) },
             ].map(({ icon: Icon, v }, i) => (
               <div key={i} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -513,10 +518,10 @@ function JobDetailDrawer({ job, onEdit, onClose }) {
           {/* Stats */}
           <div className="grid grid-cols-4 gap-2">
             {[
-              { label: "Applicants",  value: job.applicants,  color: "text-purple-600 dark:text-purple-400" },
-              { label: "Views",       value: job.views ?? 0,  color: "text-blue-600 dark:text-blue-400" },
-              { label: "Shortlisted", value: job.shortlisted, color: "text-emerald-600 dark:text-emerald-400" },
-              { label: "Rejected",    value: job.rejected,    color: "text-red-500 dark:text-red-400" },
+              { label: t("jobs.detail.applicants"),  value: job.applicants,  color: "text-purple-600 dark:text-purple-400" },
+              { label: t("jobs.detail.views"),       value: job.views ?? 0,  color: "text-blue-600 dark:text-blue-400" },
+              { label: t("jobs.detail.shortlisted"), value: job.shortlisted, color: "text-emerald-600 dark:text-emerald-400" },
+              { label: t("jobs.detail.rejected"),    value: job.rejected,    color: "text-red-500 dark:text-red-400" },
             ].map(({ label, value, color }) => (
               <div key={label} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-3 text-center border border-gray-100 dark:border-gray-800">
                 <p className={`text-xl font-black ${color}`}>{value ?? 0}</p>
@@ -528,7 +533,7 @@ function JobDetailDrawer({ job, onEdit, onClose }) {
           {/* Skills */}
           {(job.skills || job.tags || []).length > 0 && (
             <div>
-              <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">Skills</h4>
+              <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">{t("jobs.detail.skills")}</h4>
               <div className="flex flex-wrap gap-1.5">
                 {(job.skills || job.tags || []).map((s) => (
                   <span key={s} className="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/30">
@@ -542,7 +547,7 @@ function JobDetailDrawer({ job, onEdit, onClose }) {
           {/* Description */}
           {job.description && (
             <div>
-              <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">About the Role</h4>
+              <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">{t("jobs.detail.about")}</h4>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{job.description}</p>
             </div>
           )}
@@ -550,7 +555,7 @@ function JobDetailDrawer({ job, onEdit, onClose }) {
           {/* Requirements */}
           {(job.requirements || []).length > 0 && (
             <div>
-              <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">Requirements</h4>
+              <h4 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">{t("jobs.detail.requirements")}</h4>
               <ul className="space-y-2">
                 {job.requirements.map((r, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -570,26 +575,27 @@ function JobDetailDrawer({ job, onEdit, onClose }) {
 // ─── Delete Confirm ───────────────────────────────────────────────────────────
 
 function DeleteDialog({ job, onConfirm, onCancel, deleting }) {
+  const { t } = useLanguage();
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
       <div className="bg-white dark:bg-gray-950 rounded-2xl shadow-2xl w-full max-w-sm border border-gray-200 dark:border-gray-800 p-6 text-center animate-in zoom-in-95 duration-200">
         <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
           <Trash2 size={20} className="text-red-600 dark:text-red-400" />
         </div>
-        <h3 className="font-black text-gray-900 dark:text-gray-100 text-base mb-1">Delete Job?</h3>
+        <h3 className="font-black text-gray-900 dark:text-gray-100 text-base mb-1">{t("jobs.delete.title")}</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-          "<strong>{job.title}</strong>" will be permanently removed.
+          &quot;<strong>{job.title}</strong>&quot;{t("jobs.delete.confirmSuffix")}
         </p>
         <div className="flex gap-3">
           <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
-            Cancel
+            {t("jobs.delete.cancel")}
           </button>
           <button
             onClick={onConfirm}
             disabled={deleting}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white text-sm font-bold transition-all"
           >
-            {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} Delete
+            {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} {t("jobs.delete.delete")}
           </button>
         </div>
       </div>
@@ -600,6 +606,7 @@ function DeleteDialog({ job, onConfirm, onCancel, deleting }) {
 // ─── Mobile Card ──────────────────────────────────────────────────────────────
 
 function MobileJobCard({ job, onView, onEdit, onDuplicate, onDelete }) {
+  const { t } = useLanguage();
   return (
     <div
       onClick={() => onView(job)}
@@ -638,10 +645,10 @@ function MobileJobCard({ job, onView, onEdit, onDuplicate, onDelete }) {
       </div>
 
       <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px] text-gray-400">
-        <span>Views <b className="text-gray-600 dark:text-gray-300">{job.views ?? 0}</b></span>
-        <span>Shortlisted <b className="text-emerald-600">{job.shortlisted}</b></span>
-        <span>Rejected <b className="text-red-500">{job.rejected}</b></span>
-        <span className="ml-auto">{timeAgo(job.created_at)}</span>
+        <span>{t("jobs.card.views")} <b className="text-gray-600 dark:text-gray-300">{job.views ?? 0}</b></span>
+        <span>{t("jobs.card.shortlisted")} <b className="text-emerald-600">{job.shortlisted}</b></span>
+        <span>{t("jobs.card.rejected")} <b className="text-red-500">{job.rejected}</b></span>
+        <span className="ml-auto">{timeAgo(job.created_at, t)}</span>
       </div>
       </div>{/* /p-4 */}
     </div>
@@ -651,6 +658,7 @@ function MobileJobCard({ job, onView, onEdit, onDuplicate, onDelete }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function JobsContent() {
+  const { t } = useLanguage();
   const [jobs, setJobs]           = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
@@ -675,16 +683,16 @@ export default function JobsContent() {
     try {
       const res = await fetch("/api/jobs/manage");
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load jobs");
+      if (!res.ok) throw new Error(data.error || t("jobs.toast.failedLoad"));
       setJobs(data.jobs || []);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
-  useEffect(() => { fetchJobs(); }, [fetchJobs]);
+  useEffect(() => { (async () => { await fetchJobs(); })(); }, [fetchJobs]);
 
   // Realtime subscription
   useEffect(() => {
@@ -723,7 +731,7 @@ export default function JobsContent() {
       const idx = prev.findIndex((j) => j.id === savedJob.id);
       return idx >= 0 ? prev.map((j) => j.id === savedJob.id ? savedJob : j) : [savedJob, ...prev];
     });
-    showToast(savedJob.status === "active" ? "Job published!" : "Job saved as draft.");
+    showToast(savedJob.status === "active" ? t("jobs.toast.published") : t("jobs.toast.savedDraft"));
   };
 
   const handleDuplicate = async (job) => {
@@ -747,9 +755,9 @@ export default function JobsContent() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to duplicate");
+      if (!res.ok) throw new Error(data.error || t("jobs.toast.failedDuplicate"));
       setJobs((prev) => [data.job, ...prev]);
-      showToast("Job duplicated as draft.");
+      showToast(t("jobs.toast.duplicated"));
     } catch (err) {
       showToast(err.message, "error");
     }
@@ -761,10 +769,10 @@ export default function JobsContent() {
     try {
       const res = await fetch(`/api/jobs/manage?id=${deletingJob.id}`, { method: "DELETE" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to delete");
+      if (!res.ok) throw new Error(data.error || t("jobs.toast.failedDelete"));
       setJobs((prev) => prev.filter((j) => j.id !== deletingJob.id));
       setDeletingJob(null);
-      showToast("Job deleted.", "error");
+      showToast(t("jobs.toast.deleted"), "error");
     } catch (err) {
       showToast(err.message, "error");
     } finally {
@@ -794,7 +802,7 @@ export default function JobsContent() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Jobs</h1>
+              <h1 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t("jobs.title")}</h1>
               {!loading && (
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
                   {stats.total}
@@ -802,7 +810,7 @@ export default function JobsContent() {
               )}
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              {loading ? "Loading…" : `${stats.active} active · ${stats.draft} draft · ${stats.applicants} applicants`}
+              {loading ? t("jobs.loading") : t("jobs.summary", { active: stats.active, draft: stats.draft, applicants: stats.applicants })}
             </p>
           </div>
         </div>
@@ -813,7 +821,7 @@ export default function JobsContent() {
             onClick={fetchJobs}
             disabled={loading}
             className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
-            title="Refresh"
+            title={t("jobs.refresh")}
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>
@@ -824,7 +832,7 @@ export default function JobsContent() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search jobs…"
+              placeholder={t("jobs.searchPlaceholder")}
               className="w-full pl-8 pr-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
             />
           </div>
@@ -839,7 +847,7 @@ export default function JobsContent() {
             }`}
           >
             <SlidersHorizontal size={13} />
-            <span className="hidden sm:inline">Filter</span>
+            <span className="hidden sm:inline">{t("jobs.filter")}</span>
             {statusFilters.length > 0 && (
               <span className="w-4 h-4 bg-white/20 rounded-full text-[10px] font-black flex items-center justify-center">{statusFilters.length}</span>
             )}
@@ -851,8 +859,8 @@ export default function JobsContent() {
             className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-500 active:scale-95 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-purple-500/20"
           >
             <Plus size={14} />
-            <span className="hidden sm:inline">Create Job</span>
-            <span className="sm:hidden">New</span>
+            <span className="hidden sm:inline">{t("jobs.createJob")}</span>
+            <span className="sm:hidden">{t("jobs.new")}</span>
           </button>
         </div>
       </div>
@@ -860,10 +868,10 @@ export default function JobsContent() {
       {/* ── Stats Cards ───────────────────────────────────────────────── */}
       <div className="hidden sm:grid grid-cols-4 gap-3 mb-5">
         {[
-          { label: "Total Jobs",  value: stats.total,     icon: Briefcase, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
-          { label: "Active",      value: stats.active,    icon: Zap,       color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
-          { label: "Drafts",      value: stats.draft,     icon: FileText,  color: "text-gray-500",    bg: "bg-gray-100 dark:bg-gray-800" },
-          { label: "Applicants",  value: stats.applicants,icon: Users,     color: "text-blue-600",    bg: "bg-blue-50 dark:bg-blue-900/20" },
+          { label: t("jobs.stats.total"),      value: stats.total,     icon: Briefcase, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
+          { label: t("jobs.stats.active"),     value: stats.active,    icon: Zap,       color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
+          { label: t("jobs.stats.drafts"),     value: stats.draft,     icon: FileText,  color: "text-gray-500",    bg: "bg-gray-100 dark:bg-gray-800" },
+          { label: t("jobs.stats.applicants"), value: stats.applicants,icon: Users,     color: "text-blue-600",    bg: "bg-blue-50 dark:bg-blue-900/20" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-3">
             <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
@@ -882,7 +890,7 @@ export default function JobsContent() {
 
       {/* ── Filter Chips ──────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 flex-wrap mb-4">
-        <span className="text-xs text-gray-400 font-semibold">Status:</span>
+        <span className="text-xs text-gray-400 font-semibold">{t("jobs.statusLabel")}</span>
         {STATUS_FILTERS.map((s) => {
           const cfg = STATUS_CONFIG[s];
           const active = statusFilters.includes(s);
@@ -897,7 +905,7 @@ export default function JobsContent() {
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${active ? "bg-white/60" : cfg.dot}`} />
-              {cfg.label}
+              {t(cfg.labelKey)}
               {active && (
                 <span
                   onClick={(e) => { e.stopPropagation(); toggleStatus(s); }}
@@ -911,7 +919,7 @@ export default function JobsContent() {
         })}
         {statusFilters.length > 0 && (
           <button onClick={() => setStatusFilters([])} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors hover:underline ml-1">
-            Clear all
+            {t("jobs.clearAll")}
           </button>
         )}
       </div>
@@ -921,7 +929,7 @@ export default function JobsContent() {
         <div className="flex items-center gap-3 p-4 mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-2xl text-sm text-red-700 dark:text-red-400">
           <XCircle size={16} className="shrink-0" />
           <span>{error}</span>
-          <button onClick={fetchJobs} className="ml-auto text-xs font-bold underline">Retry</button>
+          <button onClick={fetchJobs} className="ml-auto text-xs font-bold underline">{t("jobs.retry")}</button>
         </div>
       )}
 
@@ -934,7 +942,7 @@ export default function JobsContent() {
                 <th className="px-4 py-3 w-10">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 accent-purple-600" />
                 </th>
-                {["Job Title", "Department", "Status", "Applicants", "Views", "Shortlisted", "Rejected", "Location", "Created", "Posted By", ""].map((h) => (
+                {[t("jobs.table.jobTitle"), t("jobs.table.department"), t("jobs.table.status"), t("jobs.table.applicants"), t("jobs.table.views"), t("jobs.table.shortlisted"), t("jobs.table.rejected"), t("jobs.table.location"), t("jobs.table.created"), t("jobs.table.postedBy"), ""].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -952,14 +960,14 @@ export default function JobsContent() {
                         <Briefcase size={20} className="text-gray-400" />
                       </div>
                       <p className="font-bold text-gray-900 dark:text-gray-100">
-                        {jobs.length === 0 ? "No jobs posted yet" : "No jobs match your filters"}
+                        {jobs.length === 0 ? t("jobs.empty.none") : t("jobs.empty.noMatch")}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {jobs.length === 0 ? "Create your first job posting to get started." : "Try adjusting your search or filters."}
+                        {jobs.length === 0 ? t("jobs.empty.getStarted") : t("jobs.empty.adjust")}
                       </p>
                       {jobs.length === 0 && (
                         <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white text-sm font-bold rounded-xl hover:bg-purple-500 transition-all mt-1">
-                          <Plus size={13} /> Create your first job
+                          <Plus size={13} /> {t("jobs.empty.createFirstBtn")}
                         </button>
                       )}
                     </div>
@@ -1019,7 +1027,7 @@ export default function JobsContent() {
                     {/* Created */}
                     <td className="px-4 py-3.5 text-xs text-gray-400 whitespace-nowrap">{formatDate(job.created_at)}</td>
                     {/* Posted By */}
-                    <td className="px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{job.posted_by || "You"}</td>
+                    <td className="px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{job.posted_by || t("jobs.you")}</td>
                     {/* Actions */}
                     <td className="px-4 py-3.5">
                       <ActionMenu
@@ -1040,11 +1048,12 @@ export default function JobsContent() {
         {!loading && filtered.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/30">
             <span className="text-xs text-gray-400">
-              {selectedIds.length > 0 ? `${selectedIds.length} selected · ` : ""}{filtered.length} job{filtered.length !== 1 ? "s" : ""}
+              {selectedIds.length > 0 ? t("jobs.selectedPrefix", { n: selectedIds.length }) : ""}
+              {filtered.length === 1 ? t("jobs.count_jobs_one", { n: filtered.length }) : t("jobs.count_jobs_many", { n: filtered.length })}
             </span>
             {selectedIds.length > 0 && (
               <button onClick={() => setSelectedIds([])} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                Clear selection
+                {t("jobs.clearSelection")}
               </button>
             )}
           </div>
@@ -1072,14 +1081,14 @@ export default function JobsContent() {
               <Briefcase size={20} className="text-gray-400" />
             </div>
             <p className="font-bold text-gray-900 dark:text-gray-100">
-              {jobs.length === 0 ? "No jobs posted yet" : "No jobs match your filters"}
+              {jobs.length === 0 ? t("jobs.empty.none") : t("jobs.empty.noMatch")}
             </p>
             <p className="text-sm text-gray-500 mt-1 mb-4">
-              {jobs.length === 0 ? "Create your first job posting." : "Try adjusting your search or filters."}
+              {jobs.length === 0 ? t("jobs.empty.createFirst") : t("jobs.empty.adjust")}
             </p>
             {jobs.length === 0 && (
               <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white text-sm font-bold rounded-xl hover:bg-purple-500 transition-all">
-                <Plus size={13} /> Create first job
+                <Plus size={13} /> {t("jobs.empty.createFirstBtnShort")}
               </button>
             )}
           </div>

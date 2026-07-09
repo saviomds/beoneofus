@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { notifyAdminsOfVerification } from '../../../../lib/notifyAdmins';
 
 // Institution console API — powers the dedicated government / education /
 // healthcare / NGO / community dashboards. Same manager-gating as the business
@@ -236,6 +237,8 @@ export async function PATCH(req, { params }) {
     if (org.is_verified) return NextResponse.json({ error: 'Already verified.' }, { status: 400 });
     const { error } = await supabase.from('organizations').update({ verification_status: 'pending' }).eq('id', org.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // Surface the request to admins immediately (bell notification → review queue).
+    await notifyAdminsOfVerification(supabase, org, gate.user.id);
     return NextResponse.json({ ok: true });
   }
 

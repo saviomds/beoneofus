@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ClipboardList, Briefcase, Bell, RefreshCw, Loader2, Check, X,
   CheckCircle2, Clock, XCircle, ChevronRight, TrendingUp, User,
@@ -225,7 +226,7 @@ const UserDashboardTool = ({ currentUserId }) => {
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0 overflow-hidden ring-2 ring-white/20">
               {myProfile?.avatar_url
-                ? <img src={myProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+                ? <Image src={myProfile.avatar_url} alt="" width={48} height={48} className="w-full h-full object-cover" unoptimized />
                 : <UserCog size={22} />}
             </div>
             <div>
@@ -375,7 +376,7 @@ const UserDashboardTool = ({ currentUserId }) => {
                               {/* Assigner */}
                               <div className="flex items-center gap-1">
                                 <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-[7px] font-black text-gray-500 shrink-0">
-                                  {task.assigner?.avatar_url ? <img src={task.assigner.avatar_url} alt="" className="w-full h-full object-cover" /> : (task.assigner?.username?.[0] || "A").toUpperCase()}
+                                  {task.assigner?.avatar_url ? <Image src={task.assigner.avatar_url} alt="" width={16} height={16} className="w-full h-full object-cover" unoptimized /> : (task.assigner?.username?.[0] || "A").toUpperCase()}
                                 </div>
                                 <span className="text-[9px] text-gray-400">from @{task.assigner?.username || "Admin"}</span>
                               </div>
@@ -383,7 +384,7 @@ const UserDashboardTool = ({ currentUserId }) => {
                               {/* Assignee */}
                               <div className="flex items-center gap-1">
                                 <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-[7px] font-black text-gray-500 shrink-0">
-                                  {task.assignee?.avatar_url ? <img src={task.assignee.avatar_url} alt="" className="w-full h-full object-cover" /> : (task.assignee?.username?.[0] || "?").toUpperCase()}
+                                  {task.assignee?.avatar_url ? <Image src={task.assignee.avatar_url} alt="" width={16} height={16} className="w-full h-full object-cover" unoptimized /> : (task.assignee?.username?.[0] || "?").toUpperCase()}
                                 </div>
                                 <span className="text-[9px] text-gray-400">@{task.assignee?.username || "?"}</span>
                               </div>

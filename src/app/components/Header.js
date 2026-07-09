@@ -11,6 +11,7 @@ import ProfileContent from '../dash/content/ProfileContent';
 import { useDashboard } from '../dash/content/DashboardContext';
 import { useTheme } from 'next-themes';
 import VerifiedBadge from './VerifiedBadge';
+import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '../../lib/i18n';
 
 // Escape regex metacharacters so queries containing ( [ \ etc. don't throw
@@ -34,7 +35,7 @@ const HighlightMatch = ({ text, query }) => {
 const QuickViewModal = dynamic(() => import('./QuickViewModal'), { ssr: false });
 
 export default function Header({ setActiveTab }) {
-  const { t, lang, setLang } = useLanguage();
+  const { t } = useLanguage();
   const { setTargetChatUser } = useDashboard();
   const router = useRouter();
   const [showQuickView, setShowQuickView] = useState(null); // 'discuss' or 'discover'
@@ -83,7 +84,7 @@ export default function Header({ setActiveTab }) {
     
     window.addEventListener('open-header-modal', handleOpenModal);
     return () => window.removeEventListener('open-header-modal', handleOpenModal);
-  }, []);
+  }, [router]);
 
   // Broadcast active modal states to sync with external mobile menus
   useEffect(() => {
@@ -147,7 +148,12 @@ export default function Header({ setActiveTab }) {
     }
   }, []);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    // Mount flag gates hydration-sensitive UI (the theme toggle). It must flip
+    // after mount, so a synchronous setState is required here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   // Get current user ID
   useEffect(() => {
@@ -198,6 +204,10 @@ export default function Header({ setActiveTab }) {
 
   // Real-time debounced search function
   useEffect(() => {
+    // Synchronously reset the result/focus/loading UI the instant the query
+    // changes; the actual query runs after a debounce below. These resets must
+    // be immediate, so setState in the effect body is required here.
+    /* eslint-disable react-hooks/set-state-in-effect */
     setFocusedIndex(-1);
     if (!searchQuery.trim()) {
       setSearchResults({ posts: [], groups: [], users: [], courses: [], events: [], jobs: [], pathways: [] });
@@ -206,6 +216,7 @@ export default function Header({ setActiveTab }) {
     }
 
     setIsSearching(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const delayDebounceFn = setTimeout(async () => {
       try {
@@ -331,61 +342,9 @@ export default function Header({ setActiveTab }) {
         transition-transform duration-300 ease-in-out
         ${showHeader ? 'translate-y-0' : '-translate-y-full'}
       `}>
-        {/* Row 1: nav pills + theme toggle */}
-        <div className="flex items-center justify-between gap-2 w-full mb-2">
-          <nav className="flex items-center gap-0.5 overflow-x-auto no-scrollbar">
-            <button
-              id="header-btn-network"
-              onClick={() => setShowNetworkModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all whitespace-nowrap"
-            >
-              <Users size={13} /> {t('header.network')}
-            </button>
-            <button
-              id="header-btn-discuss"
-              onClick={() => setShowQuickView('discuss')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all whitespace-nowrap"
-            >
-              <MessageCircle size={13} /> {t('header.discuss')}
-            </button>
-            <button
-              id="header-btn-discover"
-              onClick={() => setShowQuickView('discover')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all whitespace-nowrap"
-            >
-              <Compass size={13} /> {t('header.discover')}
-            </button>
-            <button
-              id="header-btn-marketplace"
-              onClick={() => setShowMarketplacePopup(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all whitespace-nowrap"
-            >
-              <ShoppingBag size={13} /> {t('header.marketplace')}
-            </button>
-          </nav>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => setLang(lang === 'en' ? 'fr' : 'en')}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all border border-gray-200 dark:border-gray-700"
-              title={t('header.switch_lang')}
-            >
-              {lang === 'en' ? 'FR' : 'EN'}
-            </button>
-            {mounted && (
-              <button
-                onClick={() => { const cur = theme === 'system' ? systemTheme : theme; setTheme(cur === 'dark' ? 'light' : 'dark'); }}
-                className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
-                title={t('header.toggle_theme')}
-              >
-                {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={15} /> : <Moon size={15} />}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Row 2: full-width search */}
-        <div className="relative w-full" ref={searchRef}>
+        {/* One clean row: universal search + controls (top-mid-right) */}
+        <div className="flex items-center gap-2.5 w-full">
+          <div className="relative flex-1" ref={searchRef}>
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             <Search size={14} className="text-gray-400 dark:text-gray-500" />
           </div>
@@ -592,6 +551,21 @@ export default function Header({ setActiveTab }) {
               )}
             </div>
           )}
+          </div>
+
+          {/* Controls — sit at the top-mid-right of the bar */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <LanguageSwitcher />
+            {mounted && (
+              <button
+                onClick={() => { const cur = theme === 'system' ? systemTheme : theme; setTheme(cur === 'dark' ? 'light' : 'dark'); }}
+                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all border border-gray-200 dark:border-gray-700"
+                title={t('header.toggle_theme')}
+              >
+                {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={15} /> : <Moon size={15} />}
+              </button>
+            )}
+          </div>
         </div>
       </header>
 

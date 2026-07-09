@@ -238,7 +238,7 @@ export default function ResourcesPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
           {filtered ? (
             <div>
-              <h2 className="text-xl font-black mb-6">{filtered.length} result{filtered.length !== 1 ? "s" : ""} for "{search}"</h2>
+              <h2 className="text-xl font-black mb-6">{filtered.length} result{filtered.length !== 1 ? "s" : ""} for &quot;{search}&quot;</h2>
               {filtered.length === 0 ? (
                 <div className="text-center py-20">
                   <p className="text-gray-400">No resources match that search.</p>

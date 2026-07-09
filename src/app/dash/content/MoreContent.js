@@ -9,6 +9,8 @@ import {
   Terminal, Layers, UserCog, Globe, Quote,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
+import { signOutEverywhere } from "../../../lib/signOutEverywhere";
 import FounderContent from "./FounderContent";
 import { Badge } from "./more/shared";
 import SystemStatusTool from "./more/SystemStatusTool";
@@ -16,61 +18,54 @@ import ApiAccessTool from "./more/ApiAccessTool";
 import CommunityHubTool from "./more/CommunityHubTool";
 import AdminPanelTool from "./more/AdminPanelTool";
 import SupportTool from "./more/SupportTool";
-import UserDashboardTool from "./more/UserDashboardTool";
 import QuoteTool from "./more/QuoteTool";
 
 // ─── Tool Registry ────────────────────────────────────────────────────────────
 
 const TOOLS = [
   {
-    id: "user_dashboard", label: "My Dashboard", icon: UserCog,
-    desc: "Track your tasks, job applications, and platform activity at a glance.",
-    color: "violet", tags: ["Tasks", "Applications", "Notifications"], isNew: false,
-    category: "personal",
-  },
-  {
-    id: "api", label: "API Access", icon: Code2,
-    desc: "Generate and manage secret keys, explore endpoints, and integrate with the platform API.",
-    color: "blue", tags: ["REST API", "SDK", "Keys"], isNew: false,
+    id: "api", labelKey: "more.tools.api.label", icon: Code2,
+    descKey: "more.tools.api.desc",
+    color: "blue", tagKeys: ["more.tags.rest_api", "more.tags.sdk", "more.tags.keys"], isNew: false,
     category: "developer",
   },
   {
-    id: "status", label: "System Status", icon: Zap,
-    desc: "Real-time health dashboard — service uptime, latency, and incident history.",
-    color: "emerald", tags: ["Uptime", "Latency", "Incidents"], isNew: false,
+    id: "status", labelKey: "more.tools.status.label", icon: Zap,
+    descKey: "more.tools.status.desc",
+    color: "emerald", tagKeys: ["more.tags.uptime", "more.tags.latency", "more.tags.incidents"], isNew: false,
     category: "developer",
   },
   {
-    id: "community", label: "Community Hub", icon: Globe,
-    desc: "Live global chat with channels, online presence, typing indicators and more.",
-    color: "indigo", tags: ["Chat", "Channels", "Live"], isNew: true,
+    id: "community", labelKey: "more.tools.community.label", icon: Globe,
+    descKey: "more.tools.community.desc",
+    color: "indigo", tagKeys: ["more.tags.chat", "more.tags.channels", "more.tags.live"], isNew: true,
     category: "community",
   },
   {
-    id: "support", label: "Help & Support", icon: HelpCircle,
-    desc: "AI-powered support with categorised tickets, FAQ, quick prompts and chat-style responses.",
-    color: "orange", tags: ["AI Support", "FAQ", "Tickets"], isNew: true,
+    id: "support", labelKey: "more.tools.support.label", icon: HelpCircle,
+    descKey: "more.tools.support.desc",
+    color: "orange", tagKeys: ["more.tags.ai_support", "more.tags.faq", "more.tags.tickets"], isNew: true,
     category: "community",
   },
   {
-    id: "quotes", label: "Daily Quotes", icon: Quote,
-    desc: "Curated inspiration for builders, coders, and entrepreneurs — refreshed daily.",
-    color: "amber", tags: ["Motivation", "Coding", "Career"], isNew: false,
+    id: "quotes", labelKey: "more.tools.quotes.label", icon: Quote,
+    descKey: "more.tools.quotes.desc",
+    color: "amber", tagKeys: ["more.tags.motivation", "more.tags.coding", "more.tags.career"], isNew: false,
     category: "community",
   },
   {
-    id: "admin", label: "Admin Dashboard", icon: ShieldAlert,
-    desc: "Full platform management — users, content, applications, and system controls.",
-    color: "red", tags: ["Users", "Tasks", "Moderation"], isNew: false,
-    category: "platform", adminOnly: true,
+    id: "admin", labelKey: "more.tools.admin.label", icon: ShieldAlert,
+    descKey: "more.tools.admin.desc",
+    color: "red", tagKeys: ["more.tags.users", "more.tags.verification", "more.tags.moderation"], isNew: false,
+    category: "platform", adminOnly: true, route: "/dash/admin",
   },
 ];
 
 const TOOL_CATEGORIES = [
-  { id: "personal",   label: "Personal",        icon: UserCog,    accent: "from-violet-500 to-violet-600" },
-  { id: "developer",  label: "Developer Tools",  icon: Terminal,   accent: "from-blue-500 to-blue-600"    },
-  { id: "community",  label: "Community",        icon: Users,      accent: "from-indigo-500 to-indigo-600" },
-  { id: "platform",   label: "Platform",         icon: ShieldAlert,accent: "from-red-500 to-red-600"      },
+  { id: "personal",   labelKey: "more.categories.personal",  icon: UserCog,    accent: "from-violet-500 to-violet-600" },
+  { id: "developer",  labelKey: "more.categories.developer", icon: Terminal,   accent: "from-blue-500 to-blue-600"    },
+  { id: "community",  labelKey: "more.categories.community", icon: Users,      accent: "from-indigo-500 to-indigo-600" },
+  { id: "platform",   labelKey: "more.categories.platform",  icon: ShieldAlert,accent: "from-red-500 to-red-600"      },
 ];
 
 const TOOL_COLOR_MAP = {
@@ -86,6 +81,7 @@ const TOOL_COLOR_MAP = {
 // ─── Tool Card ────────────────────────────────────────────────────────────────
 
 function ToolCard({ tool, onClick }) {
+  const { t } = useLanguage();
   const tc = TOOL_COLOR_MAP[tool.color] || TOOL_COLOR_MAP.blue;
   return (
     <button
@@ -101,7 +97,7 @@ function ToolCard({ tool, onClick }) {
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {tool.isNew && (
-            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${tc.tag}`}>Updated</span>
+            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${tc.tag}`}>{t('more.updated')}</span>
           )}
           <div className={`w-6 h-6 rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.04] flex items-center justify-center group-hover:${tc.bg} group-hover:border-${tool.color}-200 dark:group-hover:border-${tool.color}-800/40 transition-all`}>
             <ChevronRight size={12} className={`text-gray-300 dark:text-gray-700 group-hover:${tc.text} group-hover:translate-x-0.5 transition-all`} />
@@ -109,14 +105,14 @@ function ToolCard({ tool, onClick }) {
         </div>
       </div>
 
-      <p className={`text-sm font-black text-gray-900 dark:text-gray-100 group-hover:${tc.text} transition-colors mb-1`}>{tool.label}</p>
-      <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium leading-relaxed line-clamp-2 flex-1">{tool.desc}</p>
+      <p className={`text-sm font-black text-gray-900 dark:text-gray-100 group-hover:${tc.text} transition-colors mb-1`}>{t(tool.labelKey)}</p>
+      <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium leading-relaxed line-clamp-2 flex-1">{t(tool.descKey)}</p>
 
       {/* Tags */}
       <div className="flex gap-1.5 flex-wrap mt-3">
-        {tool.tags.map(tag => (
-          <span key={tag} className="text-[9px] font-bold text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 px-2 py-0.5 rounded-full">
-            {tag}
+        {tool.tagKeys.map(tagKey => (
+          <span key={tagKey} className="text-[9px] font-bold text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 px-2 py-0.5 rounded-full">
+            {t(tagKey)}
           </span>
         ))}
       </div>
@@ -127,6 +123,7 @@ function ToolCard({ tool, onClick }) {
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
 export default function MoreContent() {
+  const { t } = useLanguage();
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isFounder, setIsFounder] = useState(false);
@@ -136,9 +133,9 @@ export default function MoreContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  const visibleTools = TOOLS.filter(t => !t.adminOnly || isAdmin);
+  const visibleTools = TOOLS.filter(tool => !tool.adminOnly || isAdmin);
   const toolParam = searchParams?.get("tool");
-  const activeItem = toolParam ? visibleTools.find(t => t.id === toolParam) || null : null;
+  const activeItem = toolParam ? visibleTools.find(tool => tool.id === toolParam) || null : null;
 
   useEffect(() => {
     const init = async () => {
@@ -175,6 +172,8 @@ export default function MoreContent() {
   }, []);
 
   const openTool = (tool) => {
+    // Tools that live on their own route (e.g. the unified Admin Console) navigate there.
+    if (tool.route) { router.push(tool.route); return; }
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("tool", tool.id);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
@@ -188,14 +187,18 @@ export default function MoreContent() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOutEverywhere();
     window.location.href = "/auth";
   };
 
   const [toolSearch, setToolSearch] = useState("");
 
-  const searchedTools = visibleTools.filter(t =>
-    !toolSearch || t.label.toLowerCase().includes(toolSearch.toLowerCase()) || t.desc.toLowerCase().includes(toolSearch.toLowerCase()) || t.tags.some(tag => tag.toLowerCase().includes(toolSearch.toLowerCase()))
+  const q = toolSearch.toLowerCase();
+  const searchedTools = visibleTools.filter(tool =>
+    !toolSearch
+    || t(tool.labelKey).toLowerCase().includes(q)
+    || t(tool.descKey).toLowerCase().includes(q)
+    || tool.tagKeys.some(tagKey => t(tagKey).toLowerCase().includes(q))
   );
 
   return (
@@ -214,29 +217,29 @@ export default function MoreContent() {
             <div className="flex items-center gap-2 mb-3">
               <div className="flex items-center gap-1.5 bg-white/10 border border-white/10 px-2.5 py-1 rounded-full">
                 <Layers size={10} className="text-blue-400" />
-                <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Workspace</span>
+                <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">{t('more.badge_workspace')}</span>
               </div>
               {isAdmin && (
                 <div className="flex items-center gap-1.5 bg-red-500/20 border border-red-500/20 px-2.5 py-1 rounded-full">
                   <ShieldAlert size={10} className="text-red-400" />
-                  <span className="text-[9px] font-black text-red-400 uppercase tracking-widest">Admin</span>
+                  <span className="text-[9px] font-black text-red-400 uppercase tracking-widest">{t('more.badge_admin')}</span>
                 </div>
               )}
             </div>
-            <h1 className="text-3xl font-black text-white tracking-tighter leading-none mb-2">Resources</h1>
+            <h1 className="text-3xl font-black text-white tracking-tighter leading-none mb-2">{t('more.hero_title')}</h1>
             <p className="text-sm text-white/50 font-medium leading-relaxed max-w-md">
-              Developer tools, community features, and platform utilities — all in one workspace.
+              {t('more.hero_subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <div className="text-right hidden sm:block">
               <p className="text-xl font-black text-white">{visibleTools.length}</p>
-              <p className="text-[10px] text-white/40">tools available</p>
+              <p className="text-[10px] text-white/40">{t('more.tools_available')}</p>
             </div>
             <div className="w-px h-10 bg-white/10 hidden sm:block" />
             <div className="text-right hidden sm:block">
-              <p className="text-xl font-black text-white">{visibleTools.filter(t => t.isNew).length}</p>
-              <p className="text-[10px] text-white/40">recently updated</p>
+              <p className="text-xl font-black text-white">{visibleTools.filter(tool => tool.isNew).length}</p>
+              <p className="text-[10px] text-white/40">{t('more.recently_updated')}</p>
             </div>
           </div>
         </div>
@@ -248,7 +251,7 @@ export default function MoreContent() {
         <input
           value={toolSearch}
           onChange={e => setToolSearch(e.target.value)}
-          placeholder="Search tools by name, description, or tag…"
+          placeholder={t('more.search_tools_placeholder')}
           className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-blue-400 dark:focus:border-blue-600 transition-all shadow-sm"
         />
         {toolSearch && (
@@ -263,12 +266,12 @@ export default function MoreContent() {
         /* flat search results */
         <div className="space-y-3 mb-8">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-            {searchedTools.length} result{searchedTools.length !== 1 ? "s" : ""} for "{toolSearch}"
+            {t(searchedTools.length !== 1 ? 'more.results_for' : 'more.result_for', { n: searchedTools.length, q: toolSearch })}
           </p>
           {searchedTools.length === 0 ? (
             <div className="py-12 text-center">
               <Search size={28} className="text-gray-200 dark:text-gray-700 mx-auto mb-2" />
-              <p className="text-sm font-bold text-gray-400">No tools match your search</p>
+              <p className="text-sm font-bold text-gray-400">{t('more.no_results')}</p>
             </div>
           ) : searchedTools.map(tool => <ToolCard key={tool.id} tool={tool} onClick={() => openTool(tool)} />)}
         </div>
@@ -282,9 +285,9 @@ export default function MoreContent() {
                 <div className={`w-5 h-5 rounded-lg bg-gradient-to-br ${cat.accent} flex items-center justify-center shrink-0`}>
                   <cat.icon size={11} className="text-white" />
                 </div>
-                <p className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{cat.label}</p>
+                <p className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{t(cat.labelKey)}</p>
                 <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
-                <span className="text-[10px] text-gray-400 dark:text-gray-600">{catTools.length} tool{catTools.length !== 1 ? "s" : ""}</span>
+                <span className="text-[10px] text-gray-400 dark:text-gray-600">{t(catTools.length !== 1 ? 'more.tools_count' : 'more.tool_count', { n: catTools.length })}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {catTools.map(tool => <ToolCard key={tool.id} tool={tool} onClick={() => openTool(tool)} />)}
@@ -300,7 +303,7 @@ export default function MoreContent() {
           <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
             <Crown size={11} className="text-white" />
           </div>
-          <p className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Founder Node</p>
+          <p className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{t('more.founder_node')}</p>
           <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
         </div>
 
@@ -312,13 +315,13 @@ export default function MoreContent() {
                 <Crown size={20} className="text-white" />
               </div>
               <div>
-                <p className="text-sm font-black text-white">Founder Dashboard</p>
-                <p className="text-[11px] text-blue-200/80 font-medium mt-0.5">Team, tasks, applications & more</p>
+                <p className="text-sm font-black text-white">{t('more.founder_dashboard')}</p>
+                <p className="text-[11px] text-blue-200/80 font-medium mt-0.5">{t('more.founder_dashboard_desc')}</p>
               </div>
             </div>
             <div className="relative flex items-center gap-2">
               <span className="hidden sm:flex items-center gap-1 text-[10px] font-bold bg-white/15 text-white/80 px-2.5 py-1 rounded-full border border-white/10">
-                Open workspace <ArrowUpRight size={10} />
+                {t('more.open_workspace')} <ArrowUpRight size={10} />
               </span>
               <ChevronRight size={16} className="text-blue-200 group-hover:translate-x-0.5 transition-transform" />
             </div>
@@ -329,8 +332,8 @@ export default function MoreContent() {
               <Clock size={18} className="text-amber-600 dark:text-amber-400" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-black text-amber-700 dark:text-amber-300">Application Under Review</p>
-              <p className="text-[11px] text-amber-600/80 dark:text-amber-400/70 font-medium mt-1 leading-relaxed">Your co-founder application is being reviewed by the team. We'll notify you once a decision is made — usually within 48 hours.</p>
+              <p className="text-sm font-black text-amber-700 dark:text-amber-300">{t('more.app_review_title')}</p>
+              <p className="text-[11px] text-amber-600/80 dark:text-amber-400/70 font-medium mt-1 leading-relaxed">{t('more.app_review_desc')}</p>
             </div>
             <span className="shrink-0 w-2 h-2 bg-amber-400 rounded-full animate-pulse mt-1" />
           </div>
@@ -342,15 +345,15 @@ export default function MoreContent() {
               </div>
               <div>
                 <p className="text-sm font-black text-gray-900 dark:text-gray-100">
-                  {applicationStatus === "declined" ? "Reapply as Co-Founder" : "Apply as Co-Founder"}
+                  {applicationStatus === "declined" ? t('more.reapply_cofounder') : t('more.apply_cofounder')}
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-500 font-medium mt-0.5">
-                  {applicationStatus === "declined" ? "Your previous application was declined. You can apply again." : "Join the founding team and help shape the future of beoneofus."}
+                  {applicationStatus === "declined" ? t('more.reapply_desc') : t('more.apply_desc')}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {applicationStatus === "declined" && <Badge color="red">Reapply</Badge>}
+              {applicationStatus === "declined" && <Badge color="red">{t('more.reapply_badge')}</Badge>}
               <ChevronRight size={15} className="text-gray-300 group-hover:text-blue-500 transition-all group-hover:translate-x-0.5" />
             </div>
           </button>
@@ -360,15 +363,15 @@ export default function MoreContent() {
       {/* ── Quick links ── */}
       <div className="mb-6">
         <div className="flex items-center gap-2.5 mb-3 px-1">
-          <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Quick links</p>
+          <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">{t('more.quick_links')}</p>
           <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[
-            { label: "Feed",        href: "/dash/feed",          icon: <BarChart3 size={14} />,   color: "text-blue-500"   },
-            { label: "Jobs",        href: "/dash/jobs",          icon: <Briefcase size={14} />,   color: "text-green-500"  },
-            { label: "Connections", href: "/dash/connections",   icon: <Users size={14} />,       color: "text-violet-500" },
-            { label: "Notifications", href: "/dash/notifications", icon: <Bell size={14} />,      color: "text-amber-500"  },
+            { label: t('more.ql_feed'),          href: "/dash/feed",          icon: <BarChart3 size={14} />,   color: "text-blue-500"   },
+            { label: t('more.ql_jobs'),          href: "/dash/jobs",          icon: <Briefcase size={14} />,   color: "text-green-500"  },
+            { label: t('more.ql_connections'),   href: "/dash/connections",   icon: <Users size={14} />,       color: "text-violet-500" },
+            { label: t('more.ql_notifications'), href: "/dash/notifications", icon: <Bell size={14} />,      color: "text-amber-500"  },
           ].map(item => (
             <Link
               key={item.label}
@@ -387,7 +390,7 @@ export default function MoreContent() {
       <div className="pt-4 border-t border-gray-100 dark:border-white/[0.04]">
         <button onClick={handleSignOut} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all text-sm font-bold group">
           <LogOut size={14} className="group-hover:-translate-x-0.5 transition-transform" />
-          Sign Out
+          {t('more.sign_out_btn')}
         </button>
       </div>
 
@@ -402,8 +405,8 @@ export default function MoreContent() {
                   <Crown size={16} className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-black text-gray-900 dark:text-white">Co-Founder Application</h2>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-500 font-medium">Join the founding team at beoneofus</p>
+                  <h2 className="text-sm font-black text-gray-900 dark:text-white">{t('more.cofounder_application')}</h2>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-500 font-medium">{t('more.cofounder_application_desc')}</p>
                 </div>
               </div>
               <button onClick={() => setShowApplyModal(false)} className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-500 rounded-xl transition-all">
@@ -434,18 +437,18 @@ export default function MoreContent() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h2 className="text-sm font-black text-white">{activeItem.label}</h2>
+                      <h2 className="text-sm font-black text-white">{t(activeItem.labelKey)}</h2>
                       {activeItem.isNew && (
-                        <span className="text-[9px] font-black bg-white/20 text-white px-1.5 py-0.5 rounded-full border border-white/20">Updated</span>
+                        <span className="text-[9px] font-black bg-white/20 text-white px-1.5 py-0.5 rounded-full border border-white/20">{t('more.updated')}</span>
                       )}
                     </div>
-                    <p className="text-[10px] text-white/60 font-medium">{activeItem.desc}</p>
+                    <p className="text-[10px] text-white/60 font-medium">{t(activeItem.descKey)}</p>
                   </div>
                 </div>
                 <div className="relative flex items-center gap-2">
                   <div className="hidden sm:flex gap-1">
-                    {activeItem.tags.slice(0, 2).map(tag => (
-                      <span key={tag} className="text-[9px] font-bold bg-white/15 text-white/80 px-2 py-0.5 rounded-full border border-white/10">{tag}</span>
+                    {activeItem.tagKeys.slice(0, 2).map(tagKey => (
+                      <span key={tagKey} className="text-[9px] font-bold bg-white/15 text-white/80 px-2 py-0.5 rounded-full border border-white/10">{t(tagKey)}</span>
                     ))}
                   </div>
                   <button onClick={closeTool} className="p-2 bg-white/15 hover:bg-white/25 border border-white/10 text-white/80 hover:text-white transition-all rounded-xl backdrop-blur-sm">
@@ -457,7 +460,6 @@ export default function MoreContent() {
               {/* Modal body */}
               <div className={`flex-1 overflow-hidden ${activeItem.id === "admin" ? "flex flex-col" : "overflow-y-auto"}`}>
                 <div className={activeItem.id === "admin" ? "flex flex-col h-full" : "p-5"}>
-                  {activeItem.id === "user_dashboard" && <UserDashboardTool currentUserId={currentUserId} />}
                   {activeItem.id === "status"         && <SystemStatusTool />}
                   {activeItem.id === "api"            && <ApiAccessTool />}
                   {activeItem.id === "community"      && <div className="h-full"><CommunityHubTool currentUserId={currentUserId} /></div>}

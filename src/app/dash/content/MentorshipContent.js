@@ -11,6 +11,12 @@ import {
   Camera, FileText, Award,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
+
+function availLabel(v, t) {
+  if (!v) return "";
+  return t(`mentorship.avail.${String(v).toLowerCase()}`);
+}
 
 const SKILL_SUGGESTIONS = [
   "React", "Next.js", "TypeScript", "Node.js", "Python", "Go", "Rust",
@@ -38,6 +44,7 @@ function SkillTag({ skill, onRemove }) {
 }
 
 function MentorCard({ mentor, isPremium, onBook, isMe, onEdit }) {
+  const { t } = useLanguage();
   const profile = mentor.profiles;
   const initials = profile?.username?.[0]?.toUpperCase() || "M";
   const rating = mentor.rating ? Number(mentor.rating).toFixed(1) : "5.0";
@@ -62,7 +69,7 @@ function MentorCard({ mentor, isPremium, onBook, isMe, onEdit }) {
         {/* "You" label */}
         {isMe && (
           <div className="absolute top-3.5 left-3.5 text-[9px] font-black text-white/90 bg-white/20 border border-white/25 px-2 py-1 rounded-lg uppercase tracking-[1.5px]">
-            Your card
+            {t("mentorship.your_card")}
           </div>
         )}
       </div>
@@ -95,7 +102,7 @@ function MentorCard({ mentor, isPremium, onBook, isMe, onEdit }) {
             @{profile?.username}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-            {mentor.headline || "Available for mentorship"}
+            {mentor.headline || t("mentorship.available_for_mentorship")}
           </p>
         </div>
 
@@ -114,7 +121,7 @@ function MentorCard({ mentor, isPremium, onBook, isMe, onEdit }) {
             ))}
             {mentor.skills.length > 5 && (
               <span className="text-[10px] font-bold px-2.5 py-1 bg-gray-100 dark:bg-white/[0.05] text-gray-500 dark:text-gray-400 rounded-lg border border-gray-200 dark:border-white/[0.06]">
-                +{mentor.skills.length - 5} more
+                {t("mentorship.more_count",{n:mentor.skills.length - 5})}
               </span>
             )}
           </div>
@@ -126,13 +133,13 @@ function MentorCard({ mentor, isPremium, onBook, isMe, onEdit }) {
             <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
               <BookOpen size={11} className="text-indigo-500" />
             </div>
-            {mentor.session_count || 0} sessions
+            {t("mentorship.sessions_count",{n:mentor.session_count || 0})}
           </div>
           <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 dark:text-gray-500">
             <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
               <Clock size={11} className="text-indigo-500" />
             </div>
-            {mentor.availability || "Flexible"}
+            {mentor.availability ? availLabel(mentor.availability, t) : t("mentorship.avail.flexible")}
           </div>
         </div>
 
@@ -143,21 +150,21 @@ function MentorCard({ mentor, isPremium, onBook, isMe, onEdit }) {
               onClick={onEdit}
               className="w-full flex items-center justify-center gap-2 py-3 bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.08] text-gray-700 dark:text-gray-300 text-sm font-bold rounded-2xl transition-all"
             >
-              <Edit2 size={13} /> Edit Profile
+              <Edit2 size={13} /> {t("mentorship.edit_profile_card")}
             </button>
           ) : isPremium ? (
             <button
               onClick={() => onBook(mentor)}
               className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-500/25 active:scale-[0.98]"
             >
-              <Sparkles size={13} /> Book a Session
+              <Sparkles size={13} /> {t("mentorship.book_a_session")}
             </button>
           ) : (
             <Link
               href="/dash/premium"
               className="w-full flex items-center justify-center gap-2 py-3 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-bold rounded-2xl transition-all border border-amber-200 dark:border-amber-500/25"
             >
-              <Crown size={13} /> Unlock with Premium
+              <Crown size={13} /> {t("mentorship.unlock_premium")}
             </Link>
           )}
         </div>
@@ -167,6 +174,7 @@ function MentorCard({ mentor, isPremium, onBook, isMe, onEdit }) {
 }
 
 function MentorForm({ initial, onSave, onCancel, saving }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     headline: initial?.headline || "",
     bio: initial?.bio || "",
@@ -189,35 +197,35 @@ function MentorForm({ initial, onSave, onCancel, saving }) {
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-5 animate-in fade-in slide-in-from-top-2 duration-200">
       <h3 className="font-black text-gray-900 dark:text-white flex items-center gap-2 text-sm">
         <Handshake size={16} className="text-indigo-500" />
-        {initial ? "Edit Mentor Profile" : "Become a Mentor"}
+        {initial ? t("mentorship.edit_mentor_profile") : t("mentorship.become_mentor")}
       </h3>
 
       <div className="space-y-1.5">
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Headline</label>
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t("mentorship.mentor_headline")}</label>
         <input
           value={form.headline}
           onChange={e => setForm(f => ({ ...f, headline: e.target.value }))}
-          placeholder="e.g. Senior Full-Stack Engineer at Acme"
+          placeholder={t("mentorship.headline_ph")}
           className={inputCls}
           maxLength={80}
         />
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Bio</label>
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t("mentorship.mentor_bio")}</label>
         <textarea
           value={form.bio}
           onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
-          placeholder="What can you help others with? What's your background?"
+          placeholder={t("mentorship.bio_ph")}
           rows={3}
           className={inputCls + " resize-none"}
           maxLength={300}
         />
-        <p className="text-[10px] text-gray-400 text-right">{form.bio.length}/300</p>
+        <p className="text-[10px] text-gray-400 text-right">{t("mentorship.bio_count",{n:form.bio.length})}</p>
       </div>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Skills</label>
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t("mentorship.mentor_skills")}</label>
         <div className="flex flex-wrap gap-1.5 min-h-[32px]">
           {form.skills.map(s => <SkillTag key={s} skill={s} onRemove={removeSkill} />)}
         </div>
@@ -226,7 +234,7 @@ function MentorForm({ initial, onSave, onCancel, saving }) {
             value={skillInput}
             onChange={e => setSkillInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSkill(skillInput); } }}
-            placeholder="Type a skill and press Enter"
+            placeholder={t("mentorship.skill_ph")}
             className={inputCls}
           />
           <button
@@ -252,7 +260,7 @@ function MentorForm({ initial, onSave, onCancel, saving }) {
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Availability</label>
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t("mentorship.mentor_availability")}</label>
         <div className="flex flex-wrap gap-2">
           {AVAILABILITY_OPTIONS.map(opt => (
             <button
@@ -265,7 +273,7 @@ function MentorForm({ initial, onSave, onCancel, saving }) {
                   : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-300"
               }`}
             >
-              {opt}
+              {availLabel(opt, t)}
             </button>
           ))}
         </div>
@@ -276,7 +284,7 @@ function MentorForm({ initial, onSave, onCancel, saving }) {
           onClick={onCancel}
           className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-xl transition-all"
         >
-          Cancel
+          {t("mentorship.cancel")}
         </button>
         <button
           onClick={() => onSave(form)}
@@ -284,7 +292,7 @@ function MentorForm({ initial, onSave, onCancel, saving }) {
           className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20"
         >
           {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-          {saving ? "Saving…" : "Save Profile"}
+          {saving ? t("mentorship.saving") : t("mentorship.save_profile")}
         </button>
       </div>
     </div>
@@ -292,6 +300,7 @@ function MentorForm({ initial, onSave, onCancel, saving }) {
 }
 
 export default function MentorshipContent() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [mentors, setMentors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -353,7 +362,7 @@ export default function MentorshipContent() {
         const { error } = await supabase.from("mentors").update(form).eq("user_id", user.id);
         if (error) throw error;
         setMyMentor({ ...myMentor, ...form });
-        showToast("Mentor profile updated!");
+        showToast(t("mentorship.toast_updated"));
       } else {
         const { data, error } = await supabase
           .from("mentors")
@@ -362,7 +371,7 @@ export default function MentorshipContent() {
           .single();
         if (error) throw error;
         setMyMentor(data);
-        showToast("You're now a mentor!");
+        showToast(t("mentorship.toast_now_mentor"));
       }
       setShowForm(false);
       fetchMentors();
@@ -401,7 +410,7 @@ export default function MentorshipContent() {
         .update({ session_count: (mentor.session_count || 0) + 1 })
         .eq("user_id", mentor.user_id);
 
-      showToast("Session booked! Redirecting to Coaching…");
+      showToast(t("mentorship.toast_booked"));
       setTimeout(() => router.push("/dash/coaching"), 1200);
     } catch (err) {
       showToast(err.message, "error");
@@ -455,9 +464,9 @@ export default function MentorshipContent() {
               <Handshake size={26} className="text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Mentorship</h1>
+              <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{t("mentorship.title")}</h1>
               <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mt-0.5">
-                {mentors.length} mentor{mentors.length !== 1 ? "s" : ""} available in the community
+                {t("mentorship.mentors_available",{count:mentors.length})}
               </p>
             </div>
           </div>
@@ -467,12 +476,12 @@ export default function MentorshipContent() {
                 onClick={() => setShowForm(true)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/25 active:scale-95 shrink-0"
               >
-                <Plus size={15} /> Become a Mentor
+                <Plus size={15} /> {t("mentorship.become_mentor")}
               </button>
             ) : canBeMentor && !profileComplete ? (
               <Link href="/dash/profile"
                 className="flex items-center gap-2 px-5 py-2.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 text-sm font-bold rounded-xl transition-all shrink-0">
-                <Camera size={14} /> Complete Profile First
+                <Camera size={14} /> {t("mentorship.complete_profile_first")}
               </Link>
             ) : null
           )}
@@ -483,13 +492,13 @@ export default function MentorshipContent() {
       {user && !canBeMentor && (
         <div className="p-4 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-2xl space-y-3">
           <p className="text-sm font-black text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
-            <Award size={16} /> How to become a mentor on beoneofus
+            <Award size={16} /> {t("mentorship.how_to_title")}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
-              { icon: Camera, label: "Upload a profile photo", done: !!profile?.avatar_url },
-              { icon: FileText, label: "Fill in your bio / status", done: !!(profile?.status || profile?.bio) },
-              { icon: ShieldCheck, label: "Get verified or upgrade to Premium", done: isVerified || isPremium },
+              { icon: Camera, label: t("mentorship.check_photo"), done: !!profile?.avatar_url },
+              { icon: FileText, label: t("mentorship.check_bio"), done: !!(profile?.status || profile?.bio) },
+              { icon: ShieldCheck, label: t("mentorship.check_verified"), done: isVerified || isPremium },
             ].map(({ icon: Icon, label, done }) => (
               <div key={label} className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-bold ${done ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400"}`}>
                 {done ? <Check size={14} className="text-emerald-500 shrink-0" /> : <Icon size={14} className="shrink-0 opacity-50" />}
@@ -525,11 +534,11 @@ export default function MentorshipContent() {
         <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl">
           <Crown size={18} className="text-amber-500 shrink-0" fill="currentColor" strokeWidth={1} />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">Premium members can book mentors</p>
-            <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Upgrade to unlock 1-on-1 mentorship sessions.</p>
+            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">{t("mentorship.premium_can_book")}</p>
+            <p className="text-xs text-amber-600/70 dark:text-amber-400/70">{t("mentorship.premium_can_book_desc")}</p>
           </div>
           <Link href="/dash/premium" className="shrink-0 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold rounded-xl transition-all">
-            Upgrade
+            {t("mentorship.upgrade")}
           </Link>
         </div>
       )}
@@ -541,7 +550,7 @@ export default function MentorshipContent() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search mentors by name, skill, or topic…"
+            placeholder={t("mentorship.search_ph")}
             className="w-full pl-10 pr-4 py-2.5 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-sm"
           />
         </div>
@@ -573,19 +582,19 @@ export default function MentorshipContent() {
             <Users size={28} className="text-gray-400" />
           </div>
           <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
-            {search ? "No mentors match your search" : "No mentors yet"}
+            {search ? t("mentorship.no_mentors_search") : t("mentorship.no_mentors")}
           </p>
           <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
             {search
-              ? "Try a different skill or name."
-              : "Be the first! Members and founders can register as mentors."}
+              ? t("mentorship.search_hint")
+              : t("mentorship.empty_hint")}
           </p>
           {user && canBeMentor && !myMentor && !search && (
             <button
               onClick={() => setShowForm(true)}
               className="mt-2 flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/25 active:scale-95"
             >
-              <Plus size={15} /> Be the first mentor
+              <Plus size={15} /> {t("mentorship.be_first_mentor")}
             </button>
           )}
         </div>
@@ -598,12 +607,12 @@ export default function MentorshipContent() {
             <GraduationCap size={16} className="text-violet-600 dark:text-violet-400" />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900 dark:text-white">1-on-1 Coaching</p>
-            <p className="text-xs text-gray-500">View all your active and past sessions</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">{t("mentorship.coaching_title")}</p>
+            <p className="text-xs text-gray-500">{t("mentorship.coaching_desc")}</p>
           </div>
         </div>
         <Link href="/dash/coaching" className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
-          Open <ChevronRight size={14} />
+          {t("mentorship.open")} <ChevronRight size={14} />
         </Link>
       </div>
     </div>

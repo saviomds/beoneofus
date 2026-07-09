@@ -457,8 +457,8 @@ export default function LessonViewer() {
 
   const lessonsRef = useRef<Lesson[]>([]);
   const currentLessonRef = useRef<Lesson | null>(null);
-  lessonsRef.current = lessons;
-  currentLessonRef.current = currentLesson;
+  useEffect(() => { lessonsRef.current = lessons; }, [lessons]);
+  useEffect(() => { currentLessonRef.current = currentLesson; }, [currentLesson]);
 
   // ── Initial load ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -531,7 +531,9 @@ export default function LessonViewer() {
 
   // ── Sync completed state when lesson changes ────────────────────────────────
   useEffect(() => {
-    if (currentLesson) setIsCompleted(completedLessons.has(currentLesson.id));
+    (async () => {
+      if (currentLesson) setIsCompleted(completedLessons.has(currentLesson.id));
+    })();
   }, [currentLesson, completedLessons]);
 
   // ── Keyboard navigation ─────────────────────────────────────────────────────

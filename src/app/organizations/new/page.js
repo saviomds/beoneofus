@@ -26,7 +26,12 @@ export default function NewOrganizationPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  const [type, setType] = useState('business');
+  const [type, setType] = useState(() => {
+    if (typeof window === 'undefined') return 'business';
+    const valid = ['business', 'government', 'education', 'healthcare', 'ngo', 'community', 'other'];
+    const cat = new URLSearchParams(window.location.search).get('category');
+    return cat && valid.includes(cat) ? cat : 'business';
+  });
   const [name, setName] = useState('');
   const [tagline, setTagline] = useState('');
   const [sector, setSector] = useState('');
@@ -35,17 +40,25 @@ export default function NewOrganizationPage() {
   const [description, setDescription] = useState('');
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let settled = false;
+    const gate = (session) => {
+      if (settled) return;
+      settled = true;
       if (!session) router.replace('/auth?next=/organizations/new');
       else setChecking(false);
-    });
+    };
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => gate(session))
+      .catch(() => gate(null)); // getSession rejected → treat as signed-out
+    // Safety net: if getSession never resolves (e.g. a stale navigator.locks
+    // lock from a crashed tab), don't spin forever — fall back to the auth gate.
+    const t = setTimeout(() => gate(null), 4000);
+    return () => clearTimeout(t);
   }, [router]);
 
-  // Prefill the category chosen at business sign-up (?category=…) and clear the flag
+  // The category chosen at business sign-up (?category=…) prefills `type` via the
+  // useState initializer above; here we just clear the sign-up handoff flags.
   useEffect(() => {
-    const valid = ['business', 'government', 'education', 'healthcare', 'ngo', 'community', 'other'];
-    const cat = new URLSearchParams(window.location.search).get('category');
-    if (cat && valid.includes(cat)) setType(cat);
     try { localStorage.removeItem('pending_account_type'); localStorage.removeItem('pending_org_category'); } catch {}
   }, []);
 

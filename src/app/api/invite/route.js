@@ -1,9 +1,29 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '../../../lib/requireAuth';
+import { validate } from '../../../lib/validate';
 
 export async function POST(request) {
   try {
-    const { email, inviteLink, referralCode } = await request.json();
-    const finalLink = referralCode ? `${inviteLink}${inviteLink.includes('?') ? '&' : '?'}ref=${encodeURIComponent(referralCode)}` : inviteLink;
+    // Only signed-in members may send branded invite emails. This prevents
+    // anonymous abuse of our sending domain (spam / deliverability damage).
+    const { error: authError, status } = await requireAuth(request);
+    if (authError) return NextResponse.json({ error: authError }, { status });
+
+    const { email, referralCode } = await request.json();
+
+    if (!validate.email(email)) {
+      return NextResponse.json({ error: 'A valid recipient email is required' }, { status: 400 });
+    }
+
+    // SECURITY: the invite link is built server-side and always points at our
+    // own auth page. We never accept a caller-supplied link — doing so turned
+    // this branded email into an open phishing relay. Only a short alphanumeric
+    // referral code is honoured from the client.
+    const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.beoneofus.work';
+    const safeRef = typeof referralCode === 'string' && /^[A-Za-z0-9]{1,12}$/.test(referralCode.trim())
+      ? referralCode.trim().toUpperCase()
+      : null;
+    const finalLink = safeRef ? `${base}/auth?ref=${encodeURIComponent(safeRef)}` : `${base}/auth`;
 
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json({ error: 'Email service not configured' }, { status: 503 });

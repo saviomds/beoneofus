@@ -4,46 +4,49 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   GraduationCap, Crown, Lock, CheckCircle2, Clock, MessageSquare,
   Send, Loader2, X, Play, Sparkles, ChevronRight, Star, Calendar,
-  RefreshCw, Timer,
+  RefreshCw, Timer, Check,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
 import Link from "next/link";
 
 const TOPICS = [
-  { id: "code_review",    label: "Code Review",     desc: "Feedback on your code quality and best practices" },
-  { id: "career",         label: "Career Guidance",  desc: "Career paths, job searching, and professional growth" },
-  { id: "system_design",  label: "System Design",    desc: "Architecture, scalability, and technical design" },
-  { id: "project_help",   label: "Project Help",     desc: "Hands-on help with your current project" },
-  { id: "interview_prep", label: "Interview Prep",   desc: "Mock interviews and coding challenge preparation" },
-  { id: "mentorship",     label: "Mentorship",       desc: "Guidance and advice from experienced professionals" },
-  { id: "custom",         label: "Custom Topic",     desc: "Something else — describe in the notes field" },
+  { id: "code_review",    label: "Code Review",     labelKey: "coaching.topics.code_review",    descKey: "coaching.topic_descs.code_review" },
+  { id: "career",         label: "Career Guidance",  labelKey: "coaching.topics.career",         descKey: "coaching.topic_descs.career" },
+  { id: "system_design",  label: "System Design",    labelKey: "coaching.topics.system_design",  descKey: "coaching.topic_descs.system_design" },
+  { id: "project_help",   label: "Project Help",     labelKey: "coaching.topics.project_help",   descKey: "coaching.topic_descs.project_help" },
+  { id: "interview_prep", label: "Interview Prep",   labelKey: "coaching.topics.interview_prep", descKey: "coaching.topic_descs.interview_prep" },
+  { id: "mentorship",     label: "Mentorship",       labelKey: "coaching.topics.mentorship",     descKey: "coaching.topic_descs.mentorship" },
+  { id: "custom",         label: "Custom Topic",     labelKey: "coaching.topics.custom",         descKey: "coaching.topic_descs.custom" },
 ];
 
 const STATUS_META = {
-  pending:   { label: "Awaiting Coach",  color: "text-amber-600 dark:text-amber-400",     bg: "bg-amber-50 dark:bg-amber-500/10",       icon: Clock       },
-  accepted:  { label: "Coach Assigned",  color: "text-blue-600 dark:text-blue-400",       bg: "bg-blue-50 dark:bg-blue-500/10",         icon: CheckCircle2 },
-  active:    { label: "Session Live",    color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10",   icon: Play        },
-  completed: { label: "Completed",       color: "text-gray-500 dark:text-gray-400",       bg: "bg-gray-100 dark:bg-gray-800",           icon: CheckCircle2 },
-  cancelled: { label: "Cancelled",       color: "text-red-600 dark:text-red-400",         bg: "bg-red-50 dark:bg-red-500/10",           icon: X           },
+  pending:   { labelKey: "coaching.status_pending",   color: "text-amber-600 dark:text-amber-400",     bg: "bg-amber-50 dark:bg-amber-500/10",       icon: Clock       },
+  accepted:  { labelKey: "coaching.status_accepted",  color: "text-blue-600 dark:text-blue-400",       bg: "bg-blue-50 dark:bg-blue-500/10",         icon: CheckCircle2 },
+  active:    { labelKey: "coaching.status_active",    color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10",   icon: Play        },
+  completed: { labelKey: "coaching.status_completed", color: "text-gray-500 dark:text-gray-400",       bg: "bg-gray-100 dark:bg-gray-800",           icon: CheckCircle2 },
+  cancelled: { labelKey: "coaching.status_cancelled", color: "text-red-600 dark:text-red-400",         bg: "bg-red-50 dark:bg-red-500/10",           icon: X           },
 };
 
 function StatusBadge({ status }) {
+  const { t } = useLanguage();
   const m = STATUS_META[status] || STATUS_META.pending;
   const Icon = m.icon;
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${m.color} ${m.bg}`}>
       <Icon size={11} className={status === "pending" ? "animate-pulse" : status === "active" ? "animate-pulse" : ""} />
-      {m.label}
+      {t(m.labelKey)}
     </span>
   );
 }
 
 function ChatMessages({ messages, userId, messagesEndRef }) {
+  const { t } = useLanguage();
   return (
     <div className="h-72 overflow-y-auto p-4 space-y-3 custom-scrollbar">
       {messages.length === 0 && (
         <div className="flex items-center justify-center h-full">
-          <p className="text-xs font-medium text-gray-400 dark:text-gray-600">Session chat will appear here</p>
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-600">{t("coaching.chat_placeholder")}</p>
         </div>
       )}
       {messages.map(msg => {
@@ -70,13 +73,14 @@ function ChatMessages({ messages, userId, messagesEndRef }) {
 }
 
 function ChatInput({ value, onChange, onSend, sending }) {
+  const { t } = useLanguage();
   return (
     <div className="flex gap-2 p-3 border-t border-gray-100 dark:border-gray-800">
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-        placeholder="Type a message…"
+        placeholder={t("coaching.type_message")}
         className="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
       />
       <button
@@ -134,6 +138,7 @@ function CoachAvatar({ coach, size = "sm" }) {
 }
 
 function SessionCard({ session, onAccept, onSelect, isSelected }) {
+  const { t } = useLanguage();
   return (
     <button
       onClick={onSelect}
@@ -157,7 +162,7 @@ function SessionCard({ session, onAccept, onSelect, isSelected }) {
             onClick={e => { e.stopPropagation(); onAccept(); }}
             className="px-2.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded-lg transition-all"
           >
-            Accept
+            {t("coaching.accept")}
           </button>
         )}
         <ChevronRight size={14} className="text-gray-400" />
@@ -167,6 +172,7 @@ function SessionCard({ session, onAccept, onSelect, isSelected }) {
 }
 
 export default function CoachingContent() {
+  const { t } = useLanguage();
   const [profile, setProfile]           = useState(null);
   const [user, setUser]                 = useState(null);
   const [sessions, setSessions]         = useState([]);
@@ -219,7 +225,7 @@ export default function CoachingContent() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { (async () => { await fetchData(); })(); }, [fetchData]);
 
   const fetchMessages = useCallback(async (sessionId) => {
     if (!sessionId) return;
@@ -232,8 +238,11 @@ export default function CoachingContent() {
   }, []);
 
   useEffect(() => {
-    if (activeSession) fetchMessages(activeSession.id);
-    else setMessages([]);
+    const sid = activeSession?.id;
+    (async () => {
+      if (sid) await fetchMessages(sid);
+      else setMessages([]);
+    })();
   }, [activeSession?.id, fetchMessages]);
 
   useEffect(() => {
@@ -252,12 +261,13 @@ export default function CoachingContent() {
 
   /* Realtime: messages for active session */
   useEffect(() => {
-    if (!activeSession) return;
+    const sid = activeSession?.id;
+    if (!sid) return;
     const ch = supabase
-      .channel(`coaching-msgs-${activeSession.id}`)
+      .channel(`coaching-msgs-${sid}`)
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "coaching_messages",
-        filter: `session_id=eq.${activeSession.id}`,
+        filter: `session_id=eq.${sid}`,
       }, async (payload) => {
         const { data } = await supabase
           .from("coaching_messages")
@@ -302,10 +312,14 @@ export default function CoachingContent() {
           content: `booked a mentorship session with you. /dash/coaching`,
         });
       }
+      const { data: { session: authSession } } = await supabase.auth.getSession();
       await fetch("/api/coaching/request", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: data.id, userId: user.id, topic: topicLabel }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(authSession ? { Authorization: `Bearer ${authSession.access_token}` } : {}),
+        },
+        body: JSON.stringify({ topic: topicLabel }),
       });
     } catch (err) {
       console.error(err);
@@ -367,14 +381,14 @@ export default function CoachingContent() {
         <Lock size={24} className="text-violet-500" />
       </div>
       <div>
-        <h2 className="text-lg font-black text-gray-900 dark:text-white mb-1">Premium Feature</h2>
+        <h2 className="text-lg font-black text-gray-900 dark:text-white mb-1">{t("coaching.premium_feature")}</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-xs">
-          1-on-1 coaching is exclusive to Premium members. Book private sessions with senior engineers.
+          {t("coaching.premium_gate_desc")}
         </p>
       </div>
       <Link href="/dash/premium" className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-amber-500/25">
         <Crown size={14} fill="currentColor" strokeWidth={1.5} stroke="white" />
-        Upgrade to Premium
+        {t("coaching.upgrade")}
       </Link>
     </div>
   );
@@ -389,17 +403,17 @@ export default function CoachingContent() {
       <div className="max-w-2xl mx-auto space-y-5 animate-in fade-in duration-300">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-            <GraduationCap size={22} className="text-violet-500" /> Coaching Sessions
+            <GraduationCap size={22} className="text-violet-500" /> {t("coaching.admin_title")}
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage member coaching requests in real-time</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t("coaching.admin_subtitle")}</p>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Pending",   value: pending.length,                           color: "text-amber-600 dark:text-amber-400"   },
-            { label: "Active",    value: open.length,                              color: "text-emerald-600 dark:text-emerald-400" },
-            { label: "Completed", value: sessions.filter(s => s.status === "completed").length, color: "text-gray-500 dark:text-gray-400" },
+            { label: t("coaching.stat_pending"),   value: pending.length,                           color: "text-amber-600 dark:text-amber-400"   },
+            { label: t("coaching.stat_active"),    value: open.length,                              color: "text-emerald-600 dark:text-emerald-400" },
+            { label: t("coaching.stat_completed"), value: sessions.filter(s => s.status === "completed").length, color: "text-gray-500 dark:text-gray-400" },
           ].map(s => (
             <div key={s.label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-center shadow-sm">
               <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
@@ -413,7 +427,7 @@ export default function CoachingContent() {
           <div className="space-y-3">
             {pending.length > 0 && (
               <div>
-                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Pending ({pending.length})</p>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t("coaching.pending_count",{n:pending.length})}</p>
                 <div className="space-y-2">
                   {pending.map(s => (
                     <SessionCard key={s.id} session={s} isSelected={activeSession?.id === s.id}
@@ -425,7 +439,7 @@ export default function CoachingContent() {
             )}
             {open.length > 0 && (
               <div>
-                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Active ({open.length})</p>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t("coaching.active_count",{n:open.length})}</p>
                 <div className="space-y-2">
                   {open.map(s => (
                     <SessionCard key={s.id} session={s} isSelected={activeSession?.id === s.id}
@@ -436,7 +450,7 @@ export default function CoachingContent() {
             )}
             {past.length > 0 && (
               <div>
-                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Recent Past</p>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t("coaching.recent_past")}</p>
                 <div className="space-y-2">
                   {past.map(s => (
                     <SessionCard key={s.id} session={s} isSelected={activeSession?.id === s.id}
@@ -448,7 +462,7 @@ export default function CoachingContent() {
             {sessions.length === 0 && (
               <div className="text-center py-10 text-gray-400 dark:text-gray-600">
                 <GraduationCap size={28} className="mx-auto mb-2 opacity-40" />
-                <p className="text-xs font-medium">No coaching requests yet</p>
+                <p className="text-xs font-medium">{t("coaching.no_requests")}</p>
               </div>
             )}
           </div>
@@ -472,13 +486,13 @@ export default function CoachingContent() {
                   {activeSession.status === "accepted" && (
                     <button onClick={() => handleAdminAction(activeSession.id, "start")}
                       className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold rounded-lg transition-all">
-                      Start
+                      {t("coaching.start")}
                     </button>
                   )}
                   {activeSession.status === "active" && (
                     <button onClick={() => handleAdminAction(activeSession.id, "end")}
                       className="px-2.5 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-lg transition-all">
-                      End
+                      {t("coaching.end")}
                     </button>
                   )}
                 </div>
@@ -494,7 +508,7 @@ export default function CoachingContent() {
             <div className="bg-gray-50 dark:bg-gray-800/40 border border-dashed border-gray-200 dark:border-gray-700 rounded-2xl flex items-center justify-center h-64">
               <div className="text-center text-gray-400 dark:text-gray-600">
                 <MessageSquare size={24} className="mx-auto mb-2 opacity-40" />
-                <p className="text-xs font-medium">Select a session to view chat</p>
+                <p className="text-xs font-medium">{t("coaching.select_session")}</p>
               </div>
             </div>
           )}
@@ -518,8 +532,8 @@ export default function CoachingContent() {
             <GraduationCap size={22} className="text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-gray-900 dark:text-white">1-on-1 Coaching</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Private session with a senior engineer</p>
+            <h1 className="text-xl font-black text-gray-900 dark:text-white">{t("coaching.coaching_1on1")}</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">{t("coaching.coaching_1on1_desc")}</p>
           </div>
         </div>
       </div>
@@ -545,20 +559,20 @@ export default function CoachingContent() {
             <div className="flex items-center gap-2 mt-2">
               <CoachAvatar coach={mySession.coach} size="sm" />
               <div>
-                <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Coach: @{mySession.coach.username}</p>
+                <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{t("coaching.coach_prefix")} @{mySession.coach.username}</p>
               </div>
             </div>
           )}
           {mySession.scheduled_at && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
               <Calendar size={10} />
-              Preferred: {new Date(mySession.scheduled_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+              {t("coaching.preferred_prefix")} {new Date(mySession.scheduled_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
             </p>
           )}
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            {mySession.status === "pending"  && "Your request is in the queue. A coach will accept it shortly."}
-            {mySession.status === "accepted" && "A coach has been assigned! They'll start the session soon."}
-            {mySession.status === "active"   && "Your session is live — chat below."}
+            {mySession.status === "pending"  && t("coaching.msg_pending")}
+            {mySession.status === "accepted" && t("coaching.msg_accepted")}
+            {mySession.status === "active"   && t("coaching.msg_active")}
           </p>
         </div>
       )}
@@ -569,7 +583,7 @@ export default function CoachingContent() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Private Coaching Channel — Real-time</p>
+              <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{t("coaching.private_channel")}</p>
             </div>
             {mySession.coach && (
               <div className="flex items-center gap-1.5">
@@ -588,25 +602,25 @@ export default function CoachingContent() {
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
           <h3 className="font-black text-gray-900 dark:text-white mb-1 flex items-center gap-2">
             <Sparkles size={15} className="text-violet-500" />
-            Book a Session
+            {t("coaching.book_session")}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
-            Choose a topic and we'll match you with a senior engineer. Sessions are private and recorded only for you.
+            {t("coaching.form_desc")}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-            {TOPICS.map(t => (
+            {TOPICS.map(tp => (
               <button
-                key={t.id}
-                onClick={() => setTopic(t.id)}
+                key={tp.id}
+                onClick={() => setTopic(tp.id)}
                 className={`text-left p-3 rounded-xl border transition-all ${
-                  topic === t.id
+                  topic === tp.id
                     ? "border-violet-400 dark:border-violet-500 bg-violet-50 dark:bg-violet-500/10"
                     : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
-                <p className="text-sm font-bold text-gray-900 dark:text-white">{t.label}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{t.desc}</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">{t(tp.labelKey)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{t(tp.descKey)}</p>
               </button>
             ))}
           </div>
@@ -615,11 +629,11 @@ export default function CoachingContent() {
           {topic === "mentorship" && (
             <div className="mb-4 space-y-2">
               <p className="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-                <GraduationCap size={11} /> Choose a Mentor <span className="font-normal opacity-60">(optional)</span>
+                <GraduationCap size={11} /> {t("coaching.choose_mentor")} <span className="font-normal opacity-60">{t("coaching.optional")}</span>
               </p>
               {mentors.length === 0 ? (
                 <p className="text-xs text-gray-400 py-3 text-center border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
-                  No mentors registered yet.
+                  {t("coaching.no_mentors_registered")}
                 </p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
@@ -650,7 +664,7 @@ export default function CoachingContent() {
               )}
               {selectedMentor && (
                 <p className="text-[11px] font-bold text-violet-600 dark:text-violet-400">
-                  Selected: @{selectedMentor.profiles?.username}
+                  {t("coaching.selected_prefix")} @{selectedMentor.profiles?.username}
                 </p>
               )}
             </div>
@@ -658,7 +672,7 @@ export default function CoachingContent() {
 
           <div className="mb-4">
             <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
-              <Calendar size={11} /> Preferred Time <span className="font-normal opacity-60">(optional)</span>
+              <Calendar size={11} /> {t("coaching.preferred_time")} <span className="font-normal opacity-60">{t("coaching.optional")}</span>
             </label>
             <input
               type="datetime-local"
@@ -672,7 +686,7 @@ export default function CoachingContent() {
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="Any additional context? (optional)"
+            placeholder={t("coaching.notes_placeholder")}
             rows={3}
             className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500/30 mb-4"
           />
@@ -683,7 +697,7 @@ export default function CoachingContent() {
             className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 active:scale-[0.98] text-white font-black py-3.5 rounded-xl transition-all shadow-lg shadow-violet-500/25 text-sm"
           >
             {requesting ? <Loader2 size={16} className="animate-spin" /> : <GraduationCap size={16} />}
-            {requesting ? "Requesting…" : "Request Coaching Session"}
+            {requesting ? t("coaching.requesting") : t("coaching.request_session")}
           </button>
         </div>
       )}
@@ -691,7 +705,7 @@ export default function CoachingContent() {
       {/* Past sessions */}
       {pastMine.length > 0 && (
         <div>
-          <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Past Sessions</p>
+          <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">{t("coaching.past_sessions")}</p>
           <div className="space-y-2">
             {pastMine.map(s => {
               const duration = formatDuration(s.started_at, s.ended_at);
@@ -711,7 +725,7 @@ export default function CoachingContent() {
                         )}
                         {s.coach && (
                           <span className="text-xs text-gray-400 dark:text-gray-600">
-                            Coach: @{s.coach.username}
+                            {t("coaching.coach_prefix")} @{s.coach.username}
                           </span>
                         )}
                       </div>
@@ -723,11 +737,11 @@ export default function CoachingContent() {
                       {currentRating > 0 ? (
                         <div className="flex items-center gap-2">
                           <StarRating value={currentRating} readonly />
-                          <span className="text-xs text-gray-400">{currentRating}/5</span>
+                          <span className="text-xs text-gray-400">{t("coaching.rating_out_of",{n:currentRating})}</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-3">
-                          <p className="text-xs text-gray-400 dark:text-gray-600">Rate this session:</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-600">{t("coaching.rate_session")}</p>
                           <StarRating
                             value={0}
                             onChange={rating => handleRateSession(s.id, rating)}

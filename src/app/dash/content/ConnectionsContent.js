@@ -6,8 +6,10 @@ import { Search, UserPlus, X, Loader2, Compass, Users, CheckCircle2, Grid, List,
 import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
 import ProfileContent from "./ProfileContent";
+import { useLanguage } from '../../../lib/i18n';
 
 export default function ConnectionsContent() {
+  const { t } = useLanguage();
   const [currentUserId, setCurrentUserId] = useState(null);
   const [users, setUsers] = useState([]);
   const [connections, setConnections] = useState([]);
@@ -119,8 +121,8 @@ export default function ConnectionsContent() {
       {/* Header & Tabs */}
       <div className="flex flex-col gap-4 mb-6 px-2 shrink-0">
         <div>
-          <h2 className="text-3xl font-black tracking-tighter text-gray-900 dark:text-gray-100">Network</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Discover developers and manage your connections.</p>
+          <h2 className="text-3xl font-black tracking-tighter text-gray-900 dark:text-gray-100">{t('connections.title')}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">{t('connections.subtitle')}</p>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -130,13 +132,13 @@ export default function ConnectionsContent() {
                 onClick={() => setActiveTab('discover')}
                 className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'discover' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
               >
-                <Compass size={16} /> Discover
+                <Compass size={16} /> {t('connections.discover_tab')}
               </button>
               <button 
                 onClick={() => setActiveTab('connected')}
                 className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-2 py-2.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'connected' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
               >
-                <Users size={16} /> My Connections
+                <Users size={16} /> {t('connections.my_connections_tab')}
               </button>
             </div>
 
@@ -147,18 +149,18 @@ export default function ConnectionsContent() {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full appearance-none bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-3 pr-8 text-xs sm:text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm font-bold cursor-pointer"
                 >
-                  <option value="all">All Nodes</option>
-                  <option value="Open to work">Ready to Deploy</option>
-                  <option value="Hiring">Scaling Team</option>
+                  <option value="all">{t('connections.all_nodes')}</option>
+                  <option value="Open to work">{t('connections.ready_deploy')}</option>
+                  <option value="Hiring">{t('connections.scaling_team')}</option>
                 </select>
                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
               </div>
 
               <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl shrink-0">
-                <button onClick={() => setViewMode('grid')} className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`} title="Grid View">
+                <button onClick={() => setViewMode('grid')} className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`} title={t('connections.grid_view')}>
                   <Grid size={16} />
                 </button>
-                <button onClick={() => setViewMode('list')} className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`} title="List View">
+                <button onClick={() => setViewMode('list')} className={`p-1.5 sm:p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`} title={t('connections.list_view')}>
                   <List size={16} />
                 </button>
               </div>
@@ -169,7 +171,7 @@ export default function ConnectionsContent() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={16} />
             <input 
               type="text" 
-              placeholder="Search developers..." 
+              placeholder={t('connections.search_developers')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
@@ -207,8 +209,8 @@ export default function ConnectionsContent() {
         ) : filteredUsers.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
             <Compass size={48} className="mb-4 opacity-20" />
-            <p className="font-bold">No connections found</p>
-            <p className="text-sm">Try adjusting your filters or search query.</p>
+            <p className="font-bold">{t('connections.no_connections')}</p>
+            <p className="text-sm">{t('connections.no_connections_hint')}</p>
           </div>
         ) : (
           <div className={viewMode === 'grid' ? "grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 max-w-7xl mx-auto" : "space-y-3 max-w-4xl mx-auto"}>
@@ -252,7 +254,7 @@ export default function ConnectionsContent() {
                           ? 'bg-green-500 border-green-600 text-white hover:bg-red-500 hover:border-red-600'
                           : 'bg-white/80 dark:bg-gray-900/70 border-white/40 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-white dark:hover:bg-gray-800'
                       }`}
-                      title={isFollowing ? "Unfollow" : "Follow"}
+                      title={isFollowing ? t('connections.unfollow') : t('connections.follow')}
                     >
                       {processingId === user.id
                         ? <Loader2 size={16} className="animate-spin" />
@@ -267,7 +269,7 @@ export default function ConnectionsContent() {
                         {user.is_verified && <VerifiedBadge size={16} className="shrink-0" />}
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-medium truncate mt-0.5">
-                        {user.status || 'Active Node'}
+                        {user.status || t('connections.active_node')}
                       </p>
                     </div>
                     {user.work_status && user.work_status !== 'Not looking' && (
@@ -294,7 +296,7 @@ export default function ConnectionsContent() {
                       {user.is_verified && <VerifiedBadge size={14} />}
                     </h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                      {user.status || 'Active Node'}
+                      {user.status || t('connections.active_node')}
                     </p>
                     {user.work_status && user.work_status !== 'Not looking' && (
                       <div className={`mt-2 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${workStatusColor} max-w-full`}>
@@ -311,7 +313,7 @@ export default function ConnectionsContent() {
                         ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800 hover:text-red-600'
                         : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 hover:text-blue-600 dark:hover:text-blue-400'
                     }`}
-                    title={isFollowing ? "Unfollow" : "Follow"}
+                    title={isFollowing ? t('connections.unfollow') : t('connections.follow')}
                   >
                     {processingId === user.id
                       ? <Loader2 size={16} className="animate-spin" />

@@ -120,7 +120,7 @@ export default function FoundersStartupsCommunity() {
                 </div>
                 <h1 className="text-4xl sm:text-6xl font-black tracking-tight mb-4 leading-tight">Founders &<br />Startups</h1>
                 <p className="text-emerald-100 text-lg sm:text-xl max-w-2xl leading-relaxed">
-                  The go-to community for builders who ship. Get honest feedback on your idea, find co-founders, navigate fundraising, and connect with those who've done it before.
+                  The go-to community for builders who ship. Get honest feedback on your idea, find co-founders, navigate fundraising, and connect with those who&apos;ve done it before.
                 </p>
                 <div className="flex flex-wrap gap-3 mt-8">
                   <Link href="/dash/more?tool=community" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-emerald-700 font-bold rounded-xl hover:bg-emerald-50 transition-colors text-sm shadow-lg shadow-emerald-900/20"><MessageSquare size={16} /> Enter Community Hub</Link>

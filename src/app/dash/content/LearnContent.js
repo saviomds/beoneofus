@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
 import {
   Search, X, Bookmark, BookmarkCheck, Play,
   Clock, Code2, Briefcase, Palette, Brain,
@@ -29,15 +32,20 @@ const SEED_CONTENT = [
 ];
 
 const TOPICS = [
-  { id:"all",      label:"All",      icon:Sparkles,   color:"blue"    },
-  { id:"coding",   label:"Coding",   icon:Code2,      color:"violet"  },
-  { id:"ai",       label:"AI / ML",  icon:Brain,      color:"pink"    },
-  { id:"webdev",   label:"Web Dev",  icon:Globe,      color:"cyan"    },
-  { id:"design",   label:"Design",   icon:Palette,    color:"rose"    },
-  { id:"business", label:"Business", icon:Briefcase,  color:"amber"   },
-  { id:"career",   label:"Career",   icon:TrendingUp, color:"emerald" },
-  { id:"devops",   label:"DevOps",   icon:Terminal,   color:"gray"    },
+  { id:"all",      labelKey:"learn.topics.all",      icon:Sparkles,   color:"blue"    },
+  { id:"coding",   labelKey:"learn.topics.coding",   icon:Code2,      color:"violet"  },
+  { id:"ai",       labelKey:"learn.topics.ai",       icon:Brain,      color:"pink"    },
+  { id:"webdev",   labelKey:"learn.topics.webdev",   icon:Globe,      color:"cyan"    },
+  { id:"design",   labelKey:"learn.topics.design",   icon:Palette,    color:"rose"    },
+  { id:"business", labelKey:"learn.topics.business", icon:Briefcase,  color:"amber"   },
+  { id:"career",   labelKey:"learn.topics.career",   icon:TrendingUp, color:"emerald" },
+  { id:"devops",   labelKey:"learn.topics.devops",   icon:Terminal,   color:"gray"    },
 ];
+
+function levelLabel(level, t) {
+  if (!level) return "";
+  return t(`learn.level_${String(level).toLowerCase()}`);
+}
 
 const TOPIC_COLORS = {
   blue:    "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50",
@@ -67,16 +75,16 @@ const LEVEL_COLORS = {
 };
 
 const LAYOUTS = [
-  { id:"grid",     icon:LayoutGrid, label:"Grid"     },
-  { id:"list",     icon:List,       label:"List"     },
-  { id:"magazine", icon:Rows,       label:"Magazine" },
+  { id:"grid",     icon:LayoutGrid, labelKey:"learn.layout_grid"     },
+  { id:"list",     icon:List,       labelKey:"learn.layout_list"     },
+  { id:"magazine", icon:Rows,       labelKey:"learn.layout_magazine" },
 ];
 
 const SORT_OPTIONS = [
-  { id:"newest",  label:"Newest",    icon:Clock      },
-  { id:"popular", label:"Popular",   icon:TrendingUp },
-  { id:"az",      label:"A → Z",     icon:ArrowUpDown},
-  { id:"watched", label:"Unwatched", icon:Eye        },
+  { id:"newest",  labelKey:"learn.sort_newest",    icon:Clock      },
+  { id:"popular", labelKey:"learn.sort_popular",   icon:TrendingUp },
+  { id:"az",      labelKey:"learn.sort_az",        icon:ArrowUpDown},
+  { id:"watched", labelKey:"learn.sort_unwatched", icon:Eye        },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -120,6 +128,7 @@ function useLocalState(key, fallback) {
 
 // ── StatsBar ──────────────────────────────────────────────────────────────────
 function StatsBar({ allContent, watched, bookmarks }) {
+  const { t } = useLanguage();
   const totalVideos  = allContent.filter(i => i.type === "video").length;
   const watchedCount = watched.length;
   const pct = totalVideos > 0 ? Math.round((watchedCount / totalVideos) * 100) : 0;
@@ -131,10 +140,10 @@ function StatsBar({ allContent, watched, bookmarks }) {
     }, 0);
 
   const stats = [
-    { label:"Resources",    value:allContent.length,     icon:Layers,   color:"violet", sub:"total"          },
-    { label:"Watched",      value:watchedCount,           icon:Eye,      color:"emerald",sub:`${pct}% done`   },
-    { label:"Saved",        value:bookmarks.length,       icon:Bookmark, color:"amber",  sub:"bookmarked"     },
-    { label:"Mins Learned", value:Math.round(totalMins), icon:Clock,    color:"blue",   sub:"time invested"  },
+    { label:"Resources",    value:allContent.length,     icon:Layers,   color:"violet", sub:t("learn.stat_total")                },
+    { label:"Watched",      value:watchedCount,           icon:Eye,      color:"emerald",sub:t("learn.stat_pct_done",{pct})       },
+    { label:"Saved",        value:bookmarks.length,       icon:Bookmark, color:"amber",  sub:t("learn.stat_bookmarked")           },
+    { label:"Mins Learned", value:Math.round(totalMins), icon:Clock,    color:"blue",   sub:t("learn.stat_time_invested")        },
   ];
 
   return (
@@ -156,6 +165,7 @@ function StatsBar({ allContent, watched, bookmarks }) {
 
 // ── CommentsPanel ─────────────────────────────────────────────────────────────
 function CommentsPanel({ itemId, userProfile }) {
+  const { t } = useLanguage();
   const [comments,    setComments]  = useLocalState(`learn_comments_${itemId}`, []);
   const [commentText, setComment]   = useState("");
   const [editingId,   setEditingId] = useState(null);
@@ -185,18 +195,18 @@ function CommentsPanel({ itemId, userProfile }) {
         {comments.length === 0 && (
           <div className="text-center py-10">
             <MessageCircle size={24} className="text-gray-700 mx-auto mb-2"/>
-            <p className="text-gray-600 text-xs">No comments yet. Start the conversation.</p>
+            <p className="text-gray-600 text-xs">{t("learn.comments_empty")}</p>
           </div>
         )}
         {comments.map(c => (
           <div key={c.id} className="group flex items-start gap-2.5">
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shrink-0 text-[11px] font-black text-white overflow-hidden">
-              {c.avatar ? <img src={c.avatar} alt="" className="w-full h-full object-cover"/> : (c.username[0]||"U").toUpperCase()}
+              {c.avatar ? <Image src={c.avatar} alt="" width={28} height={28} unoptimized className="w-full h-full object-cover"/> : (c.username[0]||"U").toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                 <span className="text-[11px] font-bold text-gray-200">{c.username}</span>
-                {c.edited && <span className="text-[9px] text-gray-600">(edited)</span>}
+                {c.edited && <span className="text-[9px] text-gray-600">{t("learn.edited")}</span>}
                 <span className="text-[9px] text-gray-600">{formatTimeAgo(c.timestamp)}</span>
               </div>
               {editingId===c.id ? (
@@ -212,7 +222,7 @@ function CommentsPanel({ itemId, userProfile }) {
               )}
               <button onClick={()=>toggleLike(c.id)}
                 className={`flex items-center gap-1 mt-1 text-[10px] font-bold transition-colors ${likes[c.id]?"text-pink-400":"text-gray-600 hover:text-gray-400"}`}>
-                <Heart size={9} className={likes[c.id]?"fill-pink-400":""}/> {likes[c.id]?"Liked":"Like"}
+                <Heart size={9} className={likes[c.id]?"fill-pink-400":""}/> {likes[c.id]?t("learn.liked"):t("learn.like")}
               </button>
             </div>
             {userProfile?.id===c.userId && editingId!==c.id && (
@@ -230,7 +240,7 @@ function CommentsPanel({ itemId, userProfile }) {
           <div className="flex items-center gap-2">
             <input value={commentText} onChange={e=>setComment(e.target.value)}
               onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();addComment();}}}
-              placeholder="Add a comment…"
+              placeholder={t("learn.add_comment_ph")}
               className="flex-1 text-xs bg-white/10 border border-white/10 rounded-xl px-3 py-2.5 text-white placeholder-gray-600 outline-none focus:border-blue-500/40 transition-colors"/>
             <button onClick={addComment} disabled={!commentText.trim()}
               className="p-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 text-white rounded-xl transition-colors">
@@ -238,7 +248,7 @@ function CommentsPanel({ itemId, userProfile }) {
             </button>
           </div>
         ) : (
-          <p className="text-xs text-gray-600 text-center py-1">Sign in to comment.</p>
+          <p className="text-xs text-gray-600 text-center py-1">{t("learn.signin_comment")}</p>
         )}
       </div>
     </>
@@ -247,11 +257,12 @@ function CommentsPanel({ itemId, userProfile }) {
 
 // ── WatchlistPanel ────────────────────────────────────────────────────────────
 function WatchlistPanel({ queue, allContent, onRemove, onOpen }) {
+  const { t } = useLanguage();
   const items = queue.map(id => allContent.find(i => i.id===id)).filter(Boolean);
   if (items.length===0) return (
     <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
       <ListVideo size={28} className="text-gray-700 mb-3"/>
-      <p className="text-xs text-gray-500 font-medium">Your watch queue is empty.</p>
+      <p className="text-xs text-gray-500 font-medium">{t("learn.queue_empty")}</p>
     </div>
   );
   return (
@@ -262,7 +273,7 @@ function WatchlistPanel({ queue, allContent, onRemove, onOpen }) {
           <div key={item.id} className="flex items-center gap-2.5 group p-2 rounded-xl hover:bg-white/5 transition-colors">
             <span className="text-[10px] font-black text-gray-600 w-4 shrink-0">{idx+1}</span>
             <div className="relative w-20 h-12 rounded-lg overflow-hidden shrink-0 bg-gray-800">
-              {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center"><Video size={12} className="text-gray-600"/></div>}
+              {thumb ? <Image src={thumb} alt="" fill unoptimized className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center"><Video size={12} className="text-gray-600"/></div>}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-bold text-gray-300 line-clamp-2 leading-snug">{item.title}</p>
@@ -281,6 +292,7 @@ function WatchlistPanel({ queue, allContent, onRemove, onOpen }) {
 
 // ── VideoModal ────────────────────────────────────────────────────────────────
 function VideoModal({ initialItem, allContent, onClose, onBookmark, getBookmarked, userProfile, getWatched, onWatch, queue, onQueueToggle }) {
+  const { t } = useLanguage();
   const [current,   setCurrent]  = useState(initialItem);
   const [rightTab,  setRightTab] = useState("upnext");
   const [mobileTab, setMobileTab]= useState("video");
@@ -317,26 +329,26 @@ function VideoModal({ initialItem, allContent, onClose, onBookmark, getBookmarke
     : `https://www.youtube.com/embed/${current.youtube_id}?autoplay=1&rel=0`;
   const topic = topicConfig(current.topic);
 
-  const MiniCard = ({item})=>{
-    const t=topicConfig(item.topic); const thumb=item.platform==="youtube"?ytThumb(item.youtube_id):null; const isW=getWatched(item.id); const isCurr=item.id===current.id;
+  const MiniCard = (item)=>{
+    const tc=topicConfig(item.topic); const thumb=item.platform==="youtube"?ytThumb(item.youtube_id):null; const isW=getWatched(item.id); const isCurr=item.id===current.id;
     return (
-      <button onClick={()=>{setCurrent(item);setMobileTab("video");}} className={`w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-colors text-left group ${isCurr?"bg-white/8 ring-1 ring-blue-500/30":""}`}>
+      <button key={item.id} onClick={()=>{setCurrent(item);setMobileTab("video");}} className={`w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-colors text-left group ${isCurr?"bg-white/8 ring-1 ring-blue-500/30":""}`}>
         <div className="relative w-28 h-16 rounded-lg overflow-hidden shrink-0 bg-gray-800">
-          {thumb?<img src={thumb} alt="" className="w-full h-full object-cover"/>:<div className="w-full h-full flex items-center justify-center"><Video size={16} className="text-gray-600"/></div>}
+          {thumb?<Image src={thumb} alt="" fill unoptimized className="w-full h-full object-cover"/>:<div className="w-full h-full flex items-center justify-center"><Video size={16} className="text-gray-600"/></div>}
           {isW&&<div className="absolute inset-0 bg-black/50 flex items-center justify-center"><CheckCircle2 size={14} className="text-emerald-400"/></div>}
           {item.duration&&<span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-bold px-1 py-0.5 rounded">{item.duration}</span>}
         </div>
         <div className="flex-1 min-w-0 pt-0.5">
           <p className="text-xs font-bold text-gray-200 line-clamp-2 leading-snug group-hover:text-white">{item.title}</p>
           <p className="text-[10px] text-gray-500 mt-1">{item.author}</p>
-          <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-1 border ${TOPIC_COLORS[t.color]}`}>{t.label}</span>
+          <span className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded-full mt-1 border ${TOPIC_COLORS[tc.color]}`}>{t(tc.labelKey)}</span>
         </div>
       </button>
     );
   };
 
-  const RTABS=[{id:"upnext",label:"Up Next",icon:ListVideo},{id:"comments",label:"Comments",icon:MessageCircle},{id:"queue",label:"Queue",icon:Bookmark}];
-  const RightPanel=({mobile=false})=>{
+  const RTABS=[{id:"upnext",label:t("learn.tab_up_next"),icon:ListVideo},{id:"comments",label:t("learn.tab_comments"),icon:MessageCircle},{id:"queue",label:t("learn.tab_queue"),icon:Bookmark}];
+  const RightPanel=(mobile=false)=>{
     const active=mobile?mobileTab:rightTab; const setTab=mobile?setMobileTab:setRightTab;
     return (
       <>
@@ -348,34 +360,34 @@ function VideoModal({ initialItem, allContent, onClose, onBookmark, getBookmarke
           ))}
         </div>
         {active==="upnext"
-          ?<div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-0">{upNext.length===0?<p className="text-gray-600 text-xs text-center py-8">No more videos.</p>:upNext.map(v=><MiniCard key={v.id} item={v}/>)}</div>
+          ?<div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-0">{upNext.length===0?<p className="text-gray-600 text-xs text-center py-8">{t("learn.no_more_videos")}</p>:upNext.map(v=>MiniCard(v))}</div>
           :active==="comments"?<CommentsPanel itemId={current.id} userProfile={userProfile}/>
           :<WatchlistPanel queue={queue} allContent={allContent} onRemove={onQueueToggle} onOpen={item=>{setCurrent(item);if(mobile)setMobileTab("video");}}/>}
       </>
     );
   };
 
-  const MetaStrip=({compact=false})=>(
+  const MetaStrip=(compact=false)=>(
     <div className={`${compact?"p-4":"p-5 border-t border-white/10"} shrink-0`}>
       <div className="flex items-start justify-between gap-3 mb-2">
         <h2 className={`text-white font-black leading-snug ${compact?"text-sm":"text-base"}`}>{current.title}</h2>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${LEVEL_COLORS[current.level]}`}>{current.level}</span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${LEVEL_COLORS[current.level]}`}>{levelLabel(current.level, t)}</span>
       </div>
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}><topic.icon size={9}/> {topic.label}</span>
+        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}><topic.icon size={9}/> {t(topic.labelKey)}</span>
         <span className="text-gray-500 text-xs">{current.author}</span>
         {current.duration&&<span className="flex items-center gap-1 text-gray-600 text-xs"><Clock size={10}/>{current.duration}</span>}
-        {isWatched&&<span className="flex items-center gap-1 text-[10px] font-bold text-emerald-500"><CheckCircle2 size={10}/> Watched</span>}
+        {isWatched&&<span className="flex items-center gap-1 text-[10px] font-bold text-emerald-500"><CheckCircle2 size={10}/> {t("learn.watched_badge")}</span>}
       </div>
       <div className="flex items-center gap-2">
         <button onClick={()=>setLiked(l=>!l)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${liked?"bg-pink-500/20 border-pink-500/40 text-pink-400":"bg-white/5 border-white/10 text-gray-400 hover:text-white"}`}>
-          <ThumbsUp size={12} className={liked?"fill-pink-400":""}/> {liked?"Liked":"Like"}
+          <ThumbsUp size={12} className={liked?"fill-pink-400":""}/> {liked?t("learn.liked"):t("learn.like")}
         </button>
         <button onClick={()=>onQueueToggle(current.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${isQueued?"bg-blue-500/20 border-blue-500/40 text-blue-400":"bg-white/5 border-white/10 text-gray-400 hover:text-white"}`}>
-          <Plus size={12}/> {isQueued?"In Queue":"Queue"}
+          <Plus size={12}/> {isQueued?t("learn.in_queue"):t("learn.queue_btn")}
         </button>
         <button onClick={()=>onWatch(current.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${isWatched?"bg-emerald-500/20 border-emerald-500/40 text-emerald-400":"bg-white/5 border-white/10 text-gray-400 hover:text-white"}`}>
-          {isWatched?<EyeOff size={12}/>:<Eye size={12}/>} {isWatched?"Unwatch":"Watched"}
+          {isWatched?<EyeOff size={12}/>:<Eye size={12}/>} {isWatched?t("learn.unwatch"):t("learn.watched_action")}
         </button>
       </div>
       {!compact&&current.description&&<p className="text-gray-500 text-sm leading-relaxed mt-3">{current.description}</p>}
@@ -388,7 +400,7 @@ function VideoModal({ initialItem, allContent, onClose, onBookmark, getBookmarke
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors shrink-0"><X size={18}/></button>
           <p className="text-sm font-bold text-white truncate">{current.title}</p>
-          <span className="hidden sm:block text-[10px] text-gray-600 border border-gray-800 px-2 py-0.5 rounded-full">Esc</span>
+          <span className="hidden sm:block text-[10px] text-gray-600 border border-gray-800 px-2 py-0.5 rounded-full">{t("learn.esc")}</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-3">
           <button onClick={()=>onWatch(current.id)} className={`p-2 rounded-xl hover:bg-white/10 transition-colors ${isWatched?"text-emerald-400":"text-gray-400 hover:text-white"}`}>
@@ -398,14 +410,14 @@ function VideoModal({ initialItem, allContent, onClose, onBookmark, getBookmarke
             {getBookmarked(current.id)?<BookmarkCheck size={17} className="text-amber-400 fill-amber-400"/>:<Bookmark size={17} className="text-gray-400 hover:text-white"/>}
           </button>
           <button onClick={share} className="flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors text-xs font-bold">
-            {copied?<Check size={14} className="text-emerald-400"/>:<Share2 size={14}/>} {copied?"Copied!":"Share"}
+            {copied?<Check size={14} className="text-emerald-400"/>:<Share2 size={14}/>} {copied?t("learn.copied"):t("learn.share")}
           </button>
         </div>
       </div>
       {isMobile&&(
         <div className="flex shrink-0 border-b border-white/10 bg-black">
-          {[{id:"video",label:"Video"},{id:"upnext",label:"Up Next"},{id:"comments",label:"Comments"},{id:"queue",label:"Queue"}].map(t=>(
-            <button key={t.id} onClick={()=>setMobileTab(t.id)} className={`flex-1 py-2.5 text-[11px] font-bold transition-colors ${mobileTab===t.id?"text-white border-b-2 border-blue-500":"text-gray-500 hover:text-gray-300"}`}>{t.label}</button>
+          {[{id:"video",label:t("learn.tab_video")},{id:"upnext",label:t("learn.tab_up_next")},{id:"comments",label:t("learn.tab_comments")},{id:"queue",label:t("learn.tab_queue")}].map(tab=>(
+            <button key={tab.id} onClick={()=>setMobileTab(tab.id)} className={`flex-1 py-2.5 text-[11px] font-bold transition-colors ${mobileTab===tab.id?"text-white border-b-2 border-blue-500":"text-gray-500 hover:text-gray-300"}`}>{tab.label}</button>
           ))}
         </div>
       )}
@@ -415,9 +427,9 @@ function VideoModal({ initialItem, allContent, onClose, onBookmark, getBookmarke
             <div className="relative w-full bg-black shrink-0" style={{paddingBottom:"56.25%"}}>
               <iframe className="absolute inset-0 w-full h-full" src={embedSrc} title={current.title} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen/>
             </div>
-            <MetaStrip/>
+            {MetaStrip()}
           </div>
-          <div className="w-72 xl:w-80 flex flex-col border-l border-white/10 bg-[#0a0a0a] min-h-0 shrink-0"><RightPanel/></div>
+          <div className="w-72 xl:w-80 flex flex-col border-l border-white/10 bg-[#0a0a0a] min-h-0 shrink-0">{RightPanel()}</div>
         </div>
       )}
       {isMobile&&(
@@ -427,11 +439,11 @@ function VideoModal({ initialItem, allContent, onClose, onBookmark, getBookmarke
               <div className="relative w-full bg-black" style={{paddingBottom:"56.25%"}}>
                 <iframe className="absolute inset-0 w-full h-full" src={embedSrc} title={current.title} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen/>
               </div>
-              <MetaStrip compact/>
+              {MetaStrip(true)}
             </div>
           )}
           {(mobileTab==="upnext"||mobileTab==="comments"||mobileTab==="queue")&&(
-            <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-[#0a0a0a]"><RightPanel mobile/></div>
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-[#0a0a0a]">{RightPanel(true)}</div>
           )}
         </div>
       )}
@@ -441,19 +453,22 @@ function VideoModal({ initialItem, allContent, onClose, onBookmark, getBookmarke
 
 // ── AddContentModal ───────────────────────────────────────────────────────────
 function AddContentModal({ onClose, onAdd, userProfile, isPremium }) {
+  const { t } = useLanguage();
   const [url,setUrl]=useState(""); const [title,setTitle]=useState(""); const [desc,setDesc]=useState("");
   const [topic,setTopic]=useState("coding"); const [level,setLevel]=useState("Beginner");
   const [tags,setTags]=useState(""); const [detected,setDetected]=useState(null); const [error,setError]=useState("");
 
   useEffect(()=>{
-    const d=extractVideo(url); setDetected(d);
-    setError(d?.platform==="tiktok"&&!isPremium?"TikTok links require a Premium account.":"");
-  },[url,isPremium]);
+    (async()=>{
+      const d=extractVideo(url); setDetected(d);
+      setError(d?.platform==="tiktok"&&!isPremium?t("learn.tiktok_premium_note"):"");
+    })();
+  },[url,isPremium,t]);
 
   const submit=()=>{
-    if(!detected){setError("Paste a valid YouTube or TikTok URL.");return;}
-    if(detected.platform==="tiktok"&&!isPremium){setError("TikTok requires Premium.");return;}
-    if(!title.trim()){setError("Title is required.");return;}
+    if(!detected){setError(t("learn.err_paste_url"));return;}
+    if(detected.platform==="tiktok"&&!isPremium){setError(t("learn.err_tiktok_premium"));return;}
+    if(!title.trim()){setError(t("learn.err_title_required"));return;}
     onAdd({ id:`user_${Date.now()}`, type:"video", platform:detected.platform,
       ...(detected.platform==="youtube"?{youtube_id:detected.id}:{tiktok_id:detected.id}),
       title:title.trim(), description:desc.trim()||"Community resource.",
@@ -469,13 +484,13 @@ function AddContentModal({ onClose, onAdd, userProfile, isPremium }) {
       <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-black text-gray-900 dark:text-gray-100">Add a Resource</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{isPremium?"YouTube & TikTok supported":"YouTube · TikTok requires Premium"}</p>
+            <h2 className="text-base font-black text-gray-900 dark:text-gray-100">{t("learn.add_resource_title")}</h2>
+            <p className="text-xs text-gray-500 mt-0.5">{isPremium?t("learn.supported_all"):t("learn.supported_yt")}</p>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"><X size={16}/></button>
         </div>
         <div className="p-5 space-y-4">
-          {[{label:"Video URL *",val:url,set:setUrl,ph:"https://youtube.com/watch?v=…"},{label:"Title *",val:title,set:setTitle,ph:"Descriptive title"},{label:"Description",val:desc,set:setDesc,ph:"What will people learn?",area:true},{label:"Tags (comma-separated)",val:tags,set:setTags,ph:"react, hooks, tutorial"}].map(({label,val,set,ph,area})=>(
+          {[{label:t("learn.field_video_url"),val:url,set:setUrl,ph:t("learn.ph_video_url")},{label:t("learn.field_title_req"),val:title,set:setTitle,ph:t("learn.ph_title")},{label:t("learn.field_description"),val:desc,set:setDesc,ph:t("learn.ph_description"),area:true},{label:t("learn.field_tags"),val:tags,set:setTags,ph:t("learn.ph_tags")}].map(({label,val,set,ph,area})=>(
             <div key={label}>
               <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">{label}</label>
               {area
@@ -484,7 +499,7 @@ function AddContentModal({ onClose, onAdd, userProfile, isPremium }) {
             </div>
           ))}
           <div className="grid grid-cols-2 gap-3">
-            {[{label:"Topic",val:topic,set:setTopic,opts:TOPICS.filter(t=>t.id!=="all").map(t=>({v:t.id,l:t.label}))},{label:"Level",val:level,set:setLevel,opts:["Beginner","Intermediate","Advanced"].map(v=>({v,l:v}))}].map(({label,val,set,opts})=>(
+            {[{label:t("learn.field_topic"),val:topic,set:setTopic,opts:TOPICS.filter(tp=>tp.id!=="all").map(tp=>({v:tp.id,l:t(tp.labelKey)}))},{label:t("learn.field_level"),val:level,set:setLevel,opts:["Beginner","Intermediate","Advanced"].map(v=>({v,l:levelLabel(v,t)}))}].map(({label,val,set,opts})=>(
               <div key={label}>
                 <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">{label}</label>
                 <select value={val} onChange={e=>set(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none">
@@ -493,12 +508,12 @@ function AddContentModal({ onClose, onAdd, userProfile, isPremium }) {
               </div>
             ))}
           </div>
-          {detected&&<p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ Detected: {detected.platform} video</p>}
+          {detected&&<p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t("learn.detected",{platform:detected.platform})}</p>}
           {error&&<p className="text-xs text-red-500 font-medium">{error}</p>}
         </div>
         <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
-          <button onClick={submit} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-colors active:scale-95"><Plus size={14}/> Add</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">{t("learn.cancel")}</button>
+          <button onClick={submit} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-colors active:scale-95"><Plus size={14}/> {t("learn.add")}</button>
         </div>
       </div>
     </div>
@@ -507,12 +522,13 @@ function AddContentModal({ onClose, onAdd, userProfile, isPremium }) {
 
 // ── EditContentModal ──────────────────────────────────────────────────────────
 function EditContentModal({ item, onClose, onUpdate }) {
+  const { t } = useLanguage();
   const [title,setTitle]=useState(item.title||""); const [desc,setDesc]=useState(item.description||"");
   const [topic,setTopic]=useState(item.topic||"coding"); const [level,setLevel]=useState(item.level||"Beginner");
   const [tags,setTags]=useState((item.tags||[]).join(", ")); const [saving,setSaving]=useState(false); const [error,setError]=useState("");
 
   const submit=async()=>{
-    if(!title.trim()){setError("Title required.");return;}
+    if(!title.trim()){setError(t("learn.err_title_short"));return;}
     setSaving(true);
     await onUpdate(item.id,{title:title.trim(),description:desc.trim(),topic,level,tags:tags.split(",").map(t=>t.trim()).filter(Boolean)});
     setSaving(false); onClose();
@@ -522,11 +538,11 @@ function EditContentModal({ item, onClose, onUpdate }) {
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
-          <div className="min-w-0"><h2 className="text-base font-black text-gray-900 dark:text-gray-100">Edit Resource</h2><p className="text-xs text-gray-500 mt-0.5 truncate">{item.title}</p></div>
+          <div className="min-w-0"><h2 className="text-base font-black text-gray-900 dark:text-gray-100">{t("learn.edit_resource_title")}</h2><p className="text-xs text-gray-500 mt-0.5 truncate">{item.title}</p></div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 shrink-0"><X size={16}/></button>
         </div>
         <div className="p-5 space-y-4">
-          {[{label:"Title *",val:title,set:setTitle,ph:"Descriptive title"},{label:"Description",val:desc,set:setDesc,ph:"What will people learn?",area:true},{label:"Tags (comma-separated)",val:tags,set:setTags,ph:"react, hooks, tutorial"}].map(({label,val,set,ph,area})=>(
+          {[{label:t("learn.field_title_req"),val:title,set:setTitle,ph:t("learn.ph_title")},{label:t("learn.field_description"),val:desc,set:setDesc,ph:t("learn.ph_description"),area:true},{label:t("learn.field_tags"),val:tags,set:setTags,ph:t("learn.ph_tags")}].map(({label,val,set,ph,area})=>(
             <div key={label}>
               <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">{label}</label>
               {area?<textarea value={val} onChange={e=>set(e.target.value)} placeholder={ph} rows={2} className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"/>
@@ -534,7 +550,7 @@ function EditContentModal({ item, onClose, onUpdate }) {
             </div>
           ))}
           <div className="grid grid-cols-2 gap-3">
-            {[{label:"Topic",val:topic,set:setTopic,opts:TOPICS.filter(t=>t.id!=="all").map(t=>({v:t.id,l:t.label}))},{label:"Level",val:level,set:setLevel,opts:["Beginner","Intermediate","Advanced"].map(v=>({v,l:v}))}].map(({label,val,set,opts})=>(
+            {[{label:t("learn.field_topic"),val:topic,set:setTopic,opts:TOPICS.filter(tp=>tp.id!=="all").map(tp=>({v:tp.id,l:t(tp.labelKey)}))},{label:t("learn.field_level"),val:level,set:setLevel,opts:["Beginner","Intermediate","Advanced"].map(v=>({v,l:levelLabel(v,t)}))}].map(({label,val,set,opts})=>(
               <div key={label}>
                 <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 block">{label}</label>
                 <select value={val} onChange={e=>set(e.target.value)} className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 outline-none">
@@ -546,8 +562,8 @@ function EditContentModal({ item, onClose, onUpdate }) {
           {error&&<p className="text-xs text-red-500 font-medium">{error}</p>}
         </div>
         <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">Cancel</button>
-          <button onClick={submit} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors active:scale-95"><Check size={14}/> {saving?"Saving…":"Update"}</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">{t("learn.cancel")}</button>
+          <button onClick={submit} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors active:scale-95"><Check size={14}/> {saving?t("learn.saving"):t("learn.update")}</button>
         </div>
       </div>
     </div>
@@ -556,6 +572,7 @@ function EditContentModal({ item, onClose, onUpdate }) {
 
 // ── OwnerMenu — always-visible dropdown for the item's uploader ───────────────
 function OwnerMenu({ item, onDelete, onEdit, onHide, isHidden }) {
+  const { t } = useLanguage();
   const [open,    setOpen]    = useState(false);
   const [confirm, setConfirm] = useState(false);
   const ref = useRef(null);
@@ -578,7 +595,7 @@ function OwnerMenu({ item, onDelete, onEdit, onHide, isHidden }) {
       <button
         onClick={e=>{ e.stopPropagation(); setOpen(o=>!o); setConfirm(false); }}
         className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        title="Manage"
+        title={t("learn.manage")}
       >
         <MoreHorizontal size={14}/>
       </button>
@@ -589,15 +606,15 @@ function OwnerMenu({ item, onDelete, onEdit, onHide, isHidden }) {
             onClick={e=>{ e.stopPropagation(); onEdit?.(item); setOpen(false); }}
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            <Edit2 size={13} className="text-blue-500"/> Edit
+            <Edit2 size={13} className="text-blue-500"/> {t("learn.menu_edit")}
           </button>
           <button
             onClick={e=>{ e.stopPropagation(); onHide?.(item.id); setOpen(false); }}
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             {isHidden
-              ? <><Eye size={13} className="text-emerald-500"/> Show</>
-              : <><EyeOff size={13} className="text-gray-400"/> Hide</>}
+              ? <><Eye size={13} className="text-emerald-500"/> {t("learn.menu_show")}</>
+              : <><EyeOff size={13} className="text-gray-400"/> {t("learn.menu_hide")}</>}
           </button>
           <div className="mx-3 my-1 h-px bg-gray-100 dark:bg-gray-800"/>
           {!confirm
@@ -605,18 +622,18 @@ function OwnerMenu({ item, onDelete, onEdit, onHide, isHidden }) {
                 onClick={e=>{ e.stopPropagation(); setConfirm(true); }}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
-                <Trash2 size={13}/> Delete
+                <Trash2 size={13}/> {t("learn.menu_delete")}
               </button>
             : <div className="px-3.5 py-2.5 space-y-2">
-                <p className="text-[10px] font-black text-red-500">Delete this item?</p>
+                <p className="text-[10px] font-black text-red-500">{t("learn.confirm_delete_item")}</p>
                 <div className="flex gap-1.5">
                   <button onClick={e=>{ e.stopPropagation(); handleDelete(); }}
                     className="flex-1 py-1.5 text-[10px] font-black bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
-                    Yes, delete
+                    {t("learn.yes_delete")}
                   </button>
                   <button onClick={e=>{ e.stopPropagation(); setConfirm(false); }}
                     className="flex-1 py-1.5 text-[10px] font-black bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg transition-colors">
-                    Cancel
+                    {t("learn.cancel")}
                   </button>
                 </div>
               </div>
@@ -629,6 +646,7 @@ function OwnerMenu({ item, onDelete, onEdit, onHide, isHidden }) {
 
 // ── VideoCard ─────────────────────────────────────────────────────────────────
 function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQueueToggle, queued, isOwner=false, onDelete, onEdit, onHide, isHidden=false }) {
+  const { t } = useLanguage();
   const topic = topicConfig(item.topic);
   const thumb = item.platform==="youtube" ? ytThumb(item.youtube_id) : null;
 
@@ -637,7 +655,7 @@ function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQu
     return (
       <div className={`group relative flex items-center gap-4 p-3 bg-white dark:bg-gray-900 rounded-2xl border transition-all duration-200 ${isHidden?"opacity-40 border-dashed":"border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-md"}`}>
         <button onClick={()=>onOpen(item)} className="relative shrink-0 w-28 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800" style={{aspectRatio:"16/9"}}>
-          {thumb?<img src={thumb} alt={item.title} className="w-full h-full object-cover"/>:<div className="w-full h-full flex items-center justify-center bg-gray-900"><Video size={16} className="text-gray-600"/></div>}
+          {thumb?<Image src={thumb} alt={item.title} fill unoptimized className="w-full h-full object-cover"/>:<div className="w-full h-full flex items-center justify-center bg-gray-900"><Video size={16} className="text-gray-600"/></div>}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
             <Play size={14} className="text-white fill-white opacity-0 group-hover:opacity-100 transition-opacity"/>
           </div>
@@ -646,8 +664,8 @@ function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQu
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1 mb-1">
-            <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}><topic.icon size={8}/> {topic.label}</span>
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
+            <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}><topic.icon size={8}/> {t(topic.labelKey)}</span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{levelLabel(item.level, t)}</span>
           </div>
           <p className={`text-sm font-bold line-clamp-1 ${watched?"text-gray-400":"text-gray-900 dark:text-gray-100"}`}>{item.title}</p>
           <p className="text-[11px] text-gray-500 mt-0.5">{item.author}</p>
@@ -672,16 +690,16 @@ function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQu
       <div className="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
         <button onClick={()=>onOpen(item)} className="absolute inset-0 w-full h-full">
           {thumb
-            ?<img src={thumb} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+            ?<Image src={thumb} alt={item.title} fill unoptimized className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
             :<div className="w-full h-full flex items-center justify-center bg-gray-900"><Video size={28} className="text-gray-600"/></div>}
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
             <div className="w-11 h-11 bg-white/95 rounded-full flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-200">
               <Play size={14} className="text-gray-900 fill-gray-900 ml-0.5"/>
             </div>
           </div>
-          {item.featured&&!isHidden&&<span className="absolute top-2 left-2 flex items-center gap-0.5 bg-amber-400 text-gray-900 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide"><Flame size={7}/> Featured</span>}
-          {isHidden&&<span className="absolute top-2 left-2 flex items-center gap-0.5 bg-gray-600/90 text-white text-[8px] font-black px-2 py-0.5 rounded-full z-10"><EyeOff size={7}/> Hidden</span>}
-          {watched&&<span className="absolute top-2 right-2 flex items-center gap-0.5 bg-emerald-500/90 text-white text-[8px] font-black px-2 py-0.5 rounded-full"><CheckCircle2 size={7}/> Watched</span>}
+          {item.featured&&!isHidden&&<span className="absolute top-2 left-2 flex items-center gap-0.5 bg-amber-400 text-gray-900 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide"><Flame size={7}/> {t("learn.featured")}</span>}
+          {isHidden&&<span className="absolute top-2 left-2 flex items-center gap-0.5 bg-gray-600/90 text-white text-[8px] font-black px-2 py-0.5 rounded-full z-10"><EyeOff size={7}/> {t("learn.hidden_badge")}</span>}
+          {watched&&<span className="absolute top-2 right-2 flex items-center gap-0.5 bg-emerald-500/90 text-white text-[8px] font-black px-2 py-0.5 rounded-full"><CheckCircle2 size={7}/> {t("learn.watched_badge")}</span>}
           {item.duration&&<span className="absolute bottom-2 right-2 bg-black/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md tabular-nums">{item.duration}</span>}
         </button>
       </div>
@@ -689,9 +707,9 @@ function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQu
       {/* Body */}
       <div className="flex flex-col flex-1 p-4">
         <div className="flex items-center gap-1.5 mb-2">
-          <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}><topic.icon size={8}/> {topic.label}</span>
-          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
-          {isOwner&&<span className="ml-auto text-[8px] font-black text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800/40">{item.userId===userProfile?.id||item.user_id===userProfile?.id?"Your upload":"Admin"}</span>}
+          <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}><topic.icon size={8}/> {t(topic.labelKey)}</span>
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{levelLabel(item.level, t)}</span>
+          {isOwner&&<span className="ml-auto text-[8px] font-black text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800/40">{item.userId===userProfile?.id||item.user_id===userProfile?.id?t("learn.your_upload"):t("learn.admin_badge")}</span>}
         </div>
         <h3 className={`text-[13px] font-black leading-snug line-clamp-2 flex-1 mb-3 ${watched?"text-gray-400 dark:text-gray-500":"text-gray-900 dark:text-gray-100"}`}>{item.title}</h3>
         <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
@@ -703,7 +721,7 @@ function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQu
               {bookmarked?<BookmarkCheck size={13} className="text-amber-500 fill-current"/>:<Bookmark size={13}/>}
             </button>
             <button onClick={()=>onOpen(item)} className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-lg transition-colors active:scale-95">
-              <Play size={8} className="fill-white"/> Watch
+              <Play size={8} className="fill-white"/> {t("learn.watch")}
             </button>
           </div>
         </div>
@@ -714,6 +732,7 @@ function VideoCard({ item, layout, bookmarked, onBookmark, onOpen, watched, onQu
 
 // ── ArticleCard ───────────────────────────────────────────────────────────────
 function ArticleCard({ item, layout, bookmarked, onBookmark, isOwner=false, onDelete, onEdit, onHide, isHidden=false }) {
+  const { t } = useLanguage();
   const topic = topicConfig(item.topic);
 
   // List layout
@@ -723,8 +742,8 @@ function ArticleCard({ item, layout, bookmarked, onBookmark, isOwner=false, onDe
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${TOPIC_COLORS[topic.color]}`}><topic.icon size={16}/></div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1 mb-0.5">
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>{topic.label}</span>
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>{t(topic.labelKey)}</span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{levelLabel(item.level, t)}</span>
           </div>
           <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1">{item.title}</p>
           <p className="text-[11px] text-gray-500 mt-0.5">{item.author}{item.read_time?` · ${item.read_time}`:""}</p>
@@ -753,10 +772,10 @@ function ArticleCard({ item, layout, bookmarked, onBookmark, isOwner=false, onDe
           <topic.icon size={17}/>
         </div>
         <div className="flex flex-wrap items-center gap-1 min-w-0 flex-1">
-          <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>{topic.label}</span>
-          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{item.level}</span>
-          {item.featured&&<span className="flex items-center gap-0.5 bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800/50"><Flame size={8}/> Featured</span>}
-          {isOwner&&<span className="text-[8px] font-black text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800/40">{item.userId===userProfile?.id||item.user_id===userProfile?.id?"Your upload":"Admin"}</span>}
+          <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}>{t(topic.labelKey)}</span>
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${LEVEL_COLORS[item.level]}`}>{levelLabel(item.level, t)}</span>
+          {item.featured&&<span className="flex items-center gap-0.5 bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800/50"><Flame size={8}/> {t("learn.featured")}</span>}
+          {isOwner&&<span className="text-[8px] font-black text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800/40">{item.userId===userProfile?.id||item.user_id===userProfile?.id?t("learn.your_upload"):t("learn.admin_badge")}</span>}
         </div>
       </div>
 
@@ -779,7 +798,7 @@ function ArticleCard({ item, layout, bookmarked, onBookmark, isOwner=false, onDe
             </button>
             {item.url&&(
               <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 hover:border-blue-400 text-gray-600 dark:text-gray-300 hover:text-blue-600 text-[10px] font-bold rounded-lg transition-colors">
-                Read <ExternalLink size={8}/>
+                {t("learn.read")} <ExternalLink size={8}/>
               </a>
             )}
           </div>
@@ -791,6 +810,7 @@ function ArticleCard({ item, layout, bookmarked, onBookmark, isOwner=false, onDe
 
 // ── FeaturedSpotlight ─────────────────────────────────────────────────────────
 function FeaturedSpotlight({ items, bookmarks, onBookmark, onOpen }) {
+  const { t } = useLanguage();
   const [idx,setIdx]=useState(0);
   useEffect(()=>{ if(items.length<=1) return; const t=setInterval(()=>setIdx(i=>(i+1)%items.length),8000); return()=>clearInterval(t); },[items.length]);
 
@@ -800,15 +820,15 @@ function FeaturedSpotlight({ items, bookmarks, onBookmark, onOpen }) {
 
   return (
     <div className="relative rounded-2xl overflow-hidden mb-8 shadow-2xl border border-gray-800 min-h-[200px] sm:min-h-[240px]">
-      {thumb&&<div className="absolute inset-0"><img src={thumb} alt="" className="w-full h-full object-cover opacity-20"/><div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/90 to-gray-900/50"/></div>}
+      {thumb&&<div className="absolute inset-0"><Image src={thumb} alt="" fill unoptimized className="w-full h-full object-cover opacity-20"/><div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/90 to-gray-900/50"/></div>}
       {!thumb&&<div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800"/>}
 
       <div className="relative px-6 sm:px-8 py-8 sm:py-10 flex flex-col sm:flex-row gap-6 items-start sm:items-center">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <span className="flex items-center gap-1.5 text-[10px] font-black text-amber-400 uppercase tracking-widest"><Zap size={10}/> Editor's Pick</span>
-            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}><topic.icon size={9}/> {topic.label}</span>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${LEVEL_COLORS[feat.level]}`}>{feat.level}</span>
+            <span className="flex items-center gap-1.5 text-[10px] font-black text-amber-400 uppercase tracking-widest"><Zap size={10}/> {t("learn.editors_pick")}</span>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TOPIC_COLORS[topic.color]}`}><topic.icon size={9}/> {t(topic.labelKey)}</span>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${LEVEL_COLORS[feat.level]}`}>{levelLabel(feat.level, t)}</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-black text-white leading-tight mb-3 line-clamp-2">{feat.title}</h2>
           {feat.description&&<p className="text-sm text-gray-400 leading-relaxed line-clamp-2 mb-4 max-w-xl">{feat.description}</p>}
@@ -820,10 +840,10 @@ function FeaturedSpotlight({ items, bookmarks, onBookmark, onOpen }) {
         </div>
         <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto sm:min-w-[160px]">
           {feat.type==="video"
-            ?<button onClick={()=>onOpen(feat)} className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all text-sm shadow-lg shadow-blue-500/30 active:scale-95"><Play size={14} className="fill-white"/> Watch Now</button>
-            :feat.url?<a href={feat.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/30"><BookOpen size={14}/> Read Article</a>:null}
+            ?<button onClick={()=>onOpen(feat)} className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all text-sm shadow-lg shadow-blue-500/30 active:scale-95"><Play size={14} className="fill-white"/> {t("learn.watch_now")}</button>
+            :feat.url?<a href={feat.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-500/30"><BookOpen size={14}/> {t("learn.read_article")}</a>:null}
           <button onClick={()=>onBookmark(feat.id)} className="flex items-center justify-center gap-2 px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-sm border border-white/20 transition-colors">
-            {bookmarks.includes(feat.id)?<><BookmarkCheck size={14} className="fill-amber-400 text-amber-400"/> Saved</>:<><Bookmark size={14}/> Save</>}
+            {bookmarks.includes(feat.id)?<><BookmarkCheck size={14} className="fill-amber-400 text-amber-400"/> {t("learn.saved")}</>:<><Bookmark size={14}/> {t("learn.save")}</>}
           </button>
         </div>
       </div>
@@ -838,6 +858,7 @@ function FeaturedSpotlight({ items, bookmarks, onBookmark, onOpen }) {
 
 // ── ScrollRow ─────────────────────────────────────────────────────────────────
 function ScrollRow({ title, icon:Icon, color="blue", items, bookmarks, onBookmark, onOpen, onSeeMore, watched, queue, onQueueToggle, currentUserId, onDelete, onEdit, onHide, hiddenIds=[] }) {
+  const { t } = useLanguage();
   const rowRef = useRef(null);
   const [canLeft,setCanLeft]=useState(false);
   const [canRight,setCanRight]=useState(true);
@@ -866,7 +887,7 @@ function ScrollRow({ title, icon:Icon, color="blue", items, bookmarks, onBookmar
           <span className="text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">{items.length}</span>
         </div>
         <div className="flex items-center gap-2">
-          {onSeeMore&&<button onClick={onSeeMore} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5">See all <ChevronRight size={12}/></button>}
+          {onSeeMore&&<button onClick={onSeeMore} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5">{t("learn.see_all")} <ChevronRight size={12}/></button>}
           {[{dir:"left",dis:!canLeft},{dir:"right",dis:!canRight}].map(({dir,dis})=>(
             <button key={dir} onClick={()=>scroll(dir)} disabled={dis}
               className={`p-1.5 rounded-xl border transition-all ${dis?"border-gray-100 dark:border-gray-800 text-gray-200 dark:text-gray-700 cursor-not-allowed":"bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-blue-400 shadow-sm"}`}>
@@ -898,6 +919,7 @@ function ScrollRow({ title, icon:Icon, color="blue", items, bookmarks, onBookmar
 
 // ── MagazineLayout ────────────────────────────────────────────────────────────
 function MagazineLayout({ filtered, bookmarks, onBookmark, onOpen, watched, queue, onQueueToggle, currentUserId, onDelete, onEdit, onHide, hiddenIds=[] }) {
+  const { t } = useLanguage();
   if(filtered.length===0) return null;
   const hero=filtered[0]; const sidebar=filtered.slice(1,4); const rest=filtered.slice(4);
   const heroTopic=topicConfig(hero.topic);
@@ -909,21 +931,21 @@ function MagazineLayout({ filtered, bookmarks, onBookmark, onOpen, watched, queu
         <div className="lg:col-span-2">
           <div className="group relative w-full overflow-hidden rounded-2xl bg-gray-900 border border-gray-800 cursor-pointer shadow-xl aspect-video"
             onClick={()=>hero.type==="video"?onOpen(hero):null}>
-            {heroThumb?<img src={heroThumb} alt={hero.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>:<div className="absolute inset-0 flex items-center justify-center bg-gray-900"><Video size={48} className="text-gray-700"/></div>}
+            {heroThumb?<Image src={heroThumb} alt={hero.title} fill unoptimized className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>:<div className="absolute inset-0 flex items-center justify-center bg-gray-900"><Video size={48} className="text-gray-700"/></div>}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"/>
             {hero.type==="video"&&<div className="absolute inset-0 flex items-center justify-center"><div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30 group-hover:scale-110 transition-transform shadow-2xl"><Play size={22} className="text-white fill-white ml-1"/></div></div>}
             <div className="absolute bottom-0 left-0 right-0 p-5">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                {hero.featured&&<span className="flex items-center gap-1 bg-amber-400 text-gray-900 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide"><Flame size={9}/> Featured</span>}
-                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TOPIC_COLORS[heroTopic.color]}`}><heroTopic.icon size={9}/> {heroTopic.label}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${LEVEL_COLORS[hero.level]}`}>{hero.level}</span>
+                {hero.featured&&<span className="flex items-center gap-1 bg-amber-400 text-gray-900 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide"><Flame size={9}/> {t("learn.featured")}</span>}
+                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${TOPIC_COLORS[heroTopic.color]}`}><heroTopic.icon size={9}/> {t(heroTopic.labelKey)}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${LEVEL_COLORS[hero.level]}`}>{levelLabel(hero.level, t)}</span>
               </div>
               <h2 className="text-lg sm:text-2xl font-black text-white leading-tight mb-1 line-clamp-2">{hero.title}</h2>
               <p className="text-xs text-gray-300 line-clamp-1 mb-3">{hero.author} · {hero.description}</p>
               <div className="flex items-center gap-2">
-                {hero.type==="video"&&<button onClick={e=>{e.stopPropagation();onOpen(hero);}} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-colors active:scale-95"><Play size={11} className="fill-white"/> Watch</button>}
+                {hero.type==="video"&&<button onClick={e=>{e.stopPropagation();onOpen(hero);}} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-colors active:scale-95"><Play size={11} className="fill-white"/> {t("learn.watch")}</button>}
                 <button onClick={e=>{e.stopPropagation();onBookmark(hero.id);}} className="flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl border border-white/20 transition-colors">
-                  {bookmarks.includes(hero.id)?<BookmarkCheck size={12} className="fill-amber-400 text-amber-400"/>:<Bookmark size={12}/>} {bookmarks.includes(hero.id)?"Saved":"Save"}
+                  {bookmarks.includes(hero.id)?<BookmarkCheck size={12} className="fill-amber-400 text-amber-400"/>:<Bookmark size={12}/>} {bookmarks.includes(hero.id)?t("learn.saved"):t("learn.save")}
                 </button>
               </div>
             </div>
@@ -943,7 +965,7 @@ function MagazineLayout({ filtered, bookmarks, onBookmark, onOpen, watched, queu
         <>
           <div className="flex items-center gap-3 py-2">
             <div className="h-px flex-1 bg-gray-100 dark:bg-gray-800"/>
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">More Resources</span>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">{t("learn.more_resources")}</span>
             <div className="h-px flex-1 bg-gray-100 dark:bg-gray-800"/>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -963,9 +985,10 @@ function MagazineLayout({ filtered, bookmarks, onBookmark, onOpen, watched, queu
 
 // ── TopicDropdown ─────────────────────────────────────────────────────────────
 function TopicDropdown({ topics, value, onChange, counts, compact=false }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const current = topics.find(t => t.id === value) || topics[0];
+  const current = topics.find(tp => tp.id === value) || topics[0];
 
   useEffect(()=>{
     if(!open) return;
@@ -987,7 +1010,7 @@ function TopicDropdown({ topics, value, onChange, counts, compact=false }) {
         <div className={`flex items-center justify-center border rounded-md shrink-0 ${TOPIC_COLORS[current.color]} ${compact?"w-5 h-5":"w-6 h-6 rounded-lg"}`}>
           <current.icon size={compact?10:12}/>
         </div>
-        <span className={`text-gray-900 dark:text-gray-100 ${compact?"":"truncate"}`}>{current.label}</span>
+        <span className={`text-gray-900 dark:text-gray-100 ${compact?"":"truncate"}`}>{t(current.labelKey)}</span>
         <span className={`font-black rounded-full shrink-0 ${compact?"text-[9px] px-1 py-px bg-gray-100 dark:bg-gray-800 text-gray-400":"text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-400"}`}>
           {counts[current.id]}
         </span>
@@ -996,20 +1019,20 @@ function TopicDropdown({ topics, value, onChange, counts, compact=false }) {
 
       {open&&(
         <div className={`absolute left-0 top-full mt-1.5 z-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl overflow-hidden py-1 ${compact?"w-52":"w-full"}`}>
-          {topics.map(t=>{
-            const active = t.id === value;
-            const cnt = counts[t.id];
-            if(cnt === 0 && t.id !== "all") return null;
+          {topics.map(tp=>{
+            const active = tp.id === value;
+            const cnt = counts[tp.id];
+            if(cnt === 0 && tp.id !== "all") return null;
             return (
               <button
-                key={t.id}
-                onClick={()=>{ onChange(t.id); setOpen(false); }}
+                key={tp.id}
+                onClick={()=>{ onChange(tp.id); setOpen(false); }}
                 className={`w-full flex items-center gap-3 px-3.5 py-2 text-xs font-bold transition-colors text-left ${active?"bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400":"text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"}`}
               >
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center border shrink-0 ${TOPIC_COLORS[t.color]}`}>
-                  <t.icon size={11}/>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center border shrink-0 ${TOPIC_COLORS[tp.color]}`}>
+                  <tp.icon size={11}/>
                 </div>
-                <span className="flex-1 truncate">{t.label}</span>
+                <span className="flex-1 truncate">{t(tp.labelKey)}</span>
                 <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${active?"bg-blue-100 dark:bg-blue-900/40 text-blue-600":"bg-gray-100 dark:bg-gray-800 text-gray-400"}`}>
                   {cnt}
                 </span>
@@ -1025,19 +1048,20 @@ function TopicDropdown({ topics, value, onChange, counts, compact=false }) {
 
 // ── SortDropdown ──────────────────────────────────────────────────────────────
 function SortDropdown({ value, onChange }) {
+  const { t } = useLanguage();
   const [open,setOpen]=useState(false); const ref=useRef(null);
   const current=SORT_OPTIONS.find(o=>o.id===value)||SORT_OPTIONS[0];
   useEffect(()=>{ if(!open) return; const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);}; document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h); },[open]);
   return (
     <div className="relative" ref={ref}>
       <button onClick={()=>setOpen(o=>!o)} className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:border-gray-300 transition-all whitespace-nowrap">
-        <current.icon size={11}/> {current.label} <ChevronDown size={11} className={`transition-transform ${open?"rotate-180":""}`}/>
+        <current.icon size={11}/> {t(current.labelKey)} <ChevronDown size={11} className={`transition-transform ${open?"rotate-180":""}`}/>
       </button>
       {open&&(
         <div className="absolute right-0 top-full mt-1.5 z-30 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl overflow-hidden w-36">
           {SORT_OPTIONS.map(opt=>(
             <button key={opt.id} onClick={()=>{onChange(opt.id);setOpen(false);}} className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold transition-colors ${value===opt.id?"bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400":"text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-              <opt.icon size={12}/> {opt.label}
+              <opt.icon size={12}/> {t(opt.labelKey)}
             </button>
           ))}
         </div>
@@ -1048,6 +1072,7 @@ function SortDropdown({ value, onChange }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function LearnContent() {
+  const { t } = useLanguage();
   const [topic,       setTopic]       = useState("all");
   const [layout,      setLayout]      = useLocalState("learn_layout","grid");
   const [search,      setSearch]      = useState("");
@@ -1117,7 +1142,7 @@ export default function LearnContent() {
       if(!res.ok){ console.error("Admin delete failed:", await res.text()); return; }
     }
     setDbContent(prev=>prev.filter(i=>i.id!==id));
-  },[setUserContent, isAdmin]);
+  },[setUserContent]);
 
   const updateContent = useCallback(async(id,updates)=>{
     if(String(id).startsWith("user_")){setUserContent(prev=>prev.map(i=>i.id===id?{...i,...updates}:i));}
@@ -1184,11 +1209,11 @@ export default function LearnContent() {
                   <GraduationCap size={18} className="text-white"/>
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-xl font-black text-gray-900 dark:text-gray-100 leading-tight tracking-tight">Discover &amp; Learn</h1>
+                  <h1 className="text-xl font-black text-gray-900 dark:text-gray-100 leading-tight tracking-tight">{t("learn.title")}</h1>
                   <p className="text-[11px] text-gray-400 font-medium mt-0.5">
-                    <span className="text-gray-700 dark:text-gray-300 font-bold">{allContent.length}</span> resources ·{" "}
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{watchedCount}</span> watched ·{" "}
-                    <span className="text-blue-600 dark:text-blue-400 font-bold">{queue.length}</span> queued
+                    <span className="text-gray-700 dark:text-gray-300 font-bold">{allContent.length}</span> {t("learn.resources_word")} ·{" "}
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{watchedCount}</span> {t("learn.watched_word")} ·{" "}
+                    <span className="text-blue-600 dark:text-blue-400 font-bold">{queue.length}</span> {t("learn.queued_word")}
                   </p>
                 </div>
               </div>
@@ -1199,26 +1224,26 @@ export default function LearnContent() {
                   <button onClick={()=>setShowHidden(p=>!p)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${showHidden?"bg-gray-800 text-white border-gray-600":"border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300 bg-gray-50 dark:bg-gray-800"}`}>
                     {showHidden?<Eye size={11}/>:<EyeOff size={11}/>}
-                    {hiddenIds.length} hidden
+                    {t("learn.hidden_count",{n:hiddenIds.length})}
                   </button>
                 )}
                 <button onClick={()=>setShowStats(s=>!s)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${showStats?"bg-blue-600 text-white border-blue-600":"border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 bg-white dark:bg-gray-900"}`}>
-                  <BarChart2 size={11}/> Stats
+                  <BarChart2 size={11}/> {t("learn.stats_btn")}
                 </button>
                 {canAdd
                   ?<button onClick={()=>setShowAdd(true)} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-colors active:scale-95 shadow-sm">
-                    <Plus size={13}/> Add Resource
+                    <Plus size={13}/> {t("learn.add_resource_btn")}
                   </button>
                   :userProfile
                     ?<span className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-400 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 cursor-not-allowed select-none">
-                      <Lock size={11}/> Verified to Add
+                      <Lock size={11}/> {t("learn.verified_to_add")}
                     </span>
                     :null}
                 {/* Layout switcher */}
                 <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                  {LAYOUTS.map(({id,icon:Icon,label})=>(
-                    <button key={id} onClick={()=>setLayout(id)} title={label}
+                  {LAYOUTS.map(({id,icon:Icon,labelKey})=>(
+                    <button key={id} onClick={()=>setLayout(id)} title={t(labelKey)}
                       className={`px-2.5 py-1.5 transition-all border-r border-gray-200 dark:border-gray-700 last:border-r-0 ${layout===id?"bg-blue-600 text-white":"bg-white dark:bg-gray-900 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                       <Icon size={13}/>
                     </button>
@@ -1235,7 +1260,7 @@ export default function LearnContent() {
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
               <input
                 value={search} onChange={e=>setSearch(e.target.value)}
-                placeholder="Search by title, author, tag…"
+                placeholder={t("learn.search_ph2")}
                 className="w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white dark:focus:bg-gray-900 transition-all"
               />
               {search&&(
@@ -1264,9 +1289,9 @@ export default function LearnContent() {
               {/* Type */}
               <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shrink-0">
                 {[
-                  {v:"all",  l:"All types"},
-                  {v:"video",   l:`Videos${videoCount>0?` · ${videoCount}`:""}`},
-                  {v:"article", l:`Articles${articleCount>0?` · ${articleCount}`:""}`},
+                  {v:"all",  l:t("learn.type_all")},
+                  {v:"video",   l:`${t("learn.type_videos")}${videoCount>0?` · ${videoCount}`:""}`},
+                  {v:"article", l:`${t("learn.type_articles")}${articleCount>0?` · ${articleCount}`:""}`},
                 ].map(({v,l})=>(
                   <button key={v} onClick={()=>setTypeFilter(v)}
                     className={`px-3 py-1.5 text-xs font-bold transition-colors border-r border-gray-200 dark:border-gray-700 last:border-r-0 whitespace-nowrap ${typeFilter===v?"bg-blue-600 text-white":"bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
@@ -1278,10 +1303,10 @@ export default function LearnContent() {
               {/* Level */}
               <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shrink-0">
                 {[
-                  {v:"all",          l:"All levels"},
-                  {v:"Beginner",     l:"Beginner"},
-                  {v:"Intermediate", l:"Intermediate"},
-                  {v:"Advanced",     l:"Advanced"},
+                  {v:"all",          l:t("learn.level_all")},
+                  {v:"Beginner",     l:t("learn.level_beginner")},
+                  {v:"Intermediate", l:t("learn.level_intermediate")},
+                  {v:"Advanced",     l:t("learn.level_advanced")},
                 ].map(({v,l})=>(
                   <button key={v} onClick={()=>setLevelFilter(v)}
                     className={`px-3 py-1.5 text-xs font-bold transition-colors border-r border-gray-200 dark:border-gray-700 last:border-r-0 whitespace-nowrap ${levelFilter===v?"bg-blue-600 text-white":"bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
@@ -1296,13 +1321,13 @@ export default function LearnContent() {
               <button onClick={()=>setShowSaved(p=>!p)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 whitespace-nowrap ${showSaved?"bg-amber-500 text-white border-amber-500":"bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300"}`}>
                 {showSaved?<BookmarkCheck size={12} className="fill-white"/>:<Bookmark size={12}/>}
-                Saved{bookmarks.length>0&&` · ${bookmarks.length}`}
+                {t("learn.saved")}{bookmarks.length>0&&` · ${bookmarks.length}`}
               </button>
 
               {/* Unwatched */}
               <button onClick={()=>setShowWatched(p=>!p)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all shrink-0 whitespace-nowrap ${showWatched?"bg-violet-600 text-white border-violet-600":"bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300"}`}>
-                <EyeOff size={12}/> Unwatched
+                <EyeOff size={12}/> {t("learn.unwatched")}
               </button>
 
               {/* Sort + Clear pushed right */}
@@ -1310,7 +1335,7 @@ export default function LearnContent() {
                 {isFiltered&&(
                   <button onClick={clearFilters}
                     className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-red-500 hover:text-red-600 border border-red-200 dark:border-red-800/40 rounded-lg bg-red-50 dark:bg-red-900/10 transition-colors whitespace-nowrap">
-                    <X size={11}/> Clear filters
+                    <X size={11}/> {t("learn.clear_filters")}
                   </button>
                 )}
                 <SortDropdown value={sortBy} onChange={setSortBy}/>
@@ -1323,7 +1348,7 @@ export default function LearnContent() {
         {!userProfile&&(
           <div className="mb-6 px-4 py-3 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 flex items-center gap-3">
             <ShieldCheck size={16} className="text-blue-500 shrink-0"/>
-            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Sign in to comment, track watched videos, and unlock more features.</p>
+            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">{t("learn.signin_notice")}</p>
           </div>
         )}
 
@@ -1356,10 +1381,10 @@ export default function LearnContent() {
               <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4 border border-gray-200 dark:border-gray-700">
                 <Search size={28} className="text-gray-300 dark:text-gray-600"/>
               </div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-gray-100 mb-1">No results</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs">Try a different search, topic, or remove some filters.</p>
+              <h3 className="text-lg font-black text-gray-900 dark:text-gray-100 mb-1">{t("learn.no_results_title")}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs">{t("learn.no_results_body")}</p>
               <button onClick={clearFilters} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm transition-colors active:scale-95">
-                <RefreshCw size={13}/> Reset Filters
+                <RefreshCw size={13}/> {t("learn.reset_filters")}
               </button>
             </div>
           )
@@ -1390,20 +1415,20 @@ export default function LearnContent() {
             )
             :(
               <div>
-                {TOPICS.filter(t=>t.id!=="all").map(t=>{
-                  const rowItems = allContent.filter(i=>i.topic===t.id&&i.type==="video"&&!hiddenIds.includes(i.id));
+                {TOPICS.filter(tp=>tp.id!=="all").map(tp=>{
+                  const rowItems = allContent.filter(i=>i.topic===tp.id&&i.type==="video"&&!hiddenIds.includes(i.id));
                   if(rowItems.length===0) return null;
                   return (
-                    <ScrollRow key={t.id} title={`${t.label} Videos`} icon={t.icon} color={t.color}
+                    <ScrollRow key={tp.id} title={t("learn.topic_videos",{topic:t(tp.labelKey)})} icon={tp.icon} color={tp.color}
                       items={rowItems}
                       bookmarks={bookmarks} onBookmark={toggleBookmark} onOpen={openVideo}
-                      onSeeMore={()=>{setTopic(t.id);setTypeFilter("video");}}
+                      onSeeMore={()=>{setTopic(tp.id);setTypeFilter("video");}}
                       watched={watched} queue={queue} onQueueToggle={toggleQueue}
                       currentUserId={userProfile?.id} onDelete={deleteContent} onEdit={setEditingItem} onHide={toggleHide} hiddenIds={hiddenIds}/>
                   );
                 })}
                 {allContent.filter(i=>i.type==="article"&&!hiddenIds.includes(i.id)).length>0&&(
-                  <ScrollRow title="Articles" icon={BookOpen} color="gray"
+                  <ScrollRow title={t("learn.articles_row")} icon={BookOpen} color="gray"
                     items={allContent.filter(i=>i.type==="article"&&!hiddenIds.includes(i.id))}
                     bookmarks={bookmarks} onBookmark={toggleBookmark} onOpen={openVideo}
                     onSeeMore={()=>setTypeFilter("article")}
@@ -1418,13 +1443,13 @@ export default function LearnContent() {
                       <Newspaper size={18} className="text-violet-600 dark:text-violet-400"/>
                     </div>
                     <div>
-                      <p className="text-sm font-black text-gray-900 dark:text-gray-100">Explore the Blog</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Deep-dive articles from the community and founders.</p>
+                      <p className="text-sm font-black text-gray-900 dark:text-gray-100">{t("learn.explore_blog")}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{t("learn.explore_blog_desc")}</p>
                     </div>
                   </div>
-                  <a href="/dash/blog" className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold rounded-xl transition-colors active:scale-95 whitespace-nowrap">
-                    Go to Blog <ChevronRight size={14}/>
-                  </a>
+                  <Link href="/dash/blog" className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold rounded-xl transition-colors active:scale-95 whitespace-nowrap">
+                    {t("learn.go_to_blog")} <ChevronRight size={14}/>
+                  </Link>
                 </div>
               </div>
             )
@@ -1433,7 +1458,7 @@ export default function LearnContent() {
 
         {!loading&&filtered.length>0&&(
           <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-10">
-            {filtered.length} of {allContent.length} resources · {watchedCount} watched · {queue.length} queued
+            {t("learn.footer_summary",{filtered:filtered.length,total:allContent.length,watched:watchedCount,queued:queue.length})}
           </p>
         )}
       </div>

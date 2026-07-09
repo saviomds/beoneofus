@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import Link from "next/link";
+import { useLanguage } from '../../../lib/i18n';
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString("en-US", {
@@ -45,6 +46,7 @@ const EMPTY = {
 };
 
 export default function EventsContent() {
+  const { t } = useLanguage();
   const [profile, setProfile]         = useState(null);
   const [user, setUser]               = useState(null);
   const [events, setEvents]           = useState([]);
@@ -75,7 +77,10 @@ export default function EventsContent() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const init = () => { fetchData(); };
+    init();
+  }, [fetchData]);
 
   /* Realtime updates */
   useEffect(() => {
@@ -146,7 +151,7 @@ export default function EventsContent() {
 
   const isPremium = profile?.is_premium || profile?.is_admin;
   const isAdmin   = profile?.is_admin;
-  const now       = Date.now();
+  const now       = new Date().getTime();
 
   const inputCls = "w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
 
@@ -158,12 +163,12 @@ export default function EventsContent() {
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
             <Calendar size={22} className="text-blue-500" />
-            Events
+            {t('events.title')}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             {isPremium
-              ? "You have early access to upcoming events."
-              : "Premium members get early registration access."}
+              ? t('events.subtitle_premium')
+              : t('events.subtitle_free')}
           </p>
         </div>
         {isAdmin && (
@@ -172,7 +177,7 @@ export default function EventsContent() {
             className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all active:scale-95 shrink-0"
           >
             {showCreate ? <X size={14} /> : <Plus size={14} />}
-            {showCreate ? "Cancel" : "Create Event"}
+            {showCreate ? t('events.cancel') : t('events.create_event')}
           </button>
         )}
       </div>
@@ -182,11 +187,11 @@ export default function EventsContent() {
         <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl">
           <Crown size={18} className="text-amber-500 shrink-0" fill="currentColor" strokeWidth={1.5} stroke="white" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Early Access with Premium</p>
-            <p className="text-xs text-amber-700 dark:text-amber-400">Premium members can register before free members. Upgrade to never miss a spot.</p>
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">{t('events.early_access_premium')}</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400">{t('events.early_access_desc')}</p>
           </div>
           <Link href="/dash/premium" className="shrink-0 text-xs font-black text-amber-600 hover:text-amber-500 underline">
-            Upgrade
+            {t('events.upgrade')}
           </Link>
         </div>
       )}
@@ -196,22 +201,22 @@ export default function EventsContent() {
         <div className="bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-5 shadow-sm">
           <h3 className="font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Sparkles size={15} className="text-blue-500" />
-            New Event
+            {t('events.new_event')}
           </h3>
           <div className="space-y-3">
             <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-              placeholder="Event title *" className={inputCls} />
+              placeholder={t('events.event_title_placeholder')} className={inputCls} />
             <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Description" rows={2} className={`${inputCls} resize-none`} />
+              placeholder={t('events.event_description')} rows={2} className={`${inputCls} resize-none`} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-gray-500 block mb-1">Event Date & Time *</label>
+                <label className="text-xs font-bold text-gray-500 block mb-1">{t('events.event_datetime_label')}</label>
                 <input type="datetime-local" value={form.event_date}
                   onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} className={inputCls} />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 block mb-1">Public Registration Opens</label>
+                <label className="text-xs font-bold text-gray-500 block mb-1">{t('events.public_registration_opens')}</label>
                 <input type="datetime-local" value={form.public_opens_at}
                   onChange={e => setForm(f => ({ ...f, public_opens_at: e.target.value }))} className={inputCls} />
               </div>
@@ -219,35 +224,35 @@ export default function EventsContent() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-gray-500 block mb-1">Premium early access (hours before public)</label>
-                <input type="number" min="0" value={form.premium_hours_early} placeholder="24"
+                <label className="text-xs font-bold text-gray-500 block mb-1">{t('events.premium_early_hours')}</label>
+                <input type="number" min="0" value={form.premium_hours_early} placeholder={t('events.premium_hours_placeholder')}
                   onChange={e => setForm(f => ({ ...f, premium_hours_early: e.target.value }))} className={inputCls} />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 block mb-1">Max Attendees</label>
-                <input type="number" min="1" value={form.max_attendees} placeholder="Unlimited"
+                <label className="text-xs font-bold text-gray-500 block mb-1">{t('events.max_attendees')}</label>
+                <input type="number" min="1" value={form.max_attendees} placeholder={t('events.unlimited_placeholder')}
                   onChange={e => setForm(f => ({ ...f, max_attendees: e.target.value }))} className={inputCls} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                placeholder="Location (city / venue)" className={inputCls} />
+                placeholder={t('events.location_placeholder')} className={inputCls} />
               <input value={form.event_url} onChange={e => setForm(f => ({ ...f, event_url: e.target.value }))}
-                placeholder="Event link (optional)" className={inputCls} />
+                placeholder={t('events.event_link_placeholder')} className={inputCls} />
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.is_online}
                 onChange={e => setForm(f => ({ ...f, is_online: e.target.checked }))}
                 className="rounded accent-blue-600" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Online event</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('events.online_event')}</span>
             </label>
 
             <button onClick={handleCreate} disabled={creating || !form.title || !form.event_date}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-all active:scale-[0.98] text-sm">
               {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-              {creating ? "Creating…" : "Create Event"}
+              {creating ? t('events.creating') : t('events.create_event')}
             </button>
           </div>
         </div>
@@ -257,8 +262,8 @@ export default function EventsContent() {
       {events.length === 0 && (
         <div className="text-center py-16 text-gray-400 dark:text-gray-600">
           <Calendar size={32} className="mx-auto mb-3 opacity-40" />
-          <p className="text-sm font-medium">No upcoming events</p>
-          {isAdmin && <p className="text-xs mt-1 opacity-60">Create your first event above</p>}
+          <p className="text-sm font-medium">{t('events.no_events')}</p>
+          {isAdmin && <p className="text-xs mt-1 opacity-60">{t('events.create_first_event')}</p>}
         </div>
       )}
 
@@ -293,12 +298,12 @@ export default function EventsContent() {
                       {inPremiumWindow && (
                         <span className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-500/30">
                           <Crown size={8} fill="currentColor" strokeWidth={1.5} stroke="white" />
-                          Early Access
+                          {t('events.early_access_badge')}
                         </span>
                       )}
                       {event.is_online && (
                         <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          <Globe size={8} /> Online
+                          <Globe size={8} /> {t('events.online')}
                         </span>
                       )}
                     </div>
@@ -308,7 +313,7 @@ export default function EventsContent() {
                   </div>
                   {isRegistered && !isPast && (
                     <span className="shrink-0 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black px-2.5 py-1 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
-                      <CheckCircle2 size={10} /> Registered
+                      <CheckCircle2 size={10} /> {t('events.registered')}
                     </span>
                   )}
                 </div>
@@ -325,20 +330,20 @@ export default function EventsContent() {
                   )}
                   {event.max_attendees && (
                     <span className="flex items-center gap-1">
-                      <Users size={11} /> Max {event.max_attendees}
+                      <Users size={11} /> {t('events.max_n', { n: event.max_attendees })}
                     </span>
                   )}
                   {event.event_url && (
                     <a href={event.event_url} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1 text-blue-500 hover:text-blue-400 transition-colors">
-                      <ExternalLink size={11} /> Event Link
+                      <ExternalLink size={11} /> {t('events.event_link')}
                     </a>
                   )}
                 </div>
 
                 {/* Action */}
                 {isPast ? (
-                  <span className="text-xs font-medium text-gray-400">Event has ended</span>
+                  <span className="text-xs font-medium text-gray-400">{t('events.event_ended')}</span>
                 ) : canRegister ? (
                   <button
                     onClick={() => handleRegister(event.id)}
@@ -352,7 +357,7 @@ export default function EventsContent() {
                     {registeringId === event.id
                       ? <Loader2 size={13} className="animate-spin" />
                       : isRegistered ? <X size={13} /> : <CheckCircle2 size={13} />}
-                    {isRegistered ? "Cancel Registration" : "Register Now"}
+                    {isRegistered ? t('events.unregister') : t('events.register_now')}
                   </button>
                 ) : waitOpen ? (
                   <div className="flex items-center gap-2 flex-wrap">
@@ -360,20 +365,20 @@ export default function EventsContent() {
                       <div className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
                         <Crown size={11} className="text-amber-500" fill="currentColor" strokeWidth={1.5} stroke="white" />
                         <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
-                          Premium opens in <Countdown targetDate={event.premium_opens_at || event.public_opens_at} />
+                          {t('events.premium_opens_in')} <Countdown targetDate={event.premium_opens_at || event.public_opens_at} />
                         </span>
                       </div>
                     )}
                     <div className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
                       <Clock size={11} className="text-gray-400" />
                       <span className="text-xs font-medium text-gray-500">
-                        {isPremium ? "Early access opens in" : "Public opens in"}{" "}
+                        {isPremium ? t('events.early_access_opens_in') : t('events.public_opens_in')}{" "}
                         <Countdown targetDate={waitUntil} />
                       </span>
                     </div>
                     {!isPremium && (
                       <Link href="/dash/premium" className="text-xs font-black text-amber-600 hover:text-amber-500 underline">
-                        Get early access
+                        {t('events.get_early_access')}
                       </Link>
                     )}
                   </div>

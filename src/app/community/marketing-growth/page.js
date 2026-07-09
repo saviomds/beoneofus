@@ -134,7 +134,7 @@ export default function MarketingGrowthCommunity() {
                 </div>
                 <h1 className="text-4xl sm:text-6xl font-black tracking-tight mb-4 leading-tight">Marketing &<br />Growth</h1>
                 <p className="text-amber-100 text-lg sm:text-xl max-w-2xl leading-relaxed">
-                  Where growth practitioners share what's actually working. Real campaigns, real data, real lessons from marketers driving revenue at companies of all sizes.
+                  Where growth practitioners share what&apos;s actually working. Real campaigns, real data, real lessons from marketers driving revenue at companies of all sizes.
                 </p>
                 <div className="flex flex-wrap gap-3 mt-8">
                   <Link href="/dash/more?tool=community" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-amber-700 font-bold rounded-xl hover:bg-amber-50 transition-colors text-sm shadow-lg shadow-amber-900/20"><MessageSquare size={16} /> Open Live Hub</Link>

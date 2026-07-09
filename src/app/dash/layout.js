@@ -12,6 +12,18 @@ import NotificationPopup from '../components/NotificationPopup'
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../supabaseClient';
 
+/* ── Temporary session diagnostics ───────────────────────────────
+   Silent by default. To trace the session lifecycle in any environment
+   (including prod), run `localStorage.setItem('boo_auth_debug','1')` in the
+   console and reload. Logs auth resolution, state transitions, and events. */
+function dbg(...args) {
+  try {
+    if (typeof window !== 'undefined' && localStorage.getItem('boo_auth_debug') === '1') {
+      console.log('%c[auth]', 'color:#4C5FF5;font-weight:bold', ...args);
+    }
+  } catch { /* ignore */ }
+}
+
 /* Patch performance.measure at module load time */
 if (typeof globalThis !== 'undefined' && typeof globalThis.performance !== 'undefined') {
   const _origMeasure = globalThis.performance.measure.bind(globalThis.performance);
@@ -91,8 +103,12 @@ function DashLayoutContent({ children, isAuthenticated }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const pathname = usePathname();
 
-  /* Read persisted collapse preference on mount (client only) */
+  /* Read persisted collapse preference on mount (client only). Lazy useState
+     init can't be used here: readCollapsed() is client-only, so seeding it in
+     the initializer would diverge from the server render and cause a hydration
+     mismatch. Applying it in a layout effect keeps hydration stable. */
   useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see note above
     setIsSidebarCollapsed(readCollapsed());
   }, []);
 
@@ -104,7 +120,12 @@ function DashLayoutContent({ children, isAuthenticated }) {
     });
   };
 
-  useEffect(() => { setIsLeftOpen(false); setIsRightOpen(false); }, [pathname]);
+  // Close the mobile drawers whenever the route changes (sync UI to navigation).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset drawer UI on route change
+    setIsLeftOpen(false);
+    setIsRightOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     document.body.style.overflow = (isLeftOpen || isRightOpen) ? 'hidden' : '';
@@ -112,6 +133,9 @@ function DashLayoutContent({ children, isAuthenticated }) {
   }, [isLeftOpen, isRightOpen]);
 
   const isMessages = pathname?.endsWith('/messages') || pathname?.endsWith('/ai');
+  // The admin console is a wide, data-dense workspace — reclaim the right rail
+  // (network panel) at lg+ so the center column isn't squeezed between two rails.
+  const isAdminConsole = pathname?.startsWith('/dash/admin');
 
   return (
     <div className="flex w-full min-h-screen h-screen bg-slate-50 dark:bg-[#09090B] text-gray-900 dark:text-gray-100 relative overflow-hidden">
@@ -219,6 +243,7 @@ function DashLayoutContent({ children, isAuthenticated }) {
         transition-transform duration-300 ease-in-out
         lg:relative lg:translate-x-0 lg:shadow-none lg:h-auto lg:inset-auto
         lg:w-64 xl:w-72
+        ${isAdminConsole ? 'lg:hidden' : ''}
         ${isRightOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
         {/* Mobile drawer header */}
@@ -254,21 +279,25 @@ const USERNAME_RE = /^[a-z0-9_-]{3,20}$/;
 
 function PickUsernameModal({ onDone }) {
   const [username, setUsername] = useState('');
-  const [status, setStatus] = useState('idle');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const timer = useRef(null);
+  // Debounced availability result, keyed to the username it was checked for.
+  const [avail, setAvail] = useState({ user: null, result: null });
+
+  // Status is derived from the current input + last debounced result — no
+  // synchronous setState in the effect (react-hooks/set-state-in-effect).
+  const status = !username ? 'idle'
+    : !USERNAME_RE.test(username) ? 'invalid'
+    : (avail.user === username && avail.result) ? avail.result
+    : 'checking';
 
   useEffect(() => {
-    clearTimeout(timer.current);
-    if (!username) { setStatus('idle'); return; }
-    if (!USERNAME_RE.test(username)) { setStatus('invalid'); return; }
-    setStatus('checking');
-    timer.current = setTimeout(async () => {
+    if (!username || !USERNAME_RE.test(username)) return;
+    const t = setTimeout(async () => {
       const { count } = await supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('username', username);
-      setStatus(count === 0 ? 'available' : 'taken');
+      setAvail({ user: username, result: count === 0 ? 'available' : 'taken' });
     }, 400);
-    return () => clearTimeout(timer.current);
+    return () => clearTimeout(t);
   }, [username]);
 
   const handleSave = async () => {
@@ -281,7 +310,7 @@ function PickUsernameModal({ onDone }) {
       .update({ username })
       .eq('id', session.user.id);
     if (err?.code === '23505') {
-      setStatus('taken');
+      setAvail({ user: username, result: 'taken' });
       setError('That username was just taken. Try another.');
     } else if (err) {
       setError(err.message);
@@ -392,13 +421,25 @@ function SessionExpiredCard({ onDismiss }) {
 export default function DashLayout({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // `authResolved` = the REAL getSession() check has completed at least once.
+  // The optimistic `hasCachedSession()` render below skips the full-screen
+  // spinner, but we must not draw auth-dependent UI (the "Guest mode" bar or the
+  // session-expired card) until the token is actually validated — otherwise a
+  // stale/expired token flashes the dashboard authenticated and then snaps to
+  // guest, which is the "flash logged-in / flash logged-out" symptom.
+  const [authResolved, setAuthResolved] = useState(false);
   const [showPickUsername, setShowPickUsername] = useState(false);
   const [showSessionExpired, setShowSessionExpired] = useState(false);
   const router = useRouter();
   const wasAuthenticatedRef = useRef(false);
 
   useLayoutEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- optimistic auth seeded
+       from cached session / localStorage on mount; lazy state init would read
+       client-only storage and diverge from the server render (flash of guest
+       UI + hydration mismatch). A layout effect keeps hydration stable. */
     if (hasCachedSession()) {
+      dbg('optimistic render — cached token present, skipping spinner');
       setIsLoading(false);
       setIsAuthenticated(true);
       wasAuthenticatedRef.current = true;
@@ -406,23 +447,34 @@ export default function DashLayout({ children }) {
     if (typeof window !== 'undefined' && localStorage.getItem('pick_username') === '1') {
       setShowPickUsername(true);
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   useEffect(() => {
+    let active = true;
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!active) return;
+      dbg('getSession resolved →', session ? `authed uid=${session.user.id}` : 'no session');
       setIsAuthenticated(!!session);
       if (session) wasAuthenticatedRef.current = true;
       setIsLoading(false);
+      setAuthResolved(true);
     };
 
     checkAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
       const authed = !!session;
+      dbg('onAuthStateChange', event, authed ? `uid=${session.user.id}` : '(no session)');
       setIsAuthenticated(authed);
+      setAuthResolved(true);
       if (!authed && wasAuthenticatedRef.current) {
-        // Session just ended while user was logged in → show expired card
+        // Session ended while the user was logged in → show the expired card.
+        // Only SIGNED_OUT with no session is a genuine end-of-session; a
+        // TOKEN_REFRESHED normally carries a fresh session, so a null there is
+        // the real "silent refresh failed" case worth surfacing.
         if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
           if (!session) setShowSessionExpired(true);
         } else {
@@ -433,7 +485,7 @@ export default function DashLayout({ children }) {
       if (authed) wasAuthenticatedRef.current = true;
     });
 
-    return () => authListener.subscription?.unsubscribe();
+    return () => { active = false; authListener.subscription?.unsubscribe(); };
   }, [router]);
 
   if (isLoading) {
@@ -469,7 +521,7 @@ export default function DashLayout({ children }) {
       {showSessionExpired && (
         <SessionExpiredCard onDismiss={() => setShowSessionExpired(false)} />
       )}
-      {!isAuthenticated && !showSessionExpired && (
+      {authResolved && !isAuthenticated && !showSessionExpired && (
         <div
           className="fixed left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-md"
           style={{ bottom: 'calc(env(safe-area-inset-bottom,0px) + 5.75rem)' }}

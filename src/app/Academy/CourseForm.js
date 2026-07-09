@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { Loader2, BookOpen, Upload, Sparkles } from "lucide-react";
 import { CATEGORIES, LEVELS } from "./constants";
+import { supabase } from "../supabaseClient";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
@@ -21,9 +23,13 @@ export default function CourseForm({
     }
     setIsGeneratingDesc(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/generate-lesson", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           courseTitle: formData.title,
           category: formData.category,
@@ -62,13 +68,13 @@ export default function CourseForm({
                 thumbnailPreview.startsWith("data:video") ? (
                   <video src={thumbnailPreview} className="object-cover w-full h-full" muted loop playsInline />
                 ) : (
-                  <img src={thumbnailPreview} alt="Preview" className="object-cover w-full h-full" />
+                  <Image src={thumbnailPreview} alt="Preview" fill unoptimized className="object-cover w-full h-full" />
                 )
               ) : formData.thumbnail_url ? (
                 formData.thumbnail_url.match(/\.(mp4|webm|ogg)$/i) ? (
                   <video src={formData.thumbnail_url} className="object-cover w-full h-full" muted loop playsInline />
                 ) : (
-                  <img src={formData.thumbnail_url} alt="Preview" className="object-cover w-full h-full" />
+                  <Image src={formData.thumbnail_url} alt="Preview" fill unoptimized className="object-cover w-full h-full" />
                 )
               ) : (
                 <div className="text-gray-400 flex flex-col items-center">

@@ -424,13 +424,16 @@ export default function ShopPage() {
   const toastTimer                      = useRef(null);
 
   useEffect(() => {
-    setMounted(true);
-    const verified = localStorage.getItem('shop_age_verified');
-    if (verified === 'true') setAgeVerified(true);
-    const saved = localStorage.getItem('shop_cart');
-    if (saved) { try { setCart(JSON.parse(saved)); } catch {} }
-    const wl = localStorage.getItem('shop_wishlist');
-    if (wl) { try { setWishlist(JSON.parse(wl)); } catch {} }
+    const frame = requestAnimationFrame(() => {
+      setMounted(true);
+      const verified = localStorage.getItem('shop_age_verified');
+      if (verified === 'true') setAgeVerified(true);
+      const saved = localStorage.getItem('shop_cart');
+      if (saved) { try { setCart(JSON.parse(saved)); } catch {} }
+      const wl = localStorage.getItem('shop_wishlist');
+      if (wl) { try { setWishlist(JSON.parse(wl)); } catch {} }
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   // Persist cart + wishlist

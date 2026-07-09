@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Terminal, Award, BarChart3, Eye, TrendingUp, Loader2,
   Shield, Star, Crown, ArrowLeft, Calendar, Hash,
@@ -86,8 +87,8 @@ export default function SponsorDashboard() {
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6 text-center">
         <AlertCircle size={40} className="text-amber-500 mb-4" />
         <h1 className="text-2xl font-black text-white mb-2">No Sponsor Account Found</h1>
-        <p className="text-gray-400 mb-2 max-w-sm">We couldn't find a sponsor record linked to <strong className="text-white">{user.email}</strong>.</p>
-        <p className="text-gray-500 text-sm mb-6">If you've applied, your application may still be under review.</p>
+        <p className="text-gray-400 mb-2 max-w-sm">We couldn&apos;t find a sponsor record linked to <strong className="text-white">{user.email}</strong>.</p>
+        <p className="text-gray-500 text-sm mb-6">If you&apos;ve applied, your application may still be under review.</p>
         <Link href="/sponsors#apply" className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition-all">
           Apply as a Sponsor
         </Link>
@@ -130,7 +131,7 @@ export default function SponsorDashboard() {
             {sponsor.tagline && <p className="text-gray-400 mt-1">{sponsor.tagline}</p>}
           </div>
           {sponsor.logo_url && (
-            <img src={sponsor.logo_url} alt={sponsor.company_name} className="h-12 object-contain" />
+            <Image src={sponsor.logo_url} alt={sponsor.company_name} width={160} height={48} unoptimized className="h-12 w-auto object-contain" />
           )}
         </div>
 
@@ -144,7 +145,7 @@ export default function SponsorDashboard() {
             <AlertCircle size={16} />
             <div>
               <p className="font-bold text-sm capitalize">{sponsor.status === "pending" ? "Application Under Review" : "Application Not Approved"}</p>
-              {sponsor.status === "pending" && <p className="text-xs opacity-75 mt-0.5">We'll email you at {sponsor.contact_email} once reviewed.</p>}
+              {sponsor.status === "pending" && <p className="text-xs opacity-75 mt-0.5">We&apos;ll email you at {sponsor.contact_email} once reviewed.</p>}
             </div>
           </div>
         )}

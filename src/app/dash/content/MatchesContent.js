@@ -3,15 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../supabaseClient';
+import { useLanguage } from "../../../lib/i18n";
 import { Bot, ArrowRight, Briefcase, GraduationCap, BookOpen, Sparkles, Loader2, Search } from 'lucide-react';
 
 const MODULE = {
-  job:    { label: 'Job',    icon: Briefcase,     accent: 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/15' },
-  mentor: { label: 'Mentor', icon: GraduationCap, accent: 'text-trust-600 dark:text-trust-500 bg-trust-50 dark:bg-trust-500/15' },
-  course: { label: 'Course', icon: BookOpen,      accent: 'text-premium-600 dark:text-premium-500 bg-premium-50 dark:bg-premium-500/15' },
+  job:    { labelKey: 'matches.module_job',    icon: Briefcase,     accent: 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/15' },
+  mentor: { labelKey: 'matches.module_mentor', icon: GraduationCap, accent: 'text-trust-600 dark:text-trust-500 bg-trust-50 dark:bg-trust-500/15' },
+  course: { labelKey: 'matches.module_course', icon: BookOpen,      accent: 'text-premium-600 dark:text-premium-500 bg-premium-50 dark:bg-premium-500/15' },
 };
 
-const CHIPS = ['Find a remote design job', 'Become a senior React developer', 'Match me a mentor in AI', 'Learn cloud & land a job'];
+const CHIPS = ['matches.chip_1', 'matches.chip_2', 'matches.chip_3', 'matches.chip_4'];
 
 function scoreColor(s) {
   if (s >= 85) return 'text-trust-600 dark:text-trust-500 bg-trust-50 dark:bg-trust-500/15';
@@ -20,6 +21,7 @@ function scoreColor(s) {
 }
 
 export default function MatchesContent() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [goal, setGoal] = useState('');
   const [matches, setMatches] = useState([]);
@@ -53,17 +55,18 @@ export default function MatchesContent() {
   useEffect(() => {
     let q = '';
     try { q = sessionStorage.getItem('match_goal') || ''; sessionStorage.removeItem('match_goal'); } catch {}
-    if (q) run(q);
+    const init = () => { if (q) run(q); };
+    init();
   }, [run]);
 
   return (
     <div className="max-w-3xl mx-auto w-full">
       <div className="mb-6">
         <div className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-2">
-          <Sparkles size={13} /> AI Matching
+          <Sparkles size={13} /> {t('matches.eyebrow')}
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-gray-100">Get matched across everything.</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1.5 text-sm">Describe a goal in plain language — the engine ranks jobs, mentors, and courses by real fit, not keywords.</p>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-gray-100">{t('matches.heading')}</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1.5 text-sm">{t('matches.subheading')}</p>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); run(); }}>
@@ -72,11 +75,11 @@ export default function MatchesContent() {
           <input
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
-            placeholder="e.g. I want a remote React job and a mentor to level up"
+            placeholder={t('matches.input_placeholder')}
             className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 min-w-0"
           />
           <button type="submit" disabled={state === 'loading'} className="shrink-0 inline-flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors active:scale-95">
-            {state === 'loading' ? <Loader2 size={13} className="animate-spin" /> : <>Match <ArrowRight size={13} /></>}
+            {state === 'loading' ? <Loader2 size={13} className="animate-spin" /> : <>{t('matches.match_button')} <ArrowRight size={13} /></>}
           </button>
         </div>
       </form>
@@ -84,8 +87,8 @@ export default function MatchesContent() {
       {state === 'idle' && (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {CHIPS.map((c) => (
-            <button key={c} onClick={() => run(c)} className="text-[11px] font-semibold px-3 py-1 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-500/15 hover:text-brand-600 dark:hover:text-brand-300 transition-colors">
-              {c}
+            <button key={c} onClick={() => run(t(c))} className="text-[11px] font-semibold px-3 py-1 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-500/15 hover:text-brand-600 dark:hover:text-brand-300 transition-colors">
+              {t(c)}
             </button>
           ))}
         </div>
@@ -99,7 +102,7 @@ export default function MatchesContent() {
 
       {state === 'error' && (
         <div className="mt-6 text-center py-10 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Couldn&apos;t run matching just now. Try again.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('matches.error')}</p>
         </div>
       )}
 
@@ -108,13 +111,13 @@ export default function MatchesContent() {
           {matches.length === 0 ? (
             <div className="text-center py-12 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
               <Search size={26} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">No matches yet — as more jobs, mentors, and courses join, results improve.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('matches.empty')}</p>
             </div>
           ) : (
             <>
               <div className="flex items-center gap-2 mb-3">
-                <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">{matches.length} matches</p>
-                {engine === 'ai' && <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/15 px-2 py-0.5 rounded-full">AI-ranked</span>}
+                <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">{t('matches.count_label', { n: matches.length })}</p>
+                {engine === 'ai' && <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/15 px-2 py-0.5 rounded-full">{t('matches.ai_ranked')}</span>}
               </div>
               <div className="space-y-3">
                 {matches.map((m, i) => {
@@ -129,7 +132,7 @@ export default function MatchesContent() {
                       <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${meta.accent}`}><Icon size={20} /></div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${meta.accent}`}>{meta.label}</span>
+                          <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${meta.accent}`}>{t(meta.labelKey)}</span>
                           <p className="font-bold text-gray-900 dark:text-gray-100 truncate">{m.title}</p>
                         </div>
                         {m.subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{m.subtitle}</p>}

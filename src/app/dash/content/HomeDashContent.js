@@ -15,6 +15,7 @@ import {
 import VerifiedBadge from '../../components/VerifiedBadge';
 import PremiumBadge from '../../components/PremiumBadge';
 import { getAvatarSrc } from '../../../lib/avatar';
+import { useLanguage } from '../../../lib/i18n';
 
 /* ── Helpers ─────────────────────────────────────── */
 function timeAgo(ts) {
@@ -28,14 +29,14 @@ function timeAgo(ts) {
 function calcCompleteness(profile) {
   if (!profile) return { score: 0, missing: [] };
   const checks = [
-    { label: 'Full name',   done: !!profile.full_name },
-    { label: 'Photo',       done: !!profile.avatar_url },
-    { label: 'Bio',         done: !!profile.status },
-    { label: 'Location',    done: !!profile.location },
-    { label: 'Work status', done: !!profile.work_status },
-    { label: 'Skills',      done: Array.isArray(profile.skills) && profile.skills.length > 0 },
-    { label: 'GitHub',      done: !!profile.github },
-    { label: 'Website',     done: !!profile.website },
+    { label: 'home_dash.completeness.full_name',   done: !!profile.full_name },
+    { label: 'home_dash.completeness.photo',       done: !!profile.avatar_url },
+    { label: 'home_dash.completeness.bio',         done: !!profile.status },
+    { label: 'home_dash.completeness.location',    done: !!profile.location },
+    { label: 'home_dash.completeness.work_status', done: !!profile.work_status },
+    { label: 'home_dash.completeness.skills',      done: Array.isArray(profile.skills) && profile.skills.length > 0 },
+    { label: 'home_dash.completeness.github',      done: !!profile.github },
+    { label: 'home_dash.completeness.website',     done: !!profile.website },
   ];
   const done = checks.filter(c => c.done).length;
   return { score: Math.round((done / checks.length) * 100), missing: checks.filter(c => !c.done).map(c => c.label) };
@@ -45,8 +46,8 @@ function calcCompleteness(profile) {
 const HUBS = [
   {
     href: '/contents',
-    label: 'Contents',
-    desc: 'Everything knowledge-related — courses, career roadmaps, articles, and your saved resources.',
+    labelKey: 'home_dash.hubs.contents_label',
+    descKey: 'home_dash.hubs.contents_desc',
     icon: Library,
     iconBg: 'bg-gradient-to-br from-amber-500 to-orange-500',
     bg: 'bg-amber-50 dark:bg-amber-900/20',
@@ -57,8 +58,8 @@ const HUBS = [
   },
   {
     href: '/opportunities',
-    label: 'Opportunities',
-    desc: 'Find work, hire talent, manage contracts, and connect with mentors and co-founders.',
+    labelKey: 'home_dash.hubs.opportunities_label',
+    descKey: 'home_dash.hubs.opportunities_desc',
     icon: TrendingUp,
     iconBg: 'bg-gradient-to-br from-blue-600 to-indigo-600',
     bg: 'bg-blue-50 dark:bg-blue-900/20',
@@ -71,26 +72,27 @@ const HUBS = [
 
 /* ── Quick-nav ────────────────────────────────────── */
 const NAV_TILES = [
-  { id: 'connections',   label: 'Network',    icon: UserPlus,      stat: null,            color: 'text-blue-500' },
-  { id: 'messages',      label: 'Messages',   icon: MessageSquare, stat: 'messages',      color: 'text-sky-500' },
-  { id: 'notifications', label: 'Alerts',     icon: Bell,          stat: 'notifications', color: 'text-red-500' },
-  { id: 'feed',          label: 'Discovery',  icon: Compass,       stat: null,            color: 'text-cyan-500' },
-  { id: 'ai',            label: 'AI',         icon: Bot,           stat: null,            color: 'text-violet-500' },
-  { id: 'coaching',      label: 'Coaching',   icon: Award,         stat: null,            color: 'text-indigo-500' },
-  { id: 'events',        label: 'Events',     icon: CalendarDays,  stat: null,            color: 'text-purple-500' },
-  { id: 'settings',      label: 'Settings',   icon: Settings,      stat: null,            color: 'text-gray-400' },
+  { id: 'connections',   labelKey: 'home_dash.tiles.network',   icon: UserPlus,      stat: null,            color: 'text-blue-500' },
+  { id: 'messages',      labelKey: 'home_dash.tiles.messages',  icon: MessageSquare, stat: 'messages',      color: 'text-sky-500' },
+  { id: 'notifications', labelKey: 'home_dash.tiles.alerts',    icon: Bell,          stat: 'notifications', color: 'text-red-500' },
+  { id: 'feed',          labelKey: 'home_dash.tiles.discovery', icon: Compass,       stat: null,            color: 'text-cyan-500' },
+  { id: 'ai',            labelKey: 'home_dash.tiles.ai',        icon: Bot,           stat: null,            color: 'text-violet-500' },
+  { id: 'coaching',      labelKey: 'home_dash.tiles.coaching',  icon: Award,         stat: null,            color: 'text-indigo-500' },
+  { id: 'events',        labelKey: 'home_dash.tiles.events',    icon: CalendarDays,  stat: null,            color: 'text-purple-500' },
+  { id: 'settings',      labelKey: 'home_dash.tiles.settings',  icon: Settings,      stat: null,            color: 'text-gray-400' },
 ];
 
 /* ── Onboarding steps ─────────────────────────────── */
 const STEPS = [
-  { n: 1, label: 'Build your profile',      desc: 'Add your skills, bio, and photo so others can find and trust you.',      key: 'profile' },
-  { n: 2, label: 'Choose a pathway',        desc: 'Pick a career roadmap that matches your goals and start progressing.',    key: 'pathways' },
-  { n: 3, label: 'Explore opportunities',   desc: 'Browse jobs, services, and partnerships in your field.',                 key: 'opportunities' },
-  { n: 4, label: 'Connect & grow',          desc: 'Send connection requests, join groups, and build your professional network.', key: 'connections' },
+  { n: 1, labelKey: 'home_dash.steps.profile_label', descKey: 'home_dash.steps.profile_desc', key: 'profile' },
+  { n: 2, labelKey: 'home_dash.steps.pathway_label', descKey: 'home_dash.steps.pathway_desc', key: 'pathways' },
+  { n: 3, labelKey: 'home_dash.steps.explore_label', descKey: 'home_dash.steps.explore_desc', key: 'opportunities' },
+  { n: 4, labelKey: 'home_dash.steps.connect_label', descKey: 'home_dash.steps.connect_desc', key: 'connections' },
 ];
 
 export default function HomeDashContent() {
   const router = useRouter();
+  const { t, lang } = useLanguage();
   const [profile, setProfile]         = useState(null);
   const [authSession, setAuthSession] = useState(null);
   const [stats, setStats]             = useState({ connections: 0, messages: 0, notifications: 0 });
@@ -101,8 +103,8 @@ export default function HomeDashContent() {
   const [aiQuery, setAiQuery]         = useState('');
 
   const greetingHour = new Date().getHours();
-  const greeting = greetingHour < 12 ? 'Good morning' : greetingHour < 17 ? 'Good afternoon' : 'Good evening';
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const greeting = greetingHour < 12 ? t('home_dash.greeting_morning') : greetingHour < 17 ? t('home_dash.greeting_afternoon') : t('home_dash.greeting_evening');
+  const today = new Date().toLocaleDateString(lang, { weekday: 'long', month: 'long', day: 'numeric' });
 
   const go = (id) => router.push('/dash/' + id);
 
@@ -236,9 +238,9 @@ export default function HomeDashContent() {
         {/* Three stat pills */}
         <div className="relative z-10 flex flex-wrap gap-2 mt-5">
           {[
-            { label: `${stats.connections} connection${stats.connections !== 1 ? 's' : ''}`, id: 'connections', icon: Users, badge: 0, iconColor: 'text-blue-300' },
-            { label: stats.messages > 0 ? `${stats.messages} unread` : 'Messages', id: 'messages', icon: MessageSquare, badge: stats.messages, iconColor: 'text-sky-300' },
-            { label: stats.notifications > 0 ? `${stats.notifications} alert${stats.notifications !== 1 ? 's' : ''}` : 'Alerts', id: 'notifications', icon: Bell, badge: stats.notifications, iconColor: 'text-yellow-300' },
+            { label: t('home_dash.connections', { count: stats.connections }), id: 'connections', icon: Users, badge: 0, iconColor: 'text-blue-300' },
+            { label: stats.messages > 0 ? `${stats.messages} ${t('home_dash.unread')}` : t('home_dash.messages'), id: 'messages', icon: MessageSquare, badge: stats.messages, iconColor: 'text-sky-300' },
+            { label: stats.notifications > 0 ? `${stats.notifications} ${stats.notifications !== 1 ? t('home_dash.alerts') : t('home_dash.alert')}` : t('home_dash.alerts_label'), id: 'notifications', icon: Bell, badge: stats.notifications, iconColor: 'text-yellow-300' },
           ].map(({ label, id, icon: Icon, badge, iconColor }) => (
             <button
               key={id}
@@ -265,18 +267,23 @@ export default function HomeDashContent() {
             <input
               value={aiQuery}
               onChange={(e) => setAiQuery(e.target.value)}
-              placeholder="Tell me what you're looking for…"
+              placeholder={t('home_dash.ask_placeholder')}
               className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 min-w-0"
-              aria-label="Ask the AI assistant"
+              aria-label={t('home_dash.ask_ai')}
             />
             <button type="submit" className="shrink-0 inline-flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-3.5 sm:px-4 py-2 rounded-xl transition-colors active:scale-95">
-              <span className="hidden sm:inline">Ask AI</span>
+              <span className="hidden sm:inline">{t('home_dash.ask_ai')}</span>
               <ArrowRight size={13} />
             </button>
           </div>
         </form>
         <div className="flex flex-wrap gap-1.5 mt-2.5">
-          {['Find a remote job', 'Match me a mentor', 'Suggest a course', 'Grow my network'].map((s) => (
+          {[
+            t('home_dash.suggest_job'),
+            t('home_dash.suggest_mentor'),
+            t('home_dash.suggest_course'),
+            t('home_dash.suggest_network'),
+          ].map((s) => (
             <button
               key={s}
               type="button"
@@ -292,7 +299,7 @@ export default function HomeDashContent() {
       {/* ── YOUR JOURNEY ───────────────────────────── */}
       <section>
         <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Your journey</h2>
+          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('home_dash.journey_title')}</h2>
           <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
           <span className="text-[10px] font-black text-gray-400 shrink-0">{stepsDone.filter(Boolean).length}/{STEPS.length}</span>
         </div>
@@ -303,7 +310,7 @@ export default function HomeDashContent() {
               <button
                 key={step.n}
                 onClick={() => go(step.key)}
-                title={step.desc}
+                title={t(step.descKey)}
                 className={`group relative flex-1 min-w-0 text-left p-3 sm:p-4 rounded-2xl border transition-all active:scale-[0.98] ${
                   done
                     ? 'bg-emerald-50 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800/40'
@@ -318,7 +325,7 @@ export default function HomeDashContent() {
                 <p className={`text-[11px] sm:text-xs font-bold leading-tight line-clamp-2 ${
                   done ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'
                 }`}>
-                  {step.label}
+                  {t(step.labelKey)}
                 </p>
               </button>
             );
@@ -329,16 +336,17 @@ export default function HomeDashContent() {
       {/* ── HUB CARDS ──────────────────────────────── */}
       <section>
         <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Platform</h2>
+          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('home_dash.platform_title')}</h2>
           <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {HUBS.map((hub) => {
             const Icon = hub.icon;
+            const hubLabel = t(hub.labelKey);
             return (
               <button
-                key={hub.label}
+                key={hub.href}
                 onClick={() => router.push(hub.href)}
                 className={`group text-left p-6 rounded-2xl border ${hub.bg} ${hub.border} transition-all duration-200 hover:shadow-xl hover:-translate-y-1 active:scale-[0.98]`}
               >
@@ -347,12 +355,12 @@ export default function HomeDashContent() {
                     <Icon size={22} className="text-white" />
                   </div>
                   <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${hub.pillStyle}`}>
-                    {hub.pills.length} sections
+                    {hub.pills.length} {t('home_dash.sections_suffix')}
                   </span>
                 </div>
 
-                <h3 className={`text-lg font-black ${hub.text} mb-1.5`}>{hub.label}</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4">{hub.desc}</p>
+                <h3 className={`text-lg font-black ${hub.text} mb-1.5`}>{hubLabel}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4">{t(hub.descKey)}</p>
 
                 <div className="flex flex-wrap gap-1.5 mb-5">
                   {hub.pills.map((p) => (
@@ -361,7 +369,7 @@ export default function HomeDashContent() {
                 </div>
 
                 <span className={`inline-flex items-center gap-1.5 text-xs font-black ${hub.text}`}>
-                  Browse {hub.label}
+                  {t('home_dash.browse')} {hubLabel}
                   <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </button>
@@ -373,7 +381,7 @@ export default function HomeDashContent() {
       {/* ── QUICK NAV ──────────────────────────────── */}
       <section>
         <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Quick Access</h2>
+          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('home_dash.quick_access')}</h2>
           <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
         </div>
 
@@ -393,7 +401,7 @@ export default function HomeDashContent() {
                   </span>
                 )}
                 <Icon size={18} className={`${tile.color} group-hover:scale-110 transition-transform duration-200`} />
-                <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 text-center leading-tight">{tile.label}</span>
+                <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 text-center leading-tight">{t(tile.labelKey)}</span>
               </button>
             );
           })}
@@ -404,23 +412,23 @@ export default function HomeDashContent() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">What&apos;s New</h2>
+            <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('home_dash.whats_new')}</h2>
             <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 px-2 py-0.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live
+              {t('home_dash.live')}
             </div>
           </div>
           <button onClick={() => go('blog')} className="text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-            View all <ArrowRight size={11} />
+            {t('home_dash.view_all')} <ArrowRight size={11} />
           </button>
         </div>
 
         {feedPosts.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-8 text-center">
             <FileText size={26} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">No posts yet — be the first to publish.</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">{t('home_dash.feed_empty')}</p>
             <button onClick={() => go('blog')} className="text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline">
-              Go to Blog
+              {t('home_dash.feed_go_blog')}
             </button>
           </div>
         ) : (
@@ -451,7 +459,7 @@ export default function HomeDashContent() {
                   )}
                   <span className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
                     <Clock size={9} />
-                    {timeAgo(post.created_at)} ago
+                    {t('home_dash.ago', { time: timeAgo(post.created_at) })}
                   </span>
                 </div>
               </button>
@@ -469,7 +477,7 @@ export default function HomeDashContent() {
             <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
               <BarChart2 size={15} className="text-white" />
             </div>
-            <p className="text-sm font-black text-gray-900 dark:text-gray-100">Profile Strength</p>
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100">{t('home_dash.profile_strength')}</p>
             <span className={`ml-auto text-xs font-black px-2 py-0.5 rounded-full ${score >= 80 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : score >= 50 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
               {score}%
             </span>
@@ -482,18 +490,18 @@ export default function HomeDashContent() {
               {missing.slice(0, 3).map(m => (
                 <div key={m} className="flex items-center gap-2">
                   <Circle size={9} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400">{m}</span>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">{t(m)}</span>
                 </div>
               ))}
-              {missing.length > 3 && <p className="text-[10px] text-gray-400">+{missing.length - 3} more</p>}
+              {missing.length > 3 && <p className="text-[10px] text-gray-400">+{missing.length - 3} {t('home_dash.more_suffix')}</p>}
               <button onClick={() => go('profile')} className="mt-2 flex items-center gap-1 text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline">
-                Complete profile <ArrowRight size={10} />
+                {t('home_dash.complete_profile')} <ArrowRight size={10} />
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 size={14} />
-              <span className="text-xs font-bold">Profile complete — great work!</span>
+              <span className="text-xs font-bold">{t('home_dash.profile_complete')}</span>
             </div>
           )}
         </div>
@@ -504,21 +512,21 @@ export default function HomeDashContent() {
             <div className="w-8 h-8 bg-orange-500 rounded-xl flex items-center justify-center shrink-0">
               <Flame size={15} className="text-white" />
             </div>
-            <p className="text-sm font-black text-gray-900 dark:text-gray-100">Activity Streak</p>
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100">{t('home_dash.streak_title')}</p>
           </div>
           <div className="flex items-end gap-2.5 mb-3">
             <p className="text-5xl font-black text-orange-500 leading-none">{streak}</p>
             <div className="mb-1">
-              <p className="text-sm font-black text-gray-700 dark:text-gray-300">day{streak !== 1 ? 's' : ''}</p>
-              <p className="text-[10px] text-gray-400">consecutive</p>
+              <p className="text-sm font-black text-gray-700 dark:text-gray-300">{streak !== 1 ? t('home_dash.days') : t('home_dash.day')}</p>
+              <p className="text-[10px] text-gray-400">{t('home_dash.consecutive')}</p>
             </div>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
             {streak === 0
-              ? 'Log in and take action every day to start your streak.'
+              ? t('home_dash.streak_zero')
               : streak >= 7
-              ? `${streak} days strong. Keep the momentum going.`
-              : 'Building momentum — come back tomorrow!'}
+              ? t('home_dash.streak_strong', { days: streak })
+              : t('home_dash.streak_building')}
           </p>
         </div>
 

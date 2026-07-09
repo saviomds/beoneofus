@@ -7,23 +7,25 @@ import {
   Loader2, Shield, Building2, User, ChevronRight, Eye, Lock,
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { useLanguage } from "../../../lib/i18n";
 
 const STATUS_CFG = {
-  draft:     { label: 'Draft',     bg: 'bg-gray-100 dark:bg-gray-800',     text: 'text-gray-600 dark:text-gray-400',     border: 'border-gray-200 dark:border-gray-700',     icon: FileText },
-  sent:      { label: 'Pending',   bg: 'bg-blue-50 dark:bg-blue-900/20',   text: 'text-blue-600 dark:text-blue-400',     border: 'border-blue-200 dark:border-blue-500/20', icon: Send },
-  viewed:    { label: 'Review',    bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400',   border: 'border-amber-200 dark:border-amber-500/20', icon: Eye },
-  signed:    { label: 'Signed',    bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-500/20', icon: CheckCircle2 },
-  completed: { label: 'Completed', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-500/20', icon: CheckCircle2 },
-  expired:   { label: 'Expired',   bg: 'bg-red-50 dark:bg-red-900/20',    text: 'text-red-600 dark:text-red-400',       border: 'border-red-200 dark:border-red-500/20',   icon: XCircle },
-  cancelled: { label: 'Cancelled', bg: 'bg-red-50 dark:bg-red-900/20',    text: 'text-red-600 dark:text-red-400',       border: 'border-red-200 dark:border-red-500/20',   icon: XCircle },
+  draft:     { labelKey: 'contracts.status.draft',     bg: 'bg-gray-100 dark:bg-gray-800',     text: 'text-gray-600 dark:text-gray-400',     border: 'border-gray-200 dark:border-gray-700',     icon: FileText },
+  sent:      { labelKey: 'contracts.status.sent',      bg: 'bg-blue-50 dark:bg-blue-900/20',   text: 'text-blue-600 dark:text-blue-400',     border: 'border-blue-200 dark:border-blue-500/20', icon: Send },
+  viewed:    { labelKey: 'contracts.status.viewed',    bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400',   border: 'border-amber-200 dark:border-amber-500/20', icon: Eye },
+  signed:    { labelKey: 'contracts.status.signed',    bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-500/20', icon: CheckCircle2 },
+  completed: { labelKey: 'contracts.status.completed', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-500/20', icon: CheckCircle2 },
+  expired:   { labelKey: 'contracts.status.expired',   bg: 'bg-red-50 dark:bg-red-900/20',    text: 'text-red-600 dark:text-red-400',       border: 'border-red-200 dark:border-red-500/20',   icon: XCircle },
+  cancelled: { labelKey: 'contracts.status.cancelled', bg: 'bg-red-50 dark:bg-red-900/20',    text: 'text-red-600 dark:text-red-400',       border: 'border-red-200 dark:border-red-500/20',   icon: XCircle },
 };
 
 function StatusBadge({ status }) {
+  const { t } = useLanguage();
   const cfg = STATUS_CFG[status] || STATUS_CFG.draft;
   const Icon = cfg.icon;
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-      <Icon size={10} /> {cfg.label}
+      <Icon size={10} /> {t(cfg.labelKey)}
     </span>
   );
 }
@@ -40,6 +42,7 @@ function fmtMoney(amount, currency = 'USD') {
 
 /* ── Full-page contract document modal ─────────────────────────────────────── */
 function ContractModal({ contract, onClose, onSigned }) {
+  const { t } = useLanguage();
   const [signing, setSigning] = useState(false);
   const [sigName, setSigName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,7 +51,7 @@ function ContractModal({ contract, onClose, onSigned }) {
   const canSign = ['sent', 'viewed'].includes(contract.status);
 
   const handleSign = async () => {
-    if (!sigName.trim()) { setError('Please type your full name to sign.'); return; }
+    if (!sigName.trim()) { setError(t('contracts.err_type_name')); return; }
     setLoading(true);
     setError('');
     try {
@@ -85,7 +88,7 @@ function ContractModal({ contract, onClose, onSigned }) {
 
       onSigned({ ...contract, status: 'signed', user_signature: sigName.trim(), signed_at: new Date().toISOString() });
     } catch (e) {
-      setError(e.message || 'Failed to sign contract.');
+      setError(e.message || t('contracts.err_sign_failed'));
     } finally {
       setLoading(false);
     }
@@ -102,7 +105,7 @@ function ContractModal({ contract, onClose, onSigned }) {
               <ScrollText size={18} />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Work Contract</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">{t('contracts.work_contract')}</p>
               <h2 className="text-base font-black text-gray-900 dark:text-white tracking-tight leading-tight">{contract.title}</h2>
             </div>
           </div>
@@ -117,7 +120,7 @@ function ContractModal({ contract, onClose, onSigned }) {
           {/* Status + meta row */}
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={contract.status} />
-            <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">Issued {fmt(contract.created_at)}</span>
+            <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{t('contracts.issued', { date: fmt(contract.created_at) })}</span>
             {contract.contract_type && (
               <span className="text-[10px] font-bold uppercase tracking-wider bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/20 px-2 py-0.5 rounded-full">
                 {contract.contract_type}
@@ -128,12 +131,12 @@ function ContractModal({ contract, onClose, onSigned }) {
           {/* Period + Payment summary */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
-              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1"><Calendar size={10} /> Contract Period</p>
+              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1"><Calendar size={10} /> {t('contracts.contract_period')}</p>
               <p className="text-sm font-bold text-gray-900 dark:text-white">{fmt(contract.start_date)}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">to {fmt(contract.end_date)}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{t('contracts.to', { date: fmt(contract.end_date) })}</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
-              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1"><DollarSign size={10} /> Total Value</p>
+              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1"><DollarSign size={10} /> {t('contracts.total_value')}</p>
               <p className="text-sm font-bold text-gray-900 dark:text-white">{fmtMoney(contract.payment_amount, contract.payment_currency)}</p>
               {contract.payment_currency && <p className="text-[10px] text-gray-400 mt-0.5">{contract.payment_currency}</p>}
             </div>
@@ -142,7 +145,7 @@ function ContractModal({ contract, onClose, onSigned }) {
           {/* Work description */}
           {contract.work_description && (
             <div>
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5"><Briefcase size={10} /> Scope of Work</h3>
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5"><Briefcase size={10} /> {t('contracts.scope_of_work')}</h3>
               <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{contract.work_description}</p>
               </div>
@@ -152,7 +155,7 @@ function ContractModal({ contract, onClose, onSigned }) {
           {/* Deliverables */}
           {contract.deliverables && (
             <div>
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5"><Check size={10} /> Deliverables</h3>
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5"><Check size={10} /> {t('contracts.deliverables')}</h3>
               <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{contract.deliverables}</p>
               </div>
@@ -162,7 +165,7 @@ function ContractModal({ contract, onClose, onSigned }) {
           {/* Payment terms */}
           {(contract.payment_terms || contract.payment_schedule) && (
             <div>
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5"><DollarSign size={10} /> Payment Terms</h3>
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5"><DollarSign size={10} /> {t('contracts.payment_terms')}</h3>
               <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 space-y-2">
                 {contract.payment_terms && <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{contract.payment_terms}</p>}
                 {contract.payment_schedule && <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{contract.payment_schedule}</p>}
@@ -172,14 +175,14 @@ function ContractModal({ contract, onClose, onSigned }) {
 
           {/* ── Signature Block ── */}
           <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-6">
-            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-1.5"><PenLine size={10} /> Signatures</h3>
+            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-1.5"><PenLine size={10} /> {t('contracts.signatures')}</h3>
             <div className="grid grid-cols-2 gap-4">
 
               {/* beoneofus signature */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Building2 size={13} className="text-blue-500 shrink-0" />
-                  <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Platform</p>
+                  <p className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{t('contracts.platform')}</p>
                 </div>
                 <p className="font-black text-2xl text-blue-600 dark:text-blue-400 tracking-tight mb-2" style={{ fontFamily: 'cursive' }}>
                   beoneofus
@@ -187,7 +190,7 @@ function ContractModal({ contract, onClose, onSigned }) {
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">{contract.admin_signature || 'beoneofus'}</p>
                 <div className="mt-2 flex items-center gap-1">
                   <Shield size={10} className="text-emerald-500" />
-                  <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">Verified & Signed</p>
+                  <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">{t('contracts.verified_signed')}</p>
                 </div>
               </div>
 
@@ -195,7 +198,7 @@ function ContractModal({ contract, onClose, onSigned }) {
               <div className={`border rounded-2xl p-4 ${contract.user_signature ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-500/20' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <User size={13} className={contract.user_signature ? 'text-emerald-500' : 'text-gray-400'} />
-                  <p className={`text-[9px] font-black uppercase tracking-widest ${contract.user_signature ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>Your Signature</p>
+                  <p className={`text-[9px] font-black uppercase tracking-widest ${contract.user_signature ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>{t('contracts.your_signature')}</p>
                 </div>
                 {contract.user_signature ? (
                   <>
@@ -205,14 +208,14 @@ function ContractModal({ contract, onClose, onSigned }) {
                     <p className="text-[9px] text-gray-500 dark:text-gray-400">{fmt(contract.signed_at)}</p>
                     <div className="mt-2 flex items-center gap-1">
                       <CheckCircle2 size={10} className="text-emerald-500" />
-                      <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">Signed</p>
+                      <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">{t('contracts.signed')}</p>
                     </div>
                   </>
                 ) : (
                   <div className="flex flex-col h-full justify-center">
                     <div className="flex items-center gap-1 mt-1">
                       <Lock size={10} className="text-gray-300 dark:text-gray-600" />
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 italic">Awaiting your signature</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 italic">{t('contracts.awaiting_signature')}</p>
                     </div>
                   </div>
                 )}
@@ -222,8 +225,7 @@ function ContractModal({ contract, onClose, onSigned }) {
 
           {/* Terms note */}
           <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed text-center">
-            By signing, you agree to the terms of this contract and confirm all details are accurate.
-            This is a legally binding agreement between you and beoneofus.
+            {t('contracts.terms_note')}
           </p>
 
           {/* Sign action */}
@@ -232,16 +234,16 @@ function ContractModal({ contract, onClose, onSigned }) {
               onClick={() => setSigning(true)}
               className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 text-sm"
             >
-              <PenLine size={15} /> Sign This Contract
+              <PenLine size={15} /> {t('contracts.sign_this_contract')}
             </button>
           )}
 
           {canSign && signing && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4 space-y-3">
-              <p className="text-[11px] font-bold text-blue-700 dark:text-blue-300">Type your full legal name to sign:</p>
+              <p className="text-[11px] font-bold text-blue-700 dark:text-blue-300">{t('contracts.type_legal_name')}</p>
               <input
                 type="text"
-                placeholder="Your full name..."
+                placeholder={t('contracts.name_placeholder')}
                 value={sigName}
                 onChange={e => { setSigName(e.target.value); setError(''); }}
                 className="w-full bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-500/30 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
@@ -250,12 +252,12 @@ function ContractModal({ contract, onClose, onSigned }) {
               <div className="flex gap-2">
                 <button onClick={() => { setSigning(false); setSigName(''); setError(''); }}
                   className="flex-1 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-bold rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-sm">
-                  Cancel
+                  {t('contracts.cancel')}
                 </button>
                 <button onClick={handleSign} disabled={loading || !sigName.trim()}
                   className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl transition-all text-sm flex items-center justify-center gap-2">
                   {loading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  {loading ? 'Signing…' : 'Confirm Signature'}
+                  {loading ? t('contracts.signing') : t('contracts.confirm_signature')}
                 </button>
               </div>
             </div>
@@ -268,14 +270,15 @@ function ContractModal({ contract, onClose, onSigned }) {
 
 /* ── Empty state ────────────────────────────────────────────────────────────── */
 function Empty() {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-3xl flex items-center justify-center mb-4">
         <ScrollText size={28} className="text-gray-300 dark:text-gray-600" />
       </div>
-      <h3 className="text-base font-black text-gray-700 dark:text-gray-300 mb-1">No contracts yet</h3>
+      <h3 className="text-base font-black text-gray-700 dark:text-gray-300 mb-1">{t('contracts.empty_title')}</h3>
       <p className="text-[12px] text-gray-400 dark:text-gray-500 max-w-xs">
-        When beoneofus assigns you work, your contracts will appear here.
+        {t('contracts.empty_body')}
       </p>
     </div>
   );
@@ -283,6 +286,7 @@ function Empty() {
 
 /* ── Main ────────────────────────────────────────────────────────────────────── */
 export default function ContractsContent() {
+  const { t } = useLanguage();
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
@@ -344,14 +348,14 @@ export default function ContractsContent() {
           <AlertCircle size={24} className="text-red-500" />
         </div>
         <div>
-          <h3 className="text-base font-black text-gray-900 dark:text-white mb-1">Couldn't load contracts</h3>
+          <h3 className="text-base font-black text-gray-900 dark:text-white mb-1">{t('contracts.load_error_title')}</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">{fetchError}</p>
         </div>
         <button
           onClick={() => userId && load(userId)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-all"
         >
-          Try again
+          {t('contracts.try_again')}
         </button>
       </div>
     );
@@ -363,15 +367,15 @@ export default function ContractsContent() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">My Contracts</h1>
+          <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{t('contracts.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            Work agreements assigned to you by beoneofus
+            {t('contracts.subtitle')}
           </p>
         </div>
         {pendingCount > 0 && (
           <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-1.5 rounded-xl">
             <AlertCircle size={13} />
-            <span className="text-[11px] font-black">{pendingCount} need{pendingCount === 1 ? 's' : ''} signature</span>
+            <span className="text-[11px] font-black">{t(pendingCount === 1 ? 'contracts.needs_signature_one' : 'contracts.needs_signature_many', { n: pendingCount })}</span>
           </div>
         )}
       </div>
@@ -396,7 +400,7 @@ export default function ContractsContent() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-sm font-black text-gray-900 dark:text-white truncate">{c.title}</h3>
-                        {needsAction && <span className="text-[8px] font-black uppercase tracking-widest bg-blue-600 text-white px-1.5 py-0.5 rounded-full shrink-0">Action needed</span>}
+                        {needsAction && <span className="text-[8px] font-black uppercase tracking-widest bg-blue-600 text-white px-1.5 py-0.5 rounded-full shrink-0">{t('contracts.action_needed')}</span>}
                       </div>
                       {c.contract_type && (
                         <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mt-0.5">{c.contract_type}</p>
@@ -410,7 +414,7 @@ export default function ContractsContent() {
                         )}
                         {c.end_date && (
                           <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 flex items-center gap-0.5">
-                            <Calendar size={10} />Due {fmt(c.end_date)}
+                            <Calendar size={10} />{t('contracts.due', { date: fmt(c.end_date) })}
                           </span>
                         )}
                       </div>

@@ -36,24 +36,27 @@ export default function NotificationPopup() {
     setQueue(q => [...q, item]);
   }, []);
 
+  const dismissCurrent = useCallback(() => {
+    clearTimeout(timerRef.current);
+    setVisible(false);
+    setTimeout(() => setCurrent(null), 320);
+  }, []);
+
   // ── Dequeue: show one at a time ──────────────────────────────────────────
   useEffect(() => {
     if (current || queue.length === 0) return;
     const [next, ...rest] = queue;
+    // Draining an event-driven queue: handing the next item to render requires
+    // a synchronous setState here — there is no external system or await point
+    // to defer past.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrent(next);
     setQueue(rest);
     // Micro-delay so CSS transition plays from invisible state
     requestAnimationFrame(() => setVisible(true));
 
     timerRef.current = setTimeout(dismissCurrent, 4500);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, queue]);
-
-  const dismissCurrent = useCallback(() => {
-    clearTimeout(timerRef.current);
-    setVisible(false);
-    setTimeout(() => setCurrent(null), 320);
-  }, []);
+  }, [current, queue, dismissCurrent]);
 
   // ── Real-time subscriptions ──────────────────────────────────────────────
   useEffect(() => {

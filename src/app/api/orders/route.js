@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { requireAuth } from '../../../lib/requireAuth';
+import { computeOrderTotal } from '../../../lib/shopCatalog';
 
 // GET /api/orders — fetch the logged-in user's shop orders
 export async function GET(request) {
@@ -27,14 +28,16 @@ export async function POST(request) {
   if (authErr) return NextResponse.json({ error: authErr }, { status });
 
   try {
-    const { items, total, address } = await request.json();
+    const { items, address } = await request.json();
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ error: 'Order must have at least one item' }, { status: 400 });
+    // SECURITY: the total is recomputed from the server-side price list — the
+    // client-supplied `total` (and any client-supplied line prices) are ignored.
+    // This blocks a crafted request from recording an arbitrary / zero total.
+    const priced = computeOrderTotal(items);
+    if (!priced.ok) {
+      return NextResponse.json({ error: priced.error }, { status: 400 });
     }
-    if (!total || total <= 0) {
-      return NextResponse.json({ error: 'Invalid order total' }, { status: 400 });
-    }
+    const total = priced.total;
 
     const tracking = 'TRK-' + Math.random().toString(36).slice(2, 10).toUpperCase();
 

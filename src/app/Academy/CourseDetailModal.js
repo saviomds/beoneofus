@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   BookOpen, Pencil, X, Star, PlayCircle, Clock, Code2, Trash2,
   CheckCircle2, Award, ExternalLink, Sparkles, Loader2, Eye, EyeOff,
@@ -44,7 +45,7 @@ export default function CourseDetailModal({
     toastTimer.current = setTimeout(() => setToast(null), 4000);
   }, []);
 
-  const fetchLessonsAndProgress = async (isMounted = true) => {
+  const fetchLessonsAndProgress = useCallback(async (isMounted = true) => {
     setIsLoadingLessons(true);
     try {
       const { data: lessonsData, error: lessonsError } = await supabase
@@ -69,14 +70,14 @@ export default function CourseDetailModal({
     } finally {
       if (isMounted) setIsLoadingLessons(false);
     }
-  };
+  }, [course, userId]);
 
   useEffect(() => {
     if (!course) return;
     let isMounted = true;
-    fetchLessonsAndProgress(isMounted);
+    (async () => { await fetchLessonsAndProgress(isMounted); })();
     return () => { isMounted = false; };
-  }, [course, userId]);
+  }, [course, fetchLessonsAndProgress]);
 
   // ─── Admin: open lesson form ───────────────────────────────────────────────
   const openAddLesson = () => {
@@ -99,9 +100,13 @@ export default function CourseDetailModal({
     setIsGenerating(true);
     setShowPreview(false);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/generate-lesson", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           courseTitle: course.title,
           lessonTitle: lessonForm.title,
@@ -137,9 +142,13 @@ export default function CourseDetailModal({
 
       setAutoGenProgress({ current: 0, total: remaining, message: `Generating ${batchSize} lessons…` });
 
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/generate-lesson", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           type: "batch",
           courseTitle: course.title,
@@ -294,7 +303,7 @@ export default function CourseDetailModal({
                 {course.thumbnail_url.match(/\.(mp4|webm|ogg)$/i) ? (
                   <video src={course.thumbnail_url} className="object-cover w-full h-full" muted loop playsInline autoPlay />
                 ) : (
-                  <img src={course.thumbnail_url} alt={course.title} className="object-cover w-full h-full" />
+                  <Image src={course.thumbnail_url} alt={course.title} fill unoptimized className="object-cover w-full h-full" />
                 )}
               </div>
             ) : (

@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
 import {
   Shield, Star, Crown, Check, X, Loader2, Building2,
@@ -58,7 +59,10 @@ export default function SponsorsAdminContent({ showToast }) {
     }
   }, [showToast, token]);
 
-  useEffect(() => { if (token !== null) load(); }, [load, token]);
+  useEffect(() => {
+    const init = () => { if (token !== null) load(); };
+    init();
+  }, [load, token]);
 
   const updateSponsor = async (id, updates) => {
     setSaving(true);
@@ -169,7 +173,7 @@ export default function SponsorsAdminContent({ showToast }) {
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     {s.logo_url ? (
-                      <img src={s.logo_url} alt={s.company_name} className="w-10 h-10 object-contain rounded-xl border border-gray-100 dark:border-gray-800 bg-white p-1 shrink-0" />
+                      <Image src={s.logo_url} alt={s.company_name} width={40} height={40} unoptimized className="w-10 h-10 object-contain rounded-xl border border-gray-100 dark:border-gray-800 bg-white p-1 shrink-0" />
                     ) : (
                       <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
                         <Building2 size={16} className="text-gray-400" />

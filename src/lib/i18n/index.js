@@ -19,11 +19,17 @@ export function LanguageProvider({ children }) {
   useEffect(() => {
     const stored = localStorage.getItem("beoneofus_lang");
     if (stored === "fr" || stored === "en") {
+      // Reading the persisted language from localStorage is a genuine
+      // external-system sync that can only run after mount. A lazy useState
+      // initializer isn't safe here: the server has no localStorage, so it
+      // would hydrate the whole app's children with a mismatched language.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLangState(stored);
       document.documentElement.lang = stored;
     } else {
       const browser = navigator.language?.split("-")[0];
       if (browser === "fr" || browser === "en") {
+        // Same rationale as above (fall back to the browser's language).
         setLangState(browser);
         document.documentElement.lang = browser;
       }
@@ -53,6 +59,11 @@ export function LanguageProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    // Loading translations is an async data-fetch synchronised to the current
+    // language. loadLanguage flips the isLoading flag before awaiting the
+    // dynamic import; that loading indicator must fire on every language change,
+    // so it can't be hoisted to a lazy initializer or removed.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadLanguage(lang);
   }, [lang, loadLanguage]);
 

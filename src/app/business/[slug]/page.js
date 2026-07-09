@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '../../supabaseClient';
 import { orgMeta } from '../../../lib/orgTypes';
 import {
@@ -47,7 +48,12 @@ const accent  = 'text-brand-600 dark:text-brand-400';
 function ThemeToggle() {
   const { theme, setTheme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    // Mount flag gates hydration-sensitive UI (the theme icon). It must flip
+    // after mount, so a synchronous setState is required here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
   const isDark = mounted && (theme === 'dark' || (theme === 'system' && systemTheme === 'dark'));
   return (
     <button
@@ -87,7 +93,12 @@ export default function BusinessConsole() {
     setState('ready');
   }, [slug, router]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // load() awaits the session before any setState, so writes never happen
+    // synchronously; the async loader legitimately syncs remote data on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
   if (state === 'loading') {
     return (
@@ -178,7 +189,7 @@ export default function BusinessConsole() {
           {section === 'orgpage'      && <OrgPage org={org} slug={slug} token={token} onSaved={load} />}
           {section === 'team'         && <Team members={members} role={role} />}
           {section === 'verification' && <Verification org={org} slug={slug} token={token} onChanged={load} />}
-          {section === 'billing'      && <Billing />}
+          {section === 'billing'      && <Billing org={org} slug={slug} token={token} />}
         </main>
       </div>
     </div>
@@ -307,8 +318,8 @@ function CandidateCard({ app, stageId, onMove, busy }) {
   return (
     <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.02] p-2.5">
       <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex items-center justify-center text-[11px] font-black text-slate-500 dark:text-gray-300 shrink-0">
-          {p?.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : (name[0] || '?').toUpperCase()}
+        <div className="relative w-7 h-7 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex items-center justify-center text-[11px] font-black text-slate-500 dark:text-gray-300 shrink-0">
+          {p?.avatar_url ? <Image src={p.avatar_url} alt="" fill className="object-cover" referrerPolicy="no-referrer" unoptimized /> : (name[0] || '?').toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
           <p className={`text-[13px] font-bold ${heading} truncate`}>{name}</p>
@@ -453,16 +464,16 @@ function OrgPage({ org, slug, token, onSaved }) {
       <div className="mb-5">
         <label className={`block text-xs font-bold ${muted} mb-1.5`}>Banner &amp; logo</label>
         <div className="relative h-32 rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 bg-gradient-to-br from-brand-500/25 to-trust-500/25">
-          {org.banner_url && <img src={org.banner_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+          {org.banner_url && <Image src={org.banner_url} alt="" fill className="object-cover" referrerPolicy="no-referrer" unoptimized />}
           <label className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 text-xs font-bold bg-white/90 dark:bg-ink/80 text-slate-800 dark:text-white px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-white shadow-sm transition-colors">
             {uploading === 'banner' ? <Loader2 size={13} className="animate-spin" /> : <ImageIcon size={13} />} Upload banner
             <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadAsset('banner', e.target.files?.[0])} />
           </label>
           {/* Logo overlay */}
           <div className="absolute -bottom-0 left-4 top-0 flex items-end pb-3">
-            <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white dark:border-ink bg-white dark:bg-white/10 shadow-lg flex items-center justify-center shrink-0">
+            <div className="relative w-16 h-16 rounded-xl overflow-hidden border-2 border-white dark:border-ink bg-white dark:bg-white/10 shadow-lg flex items-center justify-center shrink-0">
               {org.logo_url
-                ? <img src={org.logo_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ? <Image src={org.logo_url} alt="" fill className="object-cover" referrerPolicy="no-referrer" unoptimized />
                 : <Building2 size={24} className="text-slate-300 dark:text-gray-500" />}
             </div>
           </div>
@@ -506,8 +517,8 @@ function Team({ members, role }) {
           const p = m.profiles;
           return (
             <div key={i} className={`${panel} p-4 flex items-center gap-3`}>
-              <div className={`w-10 h-10 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex items-center justify-center text-sm font-black ${muted} shrink-0`}>
-                {p?.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : (p?.full_name?.[0] || p?.username?.[0] || '?').toUpperCase()}
+              <div className={`relative w-10 h-10 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex items-center justify-center text-sm font-black ${muted} shrink-0`}>
+                {p?.avatar_url ? <Image src={p.avatar_url} alt="" fill className="object-cover" referrerPolicy="no-referrer" unoptimized /> : (p?.full_name?.[0] || p?.username?.[0] || '?').toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
                 <p className={`font-bold ${heading} truncate`}>{p?.full_name || p?.username || 'Member'}</p>
@@ -622,26 +633,131 @@ function Verification({ org, slug, token, onChanged }) {
   );
 }
 
-function Billing() {
+function Billing({ org, slug, token }) {
+  const [data, setData] = useState(null);   // { plan, prices, subscription, planExpiresAt }
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(null);   // plan id being processed
+  const [msg, setMsg] = useState(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/organizations/${slug}/billing`, { headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) setData(d);
+    } finally { setLoading(false); }
+  }, [slug, token]);
+
+  useEffect(() => {
+    // Async loader — every setState runs after the fetch await, never
+    // synchronously during the effect.
+    load();
+  }, [load]);
+
+  // Verify after returning from Paystack (?billing_ref=1&reference=…).
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const ref = url.searchParams.get('reference') || url.searchParams.get('trxref');
+    if (!ref || !url.searchParams.get('billing_ref')) return;
+    ['reference', 'trxref', 'billing_ref'].forEach((k) => url.searchParams.delete(k));
+    window.history.replaceState({}, '', url.toString());
+    (async () => {
+      setMsg('Confirming your payment…');
+      const res = await fetch(`/api/organizations/${slug}/billing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'verify', reference: ref }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setMsg(res.ok ? `You're now on the ${d.plan} plan — thank you! 🎉` : (d.error || 'Verification failed.'));
+      load();
+    })();
+    /* eslint-disable-next-line */
+  }, [slug, token]);
+
+  const subscribe = async (plan) => {
+    setBusy(plan); setMsg(null);
+    try {
+      const callbackUrl = `${window.location.origin}/business/${slug}?billing_ref=1`;
+      const res = await fetch(`/api/organizations/${slug}/billing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'initiate', plan, callbackUrl }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || 'Could not start checkout.');
+      window.location.assign(d.authorization_url);
+    } catch (e) { setMsg(e.message); setBusy(null); }
+  };
+
+  const manage = async (action) => {
+    setBusy(action); setMsg(null);
+    try {
+      const res = await fetch(`/api/organizations/${slug}/billing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || 'Action failed.');
+      setMsg(action === 'cancel'
+        ? 'Your plan will revert to Free at the end of the current period.'
+        : 'Cancellation reversed — your plan stays active.');
+      load();
+    } catch (e) { setMsg(e.message); } finally { setBusy(null); }
+  };
+
+  const current = data?.plan || org?.plan || 'free';
+  const prices = data?.prices || { growth: 49, scale: 199 };
+  const TIERS = [
+    { id: 'free',   name: 'Starter', price: 'Free',                feats: ['1 organization page', 'Up to 3 postings', 'Basic pipeline'] },
+    { id: 'growth', name: 'Growth',  price: `$${prices.growth}/mo`, feats: ['Unlimited postings', 'Team seats & roles', 'AI talent matching', 'Insights analytics'] },
+    { id: 'scale',  name: 'Scale',   price: `$${prices.scale}/mo`,  feats: ['Everything in Growth', 'Priority verification', 'Bulk program tools', 'Dedicated support'] },
+  ];
+
   return (
     <div className="max-w-3xl">
-      <SectionHead tag="Plans" title="Billing" desc="Organizational subscription and marketplace statements." />
+      <SectionHead tag="Plans" title="Billing" desc="Organizational subscription plans — post, hire, and engage at scale." />
+      {msg && <div className={`${panel} p-3 mb-4 text-sm ${heading}`}>{msg}</div>}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {[
-          ['Starter', 'Free', ['1 organization page', 'Up to 3 postings', 'Basic pipeline']],
-          ['Growth', 'Tiered', ['Unlimited postings', 'Team seats & roles', 'Insights analytics']],
-          ['Institution', 'Custom', ['Bulk program tools', 'Priority verification', 'Dedicated support']],
-        ].map(([name, price, feats], i) => (
-          <div key={name} className={`${panel} p-5 ${i === 1 ? 'ring-1 ring-brand-500/40' : ''}`}>
-            <p className={`text-[11px] font-mono uppercase tracking-widest ${faint}`}>{name}</p>
-            <p className={`text-2xl font-black ${heading} mt-1`}>{price}</p>
-            <ul className="mt-4 space-y-2">
-              {feats.map((ff) => <li key={ff} className={`flex items-center gap-2 text-sm ${muted}`}><CheckCircle2 size={14} className="text-trust-500 shrink-0" />{ff}</li>)}
-            </ul>
-          </div>
-        ))}
+        {TIERS.map((t, i) => {
+          const isCurrent = current === t.id;
+          return (
+            <div key={t.id} className={`${panel} p-5 relative ${i === 1 ? 'ring-1 ring-brand-500/40' : ''} ${isCurrent ? 'ring-2 ring-trust-500' : ''}`}>
+              {isCurrent && <span className="absolute top-3 right-3 text-[9px] font-black uppercase tracking-wider text-trust-600 dark:text-trust-500 bg-trust-500/10 px-2 py-0.5 rounded-full">Current</span>}
+              <p className={`text-[11px] font-mono uppercase tracking-widest ${faint}`}>{t.name}</p>
+              <p className={`text-2xl font-black ${heading} mt-1`}>{t.price}</p>
+              <ul className="mt-4 space-y-2">
+                {t.feats.map((ff) => <li key={ff} className={`flex items-center gap-2 text-sm ${muted}`}><CheckCircle2 size={14} className="text-trust-500 shrink-0" />{ff}</li>)}
+              </ul>
+              {t.id !== 'free' && !isCurrent && (
+                <button
+                  onClick={() => subscribe(t.id)}
+                  disabled={busy === t.id || loading}
+                  className="mt-5 w-full inline-flex items-center justify-center gap-1.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white px-4 py-2 rounded-xl font-bold text-sm transition-colors"
+                >
+                  {busy === t.id ? <Loader2 size={14} className="animate-spin" /> : null}
+                  {current === 'free' ? 'Upgrade' : 'Switch plan'}
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
-      <p className={`text-xs ${faint} mt-4`}>Subscription billing activates with the Organizational Subscription rollout. No charges are applied today.</p>
+      {data?.planExpiresAt && current !== 'free' && (
+        <p className={`text-xs ${faint} mt-4`}>
+          {data?.subscription?.cancel_at_period_end ? 'Reverts to Free on' : 'Your plan renews on'} {new Date(data.planExpiresAt).toLocaleDateString()}.
+        </p>
+      )}
+      {current !== 'free' && (
+        <div className="mt-2 flex items-center gap-3">
+          {data?.subscription?.cancel_at_period_end ? (
+            <button onClick={() => manage('reactivate')} disabled={busy === 'reactivate'} className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline disabled:opacity-50">Reactivate plan</button>
+          ) : (
+            <button onClick={() => manage('cancel')} disabled={busy === 'cancel'} className="text-xs font-bold text-red-500 hover:underline disabled:opacity-50">Cancel plan</button>
+          )}
+        </div>
+      )}
+      <p className={`text-xs ${faint} mt-2`}>Payments are processed securely by Paystack; amounts may be shown in your local currency at checkout.</p>
     </div>
   );
 }

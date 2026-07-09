@@ -8,6 +8,7 @@ import {
   Brain, Lightbulb,
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { useLanguage } from "../../../lib/i18n";
 
 const POPULAR_ROLES = [
   'Frontend Developer', 'Backend Developer', 'Full Stack Developer',
@@ -17,9 +18,10 @@ const POPULAR_ROLES = [
 ];
 
 function ScoreMeter({ score }) {
+  const { t } = useLanguage();
   const color = score >= 75 ? 'text-emerald-500' : score >= 50 ? 'text-blue-500' : score >= 30 ? 'text-amber-500' : 'text-red-500';
   const bgColor = score >= 75 ? 'bg-emerald-500' : score >= 50 ? 'bg-blue-500' : score >= 30 ? 'bg-amber-500' : 'bg-red-500';
-  const label = score >= 75 ? 'Strong' : score >= 50 ? 'Good' : score >= 30 ? 'Building' : 'Beginner';
+  const label = score >= 75 ? t('career_ai.level_strong') : score >= 50 ? t('career_ai.level_good') : score >= 30 ? t('career_ai.level_building') : t('career_ai.level_beginner');
 
   return (
     <div className="flex flex-col items-center gap-3 p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl">
@@ -40,7 +42,7 @@ function ScoreMeter({ score }) {
       </div>
       <div className="text-center">
         <p className={`text-sm font-black uppercase tracking-widest ${color}`}>{label}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Readiness Score</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('career_ai.readiness_score')}</p>
       </div>
     </div>
   );
@@ -65,6 +67,7 @@ function SkillChip({ skill, variant = 'have' }) {
 }
 
 function RoadmapCard({ month, data, index }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(index === 0);
   const colors = [
     { border: 'border-blue-200 dark:border-blue-800/50', bg: 'bg-blue-50 dark:bg-blue-900/10', badge: 'bg-blue-600 text-white', dot: 'bg-blue-500' },
@@ -81,7 +84,7 @@ function RoadmapCard({ month, data, index }) {
       >
         <div className="flex items-center gap-3">
           <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${c.badge}`}>
-            Month {index + 1}
+            {t('career_ai.month', { n: index + 1 })}
           </span>
           <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{data?.focus}</span>
         </div>
@@ -92,7 +95,7 @@ function RoadmapCard({ month, data, index }) {
           {data?.learn?.length > 0 && (
             <div>
               <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                <BookOpen size={11} /> Learn
+                <BookOpen size={11} /> {t('career_ai.learn')}
               </p>
               <ul className="space-y-1.5">
                 {data.learn.map((item, i) => (
@@ -107,7 +110,7 @@ function RoadmapCard({ month, data, index }) {
           {data?.build && (
             <div>
               <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                <Code2 size={11} /> Build
+                <Code2 size={11} /> {t('career_ai.build')}
               </p>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{data.build}</p>
             </div>
@@ -119,6 +122,7 @@ function RoadmapCard({ month, data, index }) {
 }
 
 function AnalysisResult({ analysis, onReset }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
@@ -129,7 +133,7 @@ function AnalysisResult({ analysis, onReset }) {
         <button
           onClick={onReset}
           className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
-          title="New analysis"
+          title={t('career_ai.new_analysis')}
         >
           <RotateCcw size={16} />
         </button>
@@ -141,18 +145,18 @@ function AnalysisResult({ analysis, onReset }) {
           {/* Have */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4">
             <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-              <CheckCircle2 size={11} /> Current Skills ({analysis.have?.length || 0})
+              <CheckCircle2 size={11} /> {t('career_ai.current_skills', { n: analysis.have?.length || 0 })}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {analysis.have?.map(s => <SkillChip key={s} skill={s} variant="have" />)}
-              {!analysis.have?.length && <span className="text-xs text-gray-400">None detected</span>}
+              {!analysis.have?.length && <span className="text-xs text-gray-400">{t('career_ai.none_detected')}</span>}
             </div>
           </div>
           {/* Weak */}
           {analysis.weak?.length > 0 && (
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4">
               <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                <AlertCircle size={11} /> Needs Deepening ({analysis.weak.length})
+                <AlertCircle size={11} /> {t('career_ai.needs_deepening', { n: analysis.weak.length })}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {analysis.weak.map(w => <SkillChip key={w.skill} skill={w.skill} variant="weak" />)}
@@ -166,7 +170,7 @@ function AnalysisResult({ analysis, onReset }) {
       {analysis.missing?.length > 0 && (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4">
           <p className="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-            <XCircle size={11} /> Missing Skills
+            <XCircle size={11} /> {t('career_ai.missing_skills')}
           </p>
           <div className="space-y-2">
             {analysis.missing.map(m => (
@@ -190,7 +194,7 @@ function AnalysisResult({ analysis, onReset }) {
       {analysis.roadmap && Object.keys(analysis.roadmap).length > 0 && (
         <div>
           <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-            <TrendingUp size={11} /> 3-Month Learning Roadmap
+            <TrendingUp size={11} /> {t('career_ai.roadmap_title')}
           </p>
           <div className="space-y-3">
             {['month_1', 'month_2', 'month_3'].map((key, i) =>
@@ -206,7 +210,7 @@ function AnalysisResult({ analysis, onReset }) {
       {analysis.job_titles?.length > 0 && (
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border border-blue-200 dark:border-blue-800/50 rounded-2xl p-4">
           <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-            <Target size={11} /> Career Path Titles
+            <Target size={11} /> {t('career_ai.career_path_titles')}
           </p>
           <div className="flex flex-wrap gap-2">
             {analysis.job_titles.map((title, i) => (
@@ -250,6 +254,7 @@ function HistoryCard({ item, onLoad }) {
 }
 
 export default function CareerAIContent() {
+  const { t } = useLanguage();
   const [session, setSession] = useState(null);
   const [step, setStep] = useState('form');
   const [loading, setLoading] = useState(false);
@@ -262,6 +267,14 @@ export default function CareerAIContent() {
   const [cvText, setCvText] = useState('');
   const [experience, setExperience] = useState('');
 
+  const loadHistory = useCallback(async (token) => {
+    const res = await fetch('/api/career/analyze', { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const { analyses } = await res.json();
+      setHistory(analyses || []);
+    }
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -272,19 +285,11 @@ export default function CareerAIContent() {
       if (s) loadHistory(s.access_token);
     });
     return () => subscription.unsubscribe();
-  }, []);
-
-  const loadHistory = useCallback(async (token) => {
-    const res = await fetch('/api/career/analyze', { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) {
-      const { analyses } = await res.json();
-      setHistory(analyses || []);
-    }
-  }, []);
+  }, [loadHistory]);
 
   const handleAnalyze = async () => {
-    if (!targetRole.trim()) { setError('Please enter or select a target role'); return; }
-    if (!session) { setError('Please sign in to use Career AI'); return; }
+    if (!targetRole.trim()) { setError(t('career_ai.err_no_role')); return; }
+    if (!session) { setError(t('career_ai.err_sign_in')); return; }
     setLoading(true);
     setError('');
     try {
@@ -294,7 +299,7 @@ export default function CareerAIContent() {
         body: JSON.stringify({ targetRole: targetRole.trim(), cvText: cvText.trim(), experience: experience.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+      if (!res.ok) throw new Error(data.error || t('career_ai.err_analysis_failed'));
       setAnalysis(data.analysis);
       setStep('result');
       loadHistory(session.access_token);
@@ -307,7 +312,7 @@ export default function CareerAIContent() {
 
   const loadFromHistory = (item) => {
     setAnalysis({
-      current_level: `${item.target_role} Candidate`,
+      current_level: t('career_ai.candidate_level', { role: item.target_role }),
       have: item.skills_found || [],
       weak: item.weak_skills || [],
       missing: item.missing_skills || [],
@@ -326,10 +331,10 @@ export default function CareerAIContent() {
           <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Brain size={28} className="text-blue-500" />
           </div>
-          <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2">Career AI Scanner</h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Sign in to get your personalized career gap analysis and roadmap.</p>
+          <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2">{t('career_ai.scanner_title')}</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">{t('career_ai.signin_desc')}</p>
           <button onClick={() => window.location.href = '/auth'} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-95">
-            Sign In to Continue
+            {t('career_ai.signin_button')}
           </button>
         </div>
       </div>
@@ -341,9 +346,9 @@ export default function CareerAIContent() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Career AI Scanner</h1>
+          <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">{t('career_ai.scanner_title')}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5 font-medium">
-            Discover your skill gaps and get a personalised 3-month roadmap.
+            {t('career_ai.header_desc')}
           </p>
         </div>
         {history.length > 0 && (
@@ -351,7 +356,7 @@ export default function CareerAIContent() {
             onClick={() => setShowHistory(v => !v)}
             className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-3 py-2 rounded-xl transition-all"
           >
-            <History size={13} /> History ({history.length})
+            <History size={13} /> {t('career_ai.history_button', { n: history.length })}
           </button>
         )}
       </div>
@@ -359,7 +364,7 @@ export default function CareerAIContent() {
       {/* History panel */}
       {showHistory && history.length > 0 && (
         <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-          <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Past Analyses</p>
+          <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('career_ai.past_analyses')}</p>
           {history.map(item => <HistoryCard key={item.id} item={item} onLoad={loadFromHistory} />)}
         </div>
       )}
@@ -369,13 +374,13 @@ export default function CareerAIContent() {
           {/* Target role */}
           <div>
             <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">
-              Target Role *
+              {t('career_ai.target_role_label')}
             </label>
             <input
               type="text"
               value={targetRole}
               onChange={e => setTargetRole(e.target.value)}
-              placeholder="e.g. Senior Frontend Developer"
+              placeholder={t('career_ai.target_role_placeholder')}
               className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             />
             <div className="flex flex-wrap gap-1.5 mt-2">
@@ -398,12 +403,12 @@ export default function CareerAIContent() {
           {/* CV paste */}
           <div>
             <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">
-              Paste Your CV / Resume <span className="font-medium normal-case text-gray-400">(optional — improves accuracy)</span>
+              {t('career_ai.cv_label')} <span className="font-medium normal-case text-gray-400">{t('career_ai.cv_label_hint')}</span>
             </label>
             <textarea
               value={cvText}
               onChange={e => setCvText(e.target.value)}
-              placeholder="Paste your CV text here for more accurate analysis..."
+              placeholder={t('career_ai.cv_placeholder')}
               rows={5}
               className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none transition-all"
             />
@@ -412,12 +417,12 @@ export default function CareerAIContent() {
           {/* Additional experience */}
           <div>
             <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-2">
-              Additional Context <span className="font-medium normal-case text-gray-400">(projects, experience)</span>
+              {t('career_ai.context_label')} <span className="font-medium normal-case text-gray-400">{t('career_ai.context_label_hint')}</span>
             </label>
             <textarea
               value={experience}
               onChange={e => setExperience(e.target.value)}
-              placeholder="Describe your current experience, projects you've built, tools you use..."
+              placeholder={t('career_ai.context_placeholder')}
               rows={3}
               className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none transition-all"
             />
@@ -433,7 +438,7 @@ export default function CareerAIContent() {
           <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-2xl">
             <Lightbulb size={18} className="text-blue-500 shrink-0" />
             <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-              AI will compare your profile skills, CV, and experience against the target role requirements to generate a personalized gap analysis and 3-month learning roadmap.
+              {t('career_ai.info_blurb')}
             </p>
           </div>
 
@@ -443,7 +448,7 @@ export default function CareerAIContent() {
             className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 text-sm active:scale-95 shadow-lg shadow-blue-500/20"
           >
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {loading ? 'Analyzing Your Career…' : 'Run Career AI Analysis'}
+            {loading ? t('career_ai.analyzing') : t('career_ai.run_analysis')}
           </button>
         </div>
       )}

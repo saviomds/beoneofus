@@ -85,13 +85,20 @@ export default function ForInstitutionsPage() {
             const m = orgMeta(t);
             const Icon = m.icon;
             return (
-              <div key={t} className={`group p-6 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] ${m.accent.ring} hover:shadow-lg transition-all`}>
+              <Link
+                key={t}
+                href={`/organizations/new?category=${t}`}
+                className={`group p-6 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] ${m.accent.ring} hover:shadow-lg transition-all block`}
+              >
                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition-transform ${m.accent.icon}`}>
                   <Icon size={20} />
                 </div>
-                <h3 className="font-bold text-gray-900 dark:text-white mb-1.5">{m.label}</h3>
+                <h3 className="font-bold text-gray-900 dark:text-white mb-1.5 flex items-center gap-1.5">
+                  {m.label}
+                  <ArrowRight size={14} className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{m.blurb}</p>
-              </div>
+              </Link>
             );
           })}
         </div>

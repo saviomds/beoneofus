@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '../../../lib/rateLimit';
 import { stripDangerousHtml } from '../../../lib/sanitize';
+import { requireAuth } from '../../../lib/requireAuth';
 import OpenAI from 'openai';
 import { aiClient } from '../../../lib/aiClient';
 
@@ -112,6 +113,11 @@ async function callAI(systemPrompt, userPrompt, maxTokens = 4096) {
 
 export async function POST(req) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown';
+
+  // Require a signed-in caller — LLM generation is a metered cost centre and
+  // must not be reachable anonymously. Rate limits below still apply per-IP.
+  const { error: authError, status: authStatus } = await requireAuth(req);
+  if (authError) return NextResponse.json({ error: authError }, { status: authStatus });
 
   try {
     const { courseTitle, lessonTitle, category, level, type = 'lesson', count, topics, existingTitles } = await req.json();

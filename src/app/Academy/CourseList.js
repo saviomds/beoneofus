@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+import Image from "next/image";
 import { CheckSquare, Square, BookOpen, Clock, Star, PlayCircle, Eye, Copy, Pencil, Trash2, Search, Lock, Crown } from "lucide-react";
 import { CATEGORY_COLORS, LEVEL_COLORS } from "./constants";
 
@@ -7,9 +9,10 @@ export default function CourseList({
   setSelectedCourse, handleEdit, handleDuplicate, handleDelete, isDuplicating,
   onClearFilters, userProgress
 }) {
+  const [now] = useState(() => Date.now());
   const isNewCourse = (course) => {
     if (!course.created_at) return false;
-    return Date.now() - new Date(course.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
+    return now - new Date(course.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
   };
 
   const stripHtml = (html) => {
@@ -63,12 +66,12 @@ export default function CourseList({
                   </button>
                 )}
 
-                <div className="w-16 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0 border border-gray-200 dark:border-gray-700">
+                <div className="relative w-16 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0 border border-gray-200 dark:border-gray-700">
                   {course.thumbnail_url ? (
                     course.thumbnail_url.match(/\.(mp4|webm|ogg)$/i) ? (
                       <video src={course.thumbnail_url} className="object-cover w-full h-full" muted playsInline />
                     ) : (
-                      <img src={course.thumbnail_url} alt={course.title} className="object-cover w-full h-full" />
+                      <Image src={course.thumbnail_url} alt={course.title} fill unoptimized className="object-cover w-full h-full" />
                     )
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">

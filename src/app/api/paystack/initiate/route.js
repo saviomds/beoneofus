@@ -39,13 +39,20 @@ export async function POST(req) {
 
   try {
     const supabase = createClient(
-      process.env.SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
-    const { plan, email, callbackUrl } = await req.json();
-    const userId = req.headers.get('x-user-id');
 
-    if (!plan || !userId || !email) {
+    // Authenticate the caller and derive their id from the token — never trust a
+    // client-supplied userId (and don't depend on a header the proxy may not set).
+    const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { data: { user: caller }, error: callerErr } = await supabase.auth.getUser(token);
+    if (callerErr || !caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const userId = caller.id;
+
+    const { plan, email, callbackUrl } = await req.json();
+    if (!plan || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 

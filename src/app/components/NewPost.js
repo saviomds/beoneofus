@@ -113,6 +113,10 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
 
   useEffect(() => {
     if (isEditMode && postToEdit) {
+      // Sync editable form fields whenever the post being edited changes. This
+      // must stay an effect (not lazy init) so re-opening the editor with a
+      // different post refreshes the fields; the writes are intentional.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(postToEdit.title || '');
       setContent(postToEdit.content || '');
       setCodeSnippet(postToEdit.code_snippet || '');
@@ -160,6 +164,10 @@ export default function NewPost({ onPostCreated, postToEdit, onPostUpdated, onCa
       if (saved) {
         try {
           const { title: t, content: c, codeSnippet: cs, codeLanguage: cl } = JSON.parse(saved);
+          // Restore the draft from localStorage after mount. Reading storage in a
+          // lazy initializer would diverge from the server-rendered empty form and
+          // cause a hydration mismatch, so the setState must happen here.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           if (t) setTitle(t);
           if (c) setContent(c);
           if (cl) setCodeLanguage(cl);

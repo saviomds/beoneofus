@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Terminal, Award, Star, Shield, Crown, CheckCircle2,
   Building2, Globe, Mail, ArrowRight, Loader2, Check,
@@ -278,7 +279,7 @@ export default function SponsorsPage() {
                   className="group flex flex-col items-center gap-2"
                 >
                   {s.logo_url ? (
-                    <img src={s.logo_url} alt={s.company_name} className="h-10 object-contain opacity-60 group-hover:opacity-100 transition-opacity filter grayscale group-hover:grayscale-0" />
+                    <Image src={s.logo_url} alt={s.company_name} width={120} height={40} unoptimized className="h-10 w-auto object-contain opacity-60 group-hover:opacity-100 transition-opacity filter grayscale group-hover:grayscale-0" />
                   ) : (
                     <div className="h-10 px-4 flex items-center bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-gray-400 group-hover:text-white transition-colors">
                       {s.company_name}
@@ -297,7 +298,7 @@ export default function SponsorsPage() {
         <section id="apply" className="max-w-2xl mx-auto px-4 py-20">
           <div className="text-center mb-10">
             <h2 className="text-4xl font-black tracking-tighter mb-4">Apply to Partner</h2>
-            <p className="text-gray-400">Fill in your details and we'll reach out within 48 hours to discuss the best package for your goals.</p>
+            <p className="text-gray-400">Fill in your details and we&apos;ll reach out within 48 hours to discuss the best package for your goals.</p>
           </div>
 
           {submitted ? (
@@ -306,7 +307,7 @@ export default function SponsorsPage() {
                 <Check size={28} className="text-emerald-400" />
               </div>
               <h3 className="text-2xl font-black mb-2">Application Received!</h3>
-              <p className="text-gray-400">We'll review your application and reach out to {form.contact_email} within 48 hours.</p>
+              <p className="text-gray-400">We&apos;ll review your application and reach out to {form.contact_email} within 48 hours.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-3xl p-8 space-y-5">
@@ -402,7 +403,7 @@ export default function SponsorsPage() {
                 {submitting ? <Loader2 size={16} className="animate-spin" /> : <Handshake size={16} />}
                 {submitting ? "Submitting…" : "Submit Partnership Application"}
               </button>
-              <p className="text-center text-xs text-gray-600">We'll respond within 48 hours. No commitment required.</p>
+              <p className="text-center text-xs text-gray-600">We&apos;ll respond within 48 hours. No commitment required.</p>
             </form>
           )}
         </section>

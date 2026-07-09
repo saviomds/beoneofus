@@ -1,12 +1,21 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '../../../../lib/requireAuth';
+import { validate } from '../../../../lib/validate';
 
 export async function GET(request) {
+  // Require a signed-in caller — this reveals a user's social graph. The target
+  // `user_id` may differ from the caller (viewing another profile's network),
+  // but the caller must at least be authenticated, and the id must be a valid
+  // UUID (it flows into a PostgREST `.or()` filter under the service-role key).
+  const { error: authError, status } = await requireAuth(request);
+  if (authError) return NextResponse.json({ error: authError }, { status });
+
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('user_id');
 
-  if (!userId) {
-    return NextResponse.json({ error: 'user_id required' }, { status: 400 });
+  if (!validate.uuid(userId)) {
+    return NextResponse.json({ error: 'A valid user_id is required' }, { status: 400 });
   }
 
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {

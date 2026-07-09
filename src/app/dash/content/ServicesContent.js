@@ -10,6 +10,7 @@ import {
   Banknote, Smartphone, Handshake, ChevronRight, ChevronDown as ChevronDownIcon,
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { useLanguage } from "../../../lib/i18n";
 
 const CATEGORIES = ['All', 'Dev', 'Design', 'Writing', 'Marketing', 'Consulting', 'Service'];
 
@@ -79,13 +80,14 @@ function Avatar({ src, name, px = 32 }) {
 
 /* ── Renegotiate Panel ─────────────────────────────────────── */
 function RenegotiatePanel({ order, onSubmit, onClose }) {
+  const { t } = useLanguage();
   const [price, setPrice] = useState(order.proposed_price_usd || order.amount_usd || '');
   const [note, setNote]   = useState(order.renegotiation_note || '');
   return (
     <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 rounded-xl p-4 space-y-3">
-      <p className="text-xs font-black text-violet-700 dark:text-violet-300 uppercase tracking-wider">Propose New Terms</p>
+      <p className="text-xs font-black text-violet-700 dark:text-violet-300 uppercase tracking-wider">{t('services.propose_new_terms')}</p>
       <div>
-        <label className="block text-[10px] font-bold text-gray-500 mb-1">New Price (USD) <span className="font-normal text-gray-400">— leave unchanged to keep current</span></label>
+        <label className="block text-[10px] font-bold text-gray-500 mb-1">{t('services.new_price_label')} <span className="font-normal text-gray-400">{t('services.new_price_hint')}</span></label>
         <input
           type="number" min="1" step="0.01"
           className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
@@ -94,13 +96,13 @@ function RenegotiatePanel({ order, onSubmit, onClose }) {
         />
       </div>
       <div>
-        <label className="block text-[10px] font-bold text-gray-500 mb-1">Message / Reason</label>
+        <label className="block text-[10px] font-bold text-gray-500 mb-1">{t('services.message_reason')}</label>
         <textarea
           className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-violet-500 resize-none"
           rows={3} maxLength={400}
           value={note}
           onChange={e => setNote(e.target.value)}
-          placeholder="Explain the change — scope increase, timeline update, etc."
+          placeholder={t('services.renegotiate_ph')}
         />
       </div>
       <div className="flex gap-2">
@@ -108,8 +110,8 @@ function RenegotiatePanel({ order, onSubmit, onClose }) {
           onClick={() => onSubmit({ newPrice: price, note })}
           disabled={!note.trim()}
           className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-black py-2 rounded-xl transition-all active:scale-95"
-        >Send Proposal</button>
-        <button onClick={onClose} className="px-4 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-black py-2 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">Cancel</button>
+        >{t('services.send_proposal')}</button>
+        <button onClick={onClose} className="px-4 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-black py-2 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">{t('services.cancel')}</button>
       </div>
     </div>
   );
@@ -117,6 +119,7 @@ function RenegotiatePanel({ order, onSubmit, onClose }) {
 
 /* ── Service Detail Modal ──────────────────────────────────── */
 function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, onDelete, onOrderSuccess }) {
+  const { t } = useLanguage();
   const [panel, setPanel]               = useState('order');
   const [requirements, setRequirements]   = useState('');
   const [destination, setDestination]     = useState('');
@@ -212,7 +215,7 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
               <span className="text-sm font-bold text-gray-900 dark:text-gray-100">@{sellerName}</span>
               {seller?.is_verified && <BadgeCheck size={14} className="text-blue-500" />}
             </div>
-            <span className="text-xs text-gray-400">Service provider</span>
+            <span className="text-xs text-gray-400">{t('services.service_provider')}</span>
           </div>
         </div>
 
@@ -222,14 +225,14 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
             <DollarSign size={15} className="text-emerald-500" />
             <div>
               <p className="text-base font-black text-emerald-700 dark:text-emerald-300 leading-none">${service.price_usd}</p>
-              <p className="text-[10px] text-emerald-600/60 dark:text-emerald-500/60 mt-0.5">Price</p>
+              <p className="text-[10px] text-emerald-600/60 dark:text-emerald-500/60 mt-0.5">{t('services.price')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 rounded-2xl">
             <Clock size={15} className="text-blue-500" />
             <div>
-              <p className="text-base font-black text-blue-700 dark:text-blue-300 leading-none">{service.delivery_days} days</p>
-              <p className="text-[10px] text-blue-600/60 dark:text-blue-500/60 mt-0.5">Delivery</p>
+              <p className="text-base font-black text-blue-700 dark:text-blue-300 leading-none">{t('services.n_days', { n: service.delivery_days })}</p>
+              <p className="text-[10px] text-blue-600/60 dark:text-blue-500/60 mt-0.5">{t('services.delivery')}</p>
             </div>
           </div>
           {service.field && (
@@ -248,7 +251,7 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
 
         {/* description */}
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">About this service</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">{t('services.about')}</p>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">{service.description}</p>
         </div>
 
@@ -260,40 +263,40 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
                 onClick={() => setPanel('order')}
                 className={`flex-1 flex items-center justify-center gap-2 text-xs font-black py-2 rounded-lg transition-all ${panel === 'order' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
               >
-                <ShoppingCart size={13} /> Place Order
+                <ShoppingCart size={13} /> {t('services.place_order')}
               </button>
               <button
                 onClick={() => setPanel('note')}
                 className={`flex-1 flex items-center justify-center gap-2 text-xs font-black py-2 rounded-lg transition-all ${panel === 'note' ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
               >
-                <MessageCircle size={13} /> Leave a Note
+                <MessageCircle size={13} /> {t('services.leave_note')}
               </button>
             </div>
 
             {panel === 'order' && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">Your Requirements *</label>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">{t('services.your_requirements')}</label>
                   <textarea
                     className={`${inputCls} resize-none`}
                     rows={4}
                     value={requirements}
                     onChange={e => setRequirements(e.target.value)}
-                    placeholder="Describe what you need — include links, assets, or context the seller should know…"
+                    placeholder={t('services.requirements_ph')}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">Delivery Destination <span className="font-normal text-gray-400">(optional)</span></label>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">{t('services.delivery_destination')} <span className="font-normal text-gray-400">{t('services.optional')}</span></label>
                   <input
                     className={inputCls}
                     value={destination}
                     onChange={e => setDestination(e.target.value)}
-                    placeholder="e.g. your GitHub repo URL, Google Drive link, email, or platform account…"
+                    placeholder={t('services.destination_ph')}
                     maxLength={300}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">Payment Method</label>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">{t('services.payment_method')}</label>
                   <div className="space-y-2">
                     {PAYMENT_METHODS.map(m => {
                       const Icon = m.icon;
@@ -306,8 +309,8 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
                         >
                           <Icon size={15} className={`mt-0.5 shrink-0 ${paymentMethod === m.id ? 'text-blue-500' : 'text-gray-400'}`} />
                           <div>
-                            <p className={`text-xs font-bold ${paymentMethod === m.id ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>{m.label}</p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{m.desc}</p>
+                            <p className={`text-xs font-bold ${paymentMethod === m.id ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>{t(m.labelKey)}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{t(m.descKey)}</p>
                           </div>
                         </button>
                       );
@@ -320,7 +323,7 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-black transition-all active:scale-95 disabled:opacity-50"
                 >
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <ShoppingCart size={14} />}
-                  {saving ? 'Placing order…' : `Order · $${service.price_usd}`}
+                  {saving ? t('services.placing_order') : t('services.order_cta', { price: service.price_usd })}
                 </button>
               </div>
             )}
@@ -328,13 +331,13 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
             {panel === 'note' && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">Message to @{sellerName}</label>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">{t('services.message_to', { name: sellerName })}</label>
                   <textarea
                     className={`${inputCls} resize-none`}
                     rows={4}
                     value={note}
                     onChange={e => setNote(e.target.value)}
-                    placeholder="Ask a question, request a custom quote, or introduce yourself…"
+                    placeholder={t('services.note_ph')}
                     maxLength={500}
                   />
                   <p className="text-[10px] text-gray-400 mt-1 text-right">{note.length}/500</p>
@@ -345,7 +348,7 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-black transition-all active:scale-95 disabled:opacity-50"
                 >
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                  {saving ? 'Sending…' : 'Send Note'}
+                  {saving ? t('services.sending') : t('services.send_note')}
                 </button>
               </div>
             )}
@@ -355,27 +358,27 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
         {done === 'order' && (
           <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl p-5 text-center space-y-2">
             <CheckCircle2 size={28} className="text-emerald-500 mx-auto" />
-            <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">Order placed!</p>
-            <p className="text-xs text-emerald-600/80 dark:text-emerald-500/80">The seller will reach out to confirm and arrange payment.</p>
+            <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">{t('services.order_placed')}</p>
+            <p className="text-xs text-emerald-600/80 dark:text-emerald-500/80">{t('services.order_placed_desc')}</p>
           </div>
         )}
         {done === 'note' && (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-2xl p-5 text-center space-y-2">
             <MessageCircle size={28} className="text-blue-500 mx-auto" />
-            <p className="text-sm font-black text-blue-700 dark:text-blue-400">Note sent!</p>
-            <p className="text-xs text-blue-600/80 dark:text-blue-500/80">Your message was delivered to @{sellerName}. Check Messages for their reply.</p>
+            <p className="text-sm font-black text-blue-700 dark:text-blue-400">{t('services.note_sent')}</p>
+            <p className="text-xs text-blue-600/80 dark:text-blue-500/80">{t('services.note_sent_desc', { name: sellerName })}</p>
           </div>
         )}
 
         {!session && !isOwn && (
           <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-5 text-center">
-            <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Sign in to order or message the seller</p>
+            <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{t('services.sign_in_to_order')}</p>
           </div>
         )}
 
         {isOwn && (
           <div className={`rounded-2xl px-4 py-3 text-center text-xs font-bold ${service.is_active ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-            {service.is_active ? 'This service is live and visible to everyone' : 'This service is paused'}
+            {service.is_active ? t('services.service_live') : t('services.service_paused')}
           </div>
         )}
       </div>
@@ -385,6 +388,7 @@ function ServiceDetailModal({ service, isOwn, userId, session, onClose, onEdit, 
 
 /* ── Create / Edit form ────────────────────────────────────── */
 function ServiceForm({ initial, onSave, onClose, saving }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     title:         initial?.title || '',
     description:   initial?.description || '',
@@ -398,35 +402,35 @@ function ServiceForm({ initial, onSave, onClose, saving }) {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between mb-1">
-        <p className="text-base font-black text-gray-900 dark:text-gray-100">{initial ? 'Edit Service' : 'Post a Service'}</p>
+        <p className="text-base font-black text-gray-900 dark:text-gray-100">{initial ? t('services.edit_service') : t('services.post_a_service')}</p>
         <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
           <X size={16} className="text-gray-400" />
         </button>
       </div>
       <div>
-        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Service Title *</label>
-        <input className={inputCls} value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Build a REST API in Node.js" maxLength={100} />
+        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">{t('services.service_title')}</label>
+        <input className={inputCls} value={form.title} onChange={e => set('title', e.target.value)} placeholder={t('services.title_ph')} maxLength={100} />
       </div>
       <div>
-        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Description *</label>
-        <textarea className={`${inputCls} resize-none`} rows={4} value={form.description} onChange={e => set('description', e.target.value)} placeholder="What will you deliver? Include deliverables and requirements." maxLength={1000} />
+        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">{t('services.description')}</label>
+        <textarea className={`${inputCls} resize-none`} rows={4} value={form.description} onChange={e => set('description', e.target.value)} placeholder={t('services.description_ph')} maxLength={1000} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Price (USD) *</label>
+          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">{t('services.price_label')}</label>
           <div className="relative">
             <DollarSign size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className={`${inputCls} pl-7`} type="number" min="1" value={form.price_usd} onChange={e => set('price_usd', e.target.value)} placeholder="50" />
+            <input className={`${inputCls} pl-7`} type="number" min="1" value={form.price_usd} onChange={e => set('price_usd', e.target.value)} placeholder={t('services.price_ph')} />
           </div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Delivery (days)</label>
+          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">{t('services.delivery_days_label')}</label>
           <input className={inputCls} type="number" min="1" max="90" value={form.delivery_days} onChange={e => set('delivery_days', e.target.value)} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Category</label>
+          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">{t('services.category')}</label>
           <div className="relative">
             <select className={`${inputCls} appearance-none pr-8`} value={form.category} onChange={e => set('category', e.target.value)}>
               {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c}>{c}</option>)}
@@ -435,13 +439,13 @@ function ServiceForm({ initial, onSave, onClose, saving }) {
           </div>
         </div>
         <div>
-          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Field / Industry</label>
-          <input className={inputCls} value={form.field} onChange={e => set('field', e.target.value)} placeholder="e.g. FinTech, SaaS" maxLength={60} />
+          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">{t('services.field_industry')}</label>
+          <input className={inputCls} value={form.field} onChange={e => set('field', e.target.value)} placeholder={t('services.field_ph')} maxLength={60} />
         </div>
       </div>
       <div className="flex gap-3 pt-1">
         <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
-          Cancel
+          {t('services.cancel')}
         </button>
         <button
           onClick={() => onSave(form)}
@@ -449,7 +453,7 @@ function ServiceForm({ initial, onSave, onClose, saving }) {
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-black transition-all active:scale-95 disabled:opacity-50"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-          {saving ? 'Saving…' : 'Save Service'}
+          {saving ? t('services.saving') : t('services.save_service')}
         </button>
       </div>
     </div>
@@ -458,6 +462,7 @@ function ServiceForm({ initial, onSave, onClose, saving }) {
 
 /* ── Service Card — wide horizontal layout ─────────────────── */
 function ServiceCard({ service, isOwn, onClick, onEdit, onDelete }) {
+  const { t } = useLanguage();
   const catStyle   = CAT_COLOR[service.category] || 'bg-gray-100 dark:bg-gray-800 text-gray-600';
   const barColor   = CAT_BAR[service.category]   || 'bg-gray-400';
   const sellerName = service.profiles?.username   || 'Anonymous';
@@ -511,7 +516,7 @@ function ServiceCard({ service, isOwn, onClick, onEdit, onDelete }) {
           <div className="text-right">
             <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 leading-none">${service.price_usd}</p>
             <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-0.5 justify-end">
-              <Clock size={9} />{service.delivery_days}d delivery
+              <Clock size={9} />{t('services.d_delivery', { n: service.delivery_days })}
             </p>
           </div>
 
@@ -532,12 +537,12 @@ function ServiceCard({ service, isOwn, onClick, onEdit, onDelete }) {
                   <Trash2 size={12} className="text-red-400" />
                 </button>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ml-1 ${service.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                  {service.is_active ? 'Active' : 'Paused'}
+                  {service.is_active ? t('services.active') : t('services.paused')}
                 </span>
               </div>
             ) : (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all">
-                View <ArrowRight size={11} />
+                {t('services.view')} <ArrowRight size={11} />
               </span>
             )}
           </div>
@@ -548,10 +553,10 @@ function ServiceCard({ service, isOwn, onClick, onEdit, onDelete }) {
 }
 
 const PAYMENT_METHODS = [
-  { id: 'paystack',     label: 'Paystack',                    icon: CreditCard,  desc: 'Pay online via card or mobile money — secure & instant' },
-  { id: 'bank',         label: 'Bank Transfer',               icon: Banknote,    desc: 'Transfer to seller\'s bank account, seller confirms receipt' },
-  { id: 'mobile_money', label: 'Mobile Money',                icon: Smartphone,  desc: 'M-Pesa, Airtel Money or similar — confirm details with seller' },
-  { id: 'agreed',       label: 'Agreed Outside Platform',     icon: Handshake,   desc: 'Both parties agree on a custom payment arrangement' },
+  { id: 'paystack',     labelKey: 'services.pay.paystack_label', icon: CreditCard,  descKey: 'services.pay.paystack_desc' },
+  { id: 'bank',         labelKey: 'services.pay.bank_label',     icon: Banknote,    descKey: 'services.pay.bank_desc' },
+  { id: 'mobile_money', labelKey: 'services.pay.mobile_label',   icon: Smartphone,  descKey: 'services.pay.mobile_desc' },
+  { id: 'agreed',       labelKey: 'services.pay.agreed_label',   icon: Handshake,   descKey: 'services.pay.agreed_desc' },
 ];
 
 /* ── Status colours ────────────────────────────────────────── */
@@ -566,6 +571,7 @@ const STATUS_COLOR = {
 
 /* ── Main ──────────────────────────────────────────────────── */
 export default function ServicesContent() {
+  const { t } = useLanguage();
   const [services, setServices]     = useState([]);
   const [myServices, setMyServices] = useState([]);
   const [myOrders, setMyOrders]         = useState([]);
@@ -653,7 +659,7 @@ export default function ServicesContent() {
   }, [loadBrowse, loadMine, loadOrders, loadIncoming]);
 
   useEffect(() => {
-    if (window.PaystackPop) { setPaystackReady(true); return; }
+    if (window.PaystackPop) { (() => setPaystackReady(true))(); return; }
     const existing = document.getElementById('paystack-svc-script');
     if (existing) {
       const onload = () => setPaystackReady(true);
@@ -668,7 +674,7 @@ export default function ServicesContent() {
     document.head.appendChild(s);
   }, []);
 
-  useEffect(() => { loadBrowse(); }, [loadBrowse]);
+  useEffect(() => { (() => { loadBrowse(); })(); }, [loadBrowse]);
 
   const handleSaveService = async (form) => {
     if (!session) return;
@@ -685,10 +691,10 @@ export default function ServicesContent() {
       };
       if (editTarget) {
         await supabase.from('services').update(payload).eq('id', editTarget.id);
-        showToast('Service updated');
+        showToast(t('services.toast_service_updated'));
       } else {
         await supabase.from('services').insert({ ...payload, is_active: true });
-        showToast('Service published');
+        showToast(t('services.toast_service_published'));
       }
       setShowCreate(false);
       setEditTarget(null);
@@ -700,10 +706,10 @@ export default function ServicesContent() {
 
   const handlePayOrder = async (order) => {
     if (payingOrderId === order.id) return;
-    if (!paystackReady) { showToast('Payment not ready yet — try again in a moment'); return; }
+    if (!paystackReady) { showToast(t('services.toast_payment_not_ready')); return; }
 
     const email = userEmail || session?.user?.email || '';
-    if (!email) { showToast('Could not read your email — please refresh and try again'); return; }
+    if (!email) { showToast(t('services.toast_no_email')); return; }
 
     setPayingOrderId(order.id);
     try {
@@ -716,9 +722,9 @@ export default function ServicesContent() {
         body: JSON.stringify({ orderId: order.id, email }),
       });
       const initData = await initRes.json();
-      if (!initRes.ok) throw new Error(initData.error || 'Failed to start payment');
+      if (!initRes.ok) throw new Error(initData.error || t('services.err_failed_start_payment'));
 
-      if (!initData.publicKey) throw new Error('Paystack key missing — contact support');
+      if (!initData.publicKey) throw new Error(t('services.err_paystack_key_missing'));
 
       const handler = window.PaystackPop.setup({
         key:      initData.publicKey,
@@ -738,7 +744,7 @@ export default function ServicesContent() {
                 body: JSON.stringify({ reference: response.reference, orderId: order.id }),
               });
               const verifyData = await verifyRes.json();
-              if (!verifyRes.ok) throw new Error(verifyData.error || 'Verification failed');
+              if (!verifyRes.ok) throw new Error(verifyData.error || t('services.err_verification_failed'));
               await supabase.from('notifications').insert({
                 receiver_id: order.seller_id,
                 actor_id:    userId,
@@ -746,9 +752,9 @@ export default function ServicesContent() {
                 message:     'has paid for their order — you can now begin work.',
               }).maybeSingle();
               await loadOrders(userId);
-              showToast('Payment confirmed!');
+              showToast(t('services.toast_payment_confirmed'));
             } catch (e) {
-              showToast('Payment verify failed: ' + e.message);
+              showToast(t('services.toast_verify_failed', { message: e.message }));
             } finally {
               setPayingOrderId(null);
             }
@@ -758,7 +764,7 @@ export default function ServicesContent() {
       });
       handler.openIframe();
     } catch (e) {
-      showToast('Payment error: ' + e.message);
+      showToast(t('services.toast_payment_error', { message: e.message }));
       setPayingOrderId(null);
     }
   };
@@ -772,12 +778,12 @@ export default function ServicesContent() {
       message:     'has confirmed their manual payment — please verify and begin work.',
     }).maybeSingle();
     await loadOrders(userId);
-    showToast('Payment confirmation sent to seller');
+    showToast(t('services.toast_payment_confirm_sent'));
   };
 
   const handleOrderAction = async (orderId, action, buyerId) => {
     const map = { accept: 'active', decline: 'cancelled', deliver: 'delivered' };
-    const toastMap = { accept: 'Order accepted', decline: 'Order declined', deliver: 'Marked as delivered' };
+    const toastMap = { accept: t('services.toast_order_accepted'), decline: t('services.toast_order_declined'), deliver: t('services.toast_marked_delivered') };
     const msgMap = {
       accept:  'accepted your service order — work has started!',
       decline: 'declined your service order.',
@@ -807,11 +813,11 @@ export default function ServicesContent() {
       message:     msg,
     }).maybeSingle();
     await loadOrders(userId);
-    showToast(action === 'complete' ? 'Order completed!' : 'Dispute raised');
+    showToast(action === 'complete' ? t('services.toast_order_completed') : t('services.toast_dispute_raised'));
   };
 
   const handleCancelOrder = async (orderId, otherPartyId, side) => {
-    if (!confirm('Cancel this order?')) return;
+    if (!confirm(t('services.confirm_cancel_order'))) return;
     await supabase.from('service_orders').update({ status: 'cancelled' }).eq('id', orderId);
     await supabase.from('notifications').insert({
       receiver_id: otherPartyId,
@@ -820,14 +826,14 @@ export default function ServicesContent() {
       message:     side === 'buyer' ? 'cancelled their order.' : 'cancelled the order.',
     }).maybeSingle();
     await Promise.all([loadOrders(userId), loadIncoming(userId)]);
-    showToast('Order cancelled');
+    showToast(t('services.toast_order_cancelled'));
   };
 
   const handleDeleteOrder = async (orderId) => {
-    if (!confirm('Permanently delete this order record?')) return;
+    if (!confirm(t('services.confirm_delete_order'))) return;
     await supabase.from('service_orders').delete().eq('id', orderId);
     await Promise.all([loadOrders(userId), loadIncoming(userId)]);
-    showToast('Order deleted');
+    showToast(t('services.toast_order_deleted'));
   };
 
   const handleProposeRenegotiation = async ({ orderId, newPrice, note, otherPartyId }) => {
@@ -840,11 +846,13 @@ export default function ServicesContent() {
       receiver_id: otherPartyId,
       actor_id:    userId,
       type:        'order_update',
-      message:     `proposed new terms on your order${newPrice ? ` — new price: $${newPrice}` : ''}.`,
+      message:     newPrice
+        ? `proposed new terms — new price $${newPrice}.`
+        : 'proposed new terms for your order.',
     }).maybeSingle();
     await Promise.all([loadOrders(userId), loadIncoming(userId)]);
     setRenegotiateTarget(null);
-    showToast('Renegotiation proposal sent');
+    showToast(t('services.toast_renegotiation_sent'));
   };
 
   const handleRenegotiationResponse = async (order, accept) => {
@@ -859,7 +867,7 @@ export default function ServicesContent() {
         type:        'order_update',
         message:     'accepted your renegotiation proposal.',
       }).maybeSingle();
-      showToast('Terms accepted');
+      showToast(t('services.toast_terms_accepted'));
     } else {
       await supabase.from('service_orders').update({
         proposed_price_usd: null, renegotiation_note: null, renegotiation_from: null,
@@ -870,16 +878,16 @@ export default function ServicesContent() {
         type:        'order_update',
         message:     'declined your renegotiation proposal.',
       }).maybeSingle();
-      showToast('Proposal declined');
+      showToast(t('services.toast_proposal_declined'));
     }
     await Promise.all([loadOrders(userId), loadIncoming(userId)]);
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this service?')) return;
+    if (!confirm(t('services.confirm_delete_service'))) return;
     await supabase.from('services').delete().eq('id', id);
     await Promise.all([loadMine(userId), loadBrowse()]);
-    showToast('Deleted');
+    showToast(t('services.toast_deleted'));
   };
 
   return (
@@ -895,15 +903,15 @@ export default function ServicesContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[3px] text-gray-400 dark:text-gray-500">Marketplace</p>
-          <h1 className="text-xl font-black text-gray-900 dark:text-gray-100">Freelance Services</h1>
+          <p className="text-[10px] font-black uppercase tracking-[3px] text-gray-400 dark:text-gray-500">{t('services.eyebrow')}</p>
+          <h1 className="text-xl font-black text-gray-900 dark:text-gray-100">{t('services.title')}</h1>
         </div>
         {session && (
           <button
             onClick={() => { setEditTarget(null); setShowCreate(true); }}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-4 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm"
           >
-            <Plus size={13} /> Post Service
+            <Plus size={13} /> {t('services.post_service')}
           </button>
         )}
       </div>
@@ -911,11 +919,11 @@ export default function ServicesContent() {
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
         {[
-          { id: 'browse', label: 'Browse' },
+          { id: 'browse', label: t('services.tab_browse') },
           ...(session ? [
-            { id: 'mine', label: 'My Services' },
-            { id: 'orders', label: 'My Orders' },
-            { id: 'incoming', label: `Incoming${incomingOrders.filter(o => o.status === 'pending').length ? ` (${incomingOrders.filter(o => o.status === 'pending').length})` : ''}` },
+            { id: 'mine', label: t('services.tab_mine') },
+            { id: 'orders', label: t('services.tab_orders') },
+            { id: 'incoming', label: `${t('services.tab_incoming')}${incomingOrders.filter(o => o.status === 'pending').length ? ` (${incomingOrders.filter(o => o.status === 'pending').length})` : ''}` },
           ] : []),
         ].map(t => (
           <button
@@ -934,7 +942,7 @@ export default function ServicesContent() {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input className={`${inputCls} pl-9`} placeholder="Search services…" value={search} onChange={e => setSearch(e.target.value)} />
+              <input className={`${inputCls} pl-9`} placeholder={t('services.search_ph')} value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
               {CATEGORIES.map(c => (
@@ -958,8 +966,8 @@ export default function ServicesContent() {
               <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Store size={22} className="text-gray-400" />
               </div>
-              <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No services found</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Be the first to post a service in this category</p>
+              <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('services.no_services_found')}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('services.be_first')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -985,10 +993,10 @@ export default function ServicesContent() {
             <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Sparkles size={22} className="text-blue-500" />
             </div>
-            <p className="text-sm font-bold text-gray-700 dark:text-gray-300">No services yet</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 mb-5">Post your first service and start earning</p>
+            <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{t('services.no_services_yet')}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 mb-5">{t('services.post_first')}</p>
             <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-5 py-2.5 rounded-xl transition-all active:scale-95">
-              <Plus size={13} /> Post Service
+              <Plus size={13} /> {t('services.post_service')}
             </button>
           </div>
         ) : (
@@ -1011,8 +1019,8 @@ export default function ServicesContent() {
       {tab === 'orders' && (
         myOrders.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No orders yet</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Browse services and place your first order</p>
+            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('services.no_orders_yet')}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('services.browse_place_first')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -1022,7 +1030,7 @@ export default function ServicesContent() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{o.services?.title || 'Service'}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      Seller: @{o.profiles?.username || 'unknown'} · ${o.amount_usd}
+                      {t('services.seller_line', { name: o.profiles?.username || 'unknown', price: o.amount_usd })}
                     </p>
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
                       {new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -1035,15 +1043,15 @@ export default function ServicesContent() {
                 {o.status === 'active' && !o.payment_reference && (
                   <div className="space-y-2">
                     <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2.5">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 mb-0.5">Payment Required</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-500 mb-0.5">{t('services.payment_required')}</p>
                       <p className="text-xs text-amber-700 dark:text-amber-300">
                         {o.payment_method === 'paystack'
-                          ? 'Complete your Paystack payment to start the work.'
+                          ? t('services.pay_instr_paystack')
                           : o.payment_method === 'bank'
-                          ? 'Transfer to the seller\'s bank account, then confirm below.'
+                          ? t('services.pay_instr_bank')
                           : o.payment_method === 'mobile_money'
-                          ? 'Send via Mobile Money to the seller, then confirm below.'
-                          : 'Pay via your agreed method, then confirm below.'}
+                          ? t('services.pay_instr_mobile')
+                          : t('services.pay_instr_agreed')}
                       </p>
                     </div>
                     {o.payment_method === 'paystack' ? (
@@ -1053,40 +1061,40 @@ export default function ServicesContent() {
                         className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-black py-2.5 rounded-xl transition-all active:scale-95"
                       >
                         {payingOrderId === o.id ? <Loader2 size={13} className="animate-spin" /> : <CreditCard size={13} />}
-                        {payingOrderId === o.id ? 'Opening payment…' : `Pay $${o.amount_usd} via Paystack`}
+                        {payingOrderId === o.id ? t('services.opening_payment') : t('services.pay_via_paystack', { price: o.amount_usd })}
                       </button>
                     ) : (
                       <button
                         onClick={() => handleConfirmManualPayment(o.id, o.seller_id)}
                         className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-2.5 rounded-xl transition-all active:scale-95"
                       >
-                        <CheckCircle2 size={13} /> I Have Paid
+                        <CheckCircle2 size={13} /> {t('services.i_have_paid')}
                       </button>
                     )}
                   </div>
                 )}
                 {o.status === 'active' && o.payment_reference && (
                   <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2.5">
-                    <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Payment confirmed — work is in progress.</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">{t('services.payment_confirmed_progress')}</p>
                   </div>
                 )}
                 {o.status === 'delivered' && (
                   <div className="space-y-2">
                     <div className="bg-violet-50 dark:bg-violet-900/20 rounded-xl px-3 py-2.5">
-                      <p className="text-xs text-violet-700 dark:text-violet-300 font-medium">The seller has delivered — review and confirm below.</p>
+                      <p className="text-xs text-violet-700 dark:text-violet-300 font-medium">{t('services.seller_delivered')}</p>
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleBuyerAction(o.id, 'complete', o.seller_id)}
                         className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-2 rounded-xl transition-all active:scale-95"
                       >
-                        <CheckCircle2 size={13} /> Accept Delivery
+                        <CheckCircle2 size={13} /> {t('services.accept_delivery')}
                       </button>
                       <button
                         onClick={() => handleBuyerAction(o.id, 'dispute', o.seller_id)}
                         className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 text-xs font-black py-2 rounded-xl transition-all active:scale-95"
                       >
-                        <X size={13} /> Dispute
+                        <X size={13} /> {t('services.dispute')}
                       </button>
                     </div>
                   </div>
@@ -1095,12 +1103,12 @@ export default function ServicesContent() {
                 {/* Renegotiation proposal received (from seller) */}
                 {o.renegotiation_from && o.renegotiation_from !== userId && (
                   <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 rounded-xl p-3 space-y-2">
-                    <p className="text-xs font-black text-violet-700 dark:text-violet-300">Seller proposed new terms</p>
-                    {o.proposed_price_usd && <p className="text-xs text-gray-700 dark:text-gray-300">New price: <span className="font-bold">${o.proposed_price_usd}</span></p>}
-                    {o.renegotiation_note && <p className="text-xs text-gray-600 dark:text-gray-400 italic">"{o.renegotiation_note}"</p>}
+                    <p className="text-xs font-black text-violet-700 dark:text-violet-300">{t('services.seller_proposed')}</p>
+                    {o.proposed_price_usd && <p className="text-xs text-gray-700 dark:text-gray-300">{t('services.new_price_display')} <span className="font-bold">${o.proposed_price_usd}</span></p>}
+                    {o.renegotiation_note && <p className="text-xs text-gray-600 dark:text-gray-400 italic">&quot;{o.renegotiation_note}&quot;</p>}
                     <div className="flex gap-2">
-                      <button onClick={() => handleRenegotiationResponse(o, true)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">Accept</button>
-                      <button onClick={() => handleRenegotiationResponse(o, false)} className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-500 text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">Decline</button>
+                      <button onClick={() => handleRenegotiationResponse(o, true)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">{t('services.accept')}</button>
+                      <button onClick={() => handleRenegotiationResponse(o, false)} className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-500 text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">{t('services.decline')}</button>
                     </div>
                   </div>
                 )}
@@ -1121,14 +1129,14 @@ export default function ServicesContent() {
                       onClick={() => handleCancelOrder(o.id, o.seller_id, 'buyer')}
                       className="flex items-center gap-1 text-[10px] font-black text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
                     >
-                      <X size={11} /> Cancel Order
+                      <X size={11} /> {t('services.cancel_order')}
                     </button>
                     {renegotiateTarget !== o.id && (
                       <button
                         onClick={() => setRenegotiateTarget(o.id)}
                         className="flex items-center gap-1 text-[10px] font-black text-violet-500 hover:text-violet-600 px-2 py-1 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all"
                       >
-                        <Handshake size={11} /> Renegotiate
+                        <Handshake size={11} /> {t('services.renegotiate')}
                       </button>
                     )}
                   </div>
@@ -1139,7 +1147,7 @@ export default function ServicesContent() {
                       onClick={() => handleDeleteOrder(o.id)}
                       className="flex items-center gap-1 text-[10px] font-black text-gray-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
                     >
-                      <Trash2 size={11} /> {isAdmin ? 'Admin Delete' : 'Remove'}
+                      <Trash2 size={11} /> {isAdmin ? t('services.admin_delete') : t('services.remove')}
                     </button>
                   </div>
                 )}
@@ -1153,8 +1161,8 @@ export default function ServicesContent() {
       {tab === 'incoming' && (
         incomingOrders.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No incoming orders yet</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Clients who order your services will appear here</p>
+            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('services.no_incoming')}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('services.incoming_desc')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -1164,7 +1172,7 @@ export default function ServicesContent() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{o.services?.title || 'Service'}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      Client: @{o.profiles?.username || 'unknown'} · ${o.amount_usd}
+                      {t('services.client_line', { name: o.profiles?.username || 'unknown', price: o.amount_usd })}
                     </p>
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
                       {new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -1176,7 +1184,7 @@ export default function ServicesContent() {
                 </div>
                 {o.requirements && (
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Client requirements</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">{t('services.client_requirements')}</p>
                     <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{o.requirements}</p>
                   </div>
                 )}
@@ -1184,7 +1192,7 @@ export default function ServicesContent() {
                   <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-2.5 flex items-start gap-2">
                     <ArrowRight size={13} className="text-blue-400 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-400 mb-0.5">Delivery destination</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-blue-400 mb-0.5">{t('services.delivery_destination_lc')}</p>
                       <p className="text-xs text-blue-700 dark:text-blue-300 break-all">{o.destination}</p>
                     </div>
                   </div>
@@ -1195,13 +1203,13 @@ export default function ServicesContent() {
                       onClick={() => handleOrderAction(o.id, 'accept', o.buyer_id)}
                       className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-2 rounded-xl transition-all active:scale-95"
                     >
-                      <CheckCircle2 size={13} /> Accept
+                      <CheckCircle2 size={13} /> {t('services.accept')}
                     </button>
                     <button
                       onClick={() => handleOrderAction(o.id, 'decline', o.buyer_id)}
                       className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 text-xs font-black py-2 rounded-xl transition-all active:scale-95"
                     >
-                      <X size={13} /> Decline
+                      <X size={13} /> {t('services.decline')}
                     </button>
                   </div>
                 )}
@@ -1210,14 +1218,14 @@ export default function ServicesContent() {
                     {(() => {
                       const pm = PAYMENT_METHODS.find(m => m.id === o.payment_method);
                       const Icon = pm?.icon || CreditCard;
-                      return <><Icon size={11} className="text-gray-400" /><p className="text-[10px] text-gray-400">{pm?.label || o.payment_method}</p></>;
+                      return <><Icon size={11} className="text-gray-400" /><p className="text-[10px] text-gray-400">{pm ? t(pm.labelKey) : o.payment_method}</p></>;
                     })()}
-                    {o.payment_reference && <span className="ml-1 text-[10px] font-black text-emerald-500">PAID</span>}
+                    {o.payment_reference && <span className="ml-1 text-[10px] font-black text-emerald-500">{t('services.paid')}</span>}
                   </div>
                 )}
                 {o.status === 'active' && !o.payment_reference && (
                   <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2">
-                    <p className="text-xs text-amber-700 dark:text-amber-400">Waiting for client payment before you begin work.</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400">{t('services.waiting_payment')}</p>
                   </div>
                 )}
                 {o.status === 'active' && o.payment_reference && (
@@ -1225,19 +1233,19 @@ export default function ServicesContent() {
                     onClick={() => handleOrderAction(o.id, 'deliver', o.buyer_id)}
                     className="w-full flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-black py-2 rounded-xl transition-all active:scale-95"
                   >
-                    <Send size={13} /> Mark as Delivered
+                    <Send size={13} /> {t('services.mark_delivered')}
                   </button>
                 )}
 
                 {/* Renegotiation proposal received (from buyer) */}
                 {o.renegotiation_from && o.renegotiation_from !== userId && (
                   <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 rounded-xl p-3 space-y-2">
-                    <p className="text-xs font-black text-violet-700 dark:text-violet-300">Client proposed new terms</p>
-                    {o.proposed_price_usd && <p className="text-xs text-gray-700 dark:text-gray-300">New price: <span className="font-bold">${o.proposed_price_usd}</span></p>}
-                    {o.renegotiation_note && <p className="text-xs text-gray-600 dark:text-gray-400 italic">"{o.renegotiation_note}"</p>}
+                    <p className="text-xs font-black text-violet-700 dark:text-violet-300">{t('services.client_proposed')}</p>
+                    {o.proposed_price_usd && <p className="text-xs text-gray-700 dark:text-gray-300">{t('services.new_price_display')} <span className="font-bold">${o.proposed_price_usd}</span></p>}
+                    {o.renegotiation_note && <p className="text-xs text-gray-600 dark:text-gray-400 italic">&quot;{o.renegotiation_note}&quot;</p>}
                     <div className="flex gap-2">
-                      <button onClick={() => handleRenegotiationResponse(o, true)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">Accept</button>
-                      <button onClick={() => handleRenegotiationResponse(o, false)} className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-500 text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">Decline</button>
+                      <button onClick={() => handleRenegotiationResponse(o, true)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">{t('services.accept')}</button>
+                      <button onClick={() => handleRenegotiationResponse(o, false)} className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-400 hover:text-red-500 text-xs font-black py-1.5 rounded-xl transition-all active:scale-95">{t('services.decline')}</button>
                     </div>
                   </div>
                 )}
@@ -1258,14 +1266,14 @@ export default function ServicesContent() {
                       onClick={() => handleCancelOrder(o.id, o.buyer_id, 'seller')}
                       className="flex items-center gap-1 text-[10px] font-black text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
                     >
-                      <X size={11} /> Cancel Order
+                      <X size={11} /> {t('services.cancel_order')}
                     </button>
                     {renegotiateTarget !== o.id && (
                       <button
                         onClick={() => setRenegotiateTarget(o.id)}
                         className="flex items-center gap-1 text-[10px] font-black text-violet-500 hover:text-violet-600 px-2 py-1 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all"
                       >
-                        <Handshake size={11} /> Renegotiate
+                        <Handshake size={11} /> {t('services.renegotiate')}
                       </button>
                     )}
                   </div>
@@ -1276,7 +1284,7 @@ export default function ServicesContent() {
                       onClick={() => handleDeleteOrder(o.id)}
                       className="flex items-center gap-1 text-[10px] font-black text-gray-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
                     >
-                      <Trash2 size={11} /> {isAdmin ? 'Admin Delete' : 'Remove'}
+                      <Trash2 size={11} /> {isAdmin ? t('services.admin_delete') : t('services.remove')}
                     </button>
                   </div>
                 )}

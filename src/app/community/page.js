@@ -186,7 +186,7 @@ export default function CommunityPage() {
 
           {filtered.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-gray-400 text-lg font-medium">No communities match "{search}"</p>
+              <p className="text-gray-400 text-lg font-medium">No communities match &quot;{search}&quot;</p>
               <button onClick={() => setSearch("")} className="mt-4 text-blue-500 text-sm font-bold hover:text-blue-600 transition-colors">Clear search</button>
             </div>
           ) : (

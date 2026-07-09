@@ -1,12 +1,25 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import {
   HelpCircle, Send, Loader2, Check, X, RefreshCw, ChevronRight,
   MessageSquare, Bot, Zap, BookOpen, FileText, Clock, CheckCircle2,
-  Heart, UserPlus, Handshake, Users, Bell,
+  Heart, UserPlus, Handshake, Users, Bell, ChevronDown, Copy, Globe,
 } from "lucide-react";
 import { supabase } from "../../../supabaseClient";
 import { Toast, useToast } from "./shared";
+
+/* Markdown renderer config for support/FAQ answers. Support replies are prose,
+   so this stays lightweight — no syntax highlighter needed. */
+const mdComponents = {
+  p:      ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+  ul:     ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
+  ol:     ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
+  strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900 dark:text-gray-100" {...props} />,
+  a:      ({ node, ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noreferrer" {...props} />,
+  code:   ({ node, ...props }) => <code className="bg-gray-100 dark:bg-gray-700/60 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded font-mono text-[10px]" {...props} />,
+};
 
 function TypewriterMessage({ content }) {
   const [displayed, setDisplayed] = useState("");

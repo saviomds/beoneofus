@@ -92,13 +92,12 @@ export default function BlogPostPage() {
   }, []);
 
   useEffect(() => {
-    fetchPost();
+    (async () => { await fetchPost(); })();
   }, [fetchPost]);
 
   useEffect(() => {
     if (!post) return;
-    fetchLikes(post.id);
-    fetchComments(post.id);
+    (async () => { await Promise.all([fetchLikes(post.id), fetchComments(post.id)]); })();
 
     const name = `blog-post-${post.id}-${Date.now()}`;
     channelRef.current = supabase

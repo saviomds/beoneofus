@@ -292,7 +292,7 @@ export default function VideoCall({ project, currentUser }) {
                 <div className="space-y-2">
                   <p className="text-xs font-bold text-red-600 dark:text-red-500">How to unblock:</p>
                   <ol className="text-xs text-red-600 dark:text-red-400 space-y-1 list-decimal list-inside leading-relaxed">
-                    <li>Click the <strong>lock 🔒</strong> or <strong>camera 📷</strong> icon in your browser's address bar</li>
+                    <li>Click the <strong>lock 🔒</strong> or <strong>camera 📷</strong> icon in your browser&apos;s address bar</li>
                     <li>Set <strong>Camera</strong> and <strong>Microphone</strong> to <strong>Allow</strong></li>
                     <li>Reload the page, then click Join Call again</li>
                   </ol>

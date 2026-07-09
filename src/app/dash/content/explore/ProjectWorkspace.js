@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
   ArrowLeft, Info, Users, Code2, MessageSquare, Video, GitMerge,
   Globe, Star, Wifi, WifiOff, Edit2, Save, Trash2, AlertTriangle,
@@ -300,7 +301,8 @@ function Avatar({ profile, size = 28, className = "" }) {
   const initial = name[0]?.toUpperCase() ?? "?";
   if (src && !imgErr) {
     return (
-      <img src={src} alt={name}
+      <Image unoptimized src={src} alt={name}
+        width={size} height={size}
         style={{ width: size, height: size, minWidth: size, minHeight: size }}
         className={`rounded-full object-cover shrink-0 ${className}`}
         onError={() => setImgErr(true)}
@@ -350,7 +352,7 @@ export default function ProjectWorkspace({ project, currentUser, onBack }) {
 
   // Workspace-level presence — only tracks authenticated users, deduplicates per key
   useEffect(() => {
-    if (!currentUser?.id) { setConnected(false); return; }
+    if (!currentUser?.id) { (() => setConnected(false))(); return; }
     const channel = supabase.channel(`workspace:presence:${projectState.id}`, {
       config: { presence: { key: currentUser.id } },
     });
@@ -372,6 +374,9 @@ export default function ProjectWorkspace({ project, currentUser, onBack }) {
 
     channelRef.current = channel;
     return () => { supabase.removeChannel(channel); channelRef.current = null; };
+    // activeTab is intentionally omitted: including it would tear down and rebuild the presence
+    // channel on every tab switch. The lightweight effect below updates only the tab field instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectState.id, currentUser?.id, myUsername]);
 
   // Update only the tab field when switching — same connection, same key, no new presence entry

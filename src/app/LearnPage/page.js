@@ -668,7 +668,7 @@ export default function AdminCoursesPage() {
   const handleDuplicate = async (course) => {
     setIsDuplicating(true);
     try {
-      // eslint-disable-next-line no-unused-vars
+       
       const { id, created_at, updated_at, ...rest } = course;
       const payload = { ...rest, title: `${rest.title} (Copy)` };
       const { error } = await supabase.from("courses").insert(payload);

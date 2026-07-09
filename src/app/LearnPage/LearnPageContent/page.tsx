@@ -9,6 +9,7 @@ import {
   Image as ImageIcon, BookOpen, Shield, UserPlus,
   Hash, Eye, EyeOff,
 } from "lucide-react";
+import Image from "next/image";
 import { supabase } from "../../supabaseClient";
 import hljs from "highlight.js";
 import "highlight.js/styles/shades-of-purple.css";
@@ -111,7 +112,7 @@ function MessageBubble({
       {!grouped ? (
         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs font-black shrink-0 mt-0.5 overflow-hidden">
           {msg.profiles?.avatar_url
-            ? <img src={msg.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+            ? <Image src={msg.profiles.avatar_url} alt="" width={36} height={36} unoptimized className="w-full h-full object-cover" />
             : avatar(msg.profiles?.username ?? "?")}
         </div>
       ) : <div className="w-9 shrink-0" />}
@@ -128,9 +129,14 @@ function MessageBubble({
           <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
         )}
         {msg.type === "image" && (
-          <img
+          <Image
             src={(msg.metadata?.url as string) || msg.content}
             alt="shared"
+            width={0}
+            height={0}
+            sizes="100vw"
+            unoptimized
+            style={{ width: "auto", height: "auto" }}
             className="mt-1 max-w-xs max-h-64 rounded-xl object-cover border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-90 transition-opacity"
             onClick={() => window.open((msg.metadata?.url as string) || msg.content, "_blank")}
           />
@@ -350,7 +356,7 @@ function PageSettingsModal({
                     {members.map((m) => (
                       <div key={m.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-xs font-black shrink-0 overflow-hidden">
-                          {m.profiles?.avatar_url ? <img src={m.profiles.avatar_url} alt="" className="w-full h-full object-cover" /> : avatar(m.profiles?.username ?? "?")}
+                          {m.profiles?.avatar_url ? <Image src={m.profiles.avatar_url} alt="" width={32} height={32} unoptimized className="w-full h-full object-cover" /> : avatar(m.profiles?.username ?? "?")}
                         </div>
                         <span className="text-sm font-bold text-gray-800 dark:text-gray-200 flex-1">{m.profiles?.username ?? "Unknown"}</span>
                         <select value={m.role} onChange={(e) => changeRole(m.id, e.target.value as typeof m.role)}
@@ -434,7 +440,7 @@ export default function PagesHub() {
     setIsLoadingPages(false);
   }, []);
 
-  useEffect(() => { loadPages(); }, [loadPages]);
+  useEffect(() => { (async () => { await loadPages(); })(); }, [loadPages]);
 
   // ── Real-time: pages ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -457,8 +463,10 @@ export default function PagesHub() {
   }, []);
 
   useEffect(() => {
-    if (selected) loadMessages(selected.id);
-    else setMessages([]);
+    (async () => {
+      if (selected) await loadMessages(selected.id);
+      else setMessages([]);
+    })();
   }, [selected, loadMessages]);
 
   // ── Auto scroll ───────────────────────────────────────────────────────────

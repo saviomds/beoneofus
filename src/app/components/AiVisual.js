@@ -79,10 +79,12 @@ export default function AiVisual({ phase = "idle", tone = "neutral", size = 128,
     parts:  [],
   });
 
-  /* Sync props → ref every render (rAF loop reads from ref, not props) */
-  S.current.phase  = phase;
-  S.current.tone   = tone;
-  S.current.target = T.speed[tone] || 1;
+  /* Sync props → ref after commit (rAF loop reads from ref, not props) */
+  useEffect(() => {
+    S.current.phase  = phase;
+    S.current.tone   = tone;
+    S.current.target = T.speed[tone] || 1;
+  }, [phase, tone]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

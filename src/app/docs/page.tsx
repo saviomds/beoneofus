@@ -100,6 +100,8 @@ const NAV = [
   },
 ];
 
+const ALL_LINKS = NAV.flatMap((g) => g.links);
+
 // ─── Brand name with blue "of" ───────────────────────────────────────────────
 
 function BrandName({ size = "base" }: { size?: "sm" | "base" | "lg" }) {
@@ -241,8 +243,6 @@ export default function DocsPage() {
     });
   }, []);
 
-  const allLinks = NAV.flatMap(g => g.links);
-
   const filteredGroups = searchQuery.trim()
     ? NAV.map(g => ({
         ...g,
@@ -253,7 +253,7 @@ export default function DocsPage() {
   useEffect(() => {
     const onScroll = () => {
       let current = "introduction";
-      for (const { id } of allLinks) {
+      for (const { id } of ALL_LINKS) {
         const el = document.getElementById(id);
         if (el && window.scrollY >= el.offsetTop - 120) current = id;
       }
@@ -422,7 +422,7 @@ export default function DocsPage() {
 
         {/* Left sidebar (fixed) */}
         <aside className={`fixed top-14 bottom-0 left-0 z-40 w-64 bg-white dark:bg-[#080808] border-r border-gray-200 dark:border-gray-800 overflow-y-auto no-scrollbar transition-transform duration-300 ease-in-out ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}>
-          <SidebarContent />
+          {SidebarContent()}
         </aside>
 
         {/* Center content */}
@@ -819,7 +819,7 @@ export default function DocsPage() {
           <div className="sticky top-20 overflow-y-auto max-h-[calc(100vh-6rem)] no-scrollbar">
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 px-2">On this page</p>
             <ul className="space-y-0.5 border-l border-gray-200 dark:border-gray-800 pl-3">
-              {allLinks.map(link => (
+              {ALL_LINKS.map(link => (
                 <li key={`toc-${link.id}`}>
                   <button
                     onClick={() => scrollTo(link.id)}

@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../lib/escapeHtml';
+// @ts-ignore — plain-JS auth helper
+import { requireAuth } from '../../../lib/requireAuth';
 
 export async function POST(req: Request) {
   try {
@@ -12,24 +14,50 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Server configuration missing API keys.' }, { status: 500 });
     }
 
+    // ── AuthN: caller must present a valid access token ──────────────────────
+    const { user: caller, error: authError, status: authStatus } = await requireAuth(req);
+    if (authError || !caller) {
+      return NextResponse.json({ error: authError }, { status: authStatus });
+    }
+
     const resend = new Resend(process.env.RESEND_API_KEY);
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { applicationId, applicantId, status, jobTitle, customMessage } = body;
+    const { applicationId, status, jobTitle, customMessage } = body;
 
-    if (!applicantId) {
-      return NextResponse.json({ error: 'Missing applicantId' }, { status: 400 });
+    if (!applicationId) {
+      return NextResponse.json({ error: 'Missing applicationId' }, { status: 400 });
+    }
+
+    // ── AuthZ: the application must belong to a job owned by the caller (or the
+    // caller must be a platform admin). The applicant is derived from the
+    // application row — never trusted from the request body — so this route can
+    // only ever email the real applicant of a job the caller controls. ───────
+    const { data: appRow } = await supabase
+      .from('job_applications')
+      .select('id, job_id, user_id')
+      .eq('id', applicationId)
+      .maybeSingle();
+    if (!appRow) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+
+    const [{ data: jobRow }, { data: callerProfile }] = await Promise.all([
+      supabase.from('jobs').select('user_id').eq('id', appRow.job_id).maybeSingle(),
+      supabase.from('profiles').select('is_admin').eq('id', caller.id).maybeSingle(),
+    ]);
+    const ownsJob = jobRow?.user_id && jobRow.user_id === caller.id;
+    if (!ownsJob && !callerProfile?.is_admin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Run DB update and user lookup in parallel to cut latency
     const [updateResult, userResult] = await Promise.all([
-      applicationId
-        ? supabase.from('job_applications').update({ status }).eq('id', applicationId)
-        : Promise.resolve({ error: null }),
-      supabase.auth.admin.getUserById(applicantId),
+      supabase.from('job_applications').update({ status }).eq('id', applicationId),
+      supabase.auth.admin.getUserById(appRow.user_id),
     ]);
 
     if (updateResult.error) {

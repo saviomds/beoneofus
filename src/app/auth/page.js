@@ -110,7 +110,7 @@ export default function AuthPage() {
                 Terms of Service
               </Link>
               <span>·</span>
-              <Link href="/help" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              <Link href="/resources" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                 Help
               </Link>
             </div>

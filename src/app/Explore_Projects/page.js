@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Terminal, ArrowLeft, Search, Code2, Filter, Globe, Lock,
   Loader2, X, AlertTriangle, CheckCircle2, Plus, FolderGit2,
@@ -73,8 +74,8 @@ function Avatar({ profile, size = 28, className = "" }) {
   const initial = name[0]?.toUpperCase() ?? "?";
   if (src && !imgErr) {
     return (
-      <img
-        src={src} alt={name}
+      <Image
+        src={src} alt={name} width={size} height={size} unoptimized
         style={{ width: size, height: size, minWidth: size, minHeight: size }}
         className={`rounded-full object-cover shrink-0 ${className}`}
         onError={() => setImgErr(true)}
@@ -114,10 +115,11 @@ function SkeletonCard() {
 // ── project card ───────────────────────────────────────────────────────────
 
 function ProjectCard({ project, memberCount, memberAvatars = [], onClick }) {
+  const [now]   = useState(() => Date.now());
   const lang    = project.language || project.tags?.[0] || null;
   const meta    = lang ? (LANG_META[lang] ?? null) : null;
   const author  = project.profiles?.username || "community";
-  const isNew   = Date.now() - new Date(project.created_at).getTime() < 86_400_000;
+  const isNew   = now - new Date(project.created_at).getTime() < 86_400_000;
   const shown   = memberAvatars.slice(0, 3);
   const extra   = Math.max(0, memberCount - shown.length);
 
@@ -419,7 +421,7 @@ export default function ExploreProjects() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { (async () => { await fetchAll(); })(); }, [fetchAll]);
 
   // Realtime: new public projects inserted by anyone
   useEffect(() => {
@@ -688,7 +690,7 @@ export default function ExploreProjects() {
               {filtered.length} project{filtered.length !== 1 ? "s" : ""}
               {visibilityFilter !== "all" && <span className="text-blue-500 dark:text-blue-400">· {visibilityFilter}</span>}
               {langFilter !== "all" && <span className="text-blue-500 dark:text-blue-400">· {langFilter}</span>}
-              {search && <span>· "{search}"</span>}
+              {search && <span>· &quot;{search}&quot;</span>}
             </p>
 
             {/* Grid */}

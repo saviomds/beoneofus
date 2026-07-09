@@ -140,7 +140,7 @@ export function InstallPrompt() {
           {isIOS && (
             <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl px-3 py-2.5 border border-gray-100 dark:border-slate-700/50 leading-relaxed">
               Tap <strong className="font-bold text-gray-700 dark:text-slate-200">Share ⎋</strong> then{' '}
-              <strong className="font-bold text-gray-700 dark:text-slate-200">"Add to Home Screen" ➕</strong>
+              <strong className="font-bold text-gray-700 dark:text-slate-200">&quot;Add to Home Screen&quot; ➕</strong>
             </p>
           )}
 

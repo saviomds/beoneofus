@@ -157,7 +157,10 @@ export default function PremiumContent() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const init = () => { fetchData(); };
+    init();
+  }, [fetchData]);
 
   /* Auto-verify when Paystack redirects back with ?reference= */
   useEffect(() => {
@@ -170,17 +173,21 @@ export default function PremiumContent() {
     clean.searchParams.delete("trxref");
     window.history.replaceState({}, "", clean.toString());
 
-    setVerifying(true);
     (async () => {
+      setVerifying(true);
       try {
+        const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch("/api/paystack/verify", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
           body: JSON.stringify({ reference: ref }),
         });
         const data = await res.json();
         if (res.ok) {
-          showToast("Payment confirmed! Awaiting admin review — you'll be notified.");
+          showToast("🎉 Payment confirmed — your Premium is now active!");
           await fetchData();
         } else {
           showToast(data.error || "Verification failed. Contact support.", false);
@@ -222,12 +229,15 @@ export default function PremiumContent() {
     if (!profile || !user || paying) return;
     setPaying(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const initRes = await fetch("/api/paystack/initiate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           plan,
-          userId:      user.id,
           email:       user.email,
           callbackUrl: `${window.location.origin}/dash?tool=premium`,
         }),

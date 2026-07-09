@@ -8,6 +8,7 @@ import {
   TrendingUp, Zap, BarChart2, ChevronDown, ChevronUp, RefreshCw, Trash2,
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { useLanguage } from "../../../lib/i18n";
 
 const MonacoEditor = dynamic(
   async () => {
@@ -30,6 +31,7 @@ const MonacoEditor = dynamic(
 // ── Helpers ──────────────────────────────────────────────────
 
 function ScoreBadge({ score }) {
+  const { t } = useLanguage();
   const color =
     score >= 80 ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
     : score >= 60 ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
@@ -37,25 +39,27 @@ function ScoreBadge({ score }) {
     : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-lg border ${color}`}>
-      <Star size={11} fill="currentColor" /> {score}/100
+      <Star size={11} fill="currentColor" /> {t('interview.scoreOutOf', { n: score })}
     </span>
   );
 }
 
 function StatusPill({ status }) {
+  const { t } = useLanguage();
   const map = {
-    active:           { label: 'In Progress',      cls: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
-    answers_complete: { label: 'Q&A Done',         cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
-    coding:           { label: 'Coding Challenge',  cls: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800' },
-    completed:        { label: 'Completed',         cls: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800' },
+    active:           { labelKey: 'status.active',   cls: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
+    answers_complete: { labelKey: 'status.answers_complete', cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
+    coding:           { labelKey: 'status.coding',   cls: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800' },
+    completed:        { labelKey: 'status.completed', cls: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800' },
   };
-  const { label, cls } = map[status] || map.active;
-  return <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${cls}`}>{label}</span>;
+  const { labelKey, cls } = map[status] || map.active;
+  return <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${cls}`}>{t(`interview.${labelKey}`)}</span>;
 }
 
 // ── Room List ─────────────────────────────────────────────────
 
 function RoomList({ rooms, onSelect, onDelete, deletingId, loading }) {
+  const { t } = useLanguage();
   if (loading) {
     return (
       <div className="space-y-4">
@@ -69,9 +73,9 @@ function RoomList({ rooms, onSelect, onDelete, deletingId, loading }) {
     return (
       <div className="text-center py-20">
         <Briefcase size={40} className="mx-auto text-gray-300 dark:text-gray-700 mb-4" />
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No Interviews Yet</h3>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t('interview.emptyTitle')}</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-xs mx-auto">
-          When an employer invites you to an interview, it will appear here.
+          {t('interview.emptyDesc')}
         </p>
       </div>
     );
@@ -100,7 +104,7 @@ function RoomList({ rooms, onSelect, onDelete, deletingId, loading }) {
                   <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{room.company}</p>
                 )}
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
-                  {room.questions?.length || 0} question{room.questions?.length !== 1 ? 's' : ''} ·{' '}
+                  {t('interview.questionCount', { count: room.questions?.length || 0 })} ·{' '}
                   {new Date(room.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
               </div>
@@ -116,7 +120,7 @@ function RoomList({ rooms, onSelect, onDelete, deletingId, loading }) {
               {deletingId === room.id
                 ? <Loader2 size={13} className="animate-spin" />
                 : <Trash2 size={13} />}
-              Delete
+              {t('interview.delete')}
             </button>
           </div>
         </div>
@@ -128,6 +132,7 @@ function RoomList({ rooms, onSelect, onDelete, deletingId, loading }) {
 // ── Q&A Phase ─────────────────────────────────────────────────
 
 function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }) {
+  const { t } = useLanguage();
   const [currentIdx, setCurrentIdx] = useState(0);
   const [draft, setDraft] = useState('');
   const [feedback, setFeedback] = useState(null); // { score, ai_feedback, strengths, improvements }
@@ -137,10 +142,12 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
 
   // Restore progress: find the first unanswered question
   useEffect(() => {
-    const answeredIndices = new Set(answers.map(a => a.question_index));
-    let start = 0;
-    while (start < questions.length && answeredIndices.has(start)) start++;
-    setCurrentIdx(Math.min(start, questions.length - 1));
+    (() => {
+      const answeredIndices = new Set(answers.map(a => a.question_index));
+      let start = 0;
+      while (start < questions.length && answeredIndices.has(start)) start++;
+      setCurrentIdx(Math.min(start, questions.length - 1));
+    })();
   }, [answers, questions.length]);
 
   const answered = new Set(answers.map(a => a.question_index));
@@ -149,9 +156,11 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
 
   // Restore saved draft from localStorage when switching questions
   useEffect(() => {
-    if (existingAnswer) { setDraft(''); return; }
-    const saved = localStorage.getItem(`iv_draft_${room.id}_${currentIdx}`);
-    setDraft(saved || '');
+    (() => {
+      if (existingAnswer) { setDraft(''); return; }
+      const saved = localStorage.getItem(`iv_draft_${room.id}_${currentIdx}`);
+      setDraft(saved || '');
+    })();
   }, [currentIdx, room.id, existingAnswer]);
 
   // Auto-save draft to localStorage as user types
@@ -231,7 +240,7 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
         <div className="flex items-center gap-2 mb-3">
           <MessageSquare size={14} className="text-blue-500" />
           <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-            Question {currentIdx + 1} of {questions.length}
+            {t('interview.questionProgress', { current: currentIdx + 1, total: questions.length })}
           </span>
         </div>
         <p className="text-base font-bold text-gray-900 dark:text-gray-100 leading-relaxed">
@@ -246,7 +255,7 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
       {existingAnswer && !showingFeedback && (
         <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Your Answer</span>
+            <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{t('interview.yourAnswer')}</span>
             <ScoreBadge score={existingAnswer.ai_score} />
           </div>
           <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{existingAnswer.answer_text}</p>
@@ -254,7 +263,7 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
             onClick={() => setShowingFeedback(true)}
             className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
           >
-            View AI Feedback <ChevronDown size={12} />
+            {t('interview.viewFeedback')} <ChevronDown size={12} />
           </button>
         </div>
       )}
@@ -266,14 +275,14 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
           <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-2xl p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
-                <Zap size={12} /> AI Feedback
+                <Zap size={12} /> {t('interview.aiFeedback')}
               </span>
               <ScoreBadge score={fb.ai_score} />
             </div>
             <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{fb.ai_feedback}</p>
             {fb.strengths?.length > 0 && (
               <div>
-                <p className="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest mb-1.5">Strengths</p>
+                <p className="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-widest mb-1.5">{t('interview.strengths')}</p>
                 <ul className="space-y-1">
                   {fb.strengths.map((s, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -285,7 +294,7 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
             )}
             {fb.improvements?.length > 0 && (
               <div>
-                <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1.5">Improvements</p>
+                <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1.5">{t('interview.improvements')}</p>
                 <ul className="space-y-1">
                   {fb.improvements.map((s, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -300,7 +309,7 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
                 onClick={handleNext}
                 className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 active:scale-95"
               >
-                Next Question <ChevronRight size={16} />
+                {t('interview.nextQuestion')} <ChevronRight size={16} />
               </button>
             )}
           </div>
@@ -313,7 +322,7 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
           <textarea
             value={draft}
             onChange={e => setDraft(e.target.value)}
-            placeholder="Type your answer here... Be thorough and specific."
+            placeholder={t('interview.answerPlaceholder')}
             rows={6}
             className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none transition-all"
           />
@@ -323,7 +332,7 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
             className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-sm active:scale-95 shadow-md shadow-blue-500/20"
           >
             {submitting ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-            {submitting ? 'Evaluating…' : 'Submit & Get AI Feedback'}
+            {submitting ? t('interview.evaluating') : t('interview.submitAnswer')}
           </button>
         </div>
       )}
@@ -334,6 +343,7 @@ function QAPhase({ room, answers, onAnswerSubmit, submitting, timeUp, onTimeUp }
 // ── Coding Phase ──────────────────────────────────────────────
 
 function CodingPhase({ room, userId, onComplete, timeUp }) {
+  const { t } = useLanguage();
   const [challenge, setChallenge] = useState(room.coding_challenge || null);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(!room.coding_challenge);
@@ -362,22 +372,19 @@ function CodingPhase({ room, userId, onComplete, timeUp }) {
   }, [room.id, userId]);
 
   useEffect(() => {
-    if (!challenge) fetchChallenge();
-    else {
-      const saved = localStorage.getItem(`iv_code_${room.id}`);
-      setCode(saved || challenge.starterCode || '');
-    }
+    (async () => {
+      if (!challenge) await fetchChallenge();
+      else {
+        const saved = localStorage.getItem(`iv_code_${room.id}`);
+        setCode(saved || challenge.starterCode || '');
+      }
+    })();
   }, [challenge, fetchChallenge, room.id]);
 
   // Auto-save code to localStorage on every change
   useEffect(() => {
     if (code) localStorage.setItem(`iv_code_${room.id}`, code);
   }, [code, room.id]);
-
-  // Auto-submit when timer expires
-  useEffect(() => {
-    if (timeUp && !result && !submitting) handleSubmit();
-  }, [timeUp]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async () => {
     if (!code.trim()) return;
@@ -407,11 +414,16 @@ function CodingPhase({ room, userId, onComplete, timeUp }) {
     }
   };
 
+  // Auto-submit when timer expires
+  useEffect(() => {
+    if (timeUp && !result && !submitting) { (async () => { await handleSubmit(); })(); }
+  }, [timeUp]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <Loader2 size={32} className="animate-spin text-blue-500" />
-        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Generating Your Challenge…</p>
+        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{t('interview.generatingChallenge')}</p>
       </div>
     );
   }
@@ -426,7 +438,7 @@ function CodingPhase({ room, userId, onComplete, timeUp }) {
               : <AlertTriangle size={28} className="text-amber-500" />}
             <div>
               <p className="font-black text-gray-900 dark:text-gray-100 text-lg">
-                {result.passed ? 'Challenge Passed!' : 'Challenge Submitted'}
+                {result.passed ? t('interview.challengePassed') : t('interview.challengeSubmitted')}
               </p>
               <ScoreBadge score={result.score} />
             </div>
@@ -434,10 +446,10 @@ function CodingPhase({ room, userId, onComplete, timeUp }) {
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{result.feedback}</p>
           <div className="flex gap-4 mt-4">
             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg px-3 py-1.5 border border-gray-200 dark:border-gray-700">
-              <Clock size={12} /> Time: {result.timeComplexity}
+              <Clock size={12} /> {t('interview.timeLabel')} {result.timeComplexity}
             </div>
             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg px-3 py-1.5 border border-gray-200 dark:border-gray-700">
-              <BarChart2 size={12} /> Space: {result.spaceComplexity}
+              <BarChart2 size={12} /> {t('interview.spaceLabel')} {result.spaceComplexity}
             </div>
           </div>
         </div>
@@ -471,11 +483,11 @@ function CodingPhase({ room, userId, onComplete, timeUp }) {
             </div>
             {challenge?.testCases?.length > 0 && (
               <div className="mt-4 space-y-2">
-                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Test Cases</p>
+                <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('interview.testCases')}</p>
                 {challenge.testCases.map((tc, i) => (
                   <div key={i} className="text-xs font-mono bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-700">
-                    <span className="text-gray-500 dark:text-gray-400">Input:</span> {tc.input} →{' '}
-                    <span className="text-gray-500 dark:text-gray-400">Expected:</span> {tc.expected}
+                    <span className="text-gray-500 dark:text-gray-400">{t('interview.inputLabel')}</span> {tc.input} →{' '}
+                    <span className="text-gray-500 dark:text-gray-400">{t('interview.expectedLabel')}</span> {tc.expected}
                   </div>
                 ))}
               </div>
@@ -518,7 +530,7 @@ function CodingPhase({ room, userId, onComplete, timeUp }) {
         className="w-full py-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 text-sm active:scale-95 shadow-lg shadow-purple-500/20"
       >
         {submitting ? <Loader2 size={16} className="animate-spin" /> : <Code2 size={16} />}
-        {submitting ? 'Evaluating Code…' : 'Submit Code for AI Review'}
+        {submitting ? t('interview.evaluatingCode') : t('interview.submitCode')}
       </button>
     </div>
   );
@@ -527,15 +539,16 @@ function CodingPhase({ room, userId, onComplete, timeUp }) {
 // ── Results View ──────────────────────────────────────────────
 
 function ResultsView({ room, answers, codeResult }) {
+  const { t } = useLanguage();
   const qScores = answers.map(a => a.ai_score || 0);
   const avg = qScores.length ? Math.round(qScores.reduce((s, n) => s + n, 0) / qScores.length) : 0;
   const overall = room.overall_score ?? avg;
 
   const grade =
-    overall >= 85 ? { label: 'Excellent', color: 'text-green-600 dark:text-green-400', bg: 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' }
-    : overall >= 70 ? { label: 'Good', color: 'text-blue-600 dark:text-blue-400', bg: 'from-blue-50 to-sky-50 dark:from-blue-900/20 dark:to-sky-900/20' }
-    : overall >= 55 ? { label: 'Fair', color: 'text-amber-600 dark:text-amber-400', bg: 'from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20' }
-    : { label: 'Needs Work', color: 'text-red-600 dark:text-red-400', bg: 'from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20' };
+    overall >= 85 ? { labelKey: 'grade.excellent', color: 'text-green-600 dark:text-green-400', bg: 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' }
+    : overall >= 70 ? { labelKey: 'grade.good', color: 'text-blue-600 dark:text-blue-400', bg: 'from-blue-50 to-sky-50 dark:from-blue-900/20 dark:to-sky-900/20' }
+    : overall >= 55 ? { labelKey: 'grade.fair', color: 'text-amber-600 dark:text-amber-400', bg: 'from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20' }
+    : { labelKey: 'grade.needsWork', color: 'text-red-600 dark:text-red-400', bg: 'from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20' };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -543,14 +556,14 @@ function ResultsView({ room, answers, codeResult }) {
       <div className={`bg-gradient-to-br ${grade.bg} border border-gray-200 dark:border-gray-700 rounded-3xl p-8 text-center`}>
         <Trophy size={40} className={`mx-auto mb-4 ${grade.color}`} />
         <p className="text-5xl font-black text-gray-900 dark:text-gray-100 mb-1">{overall}</p>
-        <p className={`text-lg font-black ${grade.color} uppercase tracking-widest mb-2`}>{grade.label}</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Overall Interview Score</p>
+        <p className={`text-lg font-black ${grade.color} uppercase tracking-widest mb-2`}>{t(`interview.${grade.labelKey}`)}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{t('interview.overallScore')}</p>
       </div>
 
       {/* Per-question breakdown */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
         <div className="px-5 py-3 bg-gray-50 dark:bg-gray-800/50">
-          <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Q&A Breakdown</p>
+          <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{t('interview.qaBreakdown')}</p>
         </div>
         {answers.sort((a, b) => a.question_index - b.question_index).map((a, i) => (
           <div key={a.id} className="p-5 space-y-2">
@@ -567,20 +580,20 @@ function ResultsView({ room, answers, codeResult }) {
       {codeResult && (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-2">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Coding Challenge</p>
+            <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{t('interview.codingChallenge')}</p>
             <ScoreBadge score={codeResult.score} />
           </div>
           <p className="text-sm text-gray-700 dark:text-gray-300">{codeResult.feedback}</p>
           <div className="flex gap-3 mt-2 flex-wrap">
             <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 font-mono">
-              Time: {codeResult.timeComplexity}
+              {t('interview.timeLabel')} {codeResult.timeComplexity}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 font-mono">
-              Space: {codeResult.spaceComplexity}
+              {t('interview.spaceLabel')} {codeResult.spaceComplexity}
             </span>
             {codeResult.passed && (
               <span className="text-xs font-black text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-lg border border-green-200 dark:border-green-800">
-                ✓ Tests Passed
+                {t('interview.testsPassed')}
               </span>
             )}
           </div>
@@ -593,6 +606,7 @@ function ResultsView({ room, answers, codeResult }) {
 // ── Room Detail ───────────────────────────────────────────────
 
 function RoomDetail({ room: initialRoom, userId, onBack }) {
+  const { t } = useLanguage();
   const [room, setRoom] = useState(initialRoom);
   const [answers, setAnswers] = useState([]);
   const [codeResult, setCodeResult] = useState(null);
@@ -658,7 +672,7 @@ function RoomDetail({ room: initialRoom, userId, onBack }) {
   const handleForceComplete = useCallback(async () => {
     const { data: currentAnswers } = await supabase
       .from('interview_answers')
-      .select('ai_score')
+      .select("ai_score")
       .eq('room_id', initialRoom.id);
     const scores = (currentAnswers || []).map(a => a.ai_score || 0);
     const overallScore = scores.length
@@ -713,23 +727,23 @@ function RoomDetail({ room: initialRoom, userId, onBack }) {
           <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-700 animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 mb-3">
               <AlertTriangle size={22} className="text-amber-500 shrink-0" />
-              <h3 className="font-black text-gray-900 dark:text-gray-100">Leave Interview?</h3>
+              <h3 className="font-black text-gray-900 dark:text-gray-100">{t('interview.leaveTitle')}</h3>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
-              Your progress is saved and you can come back to finish. But the interview won't be submitted until you complete all sections.
+              {t('interview.leaveDesc')}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setLeaveConfirm(false)}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
-                Stay
+                {t('interview.stay')}
               </button>
               <button
                 onClick={onBack}
                 className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-colors"
               >
-                Leave
+                {t('interview.leave')}
               </button>
             </div>
           </div>
@@ -769,15 +783,15 @@ function RoomDetail({ room: initialRoom, userId, onBack }) {
       {/* Phase indicator */}
       <div className="flex items-center gap-2 text-xs font-bold text-gray-400 dark:text-gray-500">
         <span className={phase === 'qa' || phase === 'coding' || phase === 'results' ? 'text-blue-600 dark:text-blue-400' : ''}>
-          Q&A
+          {t('interview.phaseQa')}
         </span>
         <ChevronRight size={12} />
         <span className={phase === 'coding' || phase === 'results' ? 'text-purple-600 dark:text-purple-400' : ''}>
-          Coding
+          {t('interview.phaseCoding')}
         </span>
         <ChevronRight size={12} />
         <span className={phase === 'results' ? 'text-green-600 dark:text-green-400' : ''}>
-          Results
+          {t('interview.phaseResults')}
         </span>
       </div>
 
@@ -798,9 +812,9 @@ function RoomDetail({ room: initialRoom, userId, onBack }) {
           <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 flex items-start gap-3">
             <CheckCircle2 size={18} className="text-green-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">Q&A Complete!</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{t('interview.qaComplete')}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Now complete the coding challenge below. Your code will be evaluated by AI.
+                {t('interview.qaCompleteDesc')}
               </p>
             </div>
           </div>
@@ -826,16 +840,17 @@ function fmtTime(s) {
 }
 
 const INTERVIEW_RULES = [
-  { icon: MessageSquare, text: 'Answer each question in your own words. Be specific and thorough — vague answers score lower.' },
-  { icon: XCircle,       text: 'Submitted answers cannot be edited. Think before you submit.' },
-  { icon: ChevronRight,  text: 'The coding challenge unlocks only after all Q&A questions are answered.' },
-  { icon: Code2,         text: 'You have ~20–30 minutes for the coding challenge. Write clean, working code.' },
-  { icon: Zap,           text: 'Each answer and your code are evaluated by AI immediately.' },
-  { icon: Clock,         text: 'You have 60 minutes total. When the timer reaches zero your interview is automatically submitted with whatever you have completed.' },
-  { icon: AlertTriangle, text: 'Do not close or refresh the tab mid-interview. Your drafts are auto-saved, but the interview won\'t be submitted until all sections are complete.' },
+  { icon: MessageSquare, textKey: 'rule1' },
+  { icon: XCircle,       textKey: 'rule2' },
+  { icon: ChevronRight,  textKey: 'rule3' },
+  { icon: Code2,         textKey: 'rule4' },
+  { icon: Zap,           textKey: 'rule5' },
+  { icon: Clock,         textKey: 'rule6' },
+  { icon: AlertTriangle, textKey: 'rule7' },
 ];
 
 function InterviewRulesScreen({ room, onBegin, onBack }) {
+  const { t } = useLanguage();
   const [agreed, setAgreed] = useState(false);
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -847,18 +862,18 @@ function InterviewRulesScreen({ room, onBegin, onBack }) {
           <ArrowLeft size={16} />
         </button>
         <div>
-          <h2 className="font-black text-gray-900 dark:text-gray-100 text-xl tracking-tight">Before You Begin</h2>
+          <h2 className="font-black text-gray-900 dark:text-gray-100 text-xl tracking-tight">{t('interview.beforeBegin')}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-0.5">{room.job_title}{room.company ? ` · ${room.company}` : ''}</p>
         </div>
       </div>
 
       <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-2xl p-5 space-y-4">
-        <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Interview Rules</p>
+        <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{t('interview.interviewRules')}</p>
         <ul className="space-y-3.5">
-          {INTERVIEW_RULES.map(({ icon: Icon, text }, i) => (
+          {INTERVIEW_RULES.map(({ icon: Icon, textKey }, i) => (
             <li key={i} className="flex items-start gap-3">
               <Icon size={15} className="text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
-              <span className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{text}</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{t(`interview.${textKey}`)}</span>
             </li>
           ))}
         </ul>
@@ -866,7 +881,7 @@ function InterviewRulesScreen({ room, onBegin, onBack }) {
 
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex items-center justify-between gap-3">
         <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
-          {room.questions?.length || 0} questions · AI-evaluated · Coding challenge included
+          {t('interview.rulesSummary', { n: room.questions?.length || 0 })}
         </span>
         <span className="flex items-center gap-1.5 text-sm font-black text-amber-600 dark:text-amber-400 shrink-0">
           <Clock size={14} /> 60:00
@@ -881,7 +896,7 @@ function InterviewRulesScreen({ room, onBegin, onBack }) {
           className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 accent-blue-600 cursor-pointer shrink-0"
         />
         <span className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">
-          I have read and understood the rules above.
+          {t('interview.agreeRules')}
         </span>
       </label>
 
@@ -896,13 +911,14 @@ function InterviewRulesScreen({ room, onBegin, onBack }) {
         disabled={!agreed}
         className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 text-sm active:scale-95 shadow-lg shadow-blue-500/20"
       >
-        <ChevronRight size={16} /> Begin Interview
+        <ChevronRight size={16} /> {t('interview.beginInterview')}
       </button>
     </div>
   );
 }
 
 export default function InterviewContent() {
+  const { t } = useLanguage();
   const [userId, setUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [rooms, setRooms] = useState([]);
@@ -932,7 +948,7 @@ export default function InterviewContent() {
       setUserId(uid);
       const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin')
+        .select("is_admin")
         .eq('id', uid)
         .single();
       const admin = profile?.is_admin ?? false;
@@ -974,7 +990,7 @@ export default function InterviewContent() {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
         <Briefcase size={36} className="text-gray-300 dark:text-gray-700" />
-        <p className="text-gray-500 dark:text-gray-400 font-bold">Sign in to view your interviews.</p>
+        <p className="text-gray-500 dark:text-gray-400 font-bold">{t('interview.signInPrompt')}</p>
       </div>
     );
   }
@@ -1001,10 +1017,10 @@ export default function InterviewContent() {
               <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-700 animate-in zoom-in-95 duration-200">
                 <div className="flex items-center gap-3 mb-3">
                   <AlertTriangle size={22} className="text-red-500 shrink-0" />
-                  <h3 className="font-black text-gray-900 dark:text-gray-100">Delete All Interviews?</h3>
+                  <h3 className="font-black text-gray-900 dark:text-gray-100">{t('interview.deleteAllTitle')}</h3>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
-                  This will permanently delete all {rooms.length} interview room{rooms.length !== 1 ? 's' : ''} and their answers. This cannot be undone.
+                  {t('interview.deleteAllConfirm', { count: rooms.length })}
                 </p>
                 <div className="flex gap-3">
                   <button
@@ -1012,7 +1028,7 @@ export default function InterviewContent() {
                     disabled={deletingAll}
                     className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
                   >
-                    Cancel
+                    {t('interview.cancel')}
                   </button>
                   <button
                     onClick={handleDeleteAll}
@@ -1020,7 +1036,7 @@ export default function InterviewContent() {
                     className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
                   >
                     {deletingAll ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                    {deletingAll ? 'Deleting…' : 'Delete All'}
+                    {deletingAll ? t('interview.deleting') : t('interview.deleteAll')}
                   </button>
                 </div>
               </div>
@@ -1029,9 +1045,9 @@ export default function InterviewContent() {
 
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Interviews</h1>
+              <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">{t('interview.title')}</h1>
               <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5 font-medium">
-                {isAdmin ? 'All interview rooms (admin view).' : 'Your active and completed interview rooms.'}
+                {isAdmin ? t('interview.subtitleAdmin') : t('interview.subtitleUser')}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -1039,15 +1055,15 @@ export default function InterviewContent() {
                 <button
                   onClick={() => setConfirmDeleteAll(true)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 text-xs font-bold border border-red-200 dark:border-red-800 transition-colors"
-                  title="Delete all interviews"
+                  title={t('interview.deleteAllTitleAttr')}
                 >
-                  <Trash2 size={13} /> Delete All
+                  <Trash2 size={13} /> {t('interview.deleteAll')}
                 </button>
               )}
               <button
                 onClick={handleRefresh}
                 className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-                title="Refresh"
+                title={t('interview.refresh')}
               >
                 <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
               </button>

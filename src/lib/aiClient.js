@@ -11,20 +11,26 @@
 
 import Groq from 'groq-sdk';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 const GROQ_KEY = process.env.GROQ_API_KEY || '';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
+const OPENAI_KEY = process.env.OPENAI_API_KEY || '';
 
-// Only a gsk_ key is a valid Groq credential — a re_ (Resend) key would 401.
+// Validate by prefix so a mis-pasted key (e.g. a Resend re_… in GROQ_API_KEY) is
+// skipped rather than 401-ing: Groq = gsk_, Anthropic = sk-ant-, OpenAI = sk-…
+// (but NOT sk-ant-, which is Anthropic).
 const groqUsable = GROQ_KEY.startsWith('gsk_');
 const anthropicUsable = ANTHROPIC_KEY.startsWith('sk-ant-');
+const openaiUsable = OPENAI_KEY.startsWith('sk-') && !OPENAI_KEY.startsWith('sk-ant-');
 
 const _groq = groqUsable ? new Groq({ apiKey: GROQ_KEY, maxRetries: 1 }) : null;
 const _anthropic = anthropicUsable ? new Anthropic({ apiKey: ANTHROPIC_KEY }) : null;
+const _openai = openaiUsable ? new OpenAI({ apiKey: OPENAI_KEY, maxRetries: 1 }) : null;
 
-// Small, fast, cheap — matches the lightweight tasks the Groq routes run and the
-// model already used elsewhere in this codebase (career/analyze).
+// Small, fast, cheap fallback models per provider.
 const FALLBACK_MODEL = 'claude-haiku-4-5';
+const OPENAI_MODEL = 'gpt-4o-mini';
 
 function textFrom(content) {
   if (typeof content === 'string') return content;
@@ -81,31 +87,43 @@ async function anthropicCreate({ messages = [], max_tokens = 1024, response_form
   return text;
 }
 
+// OpenAI is already OpenAI-shaped; just swap in an OpenAI model (Groq model ids
+// like llama-3.3-70b won't exist there) and tag the provider.
+async function openaiCreate(params = {}) {
+  const r = await _openai.chat.completions.create({ ...params, model: OPENAI_MODEL });
+  return { choices: r.choices, model: r.model, _provider: 'openai' };
+}
+
+// Try each configured provider in preference order, falling through on error so a
+// single provider outage (or an unfunded account) never takes a feature down.
 async function create(params = {}) {
-  // 1) Real Groq first.
+  let lastErr = null;
+
   if (_groq) {
-    try {
-      return await _groq.chat.completions.create(params);
-    } catch (err) {
-      if (!_anthropic) throw err; // nothing to fall back to
-      // else fall through to Anthropic
-    }
+    try { return await _groq.chat.completions.create(params); }
+    catch (err) { lastErr = err; }
   }
-  // 2) Anthropic fallback, shaped like a Groq/OpenAI completion.
+  if (_openai) {
+    try { return await openaiCreate(params); }
+    catch (err) { lastErr = err; }
+  }
   if (_anthropic) {
-    const content = await anthropicCreate(params);
-    return {
-      choices: [{ index: 0, finish_reason: 'stop', message: { role: 'assistant', content } }],
-      model: FALLBACK_MODEL,
-      _provider: 'anthropic',
-    };
+    try {
+      const content = await anthropicCreate(params);
+      return {
+        choices: [{ index: 0, finish_reason: 'stop', message: { role: 'assistant', content } }],
+        model: FALLBACK_MODEL,
+        _provider: 'anthropic',
+      };
+    } catch (err) { lastErr = err; }
   }
-  throw new Error('No AI provider configured (set GROQ_API_KEY=gsk_… or ANTHROPIC_API_KEY=sk-ant-…)');
+
+  throw lastErr || new Error('No AI provider configured (set GROQ_API_KEY=gsk_…, OPENAI_API_KEY=sk-…, or ANTHROPIC_API_KEY=sk-ant-…)');
 }
 
 export const aiClient = {
-  /** true when at least one provider (Groq or Anthropic) is usable. */
-  available: !!(_groq || _anthropic),
+  /** true when at least one provider (Groq, OpenAI, or Anthropic) is usable. */
+  available: !!(_groq || _openai || _anthropic),
   chat: { completions: { create } },
 };
 

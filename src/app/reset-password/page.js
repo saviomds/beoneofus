@@ -69,7 +69,19 @@ export default function ResetPasswordPage() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // If no recovery session materializes, the link is invalid/expired. Without
+    // this, the page is stuck forever on "Verifying reset link…" with a disabled
+    // button and no way forward.
+    const timeout = setTimeout(() => {
+      if (!sessionReadyRef.current) {
+        setError('This reset link is invalid or has expired. Please request a new one.');
+      }
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleSubmit = async (e) => {
@@ -122,12 +134,12 @@ export default function ResetPasswordPage() {
             <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs mx-auto leading-relaxed">
               Your new password is set. You&apos;re now signed in — go to your dashboard.
             </p>
-            <a
+            <Link
               href="/dash"
               className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white transition-all rounded-xl font-bold text-sm w-full shadow-sm block text-center"
             >
               Go to dashboard →
-            </a>
+            </Link>
           </div>
         </div>
       </div>

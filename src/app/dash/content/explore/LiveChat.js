@@ -6,6 +6,7 @@ import {
   ChevronDown, Copy, Check, Sparkles, Sticker,
 } from "lucide-react";
 import { supabase } from "../../../supabaseClient";
+import Image from "next/image";
 
 // ── Setup SQL (show to user if table missing or RLS blocks insert) ────────────
 const CHAT_SQL = `-- Run in Supabase SQL Editor (safe to re-run)
@@ -135,8 +136,8 @@ function Avatar({ profile, size = 28, className = "" }) {
   const initial = name[0]?.toUpperCase() ?? "?";
   const style   = { width: size, height: size, minWidth: size, minHeight: size };
   if (src && !imgErr) {
-    return <img src={src} alt={name} style={style}
-      className={`rounded-full object-cover shrink-0 ${className}`} onError={() => setImgErr(true)} />;
+    return <Image src={src} alt={name} width={size} height={size} style={style}
+      className={`rounded-full object-cover shrink-0 ${className}`} onError={() => setImgErr(true)} unoptimized />;
   }
   return (
     <div style={{ ...style, fontSize: Math.floor(size * 0.42) }}
@@ -282,11 +283,13 @@ export default function LiveChat({ project, currentUser, teamMemberIds = new Set
 
   // ── Membership check ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!currentUser || isDemo) { setMemberChecked(true); return; }
-    if (project.created_by === currentUser.id) { setIsMember(true); setMemberChecked(true); return; }
-    supabase.from("project_members")
-      .select("id").eq("project_id", project.id).eq("user_id", currentUser.id).eq("status", "approved")
-      .maybeSingle().then(({ data }) => { setIsMember(!!data); setMemberChecked(true); });
+    (() => {
+      if (!currentUser || isDemo) { setMemberChecked(true); return; }
+      if (project.created_by === currentUser.id) { setIsMember(true); setMemberChecked(true); return; }
+      supabase.from("project_members")
+        .select("id").eq("project_id", project.id).eq("user_id", currentUser.id).eq("status", "approved")
+        .maybeSingle().then(({ data }) => { setIsMember(!!data); setMemberChecked(true); });
+    })();
   }, [project.id, project.created_by, currentUser, isDemo]);
 
   // ── Profile fetcher ──────────────────────────────────────────────────────────
@@ -298,10 +301,11 @@ export default function LiveChat({ project, currentUser, teamMemberIds = new Set
     if (data) setProfileCache((prev) => ({ ...prev, [data.id]: data }));
   }, []);
 
-  useEffect(() => { if (currentUser?.id) fetchProfile(currentUser.id); }, [currentUser?.id, fetchProfile]);
+  useEffect(() => { (() => { if (currentUser?.id) fetchProfile(currentUser.id); })(); }, [currentUser?.id, fetchProfile]);
 
   // ── Load history + reactions ─────────────────────────────────────────────────
   useEffect(() => {
+    (() => {
     if (!memberChecked || !isMember || isDemo) { setLoadingHistory(false); return; }
     supabase.from("project_messages")
       .select("id, project_id, user_id, text, attachment_url, attachment_type, attachment_name, attachment_size, reply_to_id, reply_preview, created_at")
@@ -333,6 +337,7 @@ export default function LiveChat({ project, currentUser, teamMemberIds = new Set
         }
         setLoadingHistory(false);
       });
+    })();
   }, [memberChecked, isMember, isDemo, project.id, fetchProfile, currentUser?.id]);
 
   // ── Real-time subscription ───────────────────────────────────────────────────
@@ -453,7 +458,7 @@ export default function LiveChat({ project, currentUser, teamMemberIds = new Set
   const doSend = async ({ text = "", attachment_type = null, attachment_url = null, attachment_name = null, attachment_size = null }) => {
     const rPreview = replyTo ? `${replyTo.sender}: ${(replyTo.text || "").slice(0, 80)}` : null;
     const rId      = replyTo?.id ?? null;
-    const tempId   = `temp-${Date.now()}`;
+    const tempId   = `temp-${new Date().getTime()}`;
 
     setMessages((prev) => [...prev, {
       id: tempId, project_id: project.id, user_id: currentUser.id,
@@ -663,6 +668,8 @@ export default function LiveChat({ project, currentUser, teamMemberIds = new Set
                 ) : msg.attachment_type === "image" ? (
                   <div className="rounded-2xl overflow-hidden cursor-zoom-in max-w-[220px] sm:max-w-[260px] border border-gray-200 dark:border-gray-700"
                     onClick={() => setLightboxSrc(msg.attachment_url)}>
+                    {/* user-uploaded image of unknown dimensions rendered at intrinsic aspect ratio; next/image needs fixed width/height which would force a uniform box and change the layout */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={msg.attachment_url} alt="shared" className="block w-full max-h-[200px] object-cover" />
                     {msg.text && (
                       <div className={`px-3 py-2 text-sm ${isMe ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"}`}>
@@ -855,7 +862,7 @@ export default function LiveChat({ project, currentUser, teamMemberIds = new Set
       {pendingAttachment && (
         <div className="mx-3 mb-2 flex items-center gap-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 shrink-0">
           {pendingAttachment.type === "image" ? (
-            <img src={pendingAttachment.previewUrl} alt="preview" className="h-14 w-14 rounded-lg object-cover shrink-0" />
+            <Image src={pendingAttachment.previewUrl} alt="preview" width={56} height={56} className="h-14 w-14 rounded-lg object-cover shrink-0" unoptimized />
           ) : (
             <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center shrink-0">
               <FileText size={18} className="text-blue-600" />
@@ -928,6 +935,8 @@ export default function LiveChat({ project, currentUser, teamMemberIds = new Set
           <button className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors">
             <X size={20} />
           </button>
+          {/* full-size lightbox image sized to its own intrinsic dimensions (object-contain, max 90vh); next/image requires explicit dimensions or a sized parent, neither of which fits a natural-size responsive view */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={lightboxSrc} alt="full size" className="max-w-full max-h-[90vh] rounded-2xl shadow-2xl object-contain" onClick={(e) => e.stopPropagation()} />
         </div>
       )}

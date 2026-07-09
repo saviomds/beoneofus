@@ -19,11 +19,16 @@ export default function AdminVerification() {
   const [busyId, setBusyId] = useState(null);
 
   const load = useCallback(async (status, tok) => {
-    const res = await fetch(`/api/admin/verification?status=${status}`, { headers: { Authorization: `Bearer ${tok}` } });
-    if (res.status === 403) { setState('denied'); return; }
-    const data = await res.json().catch(() => ({}));
-    setRequests(data.requests || []);
-    setState('ready');
+    try {
+      const res = await fetch(`/api/admin/verification?status=${status}`, { headers: { Authorization: `Bearer ${tok}` } });
+      if (res.status === 403) { setState('denied'); return; }
+      const data = await res.json().catch(() => ({}));
+      setRequests(data.requests || []);
+      setState('ready');
+    } catch {
+      // Network failure — without this the page hangs on the spinner forever.
+      setState('error');
+    }
   }, []);
 
   useEffect(() => {
@@ -50,6 +55,20 @@ export default function AdminVerification() {
 
   if (state === 'loading') {
     return <div className="min-h-screen bg-ink flex items-center justify-center"><Loader2 className="animate-spin text-brand-400" size={26} /></div>;
+  }
+  if (state === 'error') {
+    return (
+      <div className="min-h-screen bg-ink text-gray-200 flex flex-col items-center justify-center px-6 text-center">
+        <h1 className="text-xl font-black text-white">Couldn&apos;t load requests</h1>
+        <p className="text-sm text-gray-400 mt-1.5 mb-6">A network error occurred. Check your connection and try again.</p>
+        <button
+          onClick={() => { setState('loading'); load(tab, token); }}
+          className="px-4 py-2 rounded-full bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    );
   }
   if (state === 'denied') {
     return (

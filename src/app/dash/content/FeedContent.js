@@ -15,6 +15,7 @@ import VerifiedBadge from "../../components/VerifiedBadge";
 import PremiumBadge from "../../components/PremiumBadge";
 import ReactMarkdown from "react-markdown";
 import StoriesBar from "./Stories";
+import { useLanguage } from '../../../lib/i18n';
 
 // Stable seeded hash: consistent within a session, different across page loads
 function feedHash(id, seed) {
@@ -60,6 +61,7 @@ function relativeDate(dateStr) {
 }
 
 function VideoPlayer({ src, quality: propQuality, urlType }) {
+  const { t } = useLanguage();
   const isEmbed = urlType === 'youtube' || urlType === 'vimeo';
 
   const videoRef = useRef(null);
@@ -103,10 +105,10 @@ function VideoPlayer({ src, quality: propQuality, urlType }) {
     const idx = ladder.indexOf(detQ);
     const below = idx >= 0 ? ladder.slice(idx) : [];
     return [
-      { v: 'auto', l: detQ ? `Auto (${detQ})` : 'Auto' },
+      { v: 'auto', l: detQ ? t('feed.auto_detected', { quality: detQ }) : t('feed.auto') },
       ...below.map(q => ({ v: q, l: q === '4K' ? '4K Ultra HD' : q === '1080p' ? '1080p HD' : q === '720p' ? '720p HD' : q })),
     ];
-  }, [detQ, isEmbed]);
+  }, [detQ, isEmbed, t]);
 
   const qFilter = selQ === '480p' ? 'contrast(0.93)' : selQ === '360p' ? 'blur(0.5px) contrast(0.87) saturate(0.88)' : 'none';
   const dispQ   = selQ === 'auto' ? detQ : selQ;
@@ -158,7 +160,7 @@ function VideoPlayer({ src, quality: propQuality, urlType }) {
             className="absolute top-7 right-0 bg-gray-950/95 border border-white/10 rounded-xl overflow-hidden shadow-2xl min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-white/40 text-[9px] font-black uppercase tracking-widest px-3 pt-2 pb-1 border-b border-white/10">Quality</p>
+            <p className="text-white/40 text-[9px] font-black uppercase tracking-widest px-3 pt-2 pb-1 border-b border-white/10">{t('feed.quality')}</p>
             {qualityOptions.map(o => (
               <button
                 key={o.v}
@@ -261,15 +263,17 @@ function MediaGrid({ items }) {
 }
 
 const FEED_TABS = [
-  { id: 'following',    label: 'For You',  icon: Zap },
-  { id: 'featured',    label: 'Featured', icon: Star },
-  { id: 'rising',      label: 'Rising',   icon: Flame },
-  { id: 'code review', label: 'Code',     icon: Code },
+  { id: 'following',    label: 'feed.tabs.for_you',  icon: Zap },
+  { id: 'featured',    label: 'feed.tabs.featured', icon: Star },
+  { id: 'rising',      label: 'feed.tabs.rising',   icon: Flame },
+  { id: 'code review', label: 'feed.tabs.code',     icon: Code },
 ];
 
 export default function FeedContent() {
+  const { t } = useLanguage();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [activeMenu, setActiveMenu] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -327,28 +331,52 @@ export default function FeedContent() {
   };
 
   const fetchPosts = useCallback(async (silent = false) => {
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          profiles:user_id (username, status, avatar_url, github, website, is_verified, is_premium, is_trial_premium, is_admin, profile_visibility),
-          likes (user_id),
-          comments (
-            id, content, created_at, user_id,
-            profiles:user_id (username, avatar_url, is_verified)
-          )
-        `)
-        .order('created_at', { ascending: false });
+    const runQuery = () => supabase
+      .from('posts')
+      .select(`
+        *,
+        profiles:user_id (username, status, avatar_url, github, website, is_verified, is_premium, is_trial_premium, is_admin, profile_visibility),
+        likes (user_id),
+        comments (
+          id, content, created_at, user_id,
+          profiles:user_id (username, avatar_url, is_verified)
+        )
+      `)
+      .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setPosts(data || []);
-    } catch (error) {
-      console.error('Error fetching:', error.message);
-    } finally {
-      if (!silent) setLoading(false);
+    // "TypeError: Failed to fetch" is a browser network-layer failure (dropped
+    // connection, blocked by an extension, dev-server HMR mid-request) rather
+    // than a Supabase query error — retry those a couple of times with backoff.
+    const isNetworkError = (e) =>
+      e?.name === 'TypeError' || /failed to fetch|network|load failed/i.test(e?.message || '');
+
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const { data, error } = await runQuery();
+        if (error) throw error;
+        setPosts(data || []);
+        setFetchError(null);
+        if (!silent) setLoading(false);
+        return;
+      } catch (error) {
+        lastError = error;
+        if (isNetworkError(error) && attempt < 2) {
+          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+          continue;
+        }
+        break;
+      }
     }
-  }, []);
+
+    console.error('Error fetching:', lastError?.message || lastError);
+    setFetchError(
+      isNetworkError(lastError)
+        ? t('feed.error_network')
+        : (lastError?.message || t('feed.error_generic'))
+    );
+    if (!silent) setLoading(false);
+  }, [t]);
 
   const handleManualRefresh = useCallback(async () => {
     if (isRefreshing) return;
@@ -466,7 +494,7 @@ export default function FeedContent() {
         return (bScore / Math.pow(bAge, 1.5)) - (aScore / Math.pow(aAge, 1.5));
       });
     }
-    const now = Date.now();
+    const now = new Date().getTime();
     return sorted.sort((a, b) => {
       const aHours = Math.max(0, (now - new Date(a.created_at)) / 3600000);
       const bHours = Math.max(0, (now - new Date(b.created_at)) / 3600000);
@@ -537,7 +565,7 @@ export default function FeedContent() {
       if (error) throw error;
       setNewComments({...newComments, [postId]: ""});
       fetchPosts();
-      showToast("Comment added");
+      showToast(t('feed.comment_added'));
       const post = posts.find(p => p.id === postId);
       if (post?.user_id && post.user_id !== currentUserId) {
         await supabase.from('notifications').insert({
@@ -547,12 +575,12 @@ export default function FeedContent() {
           content: commentText.length > 100 ? commentText.slice(0, 100) + '…' : commentText,
         });
       }
-    } catch (err) { alert("Error adding comment: " + err.message); }
+    } catch (err) { alert(t('feed.error_add_comment', { message: err.message })); }
   };
 
   const aiErrorMessage = (error) =>
     error instanceof TypeError
-      ? 'AI unavailable — check your connection or restart the dev server.'
+      ? t('feed.ai_unavailable')
       : error.message;
 
   const handleSuggestReply = async (post) => {
@@ -567,8 +595,8 @@ export default function FeedContent() {
       });
       const text = await res.text();
       let data;
-      try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
-      if (!res.ok) throw new Error(data.error || "Failed to get AI response");
+      try { data = JSON.parse(text); } catch (e) { throw new Error(t('feed.ai_not_active')); }
+      if (!res.ok) throw new Error(data.error || t('feed.ai_failed'));
       const cleanReply = data.message.content.replace(/^["']|["']$/g, '').trim();
       setNewComments(prev => ({ ...prev, [post.id]: cleanReply }));
     } catch (error) {
@@ -596,8 +624,8 @@ export default function FeedContent() {
       });
       const text = await res.text();
       let data;
-      try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
-      if (!res.ok) throw new Error(data.error || "Failed to get AI response");
+      try { data = JSON.parse(text); } catch (e) { throw new Error(t('feed.ai_not_active')); }
+      if (!res.ok) throw new Error(data.error || t('feed.ai_failed'));
       setPostSummaries(prev => ({ ...prev, [post.id]: data.message.content.trim() }));
     } catch (error) {
       showToast(aiErrorMessage(error));
@@ -624,8 +652,8 @@ export default function FeedContent() {
       });
       const text = await res.text();
       let data;
-      try { data = JSON.parse(text); } catch (e) { throw new Error("AI API not active. Please restart your dev server."); }
-      if (!res.ok) throw new Error(data.error || "Failed to get AI response");
+      try { data = JSON.parse(text); } catch (e) { throw new Error(t('feed.ai_not_active')); }
+      if (!res.ok) throw new Error(data.error || t('feed.ai_failed'));
       setPostAnalyses(prev => ({ ...prev, [post.id]: data.message.content.trim() }));
     } catch (error) {
       showToast(aiErrorMessage(error));
@@ -647,7 +675,7 @@ export default function FeedContent() {
 
       if (existing) {
         await supabase.from('bookmarks').delete().eq('id', existing.id);
-        showToast("Removed from Bookmarks");
+        showToast(t('feed.removed_bookmark'));
         return;
       }
       const { error } = await supabase.from('bookmarks').insert({
@@ -659,8 +687,8 @@ export default function FeedContent() {
         url: postUrl
       });
       if (error) throw error;
-      showToast("Snippet saved to Bookmarks");
-    } catch (err) { alert("Error saving bookmark: " + err.message); }
+      showToast(t('feed.saved_bookmark'));
+    } catch (err) { alert(t('feed.error_save_bookmark', { message: err.message })); }
   };
 
   const openEditModal = (post) => {
@@ -685,8 +713,8 @@ export default function FeedContent() {
       if (error) throw error;
       setIsEditing(false);
       fetchPosts();
-      showToast("Post updated successfully");
-    } catch (err) { alert("Error saving: " + err.message); }
+      showToast(t('feed.post_updated'));
+    } catch (err) { alert(t('feed.error_saving', { message: err.message })); }
     finally { setEditLoading(false); }
   };
 
@@ -733,8 +761,8 @@ export default function FeedContent() {
       if (error) throw error;
       setShowDeleteConfirm(false);
       fetchPosts();
-      showToast("Post deleted successfully");
-    } catch (err) { alert("Error deleting: " + err.message); }
+      showToast(t('feed.post_deleted'));
+    } catch (err) { alert(t('feed.error_deleting', { message: err.message })); }
     finally { setDeleteLoading(false); }
   };
 
@@ -791,13 +819,13 @@ export default function FeedContent() {
           style={{ height: `${pullIndicator}px`, opacity: pullIndicator / 90 }}
         >
           <Loader2 size={16} className={pullIndicator > 65 ? 'animate-spin' : ''} />
-          {pullIndicator > 65 ? 'Release to refresh' : 'Pull to refresh'}
+          {pullIndicator > 65 ? t('feed.release_refresh') : t('feed.pull_refresh')}
         </div>
       )}
 
       {isRefreshing && (
         <div className="flex items-center justify-center gap-2 py-3 text-blue-600 dark:text-blue-400 text-sm font-bold animate-pulse">
-          <Loader2 size={16} className="animate-spin" /> Refreshing feed…
+          <Loader2 size={16} className="animate-spin" /> {t('feed.refreshing')}
         </div>
       )}
 
@@ -812,7 +840,7 @@ export default function FeedContent() {
             className="flex items-center gap-2 w-full text-left mb-3 group"
           >
             <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors">
-              Network Members
+              {t('feed.network_members')}
             </span>
             <span className="text-[9px] font-bold text-gray-300 dark:text-gray-600 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full">
               {memberSpotlight.length}
@@ -861,10 +889,10 @@ export default function FeedContent() {
                         {isVerified && <VerifiedBadge size={11} />}
                         {isPremium && p?.profile_visibility?.premium_badge !== false && <PremiumBadge size={11} isTrial={!!p?.is_trial_premium} />}
                       </div>
-                      <p className="text-[9px] text-gray-400 dark:text-gray-500 truncate font-medium mt-0.5">{p?.status || 'Network Member'}</p>
+                      <p className="text-[9px] text-gray-400 dark:text-gray-500 truncate font-medium mt-0.5">{p?.status || t('feed.network_member')}</p>
                       {isPremium && p?.profile_visibility?.premium_badge !== false && (
                         <span className={`mt-1.5 self-start text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${p?.is_trial_premium ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50'}`}>
-                          {p?.is_trial_premium ? 'Freemium' : 'Premium'}
+                          {p?.is_trial_premium ? t('feed.freemium') : t('feed.premium_badge')}
                         </span>
                       )}
                       {(post.title || post.content) && (
@@ -874,7 +902,7 @@ export default function FeedContent() {
                       )}
                       {isVerified && (
                         <div className="flex items-center gap-1 mt-2">
-                          <span className="text-[8px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Verified Member</span>
+                          <span className="text-[8px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">{t('feed.verified_member')}</span>
                         </div>
                       )}
                     </div>
@@ -902,7 +930,7 @@ export default function FeedContent() {
                 }`}
               >
                 <Icon size={11} className={isActive ? 'text-blue-600 dark:text-blue-400' : ''} />
-                {label}
+                {t(label)}
               </button>
             );
           })}
@@ -911,9 +939,9 @@ export default function FeedContent() {
         {/* Layout toggle + refresh */}
         <div className="ml-auto flex items-center gap-0.5 shrink-0">
           {[
-            { mode: 'list',    Icon: List,          title: 'List view' },
-            { mode: 'grid',    Icon: LayoutGrid,    title: 'Grid view' },
-            { mode: 'compact', Icon: AlignJustify,  title: 'Compact view' },
+            { mode: 'list',    Icon: List,          title: t('feed.list_view') },
+            { mode: 'grid',    Icon: LayoutGrid,    title: t('feed.grid_view') },
+            { mode: 'compact', Icon: AlignJustify,  title: t('feed.compact_view') },
           ].map(({ mode, Icon, title }) => (
             <button
               key={mode}
@@ -928,7 +956,7 @@ export default function FeedContent() {
           <button
             onClick={handleManualRefresh}
             disabled={isRefreshing}
-            title="Refresh feed"
+            title={t('feed.refresh_feed')}
             className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors disabled:opacity-40"
           >
             <Loader2 size={14} className={isRefreshing ? 'animate-spin text-blue-600 dark:text-blue-400' : ''} />
@@ -941,10 +969,10 @@ export default function FeedContent() {
         <div className="fixed inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full max-w-sm rounded-2xl p-6 shadow-xl animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Share Post</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t('feed.share_post')}</h3>
               <button onClick={() => setShowShareModal(false)} className="text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"><X size={20}/></button>
             </div>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3 uppercase font-black tracking-widest">Post Link</p>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3 uppercase font-black tracking-widest">{t('feed.post_link')}</p>
             <div className="flex gap-2 items-center bg-gray-50 dark:bg-gray-800 rounded-xl p-2 border border-gray-200 dark:border-gray-700 mb-6">
               <input
                 readOnly
@@ -962,7 +990,7 @@ export default function FeedContent() {
               onClick={() => setShowShareModal(false)}
               className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700"
             >
-              Close
+              {t('feed.close')}
             </button>
           </div>
         </div>
@@ -975,15 +1003,15 @@ export default function FeedContent() {
             <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100 dark:border-red-900/50">
               <AlertTriangle size={32} />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Post?</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('feed.delete_post_title')}</h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm mb-8 leading-relaxed">
-              This action cannot be undone. This will permanently remove your post from the beoneofus network.
+              {t('feed.delete_post_desc')}
             </p>
             <div className="flex flex-col gap-3">
               <button onClick={confirmDelete} disabled={deleteLoading} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
-                {deleteLoading ? 'Deleting...' : 'Confirm Delete'}
+                {deleteLoading ? t('feed.deleting') : t('feed.confirm_delete')}
               </button>
-              <button onClick={() => setShowDeleteConfirm(false)} className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700">Cancel</button>
+              <button onClick={() => setShowDeleteConfirm(false)} className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700">{t('feed.cancel')}</button>
             </div>
           </div>
         </div>
@@ -994,24 +1022,24 @@ export default function FeedContent() {
         <div className="fixed inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 w-full max-w-lg rounded-2xl p-6 shadow-xl relative animate-in fade-in zoom-in duration-200">
             <button onClick={() => setIsEditing(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition"><X size={20} /></button>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2"><Edit3 size={18} className="text-blue-600" /> Edit Post</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2"><Edit3 size={18} className="text-blue-600" /> {t('feed.edit_post')}</h2>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-widest">Title</label>
+                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-widest">{t('feed.title_label')}</label>
                 <input type="text" value={editingPost.title || ''} onChange={(e) => setEditingPost({...editingPost, title: e.target.value})} className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl p-3 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none" />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-widest">Content</label>
+                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-widest">{t('feed.content_label')}</label>
                 <textarea rows="4" value={editingPost.content || ''} onChange={(e) => setEditingPost({...editingPost, content: e.target.value})} className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl p-3 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/50 outline-none resize-none" />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-widest">Code Snippet</label>
+                <label className="text-xs font-bold text-gray-500 uppercase mb-2 block tracking-widest">{t('feed.code_snippet_label')}</label>
                 <textarea rows="3" value={editingPost.code_snippet || ''} onChange={(e) => setEditingPost({...editingPost, code_snippet: e.target.value})} className="w-full bg-gray-950 border border-gray-700 rounded-xl p-3 text-blue-300 font-mono text-sm focus:ring-2 focus:ring-blue-500/50 outline-none" />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 font-bold py-3 rounded-xl transition">Cancel</button>
+                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 font-bold py-3 rounded-xl transition">{t('feed.cancel')}</button>
                 <button type="submit" disabled={editLoading} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
-                  {editLoading ? 'Saving...' : <><Save size={16} /> Save Changes</>}
+                  {editLoading ? t('feed.saving') : <><Save size={16} /> {t('feed.save_changes')}</>}
                 </button>
               </div>
             </form>
@@ -1025,19 +1053,35 @@ export default function FeedContent() {
           onClick={handleManualRefresh}
           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all animate-in slide-in-from-top-2 duration-300"
         >
-          <Sparkles size={13} /> New posts available — tap to refresh
+          <Sparkles size={13} /> {t('feed.new_posts')}
         </button>
       )}
 
       {/* Feed */}
-      {displayedPosts.length === 0 ? (
+      {fetchError && posts.length === 0 ? (
+        <div className="h-64 border border-dashed border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 rounded-2xl flex flex-col items-center justify-center gap-3 text-red-500 dark:text-red-400 px-6">
+          <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <AlertTriangle size={22} className="text-red-400 dark:text-red-500" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-bold text-red-600 dark:text-red-400">{t('feed.load_failed_title')}</p>
+            <p className="text-xs text-red-500/80 dark:text-red-400/80 mt-0.5 max-w-xs">{fetchError}</p>
+          </div>
+          <button
+            onClick={() => { setLoading(true); fetchPosts(); }}
+            className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
+          >
+            <Loader2 size={12} className={loading ? 'animate-spin' : ''} /> {t('feed.try_again')}
+          </button>
+        </div>
+      ) : displayedPosts.length === 0 ? (
         <div className="h-64 border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 dark:text-gray-500">
           <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
             <Sparkles size={22} className="text-gray-300 dark:text-gray-600" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No posts yet</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Be the first to share something</p>
+            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('feed.no_posts_title')}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t('feed.no_posts_desc')}</p>
           </div>
         </div>
       ) : (
@@ -1085,7 +1129,7 @@ export default function FeedContent() {
                     <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedUserId(post.user_id)}>
                       <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                         <span className="text-[11px] font-bold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[120px]">
-                          @{post.profiles?.username || 'Unknown'}
+                          @{post.profiles?.username || t('feed.unknown')}
                         </span>
                         {isVerified && <VerifiedBadge size={11} />}
                         {isPremium && post.profiles?.profile_visibility?.premium_badge !== false && <PremiumBadge size={11} isTrial={!!post.profiles?.is_trial_premium} />}
@@ -1093,12 +1137,12 @@ export default function FeedContent() {
                         <span className="text-[9px] text-gray-400 dark:text-gray-500">{relativeDate(post.created_at)}</span>
                         {post.code_snippet && (
                           <span className="flex items-center gap-0.5 text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded-full">
-                            <Code size={9} /> code
+                            <Code size={9} /> {t('feed.code_badge')}
                           </span>
                         )}
                         {mediaItems.length > 0 && (
                           <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded-full">
-                            media
+                            {t('feed.media_badge')}
                           </span>
                         )}
                       </div>
@@ -1131,11 +1175,11 @@ export default function FeedContent() {
                             <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100">
                               {currentUserId === post.user_id ? (
                                 <>
-                                  <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => openEditModal(post)}><Edit3 size={12} /> Edit</button>
-                                  <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => openDeleteModal(post)}><Trash2 size={12} /> Delete</button>
+                                  <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800" onClick={() => openEditModal(post)}><Edit3 size={12} /> {t('feed.edit')}</button>
+                                  <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => openDeleteModal(post)}><Trash2 size={12} /> {t('feed.delete_menu')}</button>
                                 </>
                               ) : (
-                                <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20" onClick={() => openReportModal(post)}><Flag size={12} /> Report</button>
+                                <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20" onClick={() => openReportModal(post)}><Flag size={12} /> {t('feed.report')}</button>
                               )}
                             </div>
                           )}
@@ -1160,7 +1204,7 @@ export default function FeedContent() {
                       <div className="flex-1 min-w-0 cursor-pointer group" onClick={() => setSelectedUserId(post.user_id)}>
                         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                           <span className="text-sm font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-[140px] sm:max-w-[200px]">
-                            {post.profiles?.username || 'Unknown User'}
+                            {post.profiles?.username || t('feed.unknown_user')}
                           </span>
                           {isVerified && <VerifiedBadge size={14} />}
                           {isPremium && post.profiles?.profile_visibility?.premium_badge !== false && <PremiumBadge size={14} isTrial={!!post.profiles?.is_trial_premium} />}
@@ -1170,21 +1214,21 @@ export default function FeedContent() {
                             </a>
                           )}
                           {post.profiles?.website && (
-                            <a href={post.profiles.website.startsWith('http') ? post.profiles.website : `https://${post.profiles.website}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0" title="Website">
+                            <a href={post.profiles.website.startsWith('http') ? post.profiles.website : `https://${post.profiles.website}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0" title={t('feed.website_title')}>
                               <LinkIcon size={13} />
                             </a>
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <p className="text-[10px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-widest truncate">
-                            {post.profiles?.status || 'Active Node'}
+                            {post.profiles?.status || t('feed.active_node')}
                           </p>
                           <span className="text-gray-200 dark:text-gray-700">·</span>
                           <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1 shrink-0">
                             <Clock size={9} /> {relativeDate(post.created_at)}
                           </span>
                           <span className="text-gray-200 dark:text-gray-700">·</span>
-                          <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">{readTime(post)} read</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">{readTime(post)} {t('feed.read_suffix')}</span>
                         </div>
                       </div>
 
@@ -1198,15 +1242,15 @@ export default function FeedContent() {
                               {currentUserId === post.user_id ? (
                                 <>
                                   <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onClick={() => openEditModal(post)}>
-                                    <Edit3 size={13} /> Edit Post
+                                    <Edit3 size={13} /> {t('feed.edit_post_menu')}
                                   </button>
                                   <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" onClick={() => openDeleteModal(post)}>
-                                    <Trash2 size={13} /> Delete
+                                    <Trash2 size={13} /> {t('feed.delete_menu')}
                                   </button>
                                 </>
                               ) : (
                                 <button className="w-full flex items-center gap-2 px-4 py-2 text-xs text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors" onClick={() => openReportModal(post)}>
-                                  <Flag size={13} /> Report Post
+                                  <Flag size={13} /> {t('feed.report_post')}
                                 </button>
                               )}
                             </div>
@@ -1237,17 +1281,17 @@ export default function FeedContent() {
                             <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
                             <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
                             <div className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
-                            <span className="ml-2 text-[10px] text-gray-400 dark:text-gray-500 font-mono">snippet</span>
+                            <span className="ml-2 text-[10px] text-gray-400 dark:text-gray-500 font-mono">{t('feed.snippet_label')}</span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigator.clipboard.writeText(post.code_snippet);
-                                showToast("Code copied to clipboard");
+                                showToast(t('feed.code_copied'));
                               }}
                               className="ml-auto flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-200/60 dark:bg-gray-700/60 hover:bg-gray-200 dark:hover:bg-gray-700 px-2 py-0.5 rounded-md transition-colors"
-                              title="Copy code"
+                              title={t('feed.copy_code')}
                             >
-                              <Copy size={10} /> Copy
+                              <Copy size={10} /> {t('feed.copy')}
                             </button>
                           </div>
                           <div className="bg-gray-950 p-4 overflow-x-auto">
@@ -1263,7 +1307,7 @@ export default function FeedContent() {
                     {postSummaries[post.id] && (
                       <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 rounded-xl animate-in fade-in slide-in-from-top-2">
                         <div className="flex items-center gap-2 mb-2 text-purple-700 dark:text-purple-400 font-bold text-xs uppercase tracking-widest">
-                          <Sparkles size={13} /> AI Summary
+                          <Sparkles size={13} /> {t('feed.ai_summary')}
                         </div>
                         <div className="text-sm text-purple-900 dark:text-purple-100 leading-relaxed">
                           <ReactMarkdown
@@ -1287,12 +1331,12 @@ export default function FeedContent() {
                       <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/50 rounded-xl animate-in fade-in slide-in-from-top-2">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 font-bold text-xs uppercase tracking-widest">
-                            <ShieldAlert size={13} /> Security & Bug Analysis
+                            <ShieldAlert size={13} /> {t('feed.security_analysis')}
                           </div>
                           <button
-                            onClick={() => { navigator.clipboard.writeText(postAnalyses[post.id]); showToast("Analysis copied"); }}
+                            onClick={() => { navigator.clipboard.writeText(postAnalyses[post.id]); showToast(t('feed.analysis_copied')); }}
                             className="p-1.5 text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 bg-orange-100/50 dark:bg-orange-800/50 hover:bg-orange-100 dark:hover:bg-orange-800 rounded-lg transition-colors"
-                            title="Copy Analysis"
+                            title={t('feed.copy_analysis')}
                           >
                             <Copy size={13} />
                           </button>
@@ -1327,20 +1371,20 @@ export default function FeedContent() {
 
                       <div className="flex items-center gap-0.5 ml-auto">
                         {post.code_snippet && (
-                          <button onClick={() => handleAnalyzeCode(post)} className={`p-1.5 rounded-lg transition-all ${postAnalyses[post.id] ? 'text-orange-600 bg-orange-50 dark:bg-orange-900/20' : 'text-gray-400 dark:text-gray-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/10'}`} title="Analyze Code">
+                          <button onClick={() => handleAnalyzeCode(post)} className={`p-1.5 rounded-lg transition-all ${postAnalyses[post.id] ? 'text-orange-600 bg-orange-50 dark:bg-orange-900/20' : 'text-gray-400 dark:text-gray-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/10'}`} title={t('feed.analyze_code')}>
                             {isAnalyzing[post.id] ? <Loader2 size={14} className="animate-spin text-orange-500" /> : <ShieldAlert size={14} />}
                           </button>
                         )}
-                        <button onClick={() => handleSummarize(post)} className={`p-1.5 rounded-lg transition-all ${postSummaries[post.id] ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/20' : 'text-gray-400 dark:text-gray-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10'}`} title="Summarize Post">
+                        <button onClick={() => handleSummarize(post)} className={`p-1.5 rounded-lg transition-all ${postSummaries[post.id] ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/20' : 'text-gray-400 dark:text-gray-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10'}`} title={t('feed.summarize_post')}>
                           {isSummarizing[post.id] ? <Loader2 size={14} className="animate-spin text-purple-500" /> : <Sparkles size={14} />}
                         </button>
-                        <button onClick={() => handleBookmark(post)} className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all" title="Save to Bookmarks">
+                        <button onClick={() => handleBookmark(post)} className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all" title={t('feed.save_bookmarks')}>
                           <Bookmark size={14} />
                         </button>
-                        <button onClick={() => handleShareClick(post.id)} className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/10 transition-all" title="Share Post">
+                        <button onClick={() => handleShareClick(post.id)} className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/10 transition-all" title={t('feed.share_post')}>
                           <Share2 size={14} />
                         </button>
-                        <a href={`/posts/${post.id}`} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all" title="Open in new tab">
+                        <a href={`/posts/${post.id}`} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all" title={t('feed.open_new_tab')}>
                           <ExternalLink size={14} />
                         </a>
                       </div>
@@ -1363,12 +1407,12 @@ export default function FeedContent() {
                       ))}
                     </div>
                     <div className="flex gap-2 items-center bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-1 border border-gray-200 dark:border-gray-700">
-                      <button onClick={() => handleSuggestReply(post)} disabled={isSuggesting[post.id]} className="text-gray-400 hover:text-blue-600 transition-colors p-1 disabled:opacity-50" title="Suggest AI Reply">
+                      <button onClick={() => handleSuggestReply(post)} disabled={isSuggesting[post.id]} className="text-gray-400 hover:text-blue-600 transition-colors p-1 disabled:opacity-50" title={t('feed.suggest_ai_reply')}>
                         {isSuggesting[post.id] ? <Loader2 size={15} className="animate-spin text-blue-500" /> : <Sparkles size={15} />}
                       </button>
                       <input
                         type="text"
-                        placeholder="Write a comment…"
+                        placeholder={t('feed.write_comment')}
                         value={newComments[post.id] || ""}
                         onChange={(e) => setNewComments({...newComments, [post.id]: e.target.value})}
                         className="flex-1 bg-transparent border-none py-2 text-sm text-gray-900 dark:text-gray-100 focus:ring-0 outline-none"
@@ -1414,7 +1458,7 @@ export default function FeedContent() {
                 <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-500 flex items-center justify-center">
                   <Flag size={16} />
                 </div>
-                <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Report Post</h2>
+                <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{t('feed.report_post')}</h2>
               </div>
               <button onClick={() => setReportingPost(null)} className="p-1.5 text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
                 <X size={18} />
@@ -1426,24 +1470,24 @@ export default function FeedContent() {
                 <div className="w-14 h-14 rounded-full bg-green-50 dark:bg-green-900/20 text-green-500 flex items-center justify-center mb-4">
                   <Check size={28} />
                 </div>
-                <p className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">Report submitted</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Our team will review this content. Thank you for helping keep the community safe.</p>
+                <p className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">{t('feed.report_submitted')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t('feed.report_thanks')}</p>
                 <button onClick={() => setReportingPost(null)} className="px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition">
-                  Close
+                  {t('feed.close')}
                 </button>
               </div>
             ) : (
               <div className="p-5 space-y-4">
                 <div>
-                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Why are you reporting this?</p>
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{t('feed.report_why')}</p>
                   <div className="space-y-2">
                     {[
-                      { value: 'spam', label: 'Spam or misleading' },
-                      { value: 'harassment', label: 'Harassment or bullying' },
-                      { value: 'misinformation', label: 'Misinformation' },
-                      { value: 'inappropriate', label: 'Inappropriate content' },
-                      { value: 'violence', label: 'Violence or threats' },
-                      { value: 'other', label: 'Other' },
+                      { value: 'spam', label: t('feed.report_reason_spam') },
+                      { value: 'harassment', label: t('feed.report_reason_harassment') },
+                      { value: 'misinformation', label: t('feed.report_reason_misinformation') },
+                      { value: 'inappropriate', label: t('feed.report_reason_inappropriate') },
+                      { value: 'violence', label: t('feed.report_reason_violence') },
+                      { value: 'other', label: t('feed.report_reason_other') },
                     ].map(opt => (
                       <label key={opt.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${reportReason === opt.value ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-orange-300 hover:bg-orange-50/50 dark:hover:bg-orange-900/10'}`}>
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${reportReason === opt.value ? 'border-orange-500 bg-orange-500' : 'border-gray-300 dark:border-gray-600'}`}>
@@ -1457,11 +1501,11 @@ export default function FeedContent() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Additional details (optional)</label>
+                  <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('feed.report_details_label')}</label>
                   <textarea
                     value={reportDetails}
                     onChange={e => setReportDetails(e.target.value)}
-                    placeholder="Describe the issue in more detail…"
+                    placeholder={t('feed.report_details_placeholder')}
                     rows={3}
                     className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 resize-none transition"
                   />
@@ -1469,14 +1513,14 @@ export default function FeedContent() {
 
                 <div className="flex gap-3 pt-1">
                   <button onClick={() => setReportingPost(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                    Cancel
+                    {t('feed.cancel')}
                   </button>
                   <button
                     onClick={submitReport}
                     disabled={!reportReason || reportLoading}
                     className="flex-1 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition disabled:opacity-40 flex items-center justify-center gap-2"
                   >
-                    {reportLoading ? <Loader2 size={16} className="animate-spin" /> : <><Flag size={14} /> Submit Report</>}
+                    {reportLoading ? <Loader2 size={16} className="animate-spin" /> : <><Flag size={14} /> {t('feed.submit_report')}</>}
                   </button>
                 </div>
               </div>

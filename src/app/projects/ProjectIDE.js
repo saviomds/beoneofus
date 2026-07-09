@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { supabase } from "../supabaseClient";
 
 if (typeof window !== 'undefined' && !window.MonacoEnvironment) {
   window.MonacoEnvironment = {
@@ -122,7 +124,31 @@ const simulateRun = (file) => {
 // ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
-export default function ProjectIDE({ projectTitle = "My Project", onBack }) {
+export default function ProjectIDE({ projectId, projectTitle = "My Project", onBack }) {
+  // ---- Project context ------------------------------------------------------
+  // When opened as /projects/[id], load that project so the header reflects the
+  // real project (previously the [id] param was passed but silently ignored).
+  // `projectStatus`: 'ready' (no id, standalone) | 'loading' | 'notfound'.
+  const [title, setTitle] = useState(projectTitle);
+  const [projectStatus, setProjectStatus] = useState(projectId ? 'loading' : 'ready');
+
+  useEffect(() => {
+    if (!projectId) return;
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', projectId)
+        .maybeSingle();
+      if (!alive) return;
+      if (error || !data) { setProjectStatus('notfound'); return; }
+      setTitle(data.title || 'Untitled project');
+      setProjectStatus('ready');
+    })();
+    return () => { alive = false; };
+  }, [projectId]);
+
   // ---- Files ----------------------------------------------------------------
   const [files, setFiles] = useState(DEFAULT_FILES);
 
@@ -181,6 +207,17 @@ export default function ProjectIDE({ projectTitle = "My Project", onBack }) {
 
   // Sync terminalHeight ref whenever state changes
   useEffect(() => { terminalHeightRef.current = terminalHeight; }, [terminalHeight]);
+
+  // FIX: handleSave now explicitly syncs both `files` and the open tab so that
+  // previewSrcDoc (which reads from the active tab) stays in sync.
+  // Declared above the Cmd/Ctrl+S effect that consumes it so it is not used before declaration.
+  const handleSave = useCallback((id, content) => {
+    if (!id) return;
+    setIsSaving(true);
+    setFiles(prev => prev.map(f => f.id === id ? { ...f, content } : f));
+    setOpenTabs(prev => prev.map(t => t.id === id ? { ...t, content } : t));
+    setTimeout(() => setIsSaving(false), 400);
+  }, []);
 
   // Cmd/Ctrl+S → save
   useEffect(() => {
@@ -256,16 +293,6 @@ export default function ProjectIDE({ projectTitle = "My Project", onBack }) {
       noSemanticValidation: false,
       noSyntaxValidation: false,
     });
-  }, []);
-
-  // FIX: handleSave now explicitly syncs both `files` and the open tab so that
-  // previewSrcDoc (which reads from the active tab) stays in sync.
-  const handleSave = useCallback((id, content) => {
-    if (!id) return;
-    setIsSaving(true);
-    setFiles(prev => prev.map(f => f.id === id ? { ...f, content } : f));
-    setOpenTabs(prev => prev.map(t => t.id === id ? { ...t, content } : t));
-    setTimeout(() => setIsSaving(false), 400);
   }, []);
 
   // FIX: handleRunCode reads content from the current tab ref instead of
@@ -552,6 +579,24 @@ export default function ProjectIDE({ projectTitle = "My Project", onBack }) {
   }, [activeTab]);
 
   // ===========================================================================
+  if (projectStatus === 'loading') {
+    return (
+      <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
+        <TerminalSquare size={20} className="text-blue-500 animate-pulse mr-2" /> Loading project…
+      </div>
+    );
+  }
+  if (projectStatus === 'notfound') {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6 text-gray-500 dark:text-gray-400">
+        <TerminalSquare size={28} className="text-gray-400 dark:text-gray-600" />
+        <p className="text-base font-bold text-gray-700 dark:text-gray-200">Project not found</p>
+        <p className="text-sm">This project doesn&apos;t exist or you don&apos;t have access to it.</p>
+        <Link href="/projects" className="mt-1 text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">← Back to projects</Link>
+      </div>
+    );
+  }
+
   return (
     <div
       onDragEnter={handleDragEnter}
@@ -611,7 +656,7 @@ export default function ProjectIDE({ projectTitle = "My Project", onBack }) {
             </button>
           )}
           <TerminalSquare size={18} className="text-blue-500" />
-          <h1 className="font-bold text-sm text-gray-900 dark:text-gray-100 hidden sm:block">{projectTitle}</h1>
+          <h1 className="font-bold text-sm text-gray-900 dark:text-gray-100 hidden sm:block">{title}</h1>
         </div>
 
         <div className="flex items-center gap-2">

@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   FileText, Briefcase, GraduationCap, Code2, Eye,
   Plus, Trash2, Edit3, ExternalLink, Copy, Check, Loader2,
   ChevronDown, ChevronUp, Info, X,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
 
 const EMPTY_EXP = { company: "", role: "", location: "", start: "", end: "", current: false, description: "" };
 const EMPTY_EDU = { school: "", degree: "", field: "", start: "", end: "", current: false, gpa: "" };
@@ -56,60 +58,61 @@ const INPUT_CLS = "w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border bor
 const LABEL_CLS = "block text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1";
 
 function ExpForm({ data, onChange, onSave, onCancel }) {
+  const { t } = useLanguage();
   const canSave = data.company.trim() && data.role.trim();
   return (
     <div className="space-y-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className={LABEL_CLS}>Company *</label>
-          <input value={data.company} onChange={e => onChange({ ...data, company: e.target.value })} className={INPUT_CLS} placeholder="Acme Corp" />
+          <label className={LABEL_CLS}>{t('resume.field_company')} *</label>
+          <input value={data.company} onChange={e => onChange({ ...data, company: e.target.value })} className={INPUT_CLS} placeholder={t('resume.ph_company')} />
         </div>
         <div>
-          <label className={LABEL_CLS}>Job Title *</label>
-          <input value={data.role} onChange={e => onChange({ ...data, role: e.target.value })} className={INPUT_CLS} placeholder="Software Engineer" />
+          <label className={LABEL_CLS}>{t('resume.field_job_title')} *</label>
+          <input value={data.role} onChange={e => onChange({ ...data, role: e.target.value })} className={INPUT_CLS} placeholder={t('resume.ph_job_title')} />
         </div>
         <div>
-          <label className={LABEL_CLS}>Location</label>
-          <input value={data.location} onChange={e => onChange({ ...data, location: e.target.value })} className={INPUT_CLS} placeholder="Nairobi, Kenya · Remote" />
+          <label className={LABEL_CLS}>{t('resume.field_location')}</label>
+          <input value={data.location} onChange={e => onChange({ ...data, location: e.target.value })} className={INPUT_CLS} placeholder={t('resume.ph_location')} />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className={LABEL_CLS}>Start</label>
-            <input value={data.start} onChange={e => onChange({ ...data, start: e.target.value })} className={INPUT_CLS} placeholder="Jan 2022" />
+            <label className={LABEL_CLS}>{t('resume.field_start')}</label>
+            <input value={data.start} onChange={e => onChange({ ...data, start: e.target.value })} className={INPUT_CLS} placeholder={t('resume.ph_start')} />
           </div>
           <div>
-            <label className={LABEL_CLS}>End</label>
+            <label className={LABEL_CLS}>{t('resume.field_end')}</label>
             <input
-              value={data.current ? "Present" : data.end}
+              value={data.current ? t('resume.present') : data.end}
               onChange={e => onChange({ ...data, end: e.target.value, current: false })}
               disabled={data.current}
               className={`${INPUT_CLS} disabled:opacity-50`}
-              placeholder="Jun 2024"
+              placeholder={t('resume.ph_end')}
             />
           </div>
         </div>
       </div>
       <label className="flex items-center gap-2 cursor-pointer select-none">
         <input type="checkbox" checked={data.current} onChange={e => onChange({ ...data, current: e.target.checked, end: "" })} className="rounded border-gray-300" />
-        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">I currently work here</span>
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{t('resume.currently_work_here')}</span>
       </label>
       <div>
-        <label className={LABEL_CLS}>Description</label>
+        <label className={LABEL_CLS}>{t('resume.field_description')}</label>
         <textarea
           value={data.description}
           onChange={e => onChange({ ...data, description: e.target.value })}
           rows={4}
           className={`${INPUT_CLS} resize-none`}
-          placeholder={"• Built and shipped X feature that improved Y by Z%\n• Led a team of N engineers to deliver…\n• Reduced load time by 40% through…"}
+          placeholder={t('resume.ph_description')}
         />
-        <p className="text-[10px] text-gray-400 mt-1">Start each line with • to render as a bullet point</p>
+        <p className="text-[10px] text-gray-400 mt-1">{t('resume.bullet_hint')}</p>
       </div>
       <div className="flex gap-2">
         <button onClick={onSave} disabled={!canSave} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all">
-          Save
+          {t('resume.save')}
         </button>
         <button onClick={onCancel} className="px-4 py-2 text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all">
-          Cancel
+          {t('resume.cancel')}
         </button>
       </div>
     </div>
@@ -117,49 +120,50 @@ function ExpForm({ data, onChange, onSave, onCancel }) {
 }
 
 function EduForm({ data, onChange, onSave, onCancel }) {
+  const { t } = useLanguage();
   const canSave = data.school.trim() && data.degree.trim();
   return (
     <div className="space-y-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className={LABEL_CLS}>School / University *</label>
-          <input value={data.school} onChange={e => onChange({ ...data, school: e.target.value })} className={INPUT_CLS} placeholder="African Leadership University" />
+          <label className={LABEL_CLS}>{t('resume.field_school')} *</label>
+          <input value={data.school} onChange={e => onChange({ ...data, school: e.target.value })} className={INPUT_CLS} placeholder={t('resume.ph_school')} />
         </div>
         <div>
-          <label className={LABEL_CLS}>Degree *</label>
-          <input value={data.degree} onChange={e => onChange({ ...data, degree: e.target.value })} className={INPUT_CLS} placeholder="BSc Computer Science" />
+          <label className={LABEL_CLS}>{t('resume.field_degree')} *</label>
+          <input value={data.degree} onChange={e => onChange({ ...data, degree: e.target.value })} className={INPUT_CLS} placeholder={t('resume.ph_degree')} />
         </div>
         <div>
-          <label className={LABEL_CLS}>Field of Study</label>
-          <input value={data.field} onChange={e => onChange({ ...data, field: e.target.value })} className={INPUT_CLS} placeholder="Software Engineering" />
+          <label className={LABEL_CLS}>{t('resume.field_field_of_study')}</label>
+          <input value={data.field} onChange={e => onChange({ ...data, field: e.target.value })} className={INPUT_CLS} placeholder={t('resume.ph_field')} />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className={LABEL_CLS}>From</label>
-            <input value={data.start} onChange={e => onChange({ ...data, start: e.target.value })} className={INPUT_CLS} placeholder="2020" />
+            <label className={LABEL_CLS}>{t('resume.field_from')}</label>
+            <input value={data.start} onChange={e => onChange({ ...data, start: e.target.value })} className={INPUT_CLS} placeholder={t('resume.ph_from')} />
           </div>
           <div>
-            <label className={LABEL_CLS}>To</label>
-            <input value={data.current ? "Present" : data.end} onChange={e => onChange({ ...data, end: e.target.value, current: false })} disabled={data.current} className={`${INPUT_CLS} disabled:opacity-50`} placeholder="2024" />
+            <label className={LABEL_CLS}>{t('resume.field_to')}</label>
+            <input value={data.current ? t('resume.present') : data.end} onChange={e => onChange({ ...data, end: e.target.value, current: false })} disabled={data.current} className={`${INPUT_CLS} disabled:opacity-50`} placeholder={t('resume.ph_to')} />
           </div>
         </div>
       </div>
       <div className="flex items-center gap-6">
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input type="checkbox" checked={data.current} onChange={e => onChange({ ...data, current: e.target.checked, end: "" })} className="rounded border-gray-300" />
-          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Currently enrolled</span>
+          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{t('resume.currently_enrolled')}</span>
         </label>
         <div className="flex items-center gap-2">
-          <label className={`${LABEL_CLS} mb-0`}>GPA</label>
-          <input value={data.gpa} onChange={e => onChange({ ...data, gpa: e.target.value })} className="w-24 px-3 py-1.5 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="3.8/4.0" />
+          <label className={`${LABEL_CLS} mb-0`}>{t('resume.field_gpa')}</label>
+          <input value={data.gpa} onChange={e => onChange({ ...data, gpa: e.target.value })} className="w-24 px-3 py-1.5 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder={t('resume.ph_gpa')} />
         </div>
       </div>
       <div className="flex gap-2">
         <button onClick={onSave} disabled={!canSave} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all">
-          Save
+          {t('resume.save')}
         </button>
         <button onClick={onCancel} className="px-4 py-2 text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all">
-          Cancel
+          {t('resume.cancel')}
         </button>
       </div>
     </div>
@@ -167,6 +171,7 @@ function EduForm({ data, onChange, onSave, onCancel }) {
 }
 
 export default function ResumeContent() {
+  const { t } = useLanguage();
   const [profile, setProfile] = useState(null);
   const [userId, setUserId] = useState(null);
   const [resumeData, setResumeData] = useState(EMPTY_RESUME);
@@ -272,7 +277,7 @@ export default function ResumeContent() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <FileText size={40} className="text-gray-300 dark:text-gray-700 mb-4" />
-        <p className="text-sm font-bold text-gray-500 dark:text-gray-400">Sign in to build your resume.</p>
+        <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('resume.sign_in_prompt')}</p>
       </div>
     );
   }
@@ -289,7 +294,7 @@ export default function ResumeContent() {
       {/* Page header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Resume Builder</h1>
+          <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t('resume.builder_title')}</h1>
           {profile && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium">
               /resume/{profile.username}
@@ -303,7 +308,7 @@ export default function ResumeContent() {
             className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 text-xs font-black uppercase tracking-wider text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-all disabled:opacity-50"
           >
             {copied ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
-            {copied ? "Copied!" : "Copy Link"}
+            {copied ? t('resume.copied') : t('resume.copy_link')}
           </button>
           {resumeUrl && (
             <a
@@ -312,7 +317,7 @@ export default function ResumeContent() {
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 dark:border-gray-700 text-xs font-black uppercase tracking-wider text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-all"
             >
-              <ExternalLink size={12} /> Preview
+              <ExternalLink size={12} /> {t('resume.preview')}
             </a>
           )}
           <button
@@ -321,7 +326,7 @@ export default function ResumeContent() {
             className={`flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-sm disabled:opacity-60 ${dirty ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"}`}
           >
             {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <Check size={12} /> : null}
-            {saving ? "Saving…" : saved ? "Saved!" : "Save"}
+            {saving ? t('resume.saving') : saved ? t('resume.saved') : t('resume.save')}
           </button>
         </div>
       </div>
@@ -332,8 +337,8 @@ export default function ResumeContent() {
           <div className="flex items-start gap-3">
             <Info size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-sm font-bold text-amber-900 dark:text-amber-100 mb-1">One-time database setup required</p>
-              <p className="text-xs text-amber-700 dark:text-amber-300 mb-2.5">Run this once in your Supabase SQL Editor, then click Save again:</p>
+              <p className="text-sm font-bold text-amber-900 dark:text-amber-100 mb-1">{t('resume.setup_title')}</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mb-2.5">{t('resume.setup_desc')}</p>
               <code className="block text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100 p-2.5 rounded-lg font-mono break-all select-all">
                 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS resume_data JSONB DEFAULT &apos;{}&apos;;
               </code>
@@ -346,10 +351,10 @@ export default function ResumeContent() {
       {profile && (
         <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">From Your Profile</span>
-            <a href="/dash/profile" className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 hover:underline">
-              Edit Profile →
-            </a>
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">{t('resume.from_profile')}</span>
+            <Link href="/dash/profile" className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 hover:underline">
+              {t('resume.edit_profile')}
+            </Link>
           </div>
           <p className="font-black text-sm text-gray-900 dark:text-gray-100">{profile.full_name || `@${profile.username}`}</p>
           {profile.status && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{profile.status}</p>}
@@ -362,20 +367,20 @@ export default function ResumeContent() {
       )}
 
       {/* Summary */}
-      <CollapsibleSection title="Professional Summary" icon={FileText} expanded={expanded.summary} onToggle={() => toggle("summary")}>
+      <CollapsibleSection title={t('resume.summary_title')} icon={FileText} expanded={expanded.summary} onToggle={() => toggle("summary")}>
         <textarea
           value={resumeData.summary}
           onChange={e => update({ summary: e.target.value })}
           rows={4}
           maxLength={600}
           className="w-full px-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none transition-all"
-          placeholder="Write 2–4 sentences highlighting your experience, core strengths, and what you're looking for next…"
+          placeholder={t('resume.summary_placeholder')}
         />
         <p className="text-[11px] text-gray-400 mt-1.5 text-right">{resumeData.summary.length}/600</p>
       </CollapsibleSection>
 
       {/* Work Experience */}
-      <CollapsibleSection title="Work Experience" icon={Briefcase} expanded={expanded.experience} onToggle={() => toggle("experience")}>
+      <CollapsibleSection title={t('resume.experience_title')} icon={Briefcase} expanded={expanded.experience} onToggle={() => toggle("experience")}>
         <div className="space-y-3">
           {resumeData.work_experience.map(exp => (
             <div key={exp.id}>
@@ -389,7 +394,7 @@ export default function ResumeContent() {
                       <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-wide">{exp.company}</span>
                     </div>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                      {exp.start}{(exp.start && (exp.end || exp.current)) ? " – " : ""}{exp.current ? "Present" : exp.end}
+                      {exp.start}{(exp.start && (exp.end || exp.current)) ? " – " : ""}{exp.current ? t('resume.present') : exp.end}
                       {exp.location ? ` · ${exp.location}` : ""}
                     </p>
                     {exp.description && (
@@ -416,14 +421,14 @@ export default function ResumeContent() {
               onClick={openNewExp}
               className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-700 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
             >
-              <Plus size={13} /> Add Position
+              <Plus size={13} /> {t('resume.add_position')}
             </button>
           )}
         </div>
       </CollapsibleSection>
 
       {/* Education */}
-      <CollapsibleSection title="Education" icon={GraduationCap} expanded={expanded.education} onToggle={() => toggle("education")}>
+      <CollapsibleSection title={t('resume.education_title')} icon={GraduationCap} expanded={expanded.education} onToggle={() => toggle("education")}>
         <div className="space-y-3">
           {resumeData.education.map(edu => (
             <div key={edu.id}>
@@ -436,7 +441,7 @@ export default function ResumeContent() {
                       {edu.degree}{edu.field ? ` · ${edu.field}` : ""}
                     </p>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                      {edu.school}{(edu.start || edu.end || edu.current) ? ` · ${edu.start}${edu.start && (edu.end || edu.current) ? " – " : ""}${edu.current ? "Present" : edu.end}` : ""}
+                      {edu.school}{(edu.start || edu.end || edu.current) ? ` · ${edu.start}${edu.start && (edu.end || edu.current) ? " – " : ""}${edu.current ? t('resume.present') : edu.end}` : ""}
                       {edu.gpa ? ` · GPA ${edu.gpa}` : ""}
                     </p>
                   </div>
@@ -460,14 +465,14 @@ export default function ResumeContent() {
               onClick={openNewEdu}
               className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-700 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
             >
-              <Plus size={13} /> Add Education
+              <Plus size={13} /> {t('resume.add_education')}
             </button>
           )}
         </div>
       </CollapsibleSection>
 
       {/* Skills (read from profile) */}
-      <CollapsibleSection title="Skills" icon={Code2} expanded={expanded.skills} onToggle={() => toggle("skills")}>
+      <CollapsibleSection title={t('resume.skills_title')} icon={Code2} expanded={expanded.skills} onToggle={() => toggle("skills")}>
         {skills.length > 0 ? (
           <div>
             <div className="flex flex-wrap gap-2 mb-3">
@@ -477,30 +482,30 @@ export default function ResumeContent() {
                 </span>
               ))}
             </div>
-            <a href="/dash/profile" className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
-              Manage skills in your profile →
-            </a>
+            <Link href="/dash/profile" className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+              {t('resume.manage_skills')}
+            </Link>
           </div>
         ) : (
           <div className="text-center py-3">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">No skills on your profile yet.</p>
-            <a href="/dash/profile" className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
-              Add skills to your profile →
-            </a>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{t('resume.no_skills')}</p>
+            <Link href="/dash/profile" className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+              {t('resume.add_skills')}
+            </Link>
           </div>
         )}
       </CollapsibleSection>
 
       {/* Resume Sections visibility */}
-      <CollapsibleSection title="Resume Sections" icon={Eye} expanded={expanded.visibility} onToggle={() => toggle("visibility")}>
+      <CollapsibleSection title={t('resume.sections_title')} icon={Eye} expanded={expanded.visibility} onToggle={() => toggle("visibility")}>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-          Toggle which auto-generated sections appear on your public resume.
+          {t('resume.sections_desc')}
         </p>
         <div className="space-y-3">
           {[
-            { key: "show_certs",    label: "Certifications",    desc: "Courses completed on the platform" },
-            { key: "show_projects", label: "Projects",          desc: "Public projects from your portfolio" },
-            { key: "show_posts",    label: "Technical Writing", desc: "Recent posts you published" },
+            { key: "show_certs",    label: t('resume.certifications'),    desc: t('resume.desc_certifications') },
+            { key: "show_projects", label: t('resume.projects'),          desc: t('resume.desc_projects') },
+            { key: "show_posts",    label: t('resume.technical_writing'), desc: t('resume.desc_technical_writing') },
           ].map(({ key, label, desc }) => (
             <div key={key} className="flex items-center justify-between p-3 border border-gray-100 dark:border-gray-800 rounded-xl">
               <div>
@@ -516,9 +521,9 @@ export default function ResumeContent() {
       {/* Save reminder */}
       {dirty && (
         <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-2xl px-4 py-3">
-          <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">You have unsaved changes.</p>
+          <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">{t('resume.unsaved_changes')}</p>
           <button onClick={handleSave} disabled={saving} className="text-xs font-black text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50">
-            {saving ? "Saving…" : "Save now →"}
+            {saving ? t('resume.saving') : t('resume.save_now')}
           </button>
         </div>
       )}

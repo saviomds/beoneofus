@@ -6,12 +6,13 @@ import {
   GraduationCap, CalendarDays, Handshake, Newspaper, HeartHandshake, LayoutDashboard,
   ShoppingBag, User, BookOpen, Sparkles, Zap, Compass, BarChart2, Briefcase,
   Map, Trophy, ScrollText, Building2, Library, TrendingUp, Globe,
-  Search, ChevronLeft, ChevronRight, Plus, Store,
+  Search, ChevronLeft, ChevronRight, ChevronDown, Plus, Store, Orbit, Rocket,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '../supabaseClient';
+import { signOutEverywhere } from '../../lib/signOutEverywhere';
 import { useRouter, usePathname } from 'next/navigation';
 import VerifiedBadge from './VerifiedBadge';
 import PremiumBadge from './PremiumBadge';
@@ -98,20 +99,78 @@ function NavItemExpanded({ icon: Icon, label, badge, active, onClick, onBadgeAct
 const SIDEBAR_CACHE_KEY = 'sidebar_profile_v1';
 const SIDEBAR_CACHE_TTL = 5 * 60 * 1000;
 
+// Read the currently signed-in user's id synchronously from the Supabase auth
+// token in localStorage. Used to guarantee the cached profile below belongs to
+// THIS user — otherwise, after a logout→login on the same device, the sidebar
+// could hydrate with the previous account's name/avatar/orgs.
+function getStoredUid() {
+  if (typeof window === 'undefined') return null;
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith('sb-') && k.endsWith('-auth-token')) {
+        let raw = localStorage.getItem(k);
+        if (!raw) continue;
+        if (raw.startsWith('base64-')) raw = atob(raw.slice(7));
+        const parsed = JSON.parse(raw);
+        return parsed?.user?.id ?? parsed?.currentSession?.user?.id ?? null;
+      }
+    }
+  } catch { /* fall through */ }
+  return null;
+}
+
 function getCachedProfile() {
   if (typeof window === 'undefined') return null;
   try {
     const raw = sessionStorage.getItem(SIDEBAR_CACHE_KEY);
     if (!raw) return null;
-    const { data, ts } = JSON.parse(raw);
+    const { uid, data, ts } = JSON.parse(raw);
     if (Date.now() - ts > SIDEBAR_CACHE_TTL) return null;
+    // Only trust the cache if it belongs to the user who is signed in RIGHT NOW.
+    if (!uid || uid !== getStoredUid()) return null;
     return data;
   } catch { return null; }
 }
 
 function setCachedProfile(data) {
-  try { sessionStorage.setItem(SIDEBAR_CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch {}
+  try {
+    sessionStorage.setItem(SIDEBAR_CACHE_KEY, JSON.stringify({ uid: data?.id ?? null, data, ts: Date.now() }));
+  } catch {}
 }
+
+/* ── Workspace model ─────────────────────────────────────────────
+   The vision reframes the flat "journey" nav as an operating system of
+   named Workspaces. Every section still maps to exactly ONE workspace so
+   there's no duplication and the active workspace can auto-expand.        */
+const SECTION_WORKSPACE = {
+  home: 'universe', feed: 'universe', messages: 'universe', notifications: 'universe',
+  'career-ai': 'career', resume: 'career', interview: 'career', skills: 'career', pathways: 'career', matches: 'career',
+  jobs: 'opportunity', freelance: 'opportunity', companies: 'opportunity', contracts: 'opportunity', partnerships: 'opportunity', discover: 'opportunity', apply: 'opportunity',
+  ai: 'ai-studio',
+  market: 'creator', marketplace: 'creator', services: 'creator', blog: 'creator', orders: 'creator',
+  learn: 'learning', coaching: 'learning', mentorship: 'learning', mentors: 'learning',
+  projects: 'innovation', 'tech-hub': 'innovation', startups: 'innovation',
+  connections: 'network', groups: 'network', events: 'network', leaderboard: 'network',
+  analytics: 'command', admin: 'command',
+  premium: 'account', settings: 'account', more: 'account', profile: 'account', search: 'account', docs: 'account', bookmarks: 'account', pages: 'account',
+};
+
+/* accent tokens per workspace — literal strings so Tailwind v4 detects them */
+const WS_ACCENT = {
+  blue: 'text-blue-600 dark:text-blue-400', violet: 'text-violet-600 dark:text-violet-400',
+  cyan: 'text-cyan-600 dark:text-cyan-400', fuchsia: 'text-fuchsia-600 dark:text-fuchsia-400',
+  amber: 'text-amber-600 dark:text-amber-400', teal: 'text-teal-600 dark:text-teal-400',
+  orange: 'text-orange-600 dark:text-orange-400', sky: 'text-sky-600 dark:text-sky-400',
+  slate: 'text-slate-600 dark:text-slate-400',
+};
+const WS_ACCENT_BG = {
+  blue: 'bg-blue-50 dark:bg-blue-500/10', violet: 'bg-violet-50 dark:bg-violet-500/10',
+  cyan: 'bg-cyan-50 dark:bg-cyan-500/10', fuchsia: 'bg-fuchsia-50 dark:bg-fuchsia-500/10',
+  amber: 'bg-amber-50 dark:bg-amber-500/10', teal: 'bg-teal-50 dark:bg-teal-500/10',
+  orange: 'bg-orange-50 dark:bg-orange-500/10', sky: 'bg-sky-50 dark:bg-sky-500/10',
+  slate: 'bg-slate-100 dark:bg-slate-500/10',
+};
+const WS_OPEN_KEY = 'sidebar_ws_open_v1';
 
 /* ── Main Sidebar component ──────────────────────────────────── */
 export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse }) {
@@ -134,8 +193,22 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
   const router           = useRouter();
   const pathname         = usePathname();
   const activeSection    = pathname?.split('/')[2] || 'feed';
+  const activeWorkspaceId = SECTION_WORKSPACE[activeSection] || 'universe';
   const channelRef       = useRef(null);
   const profileLoadedRef = useRef(!!getCachedProfile());
+
+  /* Which workspace accordions the user has expanded (persisted). The active
+     workspace is derived-open at render time so the current page is always
+     visible without writing to state inside an effect. */
+  const [openWs, setOpenWs] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try { const raw = localStorage.getItem(WS_OPEN_KEY); if (raw) return JSON.parse(raw); } catch {}
+    return [];
+  });
+  useEffect(() => {
+    try { localStorage.setItem(WS_OPEN_KEY, JSON.stringify(openWs)); } catch {}
+  }, [openWs]);
+  const toggleWs = (id) => setOpenWs(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -233,6 +306,10 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
           setAuthSession(session);
           const uid = session.user.id;
 
+          // If a previous account's profile is still on screen (in-tab account
+          // switch), drop it immediately so we never show the wrong identity.
+          setProfile(prev => (prev && prev.id !== uid ? null : prev));
+
           const { data: profileData } = await supabase
             .from('profiles').select('*').eq('id', uid).single();
           if (profileData) { setProfile(profileData); setCachedProfile(profileData); profileLoadedRef.current = true; }
@@ -308,11 +385,12 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
   }, [unreadMessages, unreadNotifs, unreadGroups]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
     setProfile(null);
     setMyOrgs([]);
-    try { sessionStorage.removeItem(SIDEBAR_CACHE_KEY); } catch {}
-    router.push('/auth');
+    await signOutEverywhere();
+    // Hard navigation (not router.push) guarantees a clean slate: no retained
+    // React state, in-memory caches, or open realtime channels from this session.
+    window.location.href = '/auth';
   };
 
   const handleMarkAllMessagesRead = async () => {
@@ -349,64 +427,91 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
 
   const handleNavClick = (id) => { router.push('/dash/' + id); onClose?.(); };
 
-  // Navigation as a JOURNEY — visible, labeled sections ordered by how a user
-  // actually moves through the platform: Home → Discover → Act → Connect →
-  // Grow → Account. No hidden bucket; every destination sits under a purpose.
-  const navGroups = [
+  // The platform as an OPERATING SYSTEM — one shell, ten workspaces. Each
+  // workspace is an accordion that expands to its modules; every existing
+  // destination lives under exactly one workspace (see SECTION_WORKSPACE).
+  const WORKSPACES = [
     {
-      label: 'Home',
+      id: 'universe', label: 'My Universe', icon: Orbit, accent: 'blue',
       items: [
-        { id: 'home',          icon: LayoutDashboard, label: t('nav.items.dashboard')     },
-        { id: 'feed',          icon: Home,            label: t('nav.items.feed')           },
+        { id: 'home',          icon: LayoutDashboard, label: 'Overview' },
+        { id: 'feed',          icon: Home,            label: t('nav.items.feed') },
         { id: 'messages',      icon: MessageSquare,   label: t('nav.items.messages'),      badge: unreadMessages, onBadge: handleMarkAllMessagesRead, isBouncing },
-        { id: 'notifications', icon: Bell,            label: t('nav.items.notifications'), badge: unreadNotifs,   onBadge: handleMarkAllNotifsRead,   isRinging  },
+        { id: 'notifications', icon: Bell,            label: t('nav.items.notifications'), badge: unreadNotifs,   onBadge: handleMarkAllNotifsRead,   isRinging },
       ],
     },
     {
-      label: 'Discover',
+      id: 'career', label: 'Career Studio', icon: TrendingUp, accent: 'violet',
       items: [
-        { id: 'ai',        icon: Sparkles,   label: 'AI Assistant' },
-        { id: 'discover',  icon: Compass,    label: 'Discover' },
-        { id: 'matches',   icon: Zap,        label: 'Matches' },
-        { id: 'career-ai', icon: TrendingUp, label: 'Career AI' },
+        { id: 'career-ai', icon: TrendingUp,    label: 'Career AI' },
+        { id: 'resume',    icon: FileText,       label: 'Resume Builder' },
+        { id: 'interview', icon: HeartHandshake, label: 'Interview AI' },
+        { id: 'skills',    icon: CheckCheck,     label: 'Verified Skills' },
+        { id: 'pathways',  icon: Map,            label: 'Career Pathways' },
+        { id: 'matches',   icon: Zap,            label: 'Matches' },
       ],
     },
     {
-      label: 'Opportunities',
+      id: 'opportunity', label: 'Opportunity Engine', icon: Compass, accent: 'cyan',
       items: [
-        { id: 'jobs',       icon: Briefcase,     label: 'Jobs' },
-        { id: 'freelance',  icon: Globe,         label: 'Remote Work' },
-        { id: 'services',   icon: ShoppingBag,   label: 'Services' },
-        { id: 'market',     icon: Store,         label: 'Marketplace', href: '/market', isNew: true },
-        { id: 'companies',  icon: Building2,     label: 'Companies' },
-        { id: 'learn',      icon: GraduationCap, label: 'Courses' },
-        { id: 'mentorship', icon: Handshake,     label: 'Mentorship' },
-        { id: 'coaching',   icon: HeartHandshake,label: 'Coaching' },
+        { id: 'jobs',         icon: Briefcase,  label: 'Jobs' },
+        { id: 'freelance',    icon: Globe,      label: 'Remote Work' },
+        { id: 'companies',    icon: Building2,   label: 'Companies' },
+        { id: 'contracts',    icon: ScrollText,  label: 'Contracts' },
+        { id: 'partnerships', icon: Handshake,   label: 'Partnerships' },
+        { id: 'discover',     icon: Compass,     label: 'Discover' },
       ],
     },
     {
-      label: 'Network',
+      id: 'ai-studio', label: 'AI Studio', icon: Sparkles, accent: 'fuchsia',
+      items: [
+        { id: 'ai', icon: Sparkles, label: 'AI Assistant' },
+      ],
+    },
+    {
+      id: 'creator', label: 'Creator Economy', icon: Store, accent: 'amber',
+      items: [
+        { id: 'market',   icon: Store,        label: 'Marketplace', href: '/market', isNew: true },
+        { id: 'services', icon: ShoppingBag,  label: 'Sell Services' },
+        { id: 'blog',     icon: Newspaper,    label: 'Publish' },
+      ],
+    },
+    {
+      id: 'learning', label: 'Learning', icon: GraduationCap, accent: 'teal',
+      items: [
+        { id: 'learn',      icon: GraduationCap,  label: 'Courses' },
+        { id: 'coaching',   icon: HeartHandshake, label: 'Coaching' },
+        { id: 'mentorship', icon: Handshake,      label: 'Mentorship' },
+      ],
+    },
+    {
+      id: 'innovation', label: 'Innovation Hub', icon: Rocket, accent: 'orange',
+      items: [
+        { id: 'projects', icon: Map,      label: 'Build Together' },
+        { id: 'tech-hub', icon: Terminal, label: 'Tech Hub' },
+        { id: 'startups', icon: Rocket,   label: 'Startups' },
+      ],
+    },
+    {
+      id: 'network', label: 'World Network', icon: Globe, accent: 'sky',
       items: [
         { id: 'connections', icon: UserPlus,     label: t('nav.items.connections') },
         { id: 'groups',      icon: Users,        label: t('nav.items.groups'), badge: unreadGroups, onBadge: handleMarkAllGroupsRead, isRinging: isGroupRinging },
         { id: 'events',      icon: CalendarDays, label: t('nav.items.events') },
-        { id: 'projects',    icon: Map,          label: 'Build Together' },
+        { id: 'leaderboard', icon: Trophy,       label: 'Leaderboard' },
       ],
     },
     {
-      label: 'Grow',
+      id: 'command', label: 'Command Center', icon: BarChart2, accent: 'slate',
       items: [
-        { id: 'skills',      icon: CheckCheck, label: 'Verified Skills' },
-        { id: 'interview',   icon: HeartHandshake, label: 'Interview AI' },
-        { id: 'resume',      icon: FileText,   label: 'Resume Builder' },
-        { id: 'analytics',   icon: BarChart2,  label: 'Analytics' },
-        { id: 'leaderboard', icon: Trophy,     label: 'Leaderboard' },
-        { id: 'premium',     icon: Crown,      label: t('nav.items.premium') },
+        { id: 'analytics', icon: BarChart2, label: 'Analytics' },
+        ...(profile?.is_admin ? [{ id: 'admin', icon: Terminal, label: 'Admin' }] : []),
       ],
     },
     {
-      label: 'Account',
+      id: 'account', label: 'Account', icon: Settings, accent: 'slate',
       items: [
+        { id: 'premium',  icon: Crown,    label: t('nav.items.premium') },
         { id: 'settings', icon: Settings, label: t('nav.items.settings') },
         { id: 'more',     icon: Terminal, label: 'More' },
       ],
@@ -415,8 +520,18 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
 
   /* ── Collapsed sidebar ───────────────────────────────────────── */
   if (isCollapsed) {
-    const orgItems = myOrgs.map(o => ({ id: `org-${o.slug}`, icon: Building2, label: o.name, href: consolePathFor(o.type, o.slug) }));
-    const allItems = [...navGroups.flatMap(g => g.items), ...orgItems];
+    // Collapsed rail shows one icon per WORKSPACE (not every module) — jumps to
+    // the workspace's primary destination and rolls up unread counts.
+    const wsItems = WORKSPACES.map(ws => ({
+      id: ws.id,
+      icon: ws.icon,
+      label: ws.label,
+      badge: ws.items.reduce((n, it) => n + (it.badge || 0), 0),
+      target: ws.items[0]?.href || ws.items[0]?.id,
+      isHref: !!ws.items[0]?.href,
+    }));
+    const orgItems = myOrgs.map(o => ({ id: `org-${o.slug}`, icon: Building2, label: o.name, target: consolePathFor(o.type, o.slug), isHref: true }));
+    const allItems = [...wsItems, ...orgItems];
     return (
       <>
         <style>{`
@@ -440,13 +555,13 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
                 icon={item.icon}
                 label={item.label}
                 badge={item.badge}
-                active={activeSection === item.id}
+                active={item.id === activeWorkspaceId || item.id === `org-${activeSection}`}
                 onClick={() => {
-                  if (item.href) { router.push(item.href); onClose?.(); }
-                  else handleNavClick(item.id);
+                  if (item.isHref) { router.push(item.target); onClose?.(); }
+                  else handleNavClick(item.target);
                 }}
-                isRinging={item.isRinging || (item.id === 'notifications' && isRinging)}
-                isBouncing={item.isBouncing || (item.id === 'messages' && isBouncing)}
+                isRinging={item.id === 'universe' && isRinging}
+                isBouncing={item.id === 'universe' && isBouncing}
               />
             ))}
           </nav>
@@ -584,7 +699,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
                     >
                       <div className="w-9 h-9 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
                         {o.logo_url
-                          ? <img src={o.logo_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ? <Image src={o.logo_url} alt="" width={36} height={36} className="w-full h-full object-cover" referrerPolicy="no-referrer" unoptimized />
                           : <span className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase">{(o.name || '?').slice(0, 2)}</span>}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -629,29 +744,60 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
 
           <div className="h-px bg-gray-100 dark:bg-gray-800 mx-1 my-1.5" />
 
-          {/* Journey sections — every destination visible under a clear purpose */}
-          {navGroups.map((group) => (
-            <div key={group.label} className="pt-1">
-              <p className="text-[9px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[2px] px-3 mb-1">{group.label}</p>
-              <div className="space-y-0.5">
-                {group.items.map((item, i) => (
-                  <NavItemExpanded
-                    key={item.id}
-                    index={i}
-                    icon={item.icon}
-                    label={item.label}
-                    badge={item.badge}
-                    active={activeSection === item.id}
-                    onClick={() => { if (item.href) { router.push(item.href); onClose?.(); } else handleNavClick(item.id); }}
-                    onBadgeAction={item.onBadge}
-                    isBouncing={item.isBouncing || false}
-                    isRinging={item.isRinging || false}
-                    isNew={item.isNew}
-                  />
-                ))}
+          {/* Workspaces — the platform as one intelligent operating system.
+              Each accordion expands to its modules; the active workspace is
+              always open, and unread rolls up onto the collapsed header. */}
+          {WORKSPACES.map((ws) => {
+            const isActiveWs = ws.id === activeWorkspaceId;
+            const open = openWs.includes(ws.id) || isActiveWs;
+            const rollup = ws.items.reduce((n, it) => n + (it.badge || 0), 0);
+            const WsIcon = ws.icon;
+            return (
+              <div key={ws.id} className="pt-0.5">
+                <button
+                  onClick={() => toggleWs(ws.id)}
+                  aria-expanded={open}
+                  className={`w-full group flex items-center gap-2.5 px-2 py-2 rounded-xl transition-colors ${
+                    isActiveWs ? 'bg-gray-50 dark:bg-gray-800/40' : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                  }`}
+                >
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${WS_ACCENT_BG[ws.accent]} ${WS_ACCENT[ws.accent]}`}>
+                    <WsIcon size={15} strokeWidth={2.2} />
+                  </span>
+                  <span className={`flex-1 text-left text-[12.5px] font-bold tracking-tight truncate ${isActiveWs ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
+                    {ws.label}
+                  </span>
+                  {rollup > 0 && !open && (
+                    <span className="shrink-0 bg-red-500 text-white text-[8px] font-black min-w-[15px] h-4 px-1 rounded-full flex items-center justify-center">
+                      {rollup > 9 ? '9+' : rollup}
+                    </span>
+                  )}
+                  <ChevronDown size={14} className={`shrink-0 text-gray-300 dark:text-gray-600 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+                </button>
+                <div className="grid transition-all duration-300 ease-out" style={{ gridTemplateRows: open ? '1fr' : '0fr' }}>
+                  <div className="overflow-hidden">
+                    <div className="pl-2.5 pr-0.5 py-0.5 space-y-0.5 border-l border-gray-100 dark:border-gray-800 ml-4 mt-0.5">
+                      {ws.items.map((item, i) => (
+                        <NavItemExpanded
+                          key={item.id}
+                          index={i}
+                          icon={item.icon}
+                          label={item.label}
+                          badge={item.badge}
+                          active={activeSection === item.id}
+                          onClick={() => { if (item.href) { router.push(item.href); onClose?.(); } else handleNavClick(item.id); }}
+                          onBadgeAction={item.onBadge}
+                          isBouncing={item.isBouncing || false}
+                          isRinging={item.isRinging || false}
+                          isNew={item.isNew}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         {/* ── User profile footer ── */}

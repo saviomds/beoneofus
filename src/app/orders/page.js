@@ -214,9 +214,12 @@ function OrdersPageInner() {
   }, [router]);
 
   useEffect(() => {
-    setMounted(true);
-    if (isCheckout) setShowCheckout(true);
-    fetchOrders();
+    const frame = requestAnimationFrame(() => {
+      setMounted(true);
+      if (isCheckout) setShowCheckout(true);
+      fetchOrders();
+    });
+    return () => cancelAnimationFrame(frame);
   }, [isCheckout, fetchOrders]);
 
   const filtered = orders.filter(o => filter === 'all' || o.status === filter);
@@ -272,7 +275,7 @@ function OrdersPageInner() {
               </div>
               <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Order Placed!</h2>
               <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-5">
-                Your order has been confirmed. We'll pack it discreetly and dispatch within 1 hour.
+                Your order has been confirmed. We&apos;ll pack it discreetly and dispatch within 1 hour.
               </p>
               <div className="p-3.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 mb-5">
                 <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">

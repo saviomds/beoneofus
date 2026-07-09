@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "./lib";
@@ -12,7 +13,7 @@ export default function CreatorCard({ creator, premium, className = "" }) {
   return (
     <div className={cn("flex items-center gap-3 rounded-mkt border border-mkt-border bg-mkt-card p-4", className)}>
       {creator.avatar ? (
-        <img src={creator.avatar} alt="" className="h-12 w-12 rounded-full object-cover ring-2 ring-mkt-border" />
+        <Image src={creator.avatar} alt="" width={48} height={48} className="h-12 w-12 rounded-full object-cover ring-2 ring-mkt-border" unoptimized />
       ) : (
         <span className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-mkt-primary to-mkt-secondary text-lg font-black text-white">
           {creator.name[0]?.toUpperCase()}

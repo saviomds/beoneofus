@@ -9,12 +9,14 @@ import {
   ShieldCheck, Crown, Camera, FileText, History,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
+import en from "../../../lib/i18n/en";
 
 const PARTNERSHIP_TYPES = [
-  { id: "sponsored_content", label: "Sponsored Content",      icon: Sparkles,  desc: "Articles, tutorials, or newsletters reaching our developers" },
-  { id: "service_ads",       label: "Service Advertisement",  icon: Briefcase, desc: "List your dev-focused services to the community" },
-  { id: "event_sponsor",     label: "Event Sponsorship",      icon: Globe,     desc: "Sponsor hackathons, meetups, or webinars" },
-  { id: "other",             label: "Other Collaboration",    icon: Handshake, desc: "Propose a unique way to align with our members" },
+  { id: "sponsored_content", labelKey: "partnerships.types.sponsored_content", icon: Sparkles,  descKey: "partnerships.type_descs.sponsored_content" },
+  { id: "service_ads",       labelKey: "partnerships.types.service_ads",       icon: Briefcase, descKey: "partnerships.type_descs.service_ads" },
+  { id: "event_sponsor",     labelKey: "partnerships.types.event_sponsor",     icon: Globe,     descKey: "partnerships.type_descs.event_sponsor" },
+  { id: "other",             labelKey: "partnerships.types.other",             icon: Handshake, descKey: "partnerships.type_descs.other" },
 ];
 
 const STATUS_COLORS = {
@@ -24,6 +26,7 @@ const STATUS_COLORS = {
 };
 
 export default function PartnershipsContent() {
+  const { t } = useLanguage();
   const [user, setUser]       = useState(null);
   const [profile, setProfile] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -177,7 +180,7 @@ export default function PartnershipsContent() {
     setSubmitting(true);
     setError("");
     try {
-      const typeLabel = PARTNERSHIP_TYPES.find(t => t.id === form.type)?.label || form.type;
+      const typeLabel = en.partnerships.types[form.type] || form.type;
       const { error: dbErr } = await supabase.from("partnerships").insert({
         user_id:         user.id,
         company_name:    form.company_name,
@@ -191,7 +194,7 @@ export default function PartnershipsContent() {
       if (dbErr) throw dbErr;
       setSuccess(true);
     } catch (err) {
-      setError(err.message || "Failed to submit proposal.");
+      setError(err.message || t('partnerships.dash.submit_error'));
     } finally {
       setSubmitting(false);
     }
@@ -207,17 +210,17 @@ export default function PartnershipsContent() {
         <div className="w-16 h-16 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 flex items-center justify-center">
           <CheckCircle2 size={32} className="text-green-500" />
         </div>
-        <h2 className="text-2xl font-black text-gray-900 dark:text-white">Proposal Received!</h2>
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white">{t('partnerships.dash.success_title')}</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-          Thank you for reaching out. Our team will review your proposal and contact you at{" "}
-          <strong>{form.contact_email}</strong> shortly.
+          {t('partnerships.dash.success_desc_before')}{" "}
+          <strong>{form.contact_email}</strong> {t('partnerships.dash.success_desc_after')}
         </p>
         <div className="flex gap-4 mt-4">
           <button
             onClick={() => { setSuccess(false); setActiveTab("mine"); }}
             className="text-sm font-bold text-blue-600 hover:underline"
           >
-            View My Proposals →
+            {t('partnerships.dash.view_my_proposals')}
           </button>
           <button
             onClick={() => {
@@ -227,7 +230,7 @@ export default function PartnershipsContent() {
             }}
             className="text-sm font-bold text-gray-400 hover:underline"
           >
-            Submit another
+            {t('partnerships.submit_another')}
           </button>
         </div>
       </div>
@@ -249,20 +252,20 @@ export default function PartnershipsContent() {
                 onClick={() => setActiveTab("submit")}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === "submit" ? "bg-blue-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
               >
-                Submit
+                {t('partnerships.dash.tab_submit')}
               </button>
               <button
                 onClick={() => setActiveTab("mine")}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === "mine" ? "bg-blue-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
               >
-                Mine{myProposals.length > 0 ? ` (${myProposals.length})` : ""}
+                {t('partnerships.dash.tab_mine')}{myProposals.length > 0 ? ` (${myProposals.length})` : ""}
               </button>
               {isAdmin && (
                 <button
                   onClick={() => setActiveTab("admin")}
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === "admin" ? "bg-blue-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
                 >
-                  Review ({proposals.filter(p => p.status === "pending").length})
+                  {t('partnerships.dash.tab_review')} ({proposals.filter(p => p.status === "pending").length})
                 </button>
               )}
             </div>
@@ -275,11 +278,11 @@ export default function PartnershipsContent() {
               <Handshake size={24} className="text-white" />
             </div>
             <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
-              Partnerships & Sponsorships
+              {t('partnerships.dash.hero_title')}
             </h1>
           </div>
           <p className="text-gray-600 dark:text-gray-400 font-medium leading-relaxed max-w-lg">
-            Align your brand or services with the beoneofus community. Propose sponsored content, tutorials, or advertise developer-focused tools.
+            {t('partnerships.dash.hero_desc')}
           </p>
         </div>
       </div>
@@ -295,14 +298,14 @@ export default function PartnershipsContent() {
                   <AlertTriangle size={18} className="text-amber-500" />
                 </div>
                 <div>
-                  <p className="font-black text-gray-900 dark:text-white text-sm">Complete your profile to submit a proposal</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">A strong profile helps us evaluate proposals faster and builds trust.</p>
+                  <p className="font-black text-gray-900 dark:text-white text-sm">{t('partnerships.dash.complete_profile_title')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('partnerships.dash.complete_profile_desc')}</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[
-                  { icon: Camera,   label: "Profile photo",       done: !!profile?.avatar_url },
-                  { icon: FileText, label: "Bio / status filled", done: !!(profile?.status || profile?.bio) },
+                  { icon: Camera,   label: t('partnerships.dash.checklist_photo'), done: !!profile?.avatar_url },
+                  { icon: FileText, label: t('partnerships.dash.checklist_bio'),   done: !!(profile?.status || profile?.bio) },
                 ].map(({ icon: Icon, label, done }) => (
                   <div key={label} className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-bold ${done ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500"}`}>
                     {done ? <Check size={13} className="text-emerald-500 shrink-0" /> : <Icon size={13} className="shrink-0 opacity-40" />}
@@ -311,7 +314,7 @@ export default function PartnershipsContent() {
                 ))}
               </div>
               <Link href="/dash/profile" className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl transition-all">
-                Go to Profile →
+                {t('partnerships.dash.go_to_profile')}
               </Link>
             </div>
           )}
@@ -321,8 +324,8 @@ export default function PartnershipsContent() {
             <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl">
               <ShieldCheck size={18} className="text-emerald-500 shrink-0" />
               <div>
-                <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">Verified member — your proposal gets priority review</p>
-                <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">Verified proposals are reviewed within 24 hours and shown first to the team.</p>
+                <p className="text-sm font-black text-emerald-700 dark:text-emerald-400">{t('partnerships.dash.verified_title')}</p>
+                <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">{t('partnerships.dash.verified_desc')}</p>
               </div>
             </div>
           )}
@@ -330,8 +333,8 @@ export default function PartnershipsContent() {
             <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl">
               <Crown size={18} className="text-amber-500 shrink-0" fill="currentColor" strokeWidth={1} />
               <div>
-                <p className="text-sm font-black text-amber-700 dark:text-amber-400">Premium member — top-priority partnership review</p>
-                <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Premium proposals are escalated directly to founders for faster decisions.</p>
+                <p className="text-sm font-black text-amber-700 dark:text-amber-400">{t('partnerships.dash.premium_title')}</p>
+                <p className="text-xs text-amber-600/70 dark:text-amber-400/70">{t('partnerships.dash.premium_desc')}</p>
               </div>
             </div>
           )}
@@ -347,20 +350,20 @@ export default function PartnershipsContent() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Partner / Company Name</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{t('partnerships.dash.company_label')}</label>
                 <div className="relative">
                   <Building size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     required
                     value={form.company_name}
                     onChange={e => setForm({ ...form, company_name: e.target.value })}
-                    placeholder="e.g. Acme Stack"
+                    placeholder={t('partnerships.dash.company_ph')}
                     className={inputCls + " pl-10"}
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Contact Email</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{t('partnerships.contact_email')}</label>
                 <div className="relative">
                   <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
@@ -368,7 +371,7 @@ export default function PartnershipsContent() {
                     type="email"
                     value={form.contact_email}
                     onChange={e => setForm({ ...form, contact_email: e.target.value })}
-                    placeholder="hello@company.com"
+                    placeholder={t('partnerships.dash.email_ph')}
                     className={inputCls + " pl-10"}
                   />
                 </div>
@@ -376,21 +379,21 @@ export default function PartnershipsContent() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Collaboration Type</label>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{t('partnerships.dash.collab_type')}</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {PARTNERSHIP_TYPES.map(t => (
+                {PARTNERSHIP_TYPES.map(pt => (
                   <button
-                    key={t.id}
+                    key={pt.id}
                     type="button"
-                    onClick={() => setForm({ ...form, type: t.id })}
-                    className={`flex items-start gap-3 p-3 rounded-xl border transition-all text-left ${form.type === t.id ? "bg-blue-50 dark:bg-blue-900/20 border-blue-400 dark:border-blue-500" : "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300"}`}
+                    onClick={() => setForm({ ...form, type: pt.id })}
+                    className={`flex items-start gap-3 p-3 rounded-xl border transition-all text-left ${form.type === pt.id ? "bg-blue-50 dark:bg-blue-900/20 border-blue-400 dark:border-blue-500" : "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-gray-300"}`}
                   >
-                    <div className={`p-2 rounded-lg ${form.type === t.id ? "bg-blue-600 text-white" : "bg-white dark:bg-gray-700 text-gray-400"}`}>
-                      <t.icon size={16} />
+                    <div className={`p-2 rounded-lg ${form.type === pt.id ? "bg-blue-600 text-white" : "bg-white dark:bg-gray-700 text-gray-400"}`}>
+                      <pt.icon size={16} />
                     </div>
                     <div>
-                      <p className={`text-sm font-bold ${form.type === t.id ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"}`}>{t.label}</p>
-                      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{t.desc}</p>
+                      <p className={`text-sm font-bold ${form.type === pt.id ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"}`}>{t(pt.labelKey)}</p>
+                      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{t(pt.descKey)}</p>
                     </div>
                   </button>
                 ))}
@@ -398,13 +401,13 @@ export default function PartnershipsContent() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Alignment & Proposal</label>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{t('partnerships.dash.proposal_label')}</label>
               <textarea
                 required
                 rows={5}
                 value={form.proposal}
                 onChange={e => setForm({ ...form, proposal: e.target.value })}
-                placeholder="How does your service align with our members' goals? Describe your proposed content or advertisement..."
+                placeholder={t('partnerships.dash.proposal_ph')}
                 className={inputCls + " resize-none"}
               />
             </div>
@@ -415,7 +418,7 @@ export default function PartnershipsContent() {
               className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black rounded-xl text-sm transition-all shadow-lg active:scale-95"
             >
               {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-              {submitting ? "Transmitting..." : "Send Proposal"}
+              {submitting ? t('partnerships.dash.submitting') : t('partnerships.dash.send')}
             </button>
           </form>
         </>
@@ -425,8 +428,8 @@ export default function PartnershipsContent() {
       {activeTab === "mine" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">My Proposals</h3>
-            <span className="text-[10px] font-bold text-gray-400">{myProposals.length} total</span>
+            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">{t('partnerships.dash.my_proposals')}</h3>
+            <span className="text-[10px] font-bold text-gray-400">{t('partnerships.dash.total', { n: myProposals.length })}</span>
           </div>
 
           {loadingMine ? (
@@ -436,9 +439,9 @@ export default function PartnershipsContent() {
           ) : myProposals.length === 0 ? (
             <div className="py-20 text-center bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700 rounded-3xl space-y-3">
               <History size={28} className="mx-auto text-gray-300 dark:text-gray-600" />
-              <p className="text-sm font-bold text-gray-400">No proposals submitted yet.</p>
+              <p className="text-sm font-bold text-gray-400">{t('partnerships.dash.none_yet')}</p>
               <button onClick={() => setActiveTab("submit")} className="text-xs font-bold text-blue-500 hover:underline">
-                Submit your first proposal →
+                {t('partnerships.dash.submit_first')}
               </button>
             </div>
           ) : (
@@ -465,11 +468,11 @@ export default function PartnershipsContent() {
 
                 <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
                   <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Type</p>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('partnerships.dash.field_type')}</p>
                     <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{prop.type}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Contact</p>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('partnerships.dash.field_contact')}</p>
                     <p className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">{prop.contact_email}</p>
                   </div>
                 </div>
@@ -478,7 +481,7 @@ export default function PartnershipsContent() {
                   <div className="flex items-center gap-2 p-2.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
                     <Clock size={12} className="text-amber-500 shrink-0" />
                     <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                      Under review — you'll be notified when a decision is made.
+                      {t('partnerships.dash.status_pending_msg')}
                     </p>
                   </div>
                 )}
@@ -486,7 +489,7 @@ export default function PartnershipsContent() {
                   <div className="flex items-center gap-2 p-2.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl">
                     <Check size={12} className="text-emerald-500 shrink-0" />
                     <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                      Accepted! Our team will reach out to coordinate next steps.
+                      {t('partnerships.dash.status_accepted_msg')}
                     </p>
                   </div>
                 )}
@@ -494,7 +497,7 @@ export default function PartnershipsContent() {
                   <div className="flex items-center gap-2 p-2.5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl">
                     <X size={12} className="text-red-500 shrink-0" />
                     <p className="text-[11px] font-bold text-red-600 dark:text-red-400">
-                      This proposal was not accepted. You&apos;re welcome to submit a revised one.
+                      {t('partnerships.dash.status_declined_msg')}
                     </p>
                   </div>
                 )}
@@ -508,7 +511,7 @@ export default function PartnershipsContent() {
       {activeTab === "admin" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">Review Submissions</h3>
+            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">{t('partnerships.dash.review_submissions')}</h3>
             <div className="flex gap-1">
               {["pending", "accepted", "declined"].map(f => (
                 <button
@@ -528,7 +531,7 @@ export default function PartnershipsContent() {
             </div>
           ) : proposals.filter(p => p.status === adminFilter).length === 0 ? (
             <div className="py-20 text-center bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700 rounded-3xl">
-              <p className="text-sm font-bold text-gray-400">No {adminFilter} proposals.</p>
+              <p className="text-sm font-bold text-gray-400">{t('partnerships.dash.none_status', { status: adminFilter })}</p>
             </div>
           ) : (
             proposals.filter(p => p.status === adminFilter).map(prop => (
@@ -559,22 +562,22 @@ export default function PartnershipsContent() {
                 {/* Details grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
                   <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Company</p>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('partnerships.dash.field_company')}</p>
                     <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{prop.company_name}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Type</p>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('partnerships.dash.field_type')}</p>
                     <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{prop.type}</p>
                   </div>
                   <div className="sm:col-span-2">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Contact Email</p>
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('partnerships.contact_email')}</p>
                     <p className="text-xs font-bold text-blue-600 dark:text-blue-400">{prop.contact_email}</p>
                   </div>
                 </div>
 
                 {/* Proposal text */}
                 <div className="space-y-1">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Proposal</p>
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('partnerships.dash.field_proposal')}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed italic">&quot;{prop.proposal}&quot;</p>
                 </div>
 
@@ -587,7 +590,7 @@ export default function PartnershipsContent() {
                       className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 rounded-xl text-[11px] font-black hover:bg-red-100 transition-all uppercase disabled:opacity-50"
                     >
                       {isProcessing === prop.id ? <Loader2 size={12} className="animate-spin" /> : <X size={14} />}
-                      Decline
+                      {t('partnerships.decline')}
                     </button>
                     <button
                       onClick={() => handleStatusUpdate(prop, "accepted")}
@@ -595,7 +598,7 @@ export default function PartnershipsContent() {
                       className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-emerald-600 text-white rounded-xl text-[11px] font-black hover:bg-emerald-500 transition-all uppercase shadow-lg shadow-emerald-600/20 disabled:opacity-50"
                     >
                       {isProcessing === prop.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={14} />}
-                      Accept
+                      {t('partnerships.accept')}
                     </button>
                   </div>
                 )}

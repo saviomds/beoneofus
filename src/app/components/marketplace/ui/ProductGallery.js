@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, DUR, EASE } from "./lib";
@@ -51,7 +52,7 @@ export default function ProductGallery({ images = [], title = "", badges = null,
                 i === active ? "border-mkt-primary ring-2 ring-mkt-primary/40" : "border-mkt-border opacity-70 hover:opacity-100"
               )}
             >
-              <img src={img} alt="" className="h-full w-full object-cover" />
+              <Image src={img} alt="" fill sizes="96px" className="object-cover" unoptimized />
             </button>
           ))}
         </div>

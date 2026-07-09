@@ -9,6 +9,7 @@ import {
   RefreshCw, Hash, ChevronRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -69,7 +70,8 @@ function Typewriter({ content, onUpdate }) {
   const [shown, setShown] = useState("");
   const [done,  setDone]  = useState(false);
   useEffect(() => {
-    let i = 0; setShown(""); setDone(false);
+    let i = 0;
+    Promise.resolve().then(() => { setShown(""); setDone(false); });
     const t = setInterval(() => {
       setShown(content.slice(0, ++i));
       onUpdate?.();
@@ -92,7 +94,7 @@ function LoadingSkeleton() {
       {/* Animated logo area */}
       <div className="relative">
         <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/[0.10] shadow-2xl shadow-blue-900/30">
-          <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />
+          <Image src="/ai.gif" alt="AI" width={80} height={80} unoptimized className="w-full h-full object-cover" />
         </div>
         <div className="absolute -inset-3 rounded-3xl border border-blue-500/[0.12] animate-ping" style={{ animationDuration: "2s" }} />
         <div className="absolute -inset-6 rounded-3xl border border-blue-500/[0.06] animate-ping" style={{ animationDuration: "2s", animationDelay: "0.4s" }} />
@@ -335,7 +337,7 @@ export default function BeoneofusAiPage() {
 
           <div className="flex items-center gap-2.5">
             <div className="relative w-9 h-9 rounded-xl overflow-hidden border border-white/[0.10] shrink-0 shadow-lg shadow-blue-900/20">
-              <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />
+              <Image src="/ai.gif" alt="AI" width={36} height={36} unoptimized className="w-full h-full object-cover" />
               <div className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-[#07101e]" />
             </div>
             <div>
@@ -388,7 +390,7 @@ export default function BeoneofusAiPage() {
               <div className="relative">
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-600/20 to-indigo-600/20 blur-2xl scale-150" />
                 <div className="relative w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/[0.10] shadow-2xl shadow-blue-900/40">
-                  <img src="/ai.gif" alt="beoneofus AI" className="w-full h-full object-cover" />
+                  <Image src="/ai.gif" alt="beoneofus AI" width={80} height={80} unoptimized className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center border-2 border-[#050913] shadow-lg">
                   <Sparkles size={11} className="text-white" />
@@ -464,7 +466,7 @@ export default function BeoneofusAiPage() {
                 {msg.role === "assistant" ? (
                   <div className="group flex gap-3">
                     <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-0.5 border border-white/[0.08] shadow-sm">
-                      <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />
+                      <Image src="/ai.gif" alt="AI" width={28} height={28} unoptimized className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
@@ -520,7 +522,7 @@ export default function BeoneofusAiPage() {
             {loading && (
               <div className="flex gap-3 animate-in fade-in duration-200">
                 <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-white/[0.08]">
-                  <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />
+                  <Image src="/ai.gif" alt="AI" width={28} height={28} unoptimized className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <p className="text-[11px] font-black text-blue-400 tracking-wide mb-2">beoneofus AI</p>

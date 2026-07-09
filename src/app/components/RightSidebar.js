@@ -129,11 +129,14 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
     if (!inviteEmail) return;
     setSendingEmail(true); setEmailError('');
     try {
-      const inviteLink = `${window.location.origin}/auth`;
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/invite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail, inviteLink }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ email: inviteEmail }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to send invite');

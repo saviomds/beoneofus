@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuth } from "../../../lib/requireAuth";
 
 function getSupabase() {
   return createClient(
@@ -9,10 +10,12 @@ function getSupabase() {
   );
 }
 
-// GET /api/pathways                      → list all published pathways
-// GET /api/pathways?id=uuid              → single pathway with stages
-// GET /api/pathways?userId=uuid          → user's enrolled pathways with progress
-// GET /api/pathways?leaderboard=true     → top completers (for leaderboard)
+// GET /api/pathways                      → list all published pathways (public)
+// GET /api/pathways?id=uuid              → single pathway with stages (public)
+// GET /api/pathways?userId=<any>         → the AUTHENTICATED caller's enrolments
+//                                          (requires Bearer token; id is taken
+//                                          from the token, not the query value)
+// GET /api/pathways?leaderboard=true     → top completers (public)
 export async function GET(req) {
   const supabase = getSupabase();
   const { searchParams } = new URL(req.url);
@@ -42,10 +45,13 @@ export async function GET(req) {
   }
 
   if (userId) {
+    // A user's enrollments are private — only the user themselves may read them.
+    const { user, error: authError, status } = await requireAuth(req);
+    if (authError) return NextResponse.json({ error: authError }, { status });
     const { data } = await supabase
       .from("user_pathways")
       .select("*, pathways(*)")
-      .eq("user_id", userId);
+      .eq("user_id", user.id);
     return NextResponse.json({ enrolled: data || [] });
   }
 
@@ -57,15 +63,17 @@ export async function GET(req) {
   return NextResponse.json({ pathways: data || [] });
 }
 
-// POST /api/pathways  body: { userId, pathwayId }  → enroll
-// POST /api/pathways  body: { userId, pathwayId, stageIndex }  → mark stage done
+// POST /api/pathways  body: { pathwayId }              → enroll (Bearer token)
+// POST /api/pathways  body: { pathwayId, stageIndex }  → mark stage done (Bearer token)
 export async function POST(req) {
   const supabase = getSupabase();
+  // Always derive the user id from the verified access token, never the body.
+  const { user, error: authError, status: authStatus } = await requireAuth(req);
+  if (authError) return NextResponse.json({ error: authError }, { status: authStatus });
+  const userId = user.id;
   const body = await req.json();
   const { pathwayId, stageIndex } = body;
-  // Always use the authenticated user ID from the middleware header, never the body
-  const userId = req.headers.get('x-user-id');
-  if (!userId || !pathwayId) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  if (!pathwayId) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
   if (stageIndex !== undefined) {
     // Mark stage complete
@@ -110,10 +118,12 @@ export async function POST(req) {
 // DELETE /api/pathways?userId=x&pathwayId=x → unenroll
 export async function DELETE(req) {
   const supabase = getSupabase();
+  const { user, error: authError, status } = await requireAuth(req);
+  if (authError) return NextResponse.json({ error: authError }, { status });
+  const userId = user.id;
   const { searchParams } = new URL(req.url);
-  const userId = searchParams.get("userId");
   const pathwayId = searchParams.get("pathwayId");
-  if (!userId || !pathwayId) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  if (!pathwayId) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   const { error } = await supabase
     .from("user_pathways")
     .delete()

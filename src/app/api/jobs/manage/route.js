@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { canCreateJob } from '../../../../lib/orgPermissions';
 
 function getSupabase(cookieStore) {
   return createServerClient(
@@ -82,6 +83,25 @@ export async function POST(request) {
 
     if (!title?.trim())   return NextResponse.json({ error: 'title is required' },   { status: 400 });
     if (!company?.trim()) return NextResponse.json({ error: 'company is required' }, { status: 400 });
+
+    // ── Posting cap (DB-driven via the centralized permission service) ───────
+    // The limit comes from subscription_plans (never hardcoded). Fails OPEN if
+    // the plan columns don't exist yet (org_subscriptions migration not applied),
+    // so job creation never breaks before the schema lands.
+    const { data: ownedOrgs, error: planErr } = await supabase
+      .from('organizations').select('plan, plan_expires_at').eq('owner_id', user.id);
+    if (!planErr) {
+      // If the owner has several orgs, evaluate against the strongest plan.
+      const rank = { scale: 3, growth: 2, enterprise: 4, free: 1 };
+      const org = (ownedOrgs || []).slice().sort((a, b) => (rank[b.plan] || 0) - (rank[a.plan] || 0))[0] || null;
+      const { count } = await supabase
+        .from('jobs').select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id).neq('status', 'closed');
+      const gate = await canCreateJob(org, count || 0);
+      if (!gate.allowed) {
+        return NextResponse.json({ error: gate.reason, code: 'plan_limit', limit: gate.limit }, { status: 403 });
+      }
+    }
 
     const { data, error } = await supabase
       .from('jobs')

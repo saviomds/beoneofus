@@ -12,6 +12,12 @@ import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
 import PremiumBadge from "../../components/PremiumBadge";
 import { getAvatarSrc } from "../../../lib/avatar";
+import { useLanguage } from "../../../lib/i18n";
+
+function wsLabel(v, t) {
+  if (!v) return "";
+  return t(`discover.ws.${String(v).toLowerCase().replace(/ /g, "_")}`);
+}
 
 const WORK_STATUS_STYLES = {
   "Open to work":    { bg: "bg-emerald-100 dark:bg-emerald-900/30", text: "text-emerald-700 dark:text-emerald-400", dot: "bg-emerald-500" },
@@ -22,15 +28,16 @@ const WORK_STATUS_STYLES = {
 };
 
 const ROLE_FILTERS = [
-  { id: "all",      label: "Everyone",   icon: Users    },
-  { id: "tech",     label: "Tech",       icon: Code2    },
-  { id: "design",   label: "Design",     icon: Palette  },
-  { id: "business", label: "Business",   icon: Briefcase },
-  { id: "ai",       label: "AI / ML",    icon: Brain    },
-  { id: "growth",   label: "Growth",     icon: TrendingUp },
+  { id: "all",      labelKey: "discover.roles.all",      icon: Users    },
+  { id: "tech",     labelKey: "discover.roles.tech",     icon: Code2    },
+  { id: "design",   labelKey: "discover.roles.design",   icon: Palette  },
+  { id: "business", labelKey: "discover.roles.business", icon: Briefcase },
+  { id: "ai",       labelKey: "discover.roles.ai",       icon: Brain    },
+  { id: "growth",   labelKey: "discover.roles.growth",   icon: TrendingUp },
 ];
 
 function UserCard({ user, connectionStatus, onConnect, onMessage, onView, processing }) {
+  const { t } = useLanguage();
   const statusStyle = WORK_STATUS_STYLES[user.work_status] || null;
   const initials = (user.full_name || user.username || "?").substring(0, 2).toUpperCase();
 
@@ -103,7 +110,7 @@ function UserCard({ user, connectionStatus, onConnect, onMessage, onView, proces
         {statusStyle && (
           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold mb-3 ${statusStyle.bg} ${statusStyle.text}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
-            {user.work_status}
+            {wsLabel(user.work_status, t)}
           </div>
         )}
 
@@ -116,17 +123,17 @@ function UserCard({ user, connectionStatus, onConnect, onMessage, onView, proces
               className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold py-2 rounded-xl transition-all disabled:opacity-50"
             >
               {processing === user.id ? <Loader2 size={12} className="animate-spin" /> : <UserPlus size={12} />}
-              Connect
+              {t("discover.connect")}
             </button>
           )}
           {connectionStatus === 'pending' && (
             <button disabled className="flex-1 flex items-center justify-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-xs font-bold py-2 rounded-xl border border-amber-200 dark:border-amber-800/40 opacity-70">
-              Pending
+              {t("discover.pending")}
             </button>
           )}
           {connectionStatus === 'accepted' && (
             <button disabled className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold py-2 rounded-xl border border-emerald-200 dark:border-emerald-800/40">
-              <CheckCircle2 size={12} /> Connected
+              <CheckCircle2 size={12} /> {t("discover.connected")}
             </button>
           )}
           <button
@@ -142,26 +149,28 @@ function UserCard({ user, connectionStatus, onConnect, onMessage, onView, proces
 }
 
 function EmptyState({ onReset }) {
+  const { t } = useLanguage();
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
       <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-4">
         <Compass size={28} className="text-blue-500" />
       </div>
-      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">No members found</h3>
+      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">{t("discover.no_members")}</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-xs">
-        Try adjusting your filters or search query.
+        {t("discover.no_members_hint")}
       </p>
       <button
         onClick={onReset}
         className="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
       >
-        <RefreshCw size={14} /> Reset filters
+        <RefreshCw size={14} /> {t("discover.reset_filters")}
       </button>
     </div>
   );
 }
 
 export default function DiscoverContent() {
+  const { t } = useLanguage();
   const [currentUserId, setCurrentUserId] = useState(null);
   const [users, setUsers] = useState([]);
   const [connections, setConnections] = useState([]);
@@ -217,16 +226,16 @@ export default function DiscoverContent() {
   }, [connections, currentUserId]);
 
   const handleConnect = async (userId) => {
-    if (!currentUserId) { showToast("Sign in to connect", "error"); return; }
+    if (!currentUserId) { showToast(t("discover.toast_signin"), "error"); return; }
     setProcessing(userId);
     const { error } = await supabase
       .from("connections")
       .insert({ sender_id: currentUserId, receiver_id: userId, status: "pending" });
     if (!error) {
       setConnections((prev) => [...prev, { sender_id: currentUserId, receiver_id: userId, status: "pending" }]);
-      showToast("Connection request sent!");
+      showToast(t("discover.toast_sent"));
     } else {
-      showToast("Something went wrong", "error");
+      showToast(t("discover.toast_error"), "error");
     }
     setProcessing(null);
   };
@@ -255,7 +264,7 @@ export default function DiscoverContent() {
           onClick={() => setSelectedUserId(null)}
           className="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline mb-4"
         >
-          ← Back to Discover
+          ← {t("discover.back")}
         </button>
         <ProfileContent viewUserId={selectedUserId} />
       </div>
@@ -271,8 +280,8 @@ export default function DiscoverContent() {
             <Compass size={18} className="text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Discover</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Find people to connect with</p>
+            <h1 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t("discover.title")}</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t("discover.subtitle")}</p>
           </div>
         </div>
       </div>
@@ -286,7 +295,7 @@ export default function DiscoverContent() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, skills, bio…"
+            placeholder={t("discover.search_ph")}
             className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
           />
         </div>
@@ -297,18 +306,18 @@ export default function DiscoverContent() {
           onChange={(e) => setWorkFilter(e.target.value)}
           className="px-3 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 transition-all"
         >
-          <option value="all">All statuses</option>
-          <option value="Open to work">Open to work</option>
-          <option value="Hiring">Hiring</option>
-          <option value="Freelancing">Freelancing</option>
-          <option value="Building">Building</option>
-          <option value="Student">Student</option>
+          <option value="all">{t("discover.all_statuses")}</option>
+          <option value="Open to work">{t("discover.ws.open_to_work")}</option>
+          <option value="Hiring">{t("discover.ws.hiring")}</option>
+          <option value="Freelancing">{t("discover.ws.freelancing")}</option>
+          <option value="Building">{t("discover.ws.building")}</option>
+          <option value="Student">{t("discover.ws.student")}</option>
         </select>
       </div>
 
       {/* Role filter chips */}
       <div className="flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
-        {ROLE_FILTERS.map(({ id, label, icon: Icon }) => (
+        {ROLE_FILTERS.map(({ id, labelKey, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setRoleFilter(id)}
@@ -319,7 +328,7 @@ export default function DiscoverContent() {
             }`}
           >
             <Icon size={11} />
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -328,13 +337,13 @@ export default function DiscoverContent() {
       {!loading && (
         <div className="flex items-center gap-2 mb-5 text-sm text-gray-500 dark:text-gray-400">
           <Users size={13} />
-          <span><strong className="text-gray-900 dark:text-gray-100">{filtered.length}</strong> members found</span>
+          <span><strong className="text-gray-900 dark:text-gray-100">{filtered.length}</strong> {t("discover.members_found")}</span>
           {(searchQuery || workFilter !== "all" || roleFilter !== "all") && (
             <button
               onClick={() => { setSearchQuery(""); setWorkFilter("all"); setRoleFilter("all"); }}
               className="ml-auto flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
             >
-              <X size={11} /> Clear filters
+              <X size={11} /> {t("discover.clear_filters")}
             </button>
           )}
         </div>

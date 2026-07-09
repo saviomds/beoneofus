@@ -206,7 +206,7 @@ export default function FounderDashboard() {
       return;
     }
     setActiveTab(tabId);
-  }, [isAdmin, protectedUnlocked]);
+  }, [protectedUnlocked]);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,6 +242,7 @@ export default function FounderDashboard() {
 
   // ── Auth & access check ────────────────────────────────────────────────────
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only locale date string; set after mount to avoid an SSR hydration mismatch
     setCurrentDate(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }));
 
     const checkAccess = async () => {
@@ -302,6 +303,7 @@ export default function FounderDashboard() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch overview stats when the tab activates
     if (hasAccess && activeTab === 'overview') fetchStats();
   }, [hasAccess, activeTab, fetchStats]);
 
@@ -317,6 +319,7 @@ export default function FounderDashboard() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch applications when the tab activates
     if (hasAccess && activeTab === 'applications') fetchApplications();
   }, [hasAccess, activeTab, fetchApplications]);
 
@@ -382,6 +385,7 @@ export default function FounderDashboard() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch users when the tab activates
     if (hasAccess && activeTab === 'users') fetchUsers();
   }, [hasAccess, activeTab, fetchUsers]);
 
@@ -428,8 +432,10 @@ export default function FounderDashboard() {
 
   useEffect(() => {
     if (hasAccess && (activeTab === 'tasks' || activeTab === 'overview')) {
+      /* eslint-disable react-hooks/set-state-in-effect -- load tasks (and users) when the tab activates */
       fetchTasks();
       if (allUsers.length === 0) fetchUsers();
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [hasAccess, activeTab, fetchTasks, fetchUsers, allUsers.length]);
 
@@ -493,6 +499,7 @@ export default function FounderDashboard() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch shop orders when the tab activates
     if (hasAccess && activeTab === 'orders') fetchShopOrders();
   }, [hasAccess, activeTab, fetchShopOrders]);
 
@@ -530,13 +537,16 @@ export default function FounderDashboard() {
 
   useEffect(() => {
     if (hasAccess && activeTab === 'contracts') {
+      /* eslint-disable react-hooks/set-state-in-effect -- load contracts (and users) when the tab activates */
       fetchContracts();
       if (allUsers.length === 0) fetchUsers();
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [hasAccess, activeTab, fetchContracts, fetchUsers, allUsers.length]);
 
   useEffect(() => {
     if (!hasAccess || activeTab !== 'platform') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load platform version when the tab activates
     setPvLoading(true);
     supabase.from('platform_settings').select('value').eq('key', 'platform_version').maybeSingle().then(({ data }) => {
       const v = data?.value ?? null;
@@ -598,6 +608,7 @@ export default function FounderDashboard() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- read persisted templates from localStorage on mount (client-only)
       try { setContractTemplates(JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]')); } catch {}
     }
   }, []);
@@ -725,7 +736,7 @@ export default function FounderDashboard() {
 
   // ── User management helpers ───────────────────────────────────────────────
   const isSuspicious = (u: any) => {
-    const days = (Date.now() - new Date(u.created_at).getTime()) / 86400000;
+    const days = (new Date().getTime() - new Date(u.created_at).getTime()) / 86400000;
     return days > 3 && !u.is_verified && !u.avatar_url;
   };
 
@@ -1372,7 +1383,7 @@ export default function FounderDashboard() {
                 ) : (
                   <div className="space-y-3 flex-1">
                     {upcomingTasks.map((t, idx) => {
-                      const daysLeft = Math.ceil((new Date(t.due_date).getTime() - Date.now()) / 86400000);
+                      const daysLeft = Math.ceil((new Date(t.due_date).getTime() - new Date().getTime()) / 86400000);
                       const colors = ['bg-blue-500', 'bg-violet-500', 'bg-[#FFB020]'];
                       return (
                         <div key={t.id} className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors">
@@ -1406,7 +1417,7 @@ export default function FounderDashboard() {
                 <div className="flex items-center justify-between mb-5">
                   <div>
                     <p className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Management</p>
-                    <h3 className="text-lg font-black text-gray-900 dark:text-white mt-0.5">Tasks I've Assigned</h3>
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white mt-0.5">Tasks I&apos;ve Assigned</h3>
                   </div>
                   <button onClick={() => handleTabClick('tasks')}
                     className="flex items-center gap-1.5 px-3 py-2 bg-gray-900 dark:bg-white hover:bg-gray-700 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-xl text-xs font-bold transition-all">
@@ -1677,7 +1688,7 @@ export default function FounderDashboard() {
                   const suspended  = user.status === 'suspended';
                   const isExpanded = expandedUserId === user.id;
                   const isActioning = userActionLoading === user.id;
-                  const daysSince = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000);
+                  const daysSince = Math.floor((new Date().getTime() - new Date(user.created_at).getTime()) / 86400000);
 
                   const ringColor = suspended ? '#ef4444' : suspicious ? '#f59e0b' : user.is_verified ? '#10b981' : '#e2e8f0';
                   const initGrad = user.is_admin
@@ -2613,7 +2624,7 @@ export default function FounderDashboard() {
                   {showTemplateList && (
                     <div className="absolute top-full left-0 mt-1 z-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl w-80 overflow-hidden">
                       {contractTemplates.length === 0 ? (
-                        <p className="p-4 text-xs text-gray-400 text-center">No templates saved yet. Fill the form and click "Save as Template".</p>
+                        <p className="p-4 text-xs text-gray-400 text-center">No templates saved yet. Fill the form and click &quot;Save as Template&quot;.</p>
                       ) : contractTemplates.map((t: any) => (
                         <div key={t.id} className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-0">
                           <div className="flex-1 min-w-0 cursor-pointer" onClick={() => applyTemplate(t)}>

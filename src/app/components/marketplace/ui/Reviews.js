@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { MessageSquare, Star } from "lucide-react";
 import { cn } from "./lib";
 import Rating from "./Rating";
@@ -33,7 +34,7 @@ export default function Reviews({ reviews = [], className = "" }) {
           {reviews.map((r) => (
             <li key={r.id} className="flex gap-3 py-4 first:pt-0 last:pb-0">
               {r.avatar ? (
-                <img src={r.avatar} alt="" className="h-9 w-9 rounded-full object-cover" />
+                <Image src={r.avatar} alt="" width={36} height={36} className="h-9 w-9 rounded-full object-cover" unoptimized />
               ) : (
                 <span className="grid h-9 w-9 place-items-center rounded-full bg-mkt-primary/20 text-sm font-bold text-mkt-text">{(r.author || "?")[0]}</span>
               )}

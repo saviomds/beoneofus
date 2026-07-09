@@ -8,6 +8,7 @@ import {
   FileText, Check, AlertCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -300,7 +301,7 @@ export default function AiFloatingChat() {
           >
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl overflow-hidden border border-white/15 shrink-0 shadow-md">
-                <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />
+                <Image src="/ai.gif" alt="AI" width={32} height={32} unoptimized className="w-full h-full object-cover" />
               </div>
               <div>
                 <p className="text-xs font-black text-white tracking-tight">beoneofus AI</p>
@@ -350,7 +351,7 @@ export default function AiFloatingChat() {
                     }`}>
                       {msg.role === "user"
                         ? <User size={11} className="text-white" />
-                        : <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />
+                        : <Image src="/ai.gif" alt="AI" width={24} height={24} unoptimized className="w-full h-full object-cover" />
                       }
                     </div>
 
@@ -361,8 +362,8 @@ export default function AiFloatingChat() {
                       {msg.attachments?.map((a, ai) => (
                         <div key={ai}>
                           {a.type === "image" && (
-                            <img src={a.url} alt={a.name}
-                              className="max-w-[180px] max-h-[140px] rounded-xl object-cover border border-white/10 shadow-lg" />
+                            <Image src={a.url} alt={a.name} width={180} height={140} unoptimized
+                              className="max-w-[180px] max-h-[140px] w-auto h-auto rounded-xl object-cover border border-white/10 shadow-lg" />
                           )}
                           {a.type === "file" && (
                             <div className="flex items-center gap-1.5 bg-white/[0.06] border border-white/[0.08] rounded-lg px-2.5 py-1.5">
@@ -400,7 +401,7 @@ export default function AiFloatingChat() {
                 {loading && (
                   <div className="flex gap-2">
                     <div className="w-6 h-6 rounded-full overflow-hidden border border-white/10 shrink-0">
-                      <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />
+                      <Image src="/ai.gif" alt="AI" width={24} height={24} unoptimized className="w-full h-full object-cover" />
                     </div>
                     <div className="bg-white/[0.07] border border-white/[0.07] rounded-xl rounded-tl-sm px-3 py-2.5 flex items-center gap-1.5">
                       {[0, 150, 300].map(d => (
@@ -424,7 +425,7 @@ export default function AiFloatingChat() {
                 <div key={a.id} className="relative group">
                   {a.type === "image" ? (
                     <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/10 shrink-0">
-                      <img src={a.url} alt={a.name} className="w-full h-full object-cover" />
+                      <Image src={a.url} alt={a.name} width={48} height={48} unoptimized className="w-full h-full object-cover" />
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 bg-white/[0.06] border border-white/[0.08] rounded-lg px-2.5 py-1.5 max-w-[140px]">
@@ -524,7 +525,7 @@ export default function AiFloatingChat() {
           }`}
           aria-label="Toggle AI assistant"
         >
-          <img src="/ai.gif" alt="beoneofus AI" className="w-full h-full object-cover" />
+          <Image src="/ai.gif" alt="beoneofus AI" width={52} height={52} unoptimized className="w-full h-full object-cover" />
           {open && (
             <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
               <X size={18} className="text-white" />

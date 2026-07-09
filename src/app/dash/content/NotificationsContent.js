@@ -10,8 +10,10 @@ import {
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import { useDashboard } from "./DashboardContext";
+import { useLanguage } from '../../../lib/i18n';
 
 export default function NotificationsContent() {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -81,7 +83,7 @@ export default function NotificationsContent() {
 
     // 2. Route to origin section based on your DashboardContext
     if (notif.link) {
-      window.location.href = notif.link; // Fallback for external links
+      window.location.assign(notif.link); // Fallback for external links
       return;
     }
 
@@ -111,6 +113,8 @@ export default function NotificationsContent() {
         break; // no navigation — just mark read and stay
       case 'partnership_update':
         router.push('/dash/partnerships'); break;
+      case 'verification_request':
+        router.push('/admin/verification'); break;
       default: break;
     }
   };
@@ -191,9 +195,9 @@ export default function NotificationsContent() {
             className={isInternal ? "inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ml-2 no-underline not-italic align-middle" : "text-blue-600 dark:text-blue-400 hover:underline font-bold"}
           >
             {isInternal ? (
-              part === '/member/application' ? <><UserPlus size={14} /> Apply Now</> : 
-              part.includes('dashboard') ? <><Briefcase size={14} /> Open Workspace</> : 
-              'View Link'
+              part === '/member/application' ? <><UserPlus size={14} /> {t('notifications.apply_now')}</> :
+              part.includes('dashboard') ? <><Briefcase size={14} /> {t('notifications.open_workspace')}</> :
+              t('notifications.view_link')
             ) : part}
           </a>
         );
@@ -272,6 +276,7 @@ export default function NotificationsContent() {
       case 'group_join_request': return <Users size={14} className="text-blue-500" />;
       case 'connection_request': return <UserPlus size={14} className="text-blue-500" />;
       case 'partnership_update': return <Handshake size={14} className="text-indigo-500" />;
+      case 'verification_request': return <ShieldCheck size={14} className="text-trust-500" />;
       default: return <Zap size={14} className="text-amber-500" />;
     }
   };
@@ -280,20 +285,20 @@ export default function NotificationsContent() {
     const date = new Date(dateString);
     const diffInSeconds = Math.floor((new Date() - date) / 1000);
     
-    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 60) return t('notifications.just_now');
     const minutes = Math.floor(diffInSeconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 60) return t('notifications.minutes_ago', { n: minutes });
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return t('notifications.hours_ago', { n: hours });
     const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d ago`;
+    if (days < 7) return t('notifications.days_ago', { n: days });
     return date.toLocaleDateString();
   };
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center p-20">
       <Zap className="text-blue-500 dark:text-blue-400 animate-pulse mb-4" size={32} />
-      <p className="text-gray-500 dark:text-gray-400 font-black text-xs uppercase tracking-[0.2em]">Syncing Terminal...</p>
+      <p className="text-gray-500 dark:text-gray-400 font-black text-xs uppercase tracking-[0.2em]">{t('notifications.syncing')}</p>
     </div>
   );
 
@@ -305,12 +310,12 @@ export default function NotificationsContent() {
         <div>
           <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter flex items-center gap-3">
             <Bell size={28} className="text-blue-500 dark:text-blue-400" />
-            Notifications
+            {t('notifications.title')}
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">Monitor your incoming alerts and network handshakes.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">{t('notifications.subtitle')}</p>
         </div>
         <button onClick={markAllRead} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800/50 px-4 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm">
-          <Check size={16} /> Mark all read
+          <Check size={16} /> {t('notifications.mark_all_read')}
         </button>
       </div>
 
@@ -351,17 +356,17 @@ export default function NotificationsContent() {
               <div className="flex-1 min-w-0 z-10 pt-1">
                 <div className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
                   <span className="font-bold text-gray-900 dark:text-gray-100 mr-1 inline-flex items-center gap-1 align-bottom">
-                    @{notif.actor?.username || 'System'}
+                    @{notif.actor?.username || t('notifications.system')}
                     {notif.actor?.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
                   </span> 
-                  {notif.type === 'like' && 'liked your post.'}
-                {notif.type === 'message' && <>sent you a message: <span className="text-gray-700 dark:text-gray-300 italic">{renderWithLinks(displayContent)}</span></>}
-                {notif.type === 'comment' && <>replied: <span className="text-gray-700 dark:text-gray-300 italic">{renderWithLinks(notif.content)}</span></>}
-                  {notif.type === 'handshake' && 'accepted your connection request.'}
-                  {notif.type === 'connection_request' && 'sent you a connection request.'}
-                  {notif.type === 'blocked' && 'severed the connection.'}
-                  {notif.type === 'group_join_request' && <>requested to join <span className="font-bold text-gray-900 dark:text-gray-100">{displayContent}</span>.</>}
-                  {notif.type === 'group_invite' && <>granted you access to <span className="font-bold text-gray-900 dark:text-gray-100">{displayContent}</span>.</>}
+                  {notif.type === 'like' && t('notifications.liked_post')}
+                {notif.type === 'message' && <>{t('notifications.sent_message')} <span className="text-gray-700 dark:text-gray-300 italic">{renderWithLinks(displayContent)}</span></>}
+                {notif.type === 'comment' && <>{t('notifications.replied')} <span className="text-gray-700 dark:text-gray-300 italic">{renderWithLinks(notif.content)}</span></>}
+                  {notif.type === 'handshake' && t('notifications.accepted_connection')}
+                  {notif.type === 'connection_request' && t('notifications.sent_connection')}
+                  {notif.type === 'blocked' && t('notifications.severed_connection')}
+                  {notif.type === 'group_join_request' && <>{t('notifications.requested_join')} <span className="font-bold text-gray-900 dark:text-gray-100">{displayContent}</span>.</>}
+                  {notif.type === 'group_invite' && <>{t('notifications.granted_access')} <span className="font-bold text-gray-900 dark:text-gray-100">{displayContent}</span>.</>}
                   {notif.type === 'partnership_update' && <>{renderWithLinks(displayContent)}</>}
                 {!['like', 'comment', 'message', 'handshake', 'connection_request', 'blocked', 'unblocked', 'group_invite', 'group_join_request', 'partnership_update'].includes(notif.type) && renderWithLinks(displayContent)}
                 </div>
@@ -382,13 +387,13 @@ export default function NotificationsContent() {
                       onClick={(e) => handleAcceptConnection(e, notif)}
                       className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
                     >
-                      Accept
+                      {t('notifications.accept')}
                     </button>
                     <button 
                       onClick={(e) => handleDeclineConnection(e, notif)}
                       className="bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-gray-200 dark:border-gray-700"
                     >
-                      Decline
+                      {t('notifications.decline')}
                     </button>
                   </div>
                 )}
@@ -400,13 +405,13 @@ export default function NotificationsContent() {
                       onClick={(e) => handleAcceptGroupJoin(e, notif, groupId, displayContent)}
                       className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
                     >
-                      Approve
+                      {t('notifications.approve')}
                     </button>
                     <button 
                       onClick={(e) => handleDeclineGroupJoin(e, notif)}
                       className="bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors border border-gray-200 dark:border-gray-700"
                     >
-                      Deny
+                      {t('notifications.deny')}
                     </button>
                   </div>
                 )}
@@ -423,8 +428,8 @@ export default function NotificationsContent() {
             <div className="w-20 h-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-full flex items-center justify-center mb-6 shadow-sm">
               <Bell size={40} className="text-gray-400 dark:text-gray-500" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">No notifications yet</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm text-center max-w-sm">When you get network updates, handshakes, or messages, they will appear here.</p>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">{t('notifications.no_notifications')}</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm text-center max-w-sm">{t('notifications.no_notifications_desc')}</p>
           </div>
         )}
       </div>

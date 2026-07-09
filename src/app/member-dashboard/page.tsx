@@ -9,6 +9,7 @@ import {
   ChevronRight, Zap, Hash, Inbox, Shield, Filter, Play, Pause, Square,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '../supabaseClient';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -80,7 +81,11 @@ export default function MemberDashboard() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); return () => setMounted(false); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount guard: flips after mount to gate client-only rendering
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [isAuthenticated, setIsAuthenticated] = useState(() =>
@@ -386,10 +391,10 @@ export default function MemberDashboard() {
 
           <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-white font-black text-xl shrink-0"
+              <div className="relative w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-white font-black text-xl shrink-0"
                 style={{ background: 'rgba(255,255,255,0.12)', border: '2px solid rgba(255,255,255,0.15)' }}>
                 {avatarUrl
-                  ? <img src={avatarUrl} alt={username} className="w-full h-full object-cover" />
+                  ? <Image src={avatarUrl} alt={username} fill unoptimized className="object-cover" />
                   : username.slice(0, 2).toUpperCase()}
               </div>
               <div>
@@ -734,9 +739,9 @@ export default function MemberDashboard() {
                             )}
                             {task.assigner && (
                               <div className="flex items-center gap-1">
-                                <div className="w-4 h-4 rounded-full overflow-hidden bg-gradient-to-br from-indigo-400 to-violet-500 shrink-0 flex items-center justify-center text-[7px] font-black text-white">
+                                <div className="relative w-4 h-4 rounded-full overflow-hidden bg-gradient-to-br from-indigo-400 to-violet-500 shrink-0 flex items-center justify-center text-[7px] font-black text-white">
                                   {task.assigner.avatar_url
-                                    ? <img src={task.assigner.avatar_url} alt="" className="w-full h-full object-cover" />
+                                    ? <Image src={task.assigner.avatar_url} alt="" fill unoptimized className="object-cover" />
                                     : task.assigner.username?.slice(0, 2).toUpperCase()}
                                 </div>
                                 <span className="text-[10px] text-gray-400 font-medium">@{task.assigner.username}</span>

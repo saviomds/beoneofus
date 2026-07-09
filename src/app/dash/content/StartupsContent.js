@@ -178,14 +178,14 @@ function StartupDetail({ startup, session, onBack }) {
             <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
             <div>
               <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">Request Sent!</p>
-              <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">The founder will reach out if there's a match.</p>
+              <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">The founder will reach out if there&apos;s a match.</p>
             </div>
           </div>
         ) : showApply ? (
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-4">
             <p className="text-sm font-black text-gray-900 dark:text-gray-100">Express Your Interest</p>
             <div>
-              <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">Role You're Applying For</label>
+              <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">Role You&apos;re Applying For</label>
               <select value={role} onChange={e => setRole(e.target.value)} className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all">
                 <option value="">Select a role...</option>
                 {startup.roles_needed?.map(r => <option key={r} value={r}>{r}</option>)}
@@ -258,7 +258,7 @@ function CreateStartupModal({ token, onClose, onCreated }) {
             <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} placeholder="Briefly describe what you're building..." className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none transition-all" />
           </div>
           <div>
-            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">Problem You're Solving</label>
+            <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">Problem You&apos;re Solving</label>
             <textarea value={form.problem} onChange={e => setForm(p => ({ ...p, problem: e.target.value }))} rows={2} placeholder="What problem does this solve?" className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none transition-all" />
           </div>
           <div>
@@ -338,9 +338,14 @@ export default function StartupsContent() {
     supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); fetchStartups(stage, search); });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
     return () => subscription.unsubscribe();
+    // Mount-only: subscribes the auth listener once. Adding stage/search would re-subscribe it on every change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { setLoading(true); fetchStartups(stage, search); }, [stage]);
+  // Refetch when stage changes. search is applied on Enter/refresh (not per-keystroke) and
+  // fetchStartups is stable (useCallback []), so both are intentionally omitted from deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { (() => { setLoading(true); fetchStartups(stage, search); })(); }, [stage]);
 
   if (selected) {
     return (

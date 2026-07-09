@@ -8,6 +8,7 @@ import { Map, CheckCircle2, Circle, ChevronRight, Loader2, Zap,
   BarChart3, Brain, Search,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
 
 const CATEGORY_ICONS = {
   tech: Code2,
@@ -26,6 +27,7 @@ const LEVEL_COLORS = {
 
 // ── Gap Analysis panel ─────────────────────────────────────────────────────
 function GapAnalysisPanel({ token }) {
+  const { t } = useLanguage();
   const [targetRole, setTargetRole] = useState("");
   const [jobDesc, setJobDesc] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,7 +46,7 @@ function GapAnalysisPanel({ token }) {
         body: JSON.stringify({ targetRole: targetRole.trim(), jobDescription: jobDesc.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Analysis failed");
+      if (!res.ok) throw new Error(data.error || t('pathways.gap.analysisFailed'));
       setResult(data.gap);
       setExpanded(true);
     } catch (e) {
@@ -57,7 +59,7 @@ function GapAnalysisPanel({ token }) {
   const scoreColor = (s) =>
     s >= 70 ? "text-emerald-500" : s >= 40 ? "text-amber-500" : "text-red-500";
   const scoreLabel = (s) =>
-    s >= 70 ? "Strong Match" : s >= 40 ? "Developing" : "Large Gap";
+    s >= 70 ? t('pathways.gap.strongMatch') : s >= 40 ? t('pathways.gap.developing') : t('pathways.gap.largeGap');
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
@@ -70,8 +72,8 @@ function GapAnalysisPanel({ token }) {
             <Brain size={16} className="text-violet-500" />
           </div>
           <div className="text-left">
-            <p className="font-black text-gray-900 dark:text-white text-sm">AI Skill Gap Analysis</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Paste a job description — see exactly what you need</p>
+            <p className="font-black text-gray-900 dark:text-white text-sm">{t('pathways.gap.title')}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('pathways.gap.subtitle')}</p>
           </div>
         </div>
         {expanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
@@ -81,20 +83,20 @@ function GapAnalysisPanel({ token }) {
         <div className="px-5 pb-5 space-y-4 border-t border-gray-100 dark:border-gray-800 pt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Target Role</label>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">{t('pathways.gap.targetRole')}</label>
               <input
                 value={targetRole}
                 onChange={e => setTargetRole(e.target.value)}
-                placeholder="e.g. Senior Product Manager"
+                placeholder={t('pathways.gap.targetRolePlaceholder')}
                 className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
               />
             </div>
             <div>
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Job Description (optional)</label>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">{t('pathways.gap.jobDesc')}</label>
               <textarea
                 value={jobDesc}
                 onChange={e => setJobDesc(e.target.value)}
-                placeholder="Paste the JD here for a precise analysis…"
+                placeholder={t('pathways.gap.jobDescPlaceholder')}
                 rows={2}
                 className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 resize-none"
               />
@@ -106,7 +108,7 @@ function GapAnalysisPanel({ token }) {
             className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-violet-500/20 active:scale-95"
           >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-            {loading ? "Analyzing…" : "Analyze My Gap"}
+            {loading ? t('pathways.gap.analyzing') : t('pathways.gap.analyze')}
           </button>
 
           {error && (
@@ -134,7 +136,7 @@ function GapAnalysisPanel({ token }) {
                 {result.have?.length > 0 && (
                   <div>
                     <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2 flex items-center gap-1">
-                      <Check size={10} /> You Have ({result.have.length})
+                      <Check size={10} /> {t('pathways.gap.youHave', { n: result.have.length })}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {result.have.map(s => (
@@ -150,7 +152,7 @@ function GapAnalysisPanel({ token }) {
                 {result.weak?.length > 0 && (
                   <div>
                     <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2 flex items-center gap-1">
-                      <AlertCircle size={10} /> Needs Deepening ({result.weak.length})
+                      <AlertCircle size={10} /> {t('pathways.gap.needsDeepening', { n: result.weak.length })}
                     </p>
                     <div className="space-y-1.5">
                       {result.weak.map(w => (
@@ -167,7 +169,7 @@ function GapAnalysisPanel({ token }) {
                 {result.missing?.length > 0 && (
                   <div>
                     <p className="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest mb-2 flex items-center gap-1">
-                      <X size={10} /> Missing ({result.missing.length})
+                      <X size={10} /> {t('pathways.gap.missingCount', { n: result.missing.length })}
                     </p>
                     <div className="space-y-1.5">
                       {result.missing.map(m => (
@@ -203,6 +205,7 @@ function GapAnalysisPanel({ token }) {
 
 // ── Pathway Card ───────────────────────────────────────────────────────────
 function PathwayCard({ pathway, progress, onEnroll, onOpen, enrolling }) {
+  const { t } = useLanguage();
   const CatIcon = CATEGORY_ICONS[pathway.category?.toLowerCase()] || CATEGORY_ICONS.default;
   const stages = pathway.stages || [];
   const completedCount = progress?.completed_stages?.length || 0;
@@ -227,11 +230,11 @@ function PathwayCard({ pathway, progress, onEnroll, onOpen, enrolling }) {
         </div>
         {isDone ? (
           <span className="shrink-0 flex items-center gap-1 text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-xl border border-emerald-200 dark:border-emerald-800/30">
-            <Award size={10} /> Done
+            <Award size={10} /> {t('pathways.card.done')}
           </span>
         ) : isEnrolled ? (
           <span className="shrink-0 text-[10px] font-black text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-xl border border-blue-200 dark:border-blue-800/30">
-            Enrolled
+            {t('pathways.card.enrolled')}
           </span>
         ) : null}
       </div>
@@ -247,11 +250,11 @@ function PathwayCard({ pathway, progress, onEnroll, onOpen, enrolling }) {
           </span>
         )}
         <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
-          <BookOpen size={10} /> {stages.length} stages
+          <BookOpen size={10} /> {t('pathways.card.stages', { n: stages.length })}
         </span>
         {pathway.estimated_weeks && (
           <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
-            <Target size={10} /> ~{pathway.estimated_weeks}w
+            <Target size={10} /> {t('pathways.card.weeks', { n: pathway.estimated_weeks })}
           </span>
         )}
       </div>
@@ -259,7 +262,7 @@ function PathwayCard({ pathway, progress, onEnroll, onOpen, enrolling }) {
       {isEnrolled && !isDone && (
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-[10px] text-gray-400 font-bold">{pct}% complete</p>
+            <p className="text-[10px] text-gray-400 font-bold">{t('pathways.card.percentComplete', { n: pct })}</p>
             <p className="text-[10px] text-gray-400">{completedCount}/{stages.length}</p>
           </div>
           <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
@@ -278,7 +281,7 @@ function PathwayCard({ pathway, progress, onEnroll, onOpen, enrolling }) {
           className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95 mt-auto"
         >
           {enrolling === pathway.id ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
-          Start Pathway
+          {t('pathways.card.startPathway')}
         </button>
       )}
     </div>
@@ -287,6 +290,7 @@ function PathwayCard({ pathway, progress, onEnroll, onOpen, enrolling }) {
 
 // ── Pathway Detail (stage-by-stage view) ──────────────────────────────────
 function PathwayDetail({ pathway, progress, userId, onClose, onStageComplete }) {
+  const { t } = useLanguage();
   const stages = pathway.stages || [];
   const completed = progress?.completed_stages || [];
   const [completing, setCompleting] = useState(null);
@@ -324,7 +328,7 @@ function PathwayDetail({ pathway, progress, userId, onClose, onStageComplete }) 
           <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-xs font-bold text-gray-600 dark:text-gray-400">
-                {completed.length}/{stages.length} stages complete
+                {t('pathways.detail.stagesComplete', { done: completed.length, total: stages.length })}
               </p>
               <p className="text-xs font-black text-blue-600 dark:text-blue-400">
                 {Math.round((completed.length / stages.length) * 100)}%
@@ -388,7 +392,7 @@ function PathwayDetail({ pathway, progress, userId, onClose, onStageComplete }) 
                       {stage.project_prompt && (
                         <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-2 flex items-start gap-1.5">
                           <Target size={11} className="shrink-0 mt-0.5" />
-                          <span><strong>Project:</strong> {stage.project_prompt}</span>
+                          <span><strong>{t('pathways.detail.project')}</strong> {stage.project_prompt}</span>
                         </p>
                       )}
                     </div>
@@ -401,7 +405,7 @@ function PathwayDetail({ pathway, progress, userId, onClose, onStageComplete }) 
                       className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95"
                     >
                       {completing === idx ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
-                      Mark Done
+                      {t('pathways.detail.markDone')}
                     </button>
                   )}
                   {isDone && (
@@ -418,7 +422,7 @@ function PathwayDetail({ pathway, progress, userId, onClose, onStageComplete }) 
 
         {!progress && (
           <div className="p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-            <p className="text-xs text-gray-500 text-center">Enroll from the pathways list to start tracking your progress.</p>
+            <p className="text-xs text-gray-500 text-center">{t('pathways.detail.enrollHint')}</p>
           </div>
         )}
       </div>
@@ -428,6 +432,7 @@ function PathwayDetail({ pathway, progress, userId, onClose, onStageComplete }) 
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function PathwaysContent() {
+  const { t } = useLanguage();
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [pathways, setPathways] = useState([]);
@@ -444,10 +449,12 @@ export default function PathwaysContent() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const load = useCallback(async (uid) => {
+  const load = useCallback(async (accessToken) => {
     const [pathRes, enrollRes] = await Promise.all([
       fetch("/api/pathways").then(r => r.json()),
-      uid ? fetch(`/api/pathways?userId=${uid}`).then(r => r.json()) : Promise.resolve({ enrolled: [] }),
+      accessToken
+        ? fetch(`/api/pathways?userId=me`, { headers: { Authorization: `Bearer ${accessToken}` } }).then(r => r.json())
+        : Promise.resolve({ enrolled: [] }),
     ]);
     setPathways(pathRes.pathways || []);
     const map = {};
@@ -461,7 +468,7 @@ export default function PathwaysContent() {
       if (session?.user) {
         setUser(session.user);
         setToken(session.access_token);
-        await load(session.user.id);
+        await load(session.access_token);
       } else {
         await load(null);
       }
@@ -471,18 +478,18 @@ export default function PathwaysContent() {
   }, [load]);
 
   const handleEnroll = async (pathwayId) => {
-    if (!user) return showToast("Sign in to enroll in pathways", "error");
+    if (!user) return showToast(t('pathways.toast.signIn'), "error");
     setEnrolling(pathwayId);
     try {
       const res = await fetch("/api/pathways", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, pathwayId }),
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ pathwayId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setEnrolled(prev => ({ ...prev, [pathwayId]: data.enrolled }));
-      showToast("Enrolled! Your progress is now tracked.");
+      showToast(t('pathways.toast.enrolled'));
     } catch (e) {
       showToast(e.message, "error");
     } finally {
@@ -494,14 +501,14 @@ export default function PathwaysContent() {
     if (!user) return;
     const res = await fetch("/api/pathways", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, pathwayId, stageIndex }),
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ pathwayId, stageIndex }),
     });
     const data = await res.json();
     if (res.ok) {
       setEnrolled(prev => ({ ...prev, [pathwayId]: data.progress }));
-      if (data.completed) showToast("Pathway complete! You did it.", "success");
-      else showToast("Stage marked done! Keep going.", "success");
+      if (data.completed) showToast(t('pathways.toast.pathwayComplete'), "success");
+      else showToast(t('pathways.toast.stageDone'), "success");
     }
   };
 
@@ -550,9 +557,9 @@ export default function PathwaysContent() {
             <Map size={26} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Career Pathways</h1>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{t('pathways.hero.title')}</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mt-0.5">
-              Structured roadmaps to reach your target role — step by step.
+              {t('pathways.hero.subtitle')}
             </p>
           </div>
         </div>
@@ -564,7 +571,7 @@ export default function PathwaysContent() {
       {/* My enrolled pathways summary */}
       {myPathways.length > 0 && (
         <div>
-          <h2 className="font-black text-xs uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Your Pathways</h2>
+          <h2 className="font-black text-xs uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">{t('pathways.section.yourPathways')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {myPathways.map(p => (
               <PathwayCard
@@ -584,7 +591,7 @@ export default function PathwaysContent() {
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 className="font-black text-xs uppercase tracking-widest text-gray-400 dark:text-gray-500">
-            {myPathways.length > 0 ? "Explore More" : "Browse Pathways"}
+            {myPathways.length > 0 ? t('pathways.section.exploreMore') : t('pathways.section.browse')}
           </h2>
           {/* Search */}
           <div className="relative sm:w-56">
@@ -592,7 +599,7 @@ export default function PathwaysContent() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search pathways…"
+              placeholder={t('pathways.search.placeholder')}
               className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             />
           </div>
@@ -610,7 +617,7 @@ export default function PathwaysContent() {
                   : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
             >
-              {cat}
+              {cat === "all" ? t('pathways.filterAll') : cat}
             </button>
           ))}
         </div>
@@ -618,8 +625,8 @@ export default function PathwaysContent() {
         {visible.length === 0 ? (
           <div className="py-16 text-center border border-dashed border-gray-200 dark:border-gray-700 rounded-3xl text-gray-400 dark:text-gray-600">
             <Map size={32} className="mx-auto mb-3" />
-            <p className="font-bold text-sm">No pathways yet</p>
-            <p className="text-xs mt-1">Pathways will appear here once published by the admin.</p>
+            <p className="font-bold text-sm">{t('pathways.empty.title')}</p>
+            <p className="text-xs mt-1">{t('pathways.empty.desc')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -99,7 +99,7 @@ export default function DashSection() {
   // in a client component (can cause hydration issues)
   useEffect(() => {
     if (section && !contentMap[section]) router.replace('/dash/home');
-  }, [section]);
+  }, [section, router]);
   if (!Content) return <TabSkeleton />;
 
   /* messages takes full height without page-level padding */

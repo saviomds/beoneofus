@@ -10,6 +10,15 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import VerifiedBadge from '../../components/VerifiedBadge';
+import { useLanguage } from '../../../lib/i18n';
+
+/* Premium-gate feature bullet keys (resolved with t() in render) */
+const GATE_FEATURE_KEYS = [
+  'gate_feature_1',
+  'gate_feature_2',
+  'gate_feature_3',
+  'gate_feature_4',
+];
 
 /* ── Mini bar chart ─────────────────────────────────────── */
 function MiniBarChart({ data }) {
@@ -62,14 +71,15 @@ function StatCard({ icon: Icon, label, value, sub, color = 'blue', trend }) {
 
 /* ── Viewer row ──────────────────────────────────────────── */
 function ViewerRow({ viewer }) {
+  const { t } = useLanguage();
   const initial = (viewer.username?.[0] || '?').toUpperCase();
   const colors  = ['bg-blue-500','bg-violet-500','bg-emerald-500','bg-amber-500','bg-rose-500'];
   const color   = colors[initial.charCodeAt(0) % colors.length];
   const timeAgo = (dt) => {
-    const diff = Date.now() - new Date(dt).getTime();
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    return `${Math.floor(diff / 86400000)}d ago`;
+    const diff = new Date().getTime() - new Date(dt).getTime();
+    if (diff < 3600000) return t('analytics.time_minutes', { n: Math.floor(diff / 60000) });
+    if (diff < 86400000) return t('analytics.time_hours', { n: Math.floor(diff / 3600000) });
+    return t('analytics.time_days', { n: Math.floor(diff / 86400000) });
   };
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
@@ -80,10 +90,10 @@ function ViewerRow({ viewer }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1">
-          <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">@{viewer.username || 'Anonymous'}</p>
+          <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">@{viewer.username || t('analytics.anonymous')}</p>
           {viewer.is_verified && <VerifiedBadge size={10} />}
         </div>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 capitalize">{viewer.role || 'member'}</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 capitalize">{viewer.role || t('analytics.role_member')}</p>
       </div>
       <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">{timeAgo(viewer.viewed_at)}</span>
     </div>
@@ -92,27 +102,23 @@ function ViewerRow({ viewer }) {
 
 /* ── Premium gate overlay ────────────────────────────────── */
 function PremiumGate({ onUpgrade }) {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
       <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-amber-200 dark:shadow-amber-900/30">
         <Crown size={28} className="text-white" />
       </div>
-      <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-2">Analytics is Premium</h2>
+      <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-2">{t('analytics.gate_title')}</h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-xs leading-relaxed">
-        See who viewed your profile, track growth over time, and unlock actionable career insights.
+        {t('analytics.gate_desc')}
       </p>
       <div className="space-y-2.5 text-left w-full max-w-xs mb-7">
-        {[
-          'Who viewed your profile (with names)',
-          'Daily view chart — last 7 days',
-          'Total views & 30-day trends',
-          'Network growth stats',
-        ].map(f => (
-          <div key={f} className="flex items-center gap-2">
+        {GATE_FEATURE_KEYS.map(k => (
+          <div key={k} className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
               <Sparkles size={8} />
             </div>
-            <span className="text-xs text-gray-600 dark:text-gray-400">{f}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{t(`analytics.${k}`)}</span>
           </div>
         ))}
       </div>
@@ -120,7 +126,7 @@ function PremiumGate({ onUpgrade }) {
         onClick={onUpgrade}
         className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white text-sm font-black px-6 py-3 rounded-xl shadow-md shadow-amber-200 dark:shadow-amber-900/30 transition-all active:scale-95"
       >
-        <Crown size={15} /> Upgrade to Premium
+        <Crown size={15} /> {t('analytics.gate_upgrade')}
       </button>
     </div>
   );
@@ -129,6 +135,7 @@ function PremiumGate({ onUpgrade }) {
 /* ── Main component ──────────────────────────────────────── */
 export default function AnalyticsContent() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [loading, setLoading]         = useState(true);
   const [refreshing, setRefreshing]   = useState(false);
   const [analytics, setAnalytics]     = useState(null);
@@ -150,20 +157,23 @@ export default function AnalyticsContent() {
       if (res.status === 403 && data.premium_required) {
         setIsPremium(false);
       } else if (!res.ok) {
-        setError(data.error || 'Failed to load analytics');
+        setError(data.error || '__load_failed__');
       } else {
         setAnalytics(data);
         setIsPremium(true);
       }
     } catch {
-      setError('Network error — check connection');
+      setError('__network_error__');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [router]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const init = () => { load(); };
+    init();
+  }, [load]);
 
   if (loading) {
     return (
@@ -182,10 +192,14 @@ export default function AnalyticsContent() {
   }
 
   if (error) {
+    const errorMsg =
+      error === '__load_failed__'   ? t('analytics.error_load')
+      : error === '__network_error__' ? t('analytics.error_network')
+      : error;
     return (
       <div className="flex flex-col items-center py-16 gap-4 text-center">
-        <p className="text-sm text-gray-500 dark:text-gray-400">{error}</p>
-        <button onClick={() => load()} className="text-xs font-bold text-blue-500 hover:underline">Retry</button>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{errorMsg}</p>
+        <button onClick={() => load()} className="text-xs font-bold text-blue-500 hover:underline">{t('analytics.retry')}</button>
       </div>
     );
   }
@@ -198,8 +212,8 @@ export default function AnalyticsContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[3px] text-gray-400 dark:text-gray-500">Career</p>
-          <h1 className="text-xl font-black text-gray-900 dark:text-gray-100">Analytics</h1>
+          <p className="text-[10px] font-black uppercase tracking-[3px] text-gray-400 dark:text-gray-500">{t('analytics.career')}</p>
+          <h1 className="text-xl font-black text-gray-900 dark:text-gray-100">{t('analytics.title')}</h1>
         </div>
         <button
           onClick={() => load(true)}
@@ -207,16 +221,16 @@ export default function AnalyticsContent() {
           className="flex items-center gap-2 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all"
         >
           <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
-          Refresh
+          {t('analytics.refresh')}
         </button>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard icon={Eye}     label="Total Views"    value={a.total_views}  color="blue"    sub="All time" />
-        <StatCard icon={Calendar} label="Views (7 days)" value={a.views_7d}   color="violet"  sub="Last week" />
-        <StatCard icon={TrendingUp} label="Views (30 days)" value={a.views_30d} color="emerald" sub="Last month" />
-        <StatCard icon={Users}   label="Connections"   value={a.connections}   color="amber"   sub="Accepted" />
+        <StatCard icon={Eye}     label={t('analytics.stat_total_views')}    value={a.total_views}  color="blue"    sub={t('analytics.stat_all_time')} />
+        <StatCard icon={Calendar} label={t('analytics.stat_views_7d')} value={a.views_7d}   color="violet"  sub={t('analytics.stat_last_week')} />
+        <StatCard icon={TrendingUp} label={t('analytics.stat_views_30d')} value={a.views_30d} color="emerald" sub={t('analytics.stat_last_month')} />
+        <StatCard icon={Users}   label={t('analytics.stat_connections')}   value={a.connections}   color="amber"   sub={t('analytics.stat_accepted')} />
       </div>
 
       {/* Chart */}
@@ -226,7 +240,7 @@ export default function AnalyticsContent() {
             <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
               <BarChart2 size={14} className="text-white" />
             </div>
-            <p className="text-sm font-black text-gray-900 dark:text-gray-100">Profile Views — Last 7 Days</p>
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100">{t('analytics.chart_title')}</p>
           </div>
         </div>
         <MiniBarChart data={a.daily_chart} />
@@ -243,14 +257,14 @@ export default function AnalyticsContent() {
           <div className="w-7 h-7 bg-violet-600 rounded-lg flex items-center justify-center">
             <UserCheck size={14} className="text-white" />
           </div>
-          <p className="text-sm font-black text-gray-900 dark:text-gray-100">Recent Visitors</p>
+          <p className="text-sm font-black text-gray-900 dark:text-gray-100">{t('analytics.visitors_title')}</p>
           <span className="ml-auto text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-800/40">
-            Premium
+            {t('analytics.premium_badge')}
           </span>
         </div>
 
         {(a.recent_viewers || []).length === 0 ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">No visitors yet — share your profile to get views</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">{t('analytics.no_visitors')}</p>
         ) : (
           <div>
             {a.recent_viewers.map((v, i) => <ViewerRow key={i} viewer={v} />)}
@@ -262,16 +276,16 @@ export default function AnalyticsContent() {
       <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl p-5 text-white">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles size={16} className="text-blue-200" />
-          <p className="text-sm font-black">Grow faster</p>
+          <p className="text-sm font-black">{t('analytics.tip_title')}</p>
         </div>
         <p className="text-xs text-blue-100 leading-relaxed mb-3">
-          Profiles with a photo, GitHub link, and 5+ skills get <strong className="text-white">3× more views</strong>. Complete your profile to unlock more opportunities.
+          {t('analytics.tip_body_1')}<strong className="text-white">{t('analytics.tip_body_strong')}</strong>{t('analytics.tip_body_2')}
         </p>
         <button
           onClick={() => router.push('/dash/profile')}
           className="flex items-center gap-2 bg-white/20 hover:bg-white/30 transition-all text-white text-xs font-black px-4 py-2 rounded-xl active:scale-95"
         >
-          Edit Profile <ArrowUpRight size={13} />
+          {t('analytics.edit_profile')} <ArrowUpRight size={13} />
         </button>
       </div>
 

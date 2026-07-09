@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '../../supabaseClient';
 import { verticalTheme } from '../../../lib/orgVerticals';
 import {
@@ -41,7 +42,10 @@ function fmt(v, format) {
 function ThemeToggle() {
   const { theme, setTheme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount guard: must start false on server/hydration, flip after mount to avoid a theme hydration mismatch
+    setMounted(true);
+  }, []);
   const isDark = mounted && (theme === 'dark' || (theme === 'system' && systemTheme === 'dark'));
   return (
     <button onClick={() => setTheme(isDark ? 'light' : 'dark')} aria-label="Toggle theme" title="Toggle light / dark"
@@ -199,6 +203,7 @@ function Programs({ v, data, slug, token, reload, filter, prefill, onPrefillCons
 
   // Opened from a recommendation → open the create form pre-filled with its context.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- respond to a one-shot prefill signal from the parent, then acknowledge it
     if (prefill) { setInitial(prefill); setCreating(true); onPrefillConsumed?.(); }
   }, [prefill, onPrefillConsumed]);
 
@@ -327,8 +332,8 @@ function Directory({ v, data, slug, token, reload, filter, label }) {
         <div className="space-y-2">
           {people.map((p) => (
             <div key={p.id} className={`${panel} p-3.5 flex items-center gap-3`}>
-              <div className={`w-9 h-9 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex items-center justify-center text-xs font-black ${muted} shrink-0`}>
-                {p.avatar ? <img src={p.avatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : (p.name[0] || '?').toUpperCase()}
+              <div className={`relative w-9 h-9 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex items-center justify-center text-xs font-black ${muted} shrink-0`}>
+                {p.avatar ? <Image src={p.avatar} alt="" fill unoptimized className="object-cover" referrerPolicy="no-referrer" /> : (p.name[0] || '?').toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -382,6 +387,18 @@ function timeAgo(iso) {
 const TREND_ICON = { up: ArrowUp, down: ArrowDown, flat: Minus };
 const TREND_TONE = { up: 'text-trust-600 dark:text-trust-500', down: 'text-red-500 dark:text-red-400', flat: 'text-slate-400 dark:text-gray-500' };
 
+function AiInsightsHeader({ children }) {
+  return (
+    <div className="flex items-center justify-between gap-2 mb-3">
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center"><Sparkles size={15} /></div>
+        <h3 className={`text-sm font-black ${heading}`}>AI insights</h3>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function AiInsights({ v, data, slug, token }) {
   const k = data.kpis;
   const [state, setState] = useState('init'); // init | idle | ready | generating | error
@@ -414,20 +431,10 @@ function AiInsights({ v, data, slug, token }) {
     } catch { setErr('Network error. Try again.'); setState('error'); }
   };
 
-  const Header = ({ children }) => (
-    <div className="flex items-center justify-between gap-2 mb-3">
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center"><Sparkles size={15} /></div>
-        <h3 className={`text-sm font-black ${heading}`}>AI insights</h3>
-      </div>
-      {children}
-    </div>
-  );
-
   if (state === 'init' || state === 'generating') {
     return (
       <div className={`${panel} p-5`}>
-        <Header />
+        <AiInsightsHeader />
         <div className="space-y-2.5 animate-pulse">
           <div className="h-3.5 w-3/4 rounded bg-slate-100 dark:bg-white/5" />
           <div className="h-3 w-full rounded bg-slate-100 dark:bg-white/5" />
@@ -441,11 +448,11 @@ function AiInsights({ v, data, slug, token }) {
   if (state === 'ready' && ai) {
     return (
       <div className={`${panel} p-5`}>
-        <Header>
+        <AiInsightsHeader>
           <button onClick={generate} className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700">
             <RefreshCw size={13} /> Regenerate
           </button>
-        </Header>
+        </AiInsightsHeader>
 
         {ai.stale && (
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-premium-600 dark:text-premium-500 bg-premium-500/10 border border-premium-500/20 rounded-lg px-2.5 py-1.5 mb-3">
@@ -501,7 +508,7 @@ function AiInsights({ v, data, slug, token }) {
   // idle | error — deterministic fallback + a way to generate.
   return (
     <div className={`${panel} p-5`}>
-      <Header />
+      <AiInsightsHeader />
       {state === 'error' && (
         <div className="flex items-start gap-2 text-xs text-red-500 dark:text-red-400 mb-3">
           <AlertTriangle size={14} className="shrink-0 mt-0.5" /><span>{err}</span>
@@ -763,6 +770,7 @@ function Recommendations({ v, slug, token, go, onCreateProgram }) {
     setState('ready');
   }, [slug, token]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load cached recommendations on mount
   useEffect(() => { loadCache(); }, [loadCache]);
 
   const generate = async () => {
@@ -1063,14 +1071,14 @@ function OrgPageEditor({ org, slug, token, reload }) {
       <div className="mb-5">
         <label className={`block text-xs font-bold ${muted} mb-1.5`}>Banner &amp; logo</label>
         <div className="relative h-32 rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10 bg-gradient-to-br from-brand-500/25 to-trust-500/25">
-          {org.banner_url && <img src={org.banner_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+          {org.banner_url && <Image src={org.banner_url} alt="" fill unoptimized className="object-cover" referrerPolicy="no-referrer" />}
           <label className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 text-xs font-bold bg-white/90 dark:bg-ink/80 text-slate-800 dark:text-white px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-white shadow-sm">
             {uploading === 'banner' ? <Loader2 size={13} className="animate-spin" /> : <ImageIcon size={13} />} Banner
             <input type="file" accept="image/*" className="hidden" onChange={(e) => upload('banner', e.target.files?.[0])} />
           </label>
           <div className="absolute bottom-3 left-4">
-            <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white dark:border-ink bg-white dark:bg-white/10 shadow-lg flex items-center justify-center">
-              {org.logo_url ? <img src={org.logo_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <Building2 size={22} className="text-slate-300 dark:text-gray-500" />}
+            <div className="relative w-16 h-16 rounded-xl overflow-hidden border-2 border-white dark:border-ink bg-white dark:bg-white/10 shadow-lg flex items-center justify-center">
+              {org.logo_url ? <Image src={org.logo_url} alt="" fill unoptimized className="object-cover" referrerPolicy="no-referrer" /> : <Building2 size={22} className="text-slate-300 dark:text-gray-500" />}
             </div>
           </div>
         </div>
@@ -1105,8 +1113,8 @@ function Team({ data }) {
           const p = m.profiles;
           return (
             <div key={i} className={`${panel} p-4 flex items-center gap-3`}>
-              <div className={`w-10 h-10 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex items-center justify-center text-sm font-black ${muted} shrink-0`}>
-                {p?.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : (p?.full_name?.[0] || p?.username?.[0] || '?').toUpperCase()}
+              <div className={`relative w-10 h-10 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex items-center justify-center text-sm font-black ${muted} shrink-0`}>
+                {p?.avatar_url ? <Image src={p.avatar_url} alt="" fill unoptimized className="object-cover" referrerPolicy="no-referrer" /> : (p?.full_name?.[0] || p?.username?.[0] || '?').toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
                 <p className={`font-bold ${heading} truncate`}>{p?.full_name || p?.username || 'Member'}</p>
@@ -1197,19 +1205,91 @@ function Verification({ org, slug, token, reload }) {
   );
 }
 
-function Billing({ v }) {
+function Billing({ v, org, slug, token }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(null);
+  const [msg, setMsg] = useState(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/organizations/${slug}/billing`, { headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) setData(d);
+    } finally { setLoading(false); }
+  }, [slug, token]);
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const ref = url.searchParams.get('reference') || url.searchParams.get('trxref');
+    if (!ref || !url.searchParams.get('billing_ref')) return;
+    ['reference', 'trxref', 'billing_ref'].forEach((k) => url.searchParams.delete(k));
+    window.history.replaceState({}, '', url.toString());
+    (async () => {
+      setMsg('Confirming your payment…');
+      const res = await fetch(`/api/organizations/${slug}/billing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'verify', reference: ref }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setMsg(res.ok ? `You're now on the ${d.plan} plan — thank you! 🎉` : (d.error || 'Verification failed.'));
+      load();
+    })();
+    /* eslint-disable-next-line */
+  }, [slug, token]);
+
+  const subscribe = async (plan) => {
+    setBusy(plan); setMsg(null);
+    try {
+      const callbackUrl = `${window.location.origin}/console/${slug}?billing_ref=1`;
+      const res = await fetch(`/api/organizations/${slug}/billing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'initiate', plan, callbackUrl }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || 'Could not start checkout.');
+      window.location.assign(d.authorization_url);
+    } catch (e) { setMsg(e.message); setBusy(null); }
+  };
+
+  const current = data?.plan || org?.plan || 'free';
+  const prices = data?.prices || { growth: 49, scale: 199 };
+  const noun = v.program.plural.toLowerCase();
+  const TIERS = [
+    { id: 'free',   name: 'Starter', price: 'Free',                feats: ['1 organization page', `Up to 3 ${noun}`, 'Basic directory'] },
+    { id: 'growth', name: 'Growth',  price: `$${prices.growth}/mo`, feats: [`Unlimited ${noun}`, 'Team seats & roles', 'Impact analytics'] },
+    { id: 'scale',  name: 'Scale',   price: `$${prices.scale}/mo`,  feats: ['Everything in Growth', 'Priority verification', 'Bulk program tools', 'Dedicated support'] },
+  ];
+
   return (
     <div className="max-w-3xl">
-      <SectionHead tag="Plans" title="Billing" desc="Organizational subscription for institutions." />
+      <SectionHead tag="Plans" title="Billing" desc="Organizational subscription — run programs and engage at scale." />
+      {msg && <div className={`${panel} p-3 mb-4 text-sm ${heading}`}>{msg}</div>}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {[['Starter', 'Free', ['1 organization page', `Up to 3 ${v.program.plural.toLowerCase()}`, 'Basic directory']], ['Growth', 'Tiered', [`Unlimited ${v.program.plural.toLowerCase()}`, 'Team seats & roles', 'Impact analytics']], ['Institution', 'Custom', ['Bulk program tools', 'Priority verification', 'Dedicated support']]].map(([name, price, feats], i) => (
-        <div key={name} className={`${panel} p-5 ${i === 1 ? 'ring-1 ring-brand-500/40' : ''}`}>
-          <p className={`text-[11px] font-mono uppercase tracking-widest ${faint}`}>{name}</p>
-          <p className={`text-2xl font-black ${heading} mt-1`}>{price}</p>
-          <ul className="mt-4 space-y-2">{feats.map((ff) => <li key={ff} className={`flex items-center gap-2 text-sm ${muted}`}><CheckCircle2 size={14} className="text-trust-500 shrink-0" />{ff}</li>)}</ul>
-        </div>))}
+        {TIERS.map((t, i) => {
+          const isCurrent = current === t.id;
+          return (
+            <div key={t.id} className={`${panel} p-5 relative ${i === 1 ? 'ring-1 ring-brand-500/40' : ''} ${isCurrent ? 'ring-2 ring-trust-500' : ''}`}>
+              {isCurrent && <span className="absolute top-3 right-3 text-[9px] font-black uppercase tracking-wider text-trust-600 dark:text-trust-500 bg-trust-500/10 px-2 py-0.5 rounded-full">Current</span>}
+              <p className={`text-[11px] font-mono uppercase tracking-widest ${faint}`}>{t.name}</p>
+              <p className={`text-2xl font-black ${heading} mt-1`}>{t.price}</p>
+              <ul className="mt-4 space-y-2">{t.feats.map((ff) => <li key={ff} className={`flex items-center gap-2 text-sm ${muted}`}><CheckCircle2 size={14} className="text-trust-500 shrink-0" />{ff}</li>)}</ul>
+              {t.id !== 'free' && !isCurrent && (
+                <button onClick={() => subscribe(t.id)} disabled={busy === t.id || loading}
+                  className="mt-5 w-full inline-flex items-center justify-center gap-1.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white px-4 py-2 rounded-xl font-bold text-sm transition-colors">
+                  {busy === t.id ? <Loader2 size={14} className="animate-spin" /> : null}
+                  {current === 'free' ? 'Upgrade' : 'Switch plan'}
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
-      <p className={`text-xs ${faint} mt-4`}>Subscription billing activates with the Organizational Subscription rollout. No charges are applied today.</p>
+      {data?.planExpiresAt && current !== 'free' && <p className={`text-xs ${faint} mt-4`}>Your plan renews on {new Date(data.planExpiresAt).toLocaleDateString()}.</p>}
+      <p className={`text-xs ${faint} mt-2`}>Payments are processed securely by Paystack.</p>
     </div>
   );
 }
@@ -1237,6 +1317,7 @@ export default function InstitutionConsole() {
     setData(d); setState('ready');
   }, [slug, router]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load console data on mount
   useEffect(() => { load(); }, [load]);
 
   if (state === 'loading') {
@@ -1287,7 +1368,7 @@ export default function InstitutionConsole() {
       case 'orgpage':      return <OrgPageEditor org={org} slug={slug} token={token} reload={load} />;
       case 'team':         return <Team data={data} />;
       case 'verification': return <Verification org={org} slug={slug} token={token} reload={load} />;
-      case 'billing':      return <Billing v={v} />;
+      case 'billing':      return <Billing v={v} org={org} slug={slug} token={token} />;
       default:             return <Overview v={v} data={data} slug={slug} token={token} go={setSection} />;
     }
   };

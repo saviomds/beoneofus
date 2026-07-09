@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import Link from "next/link";
+import { useLanguage } from "../../../lib/i18n";
 
 // Lightweight helper to replace date-fns
 function formatDistanceToNow(date) {
@@ -25,6 +26,7 @@ function formatDistanceToNow(date) {
 }
 
 export default function BookmarksContent() {
+  const { t } = useLanguage();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -133,7 +135,7 @@ export default function BookmarksContent() {
       
       setNewComments(prev => ({...prev, [item.id]: ""}));
     } catch (err) {
-      alert("Error adding comment: " + err.message);
+      alert(t('bookmarks.comment_error', { message: err.message }));
     }
   };
 
@@ -149,9 +151,9 @@ export default function BookmarksContent() {
 
     if (error) {
       console.error("Error deleting:", error.message);
-      setToastMessage("Failed to delete bookmark");
+      setToastMessage(t('bookmarks.toast_delete_failed'));
     } else {
-      setToastMessage("Bookmark removed successfully");
+      setToastMessage(t('bookmarks.toast_removed'));
     }
     
     // Auto-hide the popup after 3 seconds
@@ -167,8 +169,8 @@ export default function BookmarksContent() {
     <div className="w-full flex flex-col min-h-screen bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Bookmarks</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">Your saved snippets and discussions.</p>
+          <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">{t('bookmarks.title')}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">{t('bookmarks.subtitle')}</p>
         </div>
         
         <div className="relative w-full md:w-64">
@@ -177,7 +179,7 @@ export default function BookmarksContent() {
             type="text" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search bookmarks..." 
+            placeholder={t('bookmarks.search_placeholder')}
             className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-2.5 pl-10 pr-4 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
           />
         </div>
@@ -186,7 +188,7 @@ export default function BookmarksContent() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="animate-spin text-blue-500 dark:text-blue-400 mb-2" />
-          <p className="text-gray-500 dark:text-gray-400 text-xs">Syncing with database...</p>
+          <p className="text-gray-500 dark:text-gray-400 text-xs">{t('bookmarks.syncing')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 no-scrollbar">
@@ -202,11 +204,11 @@ export default function BookmarksContent() {
                   <div className="flex items-center gap-2 mb-2">
                     <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-blue-500 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-500/20 px-2 py-0.5 rounded-md">
                       <Tag size={10} />
-                      {item.category || "General"}
+                      {item.category || t('bookmarks.categories.general')}
                     </span>
                     <span className="flex items-center gap-1 text-[10px] text-gray-600 dark:text-gray-400 font-bold">
                       <Clock size={10} />
-                      {formatDistanceToNow(new Date(item.created_at))} ago
+                      {formatDistanceToNow(new Date(item.created_at))} {t('bookmarks.ago')}
                     </span>
                   </div>
                   
@@ -223,7 +225,7 @@ export default function BookmarksContent() {
                   className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-bold hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 >
                       <MessageSquare size={14} />
-                  {commentsData[item.id] ? commentsData[item.id].length : (item.replies || 0)} Comments
+                  {commentsData[item.id] ? commentsData[item.id].length : (item.replies || 0)} {t('bookmarks.comments')}
                 </button>
                 <Link 
                       href={item.url || "#"} 
@@ -231,7 +233,7 @@ export default function BookmarksContent() {
                       className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-bold hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
                     >
                       <ExternalLink size={14} />
-                      View Original
+                      {t('bookmarks.view_original')}
                 </Link>
                   </div>
                 </div>
@@ -258,7 +260,7 @@ export default function BookmarksContent() {
             <div className="py-20 flex flex-col items-center justify-center border border-dashed border-gray-300 dark:border-gray-700 rounded-[2rem] bg-gray-50 dark:bg-gray-800/50">
               <Bookmark size={48} className="text-gray-300 dark:text-gray-600 mb-4" />
               <p className="text-gray-500 dark:text-gray-400 font-bold">
-                {searchQuery ? "No matches found" : "No saved bookmarks yet"}
+                {searchQuery ? t('bookmarks.no_matches') : t('bookmarks.no_bookmarks')}
               </p>
             </div>
           )}

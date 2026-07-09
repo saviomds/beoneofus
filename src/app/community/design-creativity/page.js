@@ -6,7 +6,7 @@ import { supabase } from "../../supabaseClient";
 import {
   Terminal, ArrowLeft, Users, Palette, Pen, Layers, Sparkles,
   Monitor, TrendingUp, BookOpen, Briefcase, Star, ChevronRight,
-  MessageSquare, Hash, Play, Award, Zap, Globe, Image,
+  MessageSquare, Hash, Play, Award, Zap, Globe, Image as ImageIcon,
   CheckCircle2, ArrowUpRight, GitBranch,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -23,7 +23,7 @@ const TOPICS = [
   { icon: <Monitor size={18} />,  label: "Web & App Design",    color: "rose",   desc: "Responsive design, design systems, component libraries",         href: "/dash/groups" },
   { icon: <Layers size={18} />,   label: "Brand & Identity",    color: "amber",  desc: "Logos, visual identity, brand guidelines, typography",           href: "/dash/groups" },
   { icon: <Sparkles size={18} />, label: "Motion & Animation",  color: "pink",   desc: "CSS animations, Lottie, After Effects, micro-interactions",      href: "/dash/groups" },
-  { icon: <Image size={18} />,    label: "Illustration & Art",  color: "emerald",desc: "Digital art, vector graphics, character design, concept art",    href: "/dash/groups" },
+  { icon: <ImageIcon size={18} />,    label: "Illustration & Art",  color: "emerald",desc: "Digital art, vector graphics, character design, concept art",    href: "/dash/groups" },
   { icon: <Pen size={18} />,      label: "3D & Immersive",      color: "blue",   desc: "Blender, Three.js, WebGL, AR/VR experiences, product viz",       href: "/dash/groups" },
   { icon: <Globe size={18} />,    label: "Design Tools & AI",   color: "indigo", desc: "Figma AI, Midjourney, Adobe Firefly, design automation",         href: "/dash/groups" },
   { icon: <Star size={18} />,     label: "Design Critique",     color: "orange", desc: "Portfolio reviews, feedback sessions, design challenges",        href: "/dash/groups" },
@@ -124,7 +124,7 @@ export default function DesignCreativityCommunity() {
                 </p>
                 <div className="flex flex-wrap gap-3 mt-8">
                   <Link href="/dash/more?tool=community" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-violet-700 font-bold rounded-xl hover:bg-violet-50 transition-colors text-sm shadow-lg shadow-violet-900/20"><MessageSquare size={16} /> Enter Community Hub</Link>
-                  <Link href="/Explore_Projects" className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 border border-white/30 text-white font-bold rounded-xl hover:bg-white/20 transition-colors text-sm"><Image size={16} /> View Portfolios</Link>
+                  <Link href="/Explore_Projects" className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 border border-white/30 text-white font-bold rounded-xl hover:bg-white/20 transition-colors text-sm"><ImageIcon size={16} /> View Portfolios</Link>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:w-72 shrink-0">
@@ -257,7 +257,7 @@ export default function DesignCreativityCommunity() {
                     { label: "Live Community Hub",   href: "/dash/more?tool=community", icon: <MessageSquare size={14} /> },
                     { label: "Design Jobs",          href: "/dash/more",                icon: <Briefcase size={14} /> },
                     { label: "Join Groups",          href: "/dash/groups",              icon: <Users size={14} /> },
-                    { label: "View Portfolios",      href: "/Explore_Projects",         icon: <Image size={14} /> },
+                    { label: "View Portfolios",      href: "/Explore_Projects",         icon: <ImageIcon size={14} /> },
                     { label: "Design Courses",       href: "/Academy",                  icon: <BookOpen size={14} /> },
                     { label: "Find a Mentor",        href: "/dash/mentorship",          icon: <Award size={14} /> },
                     { label: "Freelance Marketplace",href: "/dash/marketplace",         icon: <Globe size={14} /> },

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { notifyAdminsOfVerification } from '../../../../lib/notifyAdmins';
 
 function admin() {
   return createClient(
@@ -174,6 +175,8 @@ export async function PATCH(req, { params }) {
   if (body.action === 'request_verification') {
     if (org.is_verified) return NextResponse.json({ error: 'Already verified.' }, { status: 400 });
     patch.verification_status = 'pending';
+    // Surface the request to admins immediately (bell notification → review queue).
+    await notifyAdminsOfVerification(supabase, org, gate.user.id);
   }
   // Allow editing a safe subset of public fields
   const EDITABLE = ['name', 'tagline', 'description', 'website', 'location', 'country', 'sector', 'size', 'contact_email', 'remote_policy', 'hiring', 'logo_url', 'banner_url', 'founded_year'];

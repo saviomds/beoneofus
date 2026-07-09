@@ -4,12 +4,20 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml } from '../../../lib/escapeHtml';
+// @ts-ignore — plain-JS RBAC helper
+import { requireRole } from '../../../lib/rbac';
 
 export async function POST(req: Request) {
   try {
     // Safely check env vars so missing keys return JSON instead of a crashing HTML page
     if (!process.env.RESEND_API_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json({ error: 'Server configuration missing API keys.' }, { status: 500 });
+    }
+
+    // ── AuthN + AuthZ: reviewing founder applications is an admin action. ─────
+    const { error: authError, status: authStatus } = await requireRole(req, 'admin');
+    if (authError) {
+      return NextResponse.json({ error: authError }, { status: authStatus });
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY);

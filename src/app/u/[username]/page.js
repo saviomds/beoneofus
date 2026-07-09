@@ -82,9 +82,18 @@ export default function PublicProfilePage() {
       if (cancelled) return;
       if (session) setCurrentUserId(session.user.id);
 
+      // Explicit PUBLIC allow-list — never `select("*")` on a page any visitor can
+      // open, or private columns (email, phone, prefs, referral_code, …) leak out.
+      const PUBLIC_PROFILE_COLUMNS = [
+        "id", "username", "full_name", "avatar_url", "banner_url", "status",
+        "work_status", "location", "website", "github", "skills", "experience",
+        "education", "role", "is_verified", "is_premium", "is_trial_premium",
+        "is_admin", "profile_visibility",
+      ].join(", ");
+
       const { data: profileData, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select(PUBLIC_PROFILE_COLUMNS)
         .eq("username", username)
         .single();
 

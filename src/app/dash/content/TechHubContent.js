@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Globe2, CalendarDays, MessageSquare, Plus, Search, Loader2,
@@ -22,7 +23,7 @@ function PostCard({ post, userId, onLike, onSelect }) {
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 hover:border-blue-400/50 dark:hover:border-blue-600/50 transition-all">
       <div className="flex items-start gap-3 mb-3">
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center text-white text-xs font-black shrink-0">
-          {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" /> : (profile?.full_name?.[0] || profile?.username?.[0] || '?')}
+          {profile?.avatar_url ? <Image src={profile.avatar_url} alt="" width={32} height={32} unoptimized className="w-8 h-8 rounded-full object-cover" /> : (profile?.full_name?.[0] || profile?.username?.[0] || '?')}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{profile?.full_name || profile?.username}</p>
@@ -201,7 +202,7 @@ export default function TechHubContent() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => { setLoading(true); fetchData(session?.user?.id); }, [activeTab]);
+  useEffect(() => { (async () => { setLoading(true); await fetchData(session?.user?.id); })(); }, [activeTab]);
 
   const handleLike = async (post) => {
     if (!session) return;

@@ -91,7 +91,7 @@ function BlogPageInner() {
   }, []);
 
   useEffect(() => {
-    fetchPosts();
+    (async () => { await fetchPosts(); })();
     const name = `blog-public-${Date.now()}`;
     channelRef.current = supabase
       .channel(name)
@@ -171,8 +171,9 @@ function BlogPageInner() {
 
   useEffect(() => {
     clearTimeout(searchTimerRef.current);
-    if (!search.trim()) { setSearchResults([]); setSearching(false); return; }
-    searchTimerRef.current = setTimeout(() => doSearch(search), 350);
+    // When search is empty/short, doSearch() itself resets the results state;
+    // deferring via setTimeout keeps the reset out of the synchronous effect body.
+    searchTimerRef.current = setTimeout(() => doSearch(search), search.trim() ? 350 : 0);
     return () => clearTimeout(searchTimerRef.current);
   }, [search, doSearch]);
 

@@ -3,6 +3,7 @@ import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import {
   Serwist,
   NetworkFirst,
+  NetworkOnly,
   CacheFirst,
   StaleWhileRevalidate,
   ExpirationPlugin,
@@ -100,15 +101,20 @@ const serwist = new Serwist({
         plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 })],
       }),
     },
-    // API routes — always network-first, short cache for offline fallback only
+    // API routes — NETWORK ONLY, never cached.
+    //
+    // Every /api/* response is per-user authenticated data. A NetworkFirst
+    // (previous behaviour) kept a short-lived cache and, on a slow or failed
+    // network, would replay a *stale* — and possibly a *different user's* —
+    // response after logout/login on the same device. That was the root cause
+    // of "data belongs to an old session", "shows another account", and
+    // "refreshing fixes it, navigating breaks it". Authenticated endpoints must
+    // always hit the network; if the network is down they must fail, not serve
+    // someone else's data.
     {
       matcher: ({ url: { pathname } }: { url: URL }) =>
         pathname.startsWith("/api/"),
-      handler: new NetworkFirst({
-        cacheName: "apis",
-        networkTimeoutSeconds: 10,
-        plugins: [new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 5 * 60 })],
-      }),
+      handler: new NetworkOnly(),
     },
     // HTML navigation — always network-first so users always get fresh HTML
     // with the correct chunk URLs. Auth routes excluded from interception.

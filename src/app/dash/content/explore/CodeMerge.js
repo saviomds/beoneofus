@@ -155,7 +155,7 @@ export default function CodeMerge({ project, currentUser }) {
     setLoading(false);
   }, [project.id, project.created_by, currentUser]);
 
-  useEffect(() => { fetchMRs(); }, [fetchMRs]);
+  useEffect(() => { (() => { fetchMRs(); })(); }, [fetchMRs]);
 
   const getToken = async () => {
     const { data: { session } } = await supabase.auth.getSession();

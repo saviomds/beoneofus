@@ -745,7 +745,7 @@ function QuickMemo({ project, onSaveMemo }) {
 
   // Sync if project.memo changes externally (e.g. after re-fetch)
   useEffect(() => {
-    setMemo(project.memo ?? "");
+    (() => { setMemo(project.memo ?? ""); })();
   }, [project.memo]);
 
   const handleChange = (e) => {

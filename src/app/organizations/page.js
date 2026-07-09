@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Building2, ArrowLeft, Plus, Search, ShieldCheck, MapPin, Globe,
 } from 'lucide-react';
@@ -114,7 +115,7 @@ export default function OrganizationsDirectory() {
                   <div className="flex items-start gap-3.5">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${meta.accent.icon}`}>
                       {o.logo_url
-                        ? <img src={o.logo_url} alt="" className="w-full h-full object-cover rounded-xl" referrerPolicy="no-referrer" />
+                        ? <Image src={o.logo_url} alt="" width={44} height={44} unoptimized className="w-full h-full object-cover rounded-xl" referrerPolicy="no-referrer" />
                         : <Icon size={20} />}
                     </div>
                     <div className="min-w-0 flex-1">

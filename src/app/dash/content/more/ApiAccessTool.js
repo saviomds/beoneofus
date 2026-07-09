@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Key, Eye, EyeOff, Copy, Check, Trash2, Plus, X } from "lucide-react";
+import { Badge } from "./shared";
 
 // ─── API Access ───────────────────────────────────────────────────────────────
 

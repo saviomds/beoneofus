@@ -165,7 +165,7 @@ export default function QuickStartPage() {
                   Quick Start Guide
                 </h1>
                 <p className="text-gray-300 text-lg leading-relaxed max-w-xl">
-                  Everything you need to go from zero to a fully set-up professional profile on beoneofus. Follow these 5 steps and you'll be ready.
+                  Everything you need to go from zero to a fully set-up professional profile on beoneofus. Follow these 5 steps and you&apos;ll be ready.
                 </p>
               </div>
               {/* Progress widget */}
@@ -246,7 +246,7 @@ export default function QuickStartPage() {
               {completed.size === STEPS.length && (
                 <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white text-center">
                   <p className="text-3xl mb-2">🎉</p>
-                  <h3 className="text-xl font-black mb-2">You're all set!</h3>
+                  <h3 className="text-xl font-black mb-2">You&apos;re all set!</h3>
                   <p className="text-emerald-100 text-sm mb-4">Your profile is ready. Time to explore the community and make your first connection.</p>
                   <Link href="/dash" className="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-emerald-700 font-bold rounded-xl text-sm hover:bg-emerald-50 transition-colors">
                     Go to Dashboard <ChevronRight size={14} />

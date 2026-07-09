@@ -6,6 +6,7 @@ import {
   Sparkles, Settings, Globe, Palette, Clock
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import Image from "next/image";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -89,8 +90,7 @@ function StoryCardBg({ story }) {
     </>
   );
   if (story.type === "image" && story.media_url) return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={story.media_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+    <Image src={story.media_url} alt="" fill sizes="104px" className="object-cover" unoptimized />
   );
   return <div className="absolute inset-0 bg-gradient-to-b from-gray-700 to-gray-900" />;
 }
@@ -143,8 +143,7 @@ export function useUserStories(userId) {
 
 function StorySettingsPanel({ story, isOwn, onDelete, onClose }) {
   const expiresAt = new Date(story.expires_at);
-  const now = Date.now();
-  const msLeft = Math.max(0, expiresAt - now);
+  const msLeft = Math.max(0, expiresAt - new Date());
   const hoursLeft = Math.floor(msLeft / 3600000);
   const minsLeft  = Math.floor((msLeft % 3600000) / 60000);
 
@@ -244,19 +243,21 @@ export function StoryViewer({ groups, startGroupIdx, currentUserId, onClose, onD
 
   useEffect(() => {
     if (!story) return;
-    markViewed(story.id);
-    setProgress(0);
-    cancelAnimationFrame(rafRef.current);
-    startRef.current = performance.now();
-    const duration = story.type === "video" ? VIDEO_DURATION : STORY_DURATION;
+    (() => {
+      markViewed(story.id);
+      setProgress(0);
+      cancelAnimationFrame(rafRef.current);
+      startRef.current = performance.now();
+      const duration = story.type === "video" ? VIDEO_DURATION : STORY_DURATION;
 
-    const tick = (now) => {
-      const pct = Math.min(((now - startRef.current) / duration) * 100, 100);
-      setProgress(pct);
-      if (pct < 100) rafRef.current = requestAnimationFrame(tick);
-      else goToNext();
-    };
-    rafRef.current = requestAnimationFrame(tick);
+      const tick = (now) => {
+        const pct = Math.min(((now - startRef.current) / duration) * 100, 100);
+        setProgress(pct);
+        if (pct < 100) rafRef.current = requestAnimationFrame(tick);
+        else goToNext();
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    })();
     return () => cancelAnimationFrame(rafRef.current);
   }, [story?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -294,8 +295,7 @@ export function StoryViewer({ groups, startGroupIdx, currentUserId, onClose, onD
           <div className="absolute inset-0 z-0" style={applyBg(story.bg_color)} />
         )}
         {story.type === "image" && story.media_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={story.media_url} alt="story" className="absolute inset-0 w-full h-full object-cover z-0" />
+          <Image src={story.media_url} alt="story" fill sizes="400px" className="object-cover z-0" unoptimized />
         )}
         {/* Dark bg fallback for image stories without media */}
         {story.type === "image" && !story.media_url && (
@@ -335,7 +335,7 @@ export function StoryViewer({ groups, startGroupIdx, currentUserId, onClose, onD
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/60 bg-gray-700 shrink-0 shadow-md">
               {group.user?.avatar_url
-                ? <img src={group.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                ? <Image src={group.user.avatar_url} alt="" width={40} height={40} className="w-full h-full object-cover" unoptimized />
                 : <div className="w-full h-full bg-violet-600 flex items-center justify-center text-white text-sm font-black">
                     {group.user?.username?.[0]?.toUpperCase()}
                   </div>
@@ -520,8 +520,7 @@ export function StoryCreator({ currentUserId, onClose, onCreated }) {
           {mode === "image" && preview && (
             <div className="p-5 space-y-4">
               <div className="relative w-full rounded-2xl overflow-hidden bg-black shadow-lg" style={{ aspectRatio: "9/14" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={preview} alt="preview" className="w-full h-full object-cover" />
+                <Image src={preview} alt="preview" fill sizes="384px" className="object-cover" unoptimized />
                 {caption && (
                   <div className="absolute bottom-4 inset-x-3 z-10">
                     <p className="text-white text-sm font-semibold text-center drop-shadow-lg">{caption}</p>
@@ -648,7 +647,7 @@ export default function StoriesBar({ currentUserId }) {
   }, [currentUserId]);
 
   useEffect(() => {
-    fetchStories();
+    (() => { fetchStories(); })();
     const ch = supabase.channel("stories-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "stories" }, fetchStories)
       .subscribe();
@@ -700,10 +699,13 @@ export default function StoriesBar({ currentUserId }) {
             {/* Top photo section */}
             <div className="absolute inset-x-0 top-0 h-[62%] bg-gray-100 dark:bg-gray-800 overflow-hidden">
               {myAvatar ? (
-                <img
+                <Image
                   src={myAvatar}
-                  alt={myUsername}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  alt={myUsername || ""}
+                  fill
+                  sizes="104px"
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  unoptimized
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white font-black text-3xl">
@@ -770,7 +772,7 @@ export default function StoriesBar({ currentUserId }) {
                 <div className="absolute bottom-7 left-2 z-10">
                   <div className={`w-9 h-9 rounded-full overflow-hidden border-2 shadow-sm ${allViewed ? 'border-white/50' : 'border-white'}`}>
                     {g.user?.avatar_url
-                      ? <img src={g.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ? <Image src={g.user.avatar_url} alt="" width={36} height={36} className="w-full h-full object-cover" unoptimized />
                       : <div className="w-full h-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white font-black text-xs">
                           {g.user?.username?.[0]?.toUpperCase()}
                         </div>

@@ -30,8 +30,8 @@ export default function VerifyPage() {
   const [urlCopied, setUrlCopied] = useState(false);
 
   useEffect(() => {
-    if (!hash) { setNotFound(true); setLoading(false); return; }
     const verify = async () => {
+      if (!hash) { setNotFound(true); setLoading(false); return; }
       setLoading(true);
       const { data, error } = await supabase
         .from('credentials')

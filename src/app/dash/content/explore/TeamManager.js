@@ -7,6 +7,7 @@ import {
   MapPin, ExternalLink, Briefcase, Github, Edit2,
 } from "lucide-react";
 import { supabase } from "../../../supabaseClient";
+import Image from "next/image";
 
 const ROLE_META = {
   owner:       { label: "Owner",       cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",  Icon: Crown  },
@@ -99,11 +100,13 @@ function Avatar({ profile, size = 28, className = "" }) {
   const initial = name[0]?.toUpperCase() ?? "?";
   if (src && !imgErr) {
     return (
-      <img
+      <Image
         src={src} alt={name}
+        width={size} height={size}
         style={{ width: size, height: size, minWidth: size, minHeight: size }}
         className={`rounded-full object-cover shrink-0 ${className}`}
         onError={() => setImgErr(true)}
+        unoptimized
       />
     );
   }
@@ -390,8 +393,10 @@ export default function TeamManager({ project, currentUser, onlineUserIds = new 
   }, [project.id]);
 
   useEffect(() => {
-    if (!isDemo) { fetchMembers(); fetchTasks(); }
-    else setLoading(false);
+    (() => {
+      if (!isDemo) { fetchMembers(); fetchTasks(); }
+      else setLoading(false);
+    })();
   }, [fetchMembers, fetchTasks, isDemo]);
 
   // Real-time task updates
@@ -717,7 +722,7 @@ export default function TeamManager({ project, currentUser, onlineUserIds = new 
                 </div>
               )}
               {userQuery.length >= 2 && !queryLoading && userResults.length === 0 && (
-                <p className="mt-2 text-[11px] text-gray-400 italic">No users found for "@{userQuery}"</p>
+                <p className="mt-2 text-[11px] text-gray-400 italic">No users found for &quot;@{userQuery}&quot;</p>
               )}
             </div>
           )}
@@ -945,7 +950,7 @@ export default function TeamManager({ project, currentUser, onlineUserIds = new 
           <div className="text-center py-8">
             <ClipboardList className="mx-auto mb-2 text-gray-300 dark:text-gray-700" size={24} />
             <p className="text-sm text-gray-500 dark:text-gray-400">No tasks yet.</p>
-            {isOwner && <p className="text-xs text-gray-400 mt-1">Click "Add Task" to assign work to your team.</p>}
+            {isOwner && <p className="text-xs text-gray-400 mt-1">Click &quot;Add Task&quot; to assign work to your team.</p>}
           </div>
         ) : (() => {
           const filtered = taskFilter === "all" ? tasks : tasks.filter((t) => t.status === taskFilter);

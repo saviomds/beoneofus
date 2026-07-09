@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
 import ReactMarkdown from "react-markdown";
+import Link from "next/link";
+import Image from "next/image";
 import {
   PenLine, Eye, Trash2, Plus, Save, Send, X, Tag, Image as ImageIcon,
   Loader2, CheckCircle2, AlertTriangle, MessageSquare, Heart, FileText,
@@ -13,11 +16,11 @@ import {
 function slugify(t) {
   return t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 80);
 }
-function timeAgo(ts) {
+function timeAgo(ts, t) {
   const s = Math.floor((Date.now() - new Date(ts)) / 1000);
-  if (s < 60) return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 60) return t("blog.time_seconds", { n: s });
+  if (s < 3600) return t("blog.time_minutes", { n: Math.floor(s / 60) });
+  if (s < 86400) return t("blog.time_hours", { n: Math.floor(s / 3600) });
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
@@ -34,6 +37,7 @@ function tagColor(tag) { let h = 0; for (const c of tag) h = (h * 31 + c.charCod
 const BLANK = { id: null, title: "", slug: "", excerpt: "", content: "", cover_url: "", tags: [], published: false, is_featured: false };
 
 export default function BlogContent() {
+  const { t } = useLanguage();
   const [profile, setProfile] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -89,7 +93,7 @@ export default function BlogContent() {
 
   useEffect(() => {
     if (!profile) return;
-    fetchPosts();
+    (() => { fetchPosts(); })();
     const name = `blog-user-${Date.now()}`;
     channelRef.current = supabase
       .channel(name)
@@ -106,16 +110,16 @@ export default function BlogContent() {
   const handleAddTag = (e) => {
     if ((e.key === "Enter" || e.key === ",") && tagInput.trim()) {
       e.preventDefault();
-      const t = tagInput.trim().toLowerCase().replace(/\s+/g, "-");
-      if (!form.tags.includes(t) && form.tags.length < 6) {
-        setForm((f) => ({ ...f, tags: [...f.tags, t] }));
+      const tag = tagInput.trim().toLowerCase().replace(/\s+/g, "-");
+      if (!form.tags.includes(tag) && form.tags.length < 6) {
+        setForm((f) => ({ ...f, tags: [...f.tags, tag] }));
       }
       setTagInput("");
     }
   };
 
   const handleSave = async (publish = false) => {
-    if (!form.title.trim() || !form.content.trim()) { showToast("error", "Title and content are required."); return; }
+    if (!form.title.trim() || !form.content.trim()) { showToast("error", t("blog.err_title_content")); return; }
     if (publish) setPublishing(true); else setSaving(true);
 
     const canFeature = isAdmin || isVerified || isPremium;
@@ -143,7 +147,7 @@ export default function BlogContent() {
 
     if (publish) setPublishing(false); else setSaving(false);
     if (error) { showToast("error", error.message); }
-    else { showToast("success", publish ? "Published!" : "Saved as draft"); fetchPosts(); if (publish) setView("list"); }
+    else { showToast("success", publish ? t("blog.toast_published") : t("blog.toast_draft_saved")); fetchPosts(); if (publish) setView("list"); }
   };
 
   const handleEdit = (post) => {
@@ -166,13 +170,13 @@ export default function BlogContent() {
   const handleDelete = async (id) => {
     await supabase.from("blog_posts").delete().eq("id", id);
     setDeleteConfirm(null);
-    showToast("success", "Post deleted.");
+    showToast("success", t("blog.toast_deleted"));
     fetchPosts();
   };
 
   const togglePublish = async (post) => {
     await supabase.from("blog_posts").update({ published: !post.published, updated_at: new Date().toISOString() }).eq("id", post.id);
-    showToast("success", post.published ? "Unpublished" : "Published!");
+    showToast("success", post.published ? t("blog.toast_unpublished") : t("blog.toast_published"));
     fetchPosts();
   };
 
@@ -183,17 +187,17 @@ export default function BlogContent() {
         <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mb-4">
           <PenLine size={22} className="text-blue-500" />
         </div>
-        <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">Sign in to write</h2>
+        <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">{t("blog.signin_title")}</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
-          Create an account to publish blog posts. Verified and Premium members get featured placement and extra visibility.
+          {t("blog.signin_desc")}
         </p>
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
           <a href="/auth" className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors">
-            Sign In / Join Free
+            {t("blog.signin_join")}
           </a>
-          <a href="/blog" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
-            <BookOpen size={15} /> Read the Blog
-          </a>
+          <Link href="/blog" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+            <BookOpen size={15} /> {t("blog.read_blog")}
+          </Link>
         </div>
       </div>
     );
@@ -218,11 +222,11 @@ export default function BlogContent() {
             <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mb-4">
               <Trash2 size={20} className="text-red-500" />
             </div>
-            <h3 className="font-black text-gray-900 dark:text-white text-lg mb-2">Delete post?</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">This will permanently delete the post and all its comments and likes.</p>
+            <h3 className="font-black text-gray-900 dark:text-white text-lg mb-2">{t("blog.delete_q")}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{t("blog.delete_body")}</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Cancel</button>
-              <button onClick={() => handleDelete(deleteConfirm)} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-sm transition-colors">Delete</button>
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">{t("blog.cancel")}</button>
+              <button onClick={() => handleDelete(deleteConfirm)} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-sm transition-colors">{t("blog.delete")}</button>
             </div>
           </div>
         </div>
@@ -238,39 +242,39 @@ export default function BlogContent() {
           )}
           <div>
             <h1 className="text-xl font-black text-gray-900 dark:text-white">
-              {view === "list" ? "Blog Manager" : view === "preview" ? "Preview" : form.id ? "Edit Post" : "New Post"}
+              {view === "list" ? t("blog.manager_title") : view === "preview" ? t("blog.preview_title") : form.id ? t("blog.edit_post") : t("blog.new_post")}
             </h1>
-            {view === "list" && <p className="text-xs text-gray-500 dark:text-gray-400">{stats.published} published · {stats.total} total · {stats.totalViews} views</p>}
+            {view === "list" && <p className="text-xs text-gray-500 dark:text-gray-400">{t("blog.stats_summary", { published: stats.published, total: stats.total, views: stats.totalViews })}</p>}
           </div>
         </div>
         <div className="flex items-center gap-2">
           {view === "list" && (
             <>
               <a href="/blog" target="_blank" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl transition-all">
-                <Globe size={13} /> Public Blog
+                <Globe size={13} /> {t("blog.public_blog")}
               </a>
               <button onClick={handleNew} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-all shadow shadow-blue-500/20">
-                <Plus size={15} /> New Post
+                <Plus size={15} /> {t("blog.new_post")}
               </button>
             </>
           )}
           {view === "editor" && (
             <>
               <button onClick={() => setView("preview")} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl transition-all">
-                <Eye size={13} /> Preview
+                <Eye size={13} /> {t("blog.preview")}
               </button>
               <button onClick={() => handleSave(false)} disabled={saving || publishing} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl transition-all disabled:opacity-60">
-                {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Save draft
+                {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} {t("blog.save_draft_btn")}
               </button>
               <button onClick={() => handleSave(true)} disabled={saving || publishing} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-all shadow shadow-blue-500/20 disabled:opacity-60">
                 {publishing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                {form.published ? "Update" : "Publish"}
+                {form.published ? t("blog.update") : t("blog.publish")}
               </button>
             </>
           )}
           {view === "preview" && (
             <button onClick={() => setView("editor")} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-all">
-              <PenLine size={14} /> Back to Editor
+              <PenLine size={14} /> {t("blog.back_to_editor")}
             </button>
           )}
         </div>
@@ -286,22 +290,22 @@ export default function BlogContent() {
             {/* Writer tier badge */}
             <div className="flex items-center gap-2 mb-4">
               {isAdmin ? (
-                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40"><ShieldCheck size={12} /> Admin</span>
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40"><ShieldCheck size={12} /> {t("blog.tier_admin")}</span>
               ) : isPremium ? (
-                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40"><Crown size={12} /> Premium Writer — Featured posts & priority placement</span>
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40"><Crown size={12} /> {t("blog.tier_premium")}</span>
               ) : isVerified ? (
-                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40"><ShieldCheck size={12} /> Verified Author — Featured posts unlocked</span>
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40"><ShieldCheck size={12} /> {t("blog.tier_verified")}</span>
               ) : (
-                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10"><PenLine size={12} /> Community Writer — <a href="/dash/premium" className="text-amber-500 hover:underline">Upgrade to Premium</a> for featured placement</span>
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10"><PenLine size={12} /> {t("blog.tier_community_pre")}<Link href="/dash/premium" className="text-amber-500 hover:underline">{t("blog.tier_upgrade")}</Link>{t("blog.tier_community_post")}</span>
               )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
               {[
-                { label: "Total Posts", val: stats.total, icon: <FileText size={16} />, color: "text-blue-600" },
-                { label: "Published", val: stats.published, icon: <Globe size={16} />, color: "text-emerald-600" },
-                { label: "Total Views", val: stats.totalViews, icon: <Eye size={16} />, color: "text-violet-600" },
-                { label: "Featured", val: stats.featured, icon: <Star size={16} />, color: "text-amber-500" },
+                { label: t("blog.total_posts"), val: stats.total, icon: <FileText size={16} />, color: "text-blue-600" },
+                { label: t("blog.published"), val: stats.published, icon: <Globe size={16} />, color: "text-emerald-600" },
+                { label: t("blog.total_views"), val: stats.totalViews, icon: <Eye size={16} />, color: "text-violet-600" },
+                { label: t("blog.featured_count"), val: stats.featured, icon: <Star size={16} />, color: "text-amber-500" },
               ].map((s) => (
                 <div key={s.label} className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-2xl p-4">
                   <div className={`${s.color} mb-1`}>{s.icon}</div>
@@ -316,10 +320,10 @@ export default function BlogContent() {
                 <div className="w-14 h-14 bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <PenLine size={20} className="text-gray-400" />
                 </div>
-                <h3 className="font-black text-gray-900 dark:text-white mb-1">No posts yet</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Start writing your first blog post.</p>
+                <h3 className="font-black text-gray-900 dark:text-white mb-1">{t("blog.no_posts")}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">{t("blog.first_post_hint")}</p>
                 <button onClick={handleNew} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors">
-                  Write first post
+                  {t("blog.write_first")}
                 </button>
               </div>
             ) : (
@@ -327,22 +331,22 @@ export default function BlogContent() {
                 <div key={p.id} className="group flex items-start gap-4 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-2xl p-4 hover:border-gray-300 dark:hover:border-white/10 transition-all">
                   {p.cover_url && (
                     <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 hidden sm:block">
-                      <img src={p.cover_url} alt={p.title} className="w-full h-full object-cover" />
+                      <Image src={p.cover_url} alt={p.title} fill sizes="64px" className="object-cover" unoptimized />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3 mb-1">
                       <h3 className="font-black text-gray-900 dark:text-white text-sm truncate">{p.title}</h3>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {p.is_featured && <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase border bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/40">⭐ Featured</span>}
+                        {p.is_featured && <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase border bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/40">{t("blog.featured_badge")}</span>}
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${p.published ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10"}`}>
-                          {p.published ? "Live" : "Draft"}
+                          {p.published ? t("blog.live") : t("blog.draft")}
                         </span>
                       </div>
                     </div>
                     {p.excerpt && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mb-2">{p.excerpt}</p>}
                     <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500 flex-wrap">
-                      <span className="flex items-center gap-1"><Clock size={10} />{timeAgo(p.created_at)}</span>
+                      <span className="flex items-center gap-1"><Clock size={10} />{timeAgo(p.created_at, t)}</span>
                       <span className="flex items-center gap-1"><Eye size={10} />{p.views || 0}</span>
                       <span className="flex items-center gap-1"><Heart size={10} />{p.blog_likes?.[0]?.count || 0}</span>
                       <span className="flex items-center gap-1"><MessageSquare size={10} />{p.blog_comments?.[0]?.count || 0}</span>
@@ -353,18 +357,18 @@ export default function BlogContent() {
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleEdit(p)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="Edit">
+                      <button onClick={() => handleEdit(p)} className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title={t("blog.tip_edit")}>
                         <PenLine size={14} />
                       </button>
-                      <button onClick={() => togglePublish(p)} className="p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all" title={p.published ? "Unpublish" : "Publish"}>
+                      <button onClick={() => togglePublish(p)} className="p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all" title={p.published ? t("blog.tip_unpublish") : t("blog.tip_publish")}>
                         {p.published ? <Lock size={14} /> : <Globe size={14} />}
                       </button>
                       {p.published && (
-                        <a href={`/blog/${p.slug}`} target="_blank" className="p-1.5 text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-all" title="View live">
+                        <a href={`/blog/${p.slug}`} target="_blank" className="p-1.5 text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-all" title={t("blog.tip_view_live")}>
                           <Eye size={14} />
                         </a>
                       )}
-                      <button onClick={() => setDeleteConfirm(p.id)} className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title="Delete">
+                      <button onClick={() => setDeleteConfirm(p.id)} className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title={t("blog.tip_delete")}>
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -380,11 +384,11 @@ export default function BlogContent() {
           <div className="space-y-5 pb-10">
             {/* title */}
             <div>
-              <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block">Title *</label>
+              <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block">{t("blog.title_req")}</label>
               <input
                 value={form.title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="Post title…"
+                placeholder={t("blog.title_ph")}
                 className="w-full bg-transparent text-2xl font-black text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-700 border-b border-gray-200 dark:border-white/10 pb-3 focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
@@ -392,20 +396,20 @@ export default function BlogContent() {
             {/* slug */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block flex items-center gap-1"><Hash size={11} /> Slug</label>
+                <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block flex items-center gap-1"><Hash size={11} /> {t("blog.slug")}</label>
                 <input
                   value={form.slug}
                   onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))}
-                  placeholder="auto-generated"
+                  placeholder={t("blog.slug_ph")}
                   className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm font-mono text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
               </div>
               <div>
-                <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block flex items-center gap-1"><ImageIcon size={11} /> Cover Image URL</label>
+                <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block flex items-center gap-1"><ImageIcon size={11} /> {t("blog.cover_image")}</label>
                 <input
                   value={form.cover_url}
                   onChange={(e) => setForm((f) => ({ ...f, cover_url: e.target.value }))}
-                  placeholder="https://…"
+                  placeholder={t("blog.cover_ph")}
                   className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
               </div>
@@ -414,7 +418,7 @@ export default function BlogContent() {
             {/* cover preview */}
             {form.cover_url && (
               <div className="relative h-40 rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10">
-                <img src={form.cover_url} alt="cover" className="w-full h-full object-cover" />
+                <Image src={form.cover_url} alt="cover" fill sizes="100vw" className="object-cover" unoptimized />
                 <button onClick={() => setForm((f) => ({ ...f, cover_url: "" }))} className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-lg transition-all">
                   <X size={14} />
                 </button>
@@ -432,21 +436,21 @@ export default function BlogContent() {
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${form.is_featured ? "translate-x-4" : "translate-x-0"}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-amber-700 dark:text-amber-400">Feature this post</p>
-                  <p className="text-[10px] text-amber-600/70 dark:text-amber-500/70">Appears at the top of the blog and gets priority visibility</p>
+                  <p className="text-xs font-black text-amber-700 dark:text-amber-400">{t("blog.feature_post")}</p>
+                  <p className="text-[10px] text-amber-600/70 dark:text-amber-500/70">{t("blog.feature_desc")}</p>
                 </div>
-                {isPremium && <span className="shrink-0 text-[9px] font-black px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full border border-amber-300 dark:border-amber-700/40 uppercase tracking-widest flex items-center gap-1"><Crown size={9} /> Premium</span>}
-                {isVerified && !isPremium && <span className="shrink-0 text-[9px] font-black px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-700/40 uppercase tracking-widest flex items-center gap-1"><ShieldCheck size={9} /> Verified</span>}
+                {isPremium && <span className="shrink-0 text-[9px] font-black px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full border border-amber-300 dark:border-amber-700/40 uppercase tracking-widest flex items-center gap-1"><Crown size={9} /> {t("blog.badge_premium")}</span>}
+                {isVerified && !isPremium && <span className="shrink-0 text-[9px] font-black px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-700/40 uppercase tracking-widest flex items-center gap-1"><ShieldCheck size={9} /> {t("blog.badge_verified")}</span>}
               </button>
             )}
 
             {/* excerpt */}
             <div>
-              <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block">Excerpt <span className="text-gray-300 dark:text-gray-600 font-normal">(optional, shown in listing)</span></label>
+              <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block">{t("blog.post_excerpt")} <span className="text-gray-300 dark:text-gray-600 font-normal">{t("blog.excerpt_optional")}</span></label>
               <textarea
                 value={form.excerpt}
                 onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))}
-                placeholder="A short summary of this post…"
+                placeholder={t("blog.excerpt_ph")}
                 rows={2}
                 className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
               />
@@ -454,7 +458,7 @@ export default function BlogContent() {
 
             {/* tags */}
             <div>
-              <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block flex items-center gap-1"><Tag size={11} /> Tags <span className="text-gray-300 dark:text-gray-600 font-normal ml-1">press Enter to add</span></label>
+              <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block flex items-center gap-1"><Tag size={11} /> {t("blog.tags_label")} <span className="text-gray-300 dark:text-gray-600 font-normal ml-1">{t("blog.tags_hint")}</span></label>
               <div className="flex flex-wrap gap-2 p-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl min-h-[44px]">
                 {form.tags.map((t) => (
                   <span key={t} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${tagColor(t)}`}>
@@ -469,7 +473,7 @@ export default function BlogContent() {
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={handleAddTag}
-                    placeholder={form.tags.length === 0 ? "Add tags…" : ""}
+                    placeholder={form.tags.length === 0 ? t("blog.tags_ph") : ""}
                     className="flex-1 min-w-[100px] bg-transparent text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none"
                   />
                 )}
@@ -478,15 +482,15 @@ export default function BlogContent() {
 
             {/* content */}
             <div>
-              <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block">Content * <span className="text-gray-300 dark:text-gray-600 font-normal">(Markdown supported)</span></label>
+              <label className="text-xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 block">{t("blog.content_req")} <span className="text-gray-300 dark:text-gray-600 font-normal">{t("blog.content_md")}</span></label>
               <textarea
                 value={form.content}
                 onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-                placeholder={"# Your post title\n\nStart writing in **Markdown**...\n\n## Section heading\n\nParagraph text here.\n\n```js\nconsole.log('code blocks work too');\n```"}
+                placeholder={t("blog.content_ph")}
                 rows={20}
                 className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-mono text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none leading-relaxed"
               />
-              <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">{form.content.length} chars · ~{Math.ceil(form.content.split(/\s+/).length / 200)} min read</p>
+              <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">{t("blog.read_meta", { chars: form.content.length, mins: Math.ceil(form.content.split(/\s+/).length / 200) })}</p>
             </div>
           </div>
         )}
@@ -496,7 +500,7 @@ export default function BlogContent() {
           <div className="pb-10">
             {form.cover_url && (
               <div className="relative h-56 sm:h-72 rounded-3xl overflow-hidden mb-8 border border-gray-200 dark:border-white/5">
-                <img src={form.cover_url} alt="cover" className="w-full h-full object-cover" />
+                <Image src={form.cover_url} alt="cover" fill sizes="100vw" className="object-cover" unoptimized />
               </div>
             )}
             {(form.tags || []).length > 0 && (
@@ -504,10 +508,10 @@ export default function BlogContent() {
                 {form.tags.map((t) => <span key={t} className={`px-3 py-1 rounded-full text-xs font-bold border ${tagColor(t)}`}>{t}</span>)}
               </div>
             )}
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-gray-900 dark:text-white mb-4 leading-tight">{form.title || "Untitled"}</h1>
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-gray-900 dark:text-white mb-4 leading-tight">{form.title || t("blog.untitled")}</h1>
             {form.excerpt && <p className="text-gray-500 dark:text-gray-400 text-base mb-8 leading-relaxed border-l-4 border-blue-500 pl-4">{form.excerpt}</p>}
             <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:font-black prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-code:bg-gray-100 dark:prose-code:bg-white/10 prose-code:rounded prose-code:px-1 prose-pre:bg-gray-900 dark:prose-pre:bg-black/50 prose-pre:rounded-2xl prose-img:rounded-2xl">
-              <ReactMarkdown>{form.content || "*No content yet.*"}</ReactMarkdown>
+              <ReactMarkdown>{form.content || t("blog.no_content")}</ReactMarkdown>
             </div>
           </div>
         )}

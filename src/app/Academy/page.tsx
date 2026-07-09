@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { 
   Terminal, ArrowLeft, Search, BookOpen, PlayCircle, 
@@ -69,8 +70,10 @@ function AcademyContent() {
   }, [activeCategory, debouncedSearch]);
 
   useEffect(() => {
-    setPage(0);
-    fetchCourses(0, true);
+    (async () => {
+      setPage(0);
+      await fetchCourses(0, true);
+    })();
   }, [fetchCourses]);
 
   const loadMore = () => {
@@ -165,7 +168,7 @@ function AcademyContent() {
                     {course.thumbnail_url.match(/\.(mp4|webm|ogg)$/i) ? (
                       <video src={course.thumbnail_url} className="object-cover w-full h-full" muted loop playsInline autoPlay />
                     ) : (
-                      <img src={course.thumbnail_url} alt={course.title} className="object-cover w-full h-full" />
+                      <Image src={course.thumbnail_url} alt={course.title} fill unoptimized className="object-cover w-full h-full" />
                     )}
                     <div className="absolute top-2 right-2">
                       <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg backdrop-blur-md ${

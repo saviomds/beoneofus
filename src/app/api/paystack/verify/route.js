@@ -49,13 +49,12 @@ export async function POST(req) {
       );
     }
 
-    /* Update subscription — must belong to the authenticated caller (ownership check) */
+    /* Locate the subscription — must belong to the authenticated caller. */
     const { data: sub, error: subErr } = await supabase
       .from('premium_subscriptions')
-      .update({ status: 'pending_review', updated_at: new Date().toISOString() })
+      .select('id, user_id, plan, amount, currency, status')
       .eq('payment_reference', reference)
       .eq('user_id', caller.id)          // ownership enforced here
-      .select('id, user_id, plan, amount, currency')
       .single();
 
     if (subErr) throw subErr;
@@ -63,34 +62,37 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Payment reference not found or does not belong to your account.' }, { status: 403 });
     }
 
-    /* Fetch username for notification message */
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', sub.user_id)
-      .single();
-
-    /* Notify all admins */
-    const { data: admins } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('is_admin', true)
-      .neq('id', sub.user_id);
-
-    if (admins?.length) {
-      const amount = sub.plan === 'monthly' ? '$9.99/mo' : '$99/yr';
-      await supabase.from('notifications').insert(
-        admins.map(a => ({
-          receiver_id: a.id,
-          actor_id:    sub.user_id,
-          type:        'premium_request',
-          content:     `@${profile?.username || 'A user'} paid ${amount} for ${sub.plan} premium. Review their request.`,
-          unread:      true,
-        }))
-      );
+    /* Idempotency: if we already granted this reference, don't double-grant/notify
+       (verify can fire again on a page reload or a retried callback). */
+    if (sub.status === 'active') {
+      return NextResponse.json({ success: true, subscriptionId: sub.id, premium: true, alreadyActive: true });
     }
 
-    return NextResponse.json({ success: true, subscriptionId: sub.id });
+    /* Payment is confirmed by Paystack — payment IS the entitlement. Grant now. */
+    const expiresAt = new Date(
+      Date.now() + (sub.plan === 'annual' ? 365 : 30) * 86400000
+    ).toISOString();
+
+    await supabase
+      .from('premium_subscriptions')
+      .update({ status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', sub.id);
+
+    await supabase
+      .from('profiles')
+      .update({ is_premium: true, premium_expires_at: expiresAt })
+      .eq('id', sub.user_id);
+
+    /* Receipt to the user (their real-time channel also flips the UI to active). */
+    await supabase.from('notifications').insert({
+      receiver_id: sub.user_id,
+      actor_id:    sub.user_id,
+      type:        'premium_activated',
+      content:     'Payment confirmed — your Premium is now active. Enjoy full access to every premium feature.',
+      unread:      true,
+    });
+
+    return NextResponse.json({ success: true, subscriptionId: sub.id, premium: true, expiresAt });
   } catch (err) {
     console.error('Paystack verify error:', err);
     return NextResponse.json({ error: 'Payment verification failed. Please contact support.' }, { status: 500 });

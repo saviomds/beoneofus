@@ -9,6 +9,7 @@ import VerifiedBadge from "../../components/VerifiedBadge";
 import PremiumBadge from "../../components/PremiumBadge";
 import GitHubStats from "../../components/GitHubStats";
 import { StoryRing, useUserStories, StoryViewer, StoryCreator } from "./Stories";
+import { useLanguage } from "../../../lib/i18n";
 
 // --- Image Cropping Helper ---
 const createImage = (url) =>
@@ -41,6 +42,7 @@ async function getCroppedImg(imageSrc, pixelCrop) {
 }
 
 export default function ProfileContent({ viewUserId }) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -253,8 +255,8 @@ export default function ProfileContent({ viewUserId }) {
   // org-console flow. Returns true on success.
   const commitImage = async (kind, file) => {
     if (!file || !currentUser) return false;
-    if (!file.type?.startsWith('image/')) { setToast({ message: 'Please choose an image file.', type: 'error' }); setTimeout(() => setToast({ message: '' }), 3000); return false; }
-    if (file.size > 6 * 1024 * 1024) { setToast({ message: 'Image must be under 6 MB.', type: 'error' }); setTimeout(() => setToast({ message: '' }), 3000); return false; }
+    if (!file.type?.startsWith('image/')) { setToast({ message: t('profile.err_choose_image'), type: 'error' }); setTimeout(() => setToast({ message: '' }), 3000); return false; }
+    if (file.size > 6 * 1024 * 1024) { setToast({ message: t('profile.err_image_size'), type: 'error' }); setTimeout(() => setToast({ message: '' }), 3000); return false; }
     setSaving(true);
     try {
       const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
@@ -267,12 +269,12 @@ export default function ProfileContent({ viewUserId }) {
       if (updErr) throw updErr;
       setProfile((prev) => ({ ...prev, [col]: urlData.publicUrl }));
       if (kind === 'avatar') { setImageFile(null); setImagePreview(null); } else { setBannerFile(null); setBannerPreview(null); }
-      setToast({ message: kind === 'avatar' ? 'Photo updated' : 'Cover updated', type: 'success' });
+      setToast({ message: kind === 'avatar' ? t('profile.photo_updated') : t('profile.cover_updated'), type: 'success' });
       setTimeout(() => setToast({ message: '' }), 2500);
       return true;
     } catch (err) {
       console.error('Image upload error:', err?.message || err);
-      setToast({ message: err?.message || 'Upload failed. Please try again.', type: 'error' });
+      setToast({ message: err?.message || t('profile.err_upload'), type: 'error' });
       setTimeout(() => setToast({ message: '' }), 3500);
       return false;
     } finally {
@@ -314,7 +316,7 @@ export default function ProfileContent({ viewUserId }) {
       await commitImage('banner', croppedFile);
     } catch (e) {
       console.error(e);
-      setToast({ message: "Failed to crop image", type: "error" });
+      setToast({ message: t('profile.err_crop'), type: "error" });
       setTimeout(() => setToast({ message: "" }), 3000);
     }
   };
@@ -322,7 +324,7 @@ export default function ProfileContent({ viewUserId }) {
   const handleSave = async () => {
     const cleanUsername = formData.username.trim().replace(/\s+/g, '_').toLowerCase();
     if (!cleanUsername) {
-      setToast({ message: "Username cannot be empty", type: "error" });
+      setToast({ message: t('profile.err_username_empty'), type: "error" });
       return;
     }
 
@@ -376,7 +378,7 @@ export default function ProfileContent({ viewUserId }) {
         .eq('id', currentUser.id);
 
       if (error) {
-        if (error.code === '23505') throw new Error("Username is already taken.");
+        if (error.code === '23505') throw new Error(t('profile.err_username_taken'));
         throw error;
       }
 
@@ -409,7 +411,7 @@ export default function ProfileContent({ viewUserId }) {
       setIsEditing(false);
       setImageFile(null);
       setBannerFile(null);
-      setToast({ message: "Profile updated successfully", type: "success" });
+      setToast({ message: t('profile.profile_updated'), type: "success" });
       setTimeout(() => setToast({ message: "" }), 3000);
     } catch (error) {
       console.error("Error updating profile:", error.message);
@@ -433,12 +435,12 @@ export default function ProfileContent({ viewUserId }) {
       console.log('Visibility update result:', { data, error });
       if (error) throw error;
       setProfile(prev => ({ ...prev, profile_visibility: visibility }));
-      setToast({ message: "Visibility settings saved", type: "success" });
+      setToast({ message: t('profile.visibility_saved'), type: "success" });
       setTimeout(() => setToast({ message: "" }), 3000);
     } catch (err) {
       const msg = err?.message || err?.details || err?.hint || err?.code || JSON.stringify(err);
       console.error('Visibility save error:', msg, err);
-      setToast({ message: msg || "Could not save visibility settings", type: "error" });
+      setToast({ message: msg || t('profile.err_visibility'), type: "error" });
       setTimeout(() => setToast({ message: "" }), 3000);
     } finally {
       setSavingVisibility(false);
@@ -474,7 +476,7 @@ export default function ProfileContent({ viewUserId }) {
         status: 'pending'
       });
       if (error) {
-        if (error.code === '23503') throw new Error("This profile no longer exists.");
+        if (error.code === '23503') throw new Error(t('profile.err_profile_gone'));
         throw error;
       }
       setConnectionStatus('pending_sent');
@@ -486,11 +488,11 @@ export default function ProfileContent({ viewUserId }) {
         content: 'wants to connect'
       });
       
-      setToast({ message: "Follow request sent", type: "success" });
+      setToast({ message: t('profile.follow_sent'), type: "success" });
       setTimeout(() => setToast({ message: "" }), 3000);
     } catch (err) {
       console.error(err);
-      setToast({ message: "Failed to follow", type: "error" });
+      setToast({ message: t('profile.err_follow'), type: "error" });
       setTimeout(() => setToast({ message: "" }), 3000);
     } finally {
       setConnectionProcessing(false);
@@ -515,11 +517,11 @@ export default function ProfileContent({ viewUserId }) {
         setFollowersCount(prev => Math.max(0, prev - 1));
       }
       setConnectionStatus('none');
-      setToast({ message: "Unfollowed successfully", type: "success" });
+      setToast({ message: t('profile.unfollowed'), type: "success" });
       setTimeout(() => setToast({ message: "" }), 3000);
     } catch (err) {
       console.error(err);
-      setToast({ message: "Failed to unfollow", type: "error" });
+      setToast({ message: t('profile.err_unfollow'), type: "error" });
       setTimeout(() => setToast({ message: "" }), 3000);
     } finally {
       setConnectionProcessing(false);
@@ -538,7 +540,10 @@ export default function ProfileContent({ viewUserId }) {
     
     setLoadingFollowers(true);
     try {
-      const res = await fetch(`/api/connections/list?user_id=${profile.id}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/connections/list?user_id=${profile.id}`, {
+        headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
       const data = await res.json();
       setFollowersData(data.users || []);
     } catch (err) {
@@ -552,7 +557,7 @@ export default function ProfileContent({ viewUserId }) {
   const handlePostJob = async (e) => {
     e.preventDefault();
     if (!currentUser) {
-      setToast({ message: "Authentication error. Please log in again.", type: "error" });
+      setToast({ message: t('profile.err_auth'), type: "error" });
       setTimeout(() => setToast({ message: "" }), 3000);
       return;
     }
@@ -564,7 +569,7 @@ export default function ProfileContent({ viewUserId }) {
         location: jobForm.location,
         type: jobForm.type,
         salary: jobForm.salary,
-        tags: (jobForm.tags || "").toString().split(',').map(t => t.trim()).filter(Boolean),
+        tags: (jobForm.tags || "").toString().split(',').map(tag => tag.trim()).filter(Boolean),
         external_url: jobForm.external_url,
         description: jobForm.description,
         experience_level: jobForm.experience_level,
@@ -575,12 +580,12 @@ export default function ProfileContent({ viewUserId }) {
         const { data, error } = await supabase.from('jobs').update(jobData).eq('id', editingJobId).select().single();
         if (error) throw error;
         setUserJobs(userJobs.map(job => job.id === editingJobId ? data : job));
-        setToast({ message: "Opportunity updated successfully!", type: "success" });
+        setToast({ message: t('profile.job_updated'), type: "success" });
       } else {
         const { data, error } = await supabase.from('jobs').insert(jobData).select().single();
         if (error) throw error;
         setUserJobs([data, ...userJobs]);
-        setToast({ message: "Opportunity broadcasted to the network!", type: "success" });
+        setToast({ message: t('profile.job_posted'), type: "success" });
       }
 
       setShowJobModal(false);
@@ -607,7 +612,7 @@ export default function ProfileContent({ viewUserId }) {
       if (error) throw error;
       
       setUserJobs(prev => prev.filter(job => job.id !== jobToDelete.id));
-      setToast({ message: "Opportunity deleted.", type: "success" });
+      setToast({ message: t('profile.job_deleted'), type: "success" });
     } catch (err) {
       setToast({ message: err.message, type: "error" });
     } finally {
@@ -638,7 +643,7 @@ export default function ProfileContent({ viewUserId }) {
   };
 
   const handleAppAction = async (appId, newStatus, applicantId, jobTitle) => {
-    const customMessage = window.prompt(`Optional: Add a personal message to send to the applicant (leave blank for standard message):`);
+    const customMessage = window.prompt(t('profile.app_message_prompt'));
     if (customMessage === null) return; // Cancel if the user clicks 'Cancel' on the prompt
 
     try {
@@ -659,12 +664,15 @@ export default function ProfileContent({ viewUserId }) {
 
         // Trigger email notification
         try {
+          const { data: { session } } = await supabase.auth.getSession();
           const emailRes = await fetch('/api/send-app-email', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+            },
             body: JSON.stringify({
               applicationId: appId,
-              applicantId,
               status: newStatus,
               jobTitle: jobTitle || 'a recent role',
               customMessage
@@ -685,9 +693,9 @@ export default function ProfileContent({ viewUserId }) {
       if (selectedApplicant && selectedApplicant.id === appId) {
         setSelectedApplicant(prev => ({...prev, status: newStatus}));
       }
-      setToast({ message: `Application ${newStatus} successfully!`, type: "success" });
+      setToast({ message: t('profile.app_action_success', { status: newStatus }), type: "success" });
     } catch (err) {
-      setToast({ message: "Error updating application: " + err.message, type: "error" });
+      setToast({ message: t('profile.err_app_update') + err.message, type: "error" });
     }
   };
 
@@ -703,11 +711,14 @@ export default function ProfileContent({ viewUserId }) {
     if (!currentUser || !interviewTarget) return;
     setCreatingInterview(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/interview/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
-          adminId: currentUser.id,
           applicantId: interviewTarget.applicant.user_id,
           jobId: interviewTarget.job?.id || null,
           applicationId: interviewTarget.applicant.id,
@@ -717,12 +728,12 @@ export default function ProfileContent({ viewUserId }) {
         }),
       });
       const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Failed to create room');
+      if (!data.success) throw new Error(data.error || t('profile.err_create_room'));
       setShowInterviewModal(false);
-      setInterviewToast('Interview room created and candidate notified!');
+      setInterviewToast(t('profile.interview_created'));
       setTimeout(() => setInterviewToast(''), 4000);
     } catch (err) {
-      setInterviewToast('Error: ' + err.message);
+      setInterviewToast(t('profile.error_prefix') + err.message);
       setTimeout(() => setInterviewToast(''), 4000);
     } finally {
       setCreatingInterview(false);
@@ -733,7 +744,7 @@ export default function ProfileContent({ viewUserId }) {
     return (
       <div className="flex flex-col items-center justify-center p-20">
         <Loader2 className="animate-spin text-blue-500 dark:text-blue-400 mb-4" size={32} />
-        <p className="text-gray-500 dark:text-gray-400 font-black text-xs uppercase tracking-widest">Decrypting Identity...</p>
+        <p className="text-gray-500 dark:text-gray-400 font-black text-xs uppercase tracking-widest">{t('profile.loading')}</p>
       </div>
     );
   }
@@ -755,8 +766,8 @@ export default function ProfileContent({ viewUserId }) {
   return (
     <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 pt-4 px-2 sm:px-4 md:px-6">
       <div className="mb-6 max-w-6xl w-full mx-auto">
-        <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">Profile</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">{isOwnProfile ? "Manage your professional identity and network status." : "Viewing professional network identity."}</p>
+        <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tighter">{t('profile.page_title')}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">{isOwnProfile ? t('profile.subtitle_own') : t('profile.subtitle_other')}</p>
       </div>
 
 
@@ -766,7 +777,7 @@ export default function ProfileContent({ viewUserId }) {
           <div className="absolute inset-0 bg-gray-900/80 dark:bg-black/80 backdrop-blur-sm" />
           <div className="relative w-full max-w-3xl bg-white dark:bg-gray-900 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col h-[75vh] animate-in fade-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800 z-10 shrink-0">
-              <h3 className="font-bold text-gray-900 dark:text-gray-100">Adjust Cover Image</h3>
+              <h3 className="font-bold text-gray-900 dark:text-gray-100">{t('profile.adjust_cover')}</h3>
               <button onClick={() => { setShowBannerCropper(false); setBannerPreview(profile?.banner_url || null); setBannerFile(null); }} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
                 <X size={20} />
               </button>
@@ -784,7 +795,7 @@ export default function ProfileContent({ viewUserId }) {
             </div>
             <div className="p-5 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-800 z-10 flex flex-col sm:flex-row items-center gap-4 shrink-0">
               <input type="range" value={bannerZoom} min={1} max={3} step={0.1} aria-labelledby="Zoom" onChange={(e) => setBannerZoom(e.target.value)} className="w-full accent-blue-600" />
-              <button onClick={handleCropComplete} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all shrink-0">Apply Crop</button>
+              <button onClick={handleCropComplete} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all shrink-0">{t('profile.apply_crop')}</button>
             </div>
           </div>
         </div>
@@ -794,7 +805,7 @@ export default function ProfileContent({ viewUserId }) {
         {/* Banner Section */}
         <div className="h-28 sm:h-40 md:h-48 w-full bg-gradient-to-tr from-brand-500 via-brand-600 to-trust-500 rounded-t-2xl sm:rounded-t-[2.5rem] relative overflow-hidden group">
           {displayBanner ? (
-            <Image src={displayBanner} alt="Profile Banner" fill priority quality={75} className="object-cover object-center" />
+            <Image src={displayBanner} alt={t('profile.banner_alt')} fill priority quality={75} className="object-cover object-center" />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 mix-blend-overlay"></div>
           )}
@@ -805,7 +816,7 @@ export default function ProfileContent({ viewUserId }) {
               className="absolute inset-0 bg-gray-900/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
             >
               <Camera size={32} className="text-white mb-2" />
-              <span className="text-xs font-bold uppercase tracking-widest text-white bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/20">Change Cover</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-white bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/20">{t('profile.change_cover')}</span>
             </div>
           )}
           {/* Always-visible cover button (mobile has no hover) */}
@@ -815,7 +826,7 @@ export default function ProfileContent({ viewUserId }) {
               disabled={saving}
               className="absolute top-3 right-3 z-20 inline-flex items-center gap-1.5 text-xs font-bold text-white bg-black/45 hover:bg-black/60 backdrop-blur-sm border border-white/20 px-3 py-1.5 rounded-full transition-colors disabled:opacity-60"
             >
-              {saving ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} Cover
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} {t('profile.cover')}
             </button>
           )}
         </div>
@@ -832,7 +843,7 @@ export default function ProfileContent({ viewUserId }) {
             >
               <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 rounded-full border-4 sm:border-[5px] md:border-[6px] border-white dark:border-gray-900 bg-white dark:bg-gray-900 flex items-center justify-center text-3xl sm:text-4xl font-black text-gray-700 dark:text-gray-300 shadow-xl shrink-0 overflow-hidden group z-10 transition-transform hover:scale-105 duration-300">
                 {displayAvatar ? (
-                  <Image src={displayAvatar} alt="Profile Avatar" fill sizes="128px" className="object-cover object-center" />
+                  <Image src={displayAvatar} alt={t('profile.avatar_alt_main')} fill sizes="128px" className="object-cover object-center" />
                 ) : (
                   userInitial
                 )}
@@ -843,7 +854,7 @@ export default function ProfileContent({ viewUserId }) {
                     className="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
                   >
                     <Camera size={24} className="text-white mb-1" />
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-white">Change</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-white">{t('profile.change')}</span>
                   </div>
                 )}
               </div>
@@ -858,22 +869,22 @@ export default function ProfileContent({ viewUserId }) {
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       disabled={saving}
-                      title="Change profile photo"
+                      title={t('profile.change_photo_title')}
                       className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-3 sm:px-4 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95 disabled:opacity-60"
                     >
-                      {saving ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />} <span className="hidden sm:inline">Photo</span>
+                      {saving ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />} <span className="hidden sm:inline">{t('profile.photo')}</span>
                     </button>
                     <button
                       onClick={() => setIsEditing(true)}
                       className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-3 sm:px-5 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
                     >
-                      <Edit3 size={16} /> <span className="hidden xs:inline sm:inline">Edit Profile</span>
+                      <Edit3 size={16} /> <span className="hidden xs:inline sm:inline">{t('profile.edit_profile')}</span>
                     </button>
                     <button
                       onClick={() => setStoryViewerOpen("create")}
                       className="flex items-center gap-1.5 text-sm font-bold text-white bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 px-3 sm:px-4 py-2.5 rounded-full transition-all shadow-sm hover:shadow-md active:scale-95"
                     >
-                      <Plus size={15} /> <span className="hidden sm:inline">Story</span>
+                      <Plus size={15} /> <span className="hidden sm:inline">{t('profile.story')}</span>
                     </button>
                     {profile?.username && (
                       <>
@@ -881,19 +892,19 @@ export default function ProfileContent({ viewUserId }) {
                           href={`/u/${profile.username}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          title="View public profile"
+                          title={t('profile.view_public')}
                           className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-200 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md hover:bg-gray-50 dark:hover:bg-gray-700 px-3 sm:px-4 py-2.5 rounded-full border border-gray-200 dark:border-gray-700 transition-all shadow-sm hover:shadow-md active:scale-95"
                         >
-                          <ExternalLink size={15} /> <span className="hidden sm:inline">Public</span>
+                          <ExternalLink size={15} /> <span className="hidden sm:inline">{t('profile.public')}</span>
                         </a>
                         <a
                           href={`/resume/${profile.username}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          title="Generate resume"
+                          title={t('profile.generate_resume')}
                           className="flex items-center gap-1.5 text-sm font-bold text-white bg-blue-600/90 hover:bg-blue-500 backdrop-blur-md px-3 sm:px-4 py-2.5 rounded-full transition-all shadow-sm hover:shadow-md active:scale-95"
                         >
-                          <FileText size={15} /> <span className="hidden sm:inline">Resume</span>
+                          <FileText size={15} /> <span className="hidden sm:inline">{t('profile.resume')}</span>
                         </a>
                       </>
                     )}
@@ -907,7 +918,7 @@ export default function ProfileContent({ viewUserId }) {
                       disabled={connectionProcessing}
                       className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-full transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50"
                     >
-                      {connectionProcessing ? <Loader2 size={18} className="animate-spin" /> : <Users size={18} />} Follow
+                      {connectionProcessing ? <Loader2 size={18} className="animate-spin" /> : <Users size={18} />} {t('profile.follow')}
                     </button>
                   )}
                   {connectionStatus === 'pending_sent' && (
@@ -916,7 +927,7 @@ export default function ProfileContent({ viewUserId }) {
                       disabled={connectionProcessing}
                       className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/50 border border-gray-300 dark:border-gray-700 px-8 py-3 rounded-full transition-all active:scale-95 disabled:opacity-50"
                     >
-                      {connectionProcessing ? <Loader2 size={18} className="animate-spin" /> : <Users size={18} />} Pending
+                      {connectionProcessing ? <Loader2 size={18} className="animate-spin" /> : <Users size={18} />} {t('profile.pending')}
                     </button>
                   )}
                   {connectionStatus === 'pending_received' && (
@@ -924,7 +935,7 @@ export default function ProfileContent({ viewUserId }) {
                       disabled
                       className="flex items-center gap-2 text-sm font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-8 py-3 rounded-full border border-amber-200 dark:border-amber-800/50 transition-all cursor-default shadow-sm"
                     >
-                      <Users size={18} /> Review Request
+                      <Users size={18} /> {t('profile.review_request')}
                     </button>
                   )}
                   {connectionStatus === 'accepted' && (
@@ -933,7 +944,7 @@ export default function ProfileContent({ viewUserId }) {
                       disabled={connectionProcessing}
                       className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/50 px-8 py-3 rounded-full border border-gray-300 dark:border-gray-700 transition-all active:scale-95 disabled:opacity-50"
                     >
-                      {connectionProcessing ? <Loader2 size={18} className="animate-spin" /> : <Users size={18} />} Unfollow
+                      {connectionProcessing ? <Loader2 size={18} className="animate-spin" /> : <Users size={18} />} {t('profile.unfollow')}
                     </button>
                   )}
                 </>
@@ -946,33 +957,33 @@ export default function ProfileContent({ viewUserId }) {
             <div className="pt-2 pb-6 animate-in fade-in zoom-in-95 duration-200">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Edit Details</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Update your professional identity.</p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('profile.edit_details')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('profile.edit_details_desc')}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={handleCancel} className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">Cancel</button>
+                  <button onClick={handleCancel} className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">{t('profile.cancel')}</button>
                   <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-sm disabled:opacity-50">
-                    {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} Save
+                    {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} {t('profile.save')}
                   </button>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 dark:bg-gray-800/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-800">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Full Name</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('profile.full_name')}</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><User size={14} /></span>
                       <input
                         type="text"
                         value={formData.full_name}
                         onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                        placeholder="Your real name (optional)"
+                        placeholder={t('profile.full_name_ph')}
                         className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Username</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('profile.username')}</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 font-bold">@</span>
                       <input 
@@ -984,30 +995,30 @@ export default function ProfileContent({ viewUserId }) {
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Headline / Bio</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('profile.headline_bio')}</label>
                     <input 
                       type="text" 
                       value={formData.status} 
                       onChange={(e) => setFormData({...formData, status: e.target.value})}
-                      placeholder="e.g. Senior Software Engineer"
+                      placeholder={t('profile.headline_ph')}
                       className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Location</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('profile.location')}</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><MapPin size={14} /></span>
                       <input 
                         type="text" 
                         value={formData.location} 
                         onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        placeholder="City, Country"
+                        placeholder={t('profile.location_ph')}
                         className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Work Status</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('profile.work_status')}</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><Briefcase size={14} /></span>
                       <select 
@@ -1015,44 +1026,44 @@ export default function ProfileContent({ viewUserId }) {
                         onChange={(e) => setFormData({...formData, work_status: e.target.value})}
                         className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm appearance-none"
                       >
-                        <option value="">Not Specified</option>
-                        <option value="Open to Work">Open to Work</option>
-                        <option value="Hiring">Hiring</option>
-                        <option value="Freelancing">Freelancing</option>
-                        <option value="Employed">Employed</option>
+                        <option value="">{t('profile.ws_not_specified')}</option>
+                        <option value="Open to Work">{t('profile.ws_open')}</option>
+                        <option value="Hiring">{t('profile.ws_hiring')}</option>
+                        <option value="Freelancing">{t('profile.ws_freelancing')}</option>
+                        <option value="Employed">{t('profile.ws_employed')}</option>
                       </select>
                     </div>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">GitHub Username</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('profile.github')}</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><GitBranch size={14} /></span>
                       <input 
                         type="text" 
                         value={formData.github} 
                         onChange={(e) => setFormData({...formData, github: e.target.value})}
-                        placeholder="octocat"
+                        placeholder={t('profile.github_ph')}
                         className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Website URL</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('profile.website')}</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><Link size={14} /></span>
                       <input
                         type="text"
                         value={formData.website}
                         onChange={(e) => setFormData({...formData, website: e.target.value})}
-                        placeholder="https://yourdomain.com"
+                        placeholder={t('profile.website_ph')}
                         className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Skills</label>
+                    <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('profile.skills')}</label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"><Code2 size={14} /></span>
@@ -1070,7 +1081,7 @@ export default function ProfileContent({ viewUserId }) {
                               setSkillsInput("");
                             }
                           }}
-                          placeholder="e.g. React, Python — press Enter to add"
+                          placeholder={t('profile.skills_ph')}
                           className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
                         />
                       </div>
@@ -1105,20 +1116,20 @@ export default function ProfileContent({ viewUserId }) {
               {/* ── Experience ── */}
               <div className="mt-6 border-t border-gray-100 dark:border-gray-800 pt-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Experience</h4>
+                  <h4 className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('profile.experience')}</h4>
                   <button type="button" onClick={() => setEditExperience(prev => [...prev, { title: "", company: "", period: "", description: "" }])} className="flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                    <Plus size={12} /> Add
+                    <Plus size={12} /> {t('profile.add')}
                   </button>
                 </div>
                 {editExperience.map((exp, i) => (
                   <div key={i} className="mb-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      <input value={exp.title} onChange={e => { const n=[...editExperience]; n[i]={...n[i],title:e.target.value}; setEditExperience(n); }} placeholder="Job Title" className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
-                      <input value={exp.company} onChange={e => { const n=[...editExperience]; n[i]={...n[i],company:e.target.value}; setEditExperience(n); }} placeholder="Company" className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <input value={exp.title} onChange={e => { const n=[...editExperience]; n[i]={...n[i],title:e.target.value}; setEditExperience(n); }} placeholder={t('profile.job_title')} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <input value={exp.company} onChange={e => { const n=[...editExperience]; n[i]={...n[i],company:e.target.value}; setEditExperience(n); }} placeholder={t('profile.company')} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
                     </div>
-                    <input value={exp.period} onChange={e => { const n=[...editExperience]; n[i]={...n[i],period:e.target.value}; setEditExperience(n); }} placeholder="Period (e.g. Jan 2022 – Present)" className="w-full text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                    <input value={exp.period} onChange={e => { const n=[...editExperience]; n[i]={...n[i],period:e.target.value}; setEditExperience(n); }} placeholder={t('profile.exp_period_ph')} className="w-full text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
                     <div className="flex gap-2">
-                      <input value={exp.description} onChange={e => { const n=[...editExperience]; n[i]={...n[i],description:e.target.value}; setEditExperience(n); }} placeholder="Brief description" className="flex-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <input value={exp.description} onChange={e => { const n=[...editExperience]; n[i]={...n[i],description:e.target.value}; setEditExperience(n); }} placeholder={t('profile.exp_desc_ph')} className="flex-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
                       <button type="button" onClick={() => setEditExperience(prev => prev.filter((_,idx)=>idx!==i))} className="text-red-400 hover:text-red-600 transition-colors"><Trash size={14} /></button>
                     </div>
                   </div>
@@ -1128,19 +1139,19 @@ export default function ProfileContent({ viewUserId }) {
               {/* ── Education ── */}
               <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">Education</h4>
+                  <h4 className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('profile.education')}</h4>
                   <button type="button" onClick={() => setEditEducation(prev => [...prev, { degree: "", school: "", period: "", field: "" }])} className="flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
-                    <Plus size={12} /> Add
+                    <Plus size={12} /> {t('profile.add')}
                   </button>
                 </div>
                 {editEducation.map((edu, i) => (
                   <div key={i} className="mb-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      <input value={edu.degree} onChange={e => { const n=[...editEducation]; n[i]={...n[i],degree:e.target.value}; setEditEducation(n); }} placeholder="Degree / Certificate" className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
-                      <input value={edu.school} onChange={e => { const n=[...editEducation]; n[i]={...n[i],school:e.target.value}; setEditEducation(n); }} placeholder="School / Institution" className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <input value={edu.degree} onChange={e => { const n=[...editEducation]; n[i]={...n[i],degree:e.target.value}; setEditEducation(n); }} placeholder={t('profile.edu_degree_ph')} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <input value={edu.school} onChange={e => { const n=[...editEducation]; n[i]={...n[i],school:e.target.value}; setEditEducation(n); }} placeholder={t('profile.edu_school_ph')} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
                     </div>
                     <div className="flex gap-2">
-                      <input value={edu.period} onChange={e => { const n=[...editEducation]; n[i]={...n[i],period:e.target.value}; setEditEducation(n); }} placeholder="Year / Period" className="flex-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
+                      <input value={edu.period} onChange={e => { const n=[...editEducation]; n[i]={...n[i],period:e.target.value}; setEditEducation(n); }} placeholder={t('profile.edu_period_ph')} className="flex-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500" />
                       <button type="button" onClick={() => setEditEducation(prev => prev.filter((_,idx)=>idx!==i))} className="text-red-400 hover:text-red-600 transition-colors"><Trash size={14} /></button>
                     </div>
                   </div>
@@ -1151,7 +1162,7 @@ export default function ProfileContent({ viewUserId }) {
           ) : (
             <div className="animate-in fade-in duration-500 pt-4">
               <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white flex items-center gap-2 tracking-tight">
-                {profile?.full_name || profile?.username || 'Unknown User'}
+                {profile?.full_name || profile?.username || t('profile.unknown_user')}
                 {profile?.is_verified && <VerifiedBadge size={26} />}
                 {(profile?.is_premium || profile?.is_admin) && visibility.premium_badge !== false && <PremiumBadge size={22} isTrial={!!profile?.is_trial_premium} />}
               </h2>
@@ -1159,7 +1170,7 @@ export default function ProfileContent({ viewUserId }) {
                 <p className="text-sm font-bold text-gray-400 dark:text-gray-500 mt-1">@{profile.username}</p>
               )}
               <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg mt-2 font-medium max-w-2xl leading-relaxed">
-                {profile?.status || 'Software Engineer'}
+                {profile?.status || t('profile.default_headline')}
               </p>
               
               <div className="flex flex-wrap items-center gap-3 mt-6 text-sm text-gray-600 dark:text-gray-400 font-medium">
@@ -1207,7 +1218,7 @@ export default function ProfileContent({ viewUserId }) {
 
               {Array.isArray(profile?.skills) && profile.skills.length > 0 && (
                 <div className="mt-4">
-                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Skills</p>
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">{t('profile.skills')}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.skills.map((skill, i) => (
                       <span key={i} className="px-2.5 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 rounded-lg text-[11px] font-bold">
@@ -1220,7 +1231,7 @@ export default function ProfileContent({ viewUserId }) {
               {/* Experience */}
               {Array.isArray(profile?.experience) && profile.experience.length > 0 && (
                 <div className="mt-5 border-t border-gray-100 dark:border-gray-800 pt-4">
-                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Experience</p>
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">{t('profile.experience')}</p>
                   <div className="space-y-3">
                     {profile.experience.map((exp, i) => (
                       <div key={i} className="flex gap-3">
@@ -1241,7 +1252,7 @@ export default function ProfileContent({ viewUserId }) {
               {/* Education */}
               {Array.isArray(profile?.education) && profile.education.length > 0 && (
                 <div className="mt-5 border-t border-gray-100 dark:border-gray-800 pt-4">
-                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Education</p>
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">{t('profile.education')}</p>
                   <div className="space-y-3">
                     {profile.education.map((edu, i) => (
                       <div key={i} className="flex gap-3">
@@ -1267,13 +1278,13 @@ export default function ProfileContent({ viewUserId }) {
                     <Users size={16} className={followersCount > 0 ? "text-blue-500" : "text-gray-400 dark:text-gray-500"} /> 
                     <span className={followersCount > 0 ? "font-bold text-blue-600 dark:text-blue-400" : "font-bold"}>
                       {Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(followersCount)}
-                    </span> connections
+                    </span> {t('profile.connections_lc')}
                   </span>
 
                   {showFollowersList && (
                     <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Network Nodes</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{t('profile.network_nodes')}</span>
                         <button onClick={() => setShowFollowersList(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"><X size={14}/></button>
                       </div>
                       <div className="max-h-[170px] overflow-y-auto custom-scrollbar p-2 space-y-1">
@@ -1282,14 +1293,14 @@ export default function ProfileContent({ viewUserId }) {
                         ) : followersData.map(user => (
                           <div key={`follower-${user.id}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors cursor-pointer group">
                             <div className="relative w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-bold uppercase text-gray-500 dark:text-gray-400 shrink-0 overflow-hidden">
-                              {user.avatar_url ? <Image src={user.avatar_url} alt="avatar" fill sizes="32px" className="object-cover" /> : user.username?.substring(0, 2)}
+                              {user.avatar_url ? <Image src={user.avatar_url} alt={t('profile.avatar_alt')} fill sizes="32px" className="object-cover" /> : user.username?.substring(0, 2)}
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
                                 @{user.username}
                                 {user.is_verified && <VerifiedBadge size={14} />}
                               </p>
-                              <p className="text-[9px] text-gray-500 dark:text-gray-400 truncate uppercase tracking-widest">{user.status || 'Active Node'}</p>
+                              <p className="text-[9px] text-gray-500 dark:text-gray-400 truncate uppercase tracking-widest">{user.status || t('profile.active_node')}</p>
                             </div>
                           </div>
                         ))}
@@ -1310,7 +1321,7 @@ export default function ProfileContent({ viewUserId }) {
               <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">
                 {/* My Posts */}
                 <div className="mb-10">
-                  <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-5">Posts</h3>
+                  <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-5">{t('profile.posts')}</h3>
                   {profilePosts.length > 0 ? (
                     <div className="relative">
                       {postsEdge.left && (
@@ -1346,7 +1357,7 @@ export default function ProfileContent({ viewUserId }) {
                             <div className="relative h-32 w-full bg-gray-100 dark:bg-gray-700 shrink-0">
                               <Image
                                 src={post.image_url}
-                                alt={post.title || 'Post image'}
+                                alt={post.title || t('profile.post_image_alt')}
                                 fill
                                 sizes="224px"
                                 className={(post.image_fit || 'cover') === 'contain' ? 'object-contain' : 'object-cover'}
@@ -1381,14 +1392,14 @@ export default function ProfileContent({ viewUserId }) {
                   ) : (
                     <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
                       <Activity size={28} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-                      <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No posts yet.</p>
+                      <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('profile.no_posts')}</p>
                     </div>
                   )}
                 </div>
 
                 {/* Liked Posts */}
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-5">Liked</h3>
+                  <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-5">{t('profile.liked')}</h3>
                   {likedPosts.length > 0 ? (
                     <div className="relative">
                       {likedEdge.left && (
@@ -1424,7 +1435,7 @@ export default function ProfileContent({ viewUserId }) {
                             <div className="relative h-32 w-full bg-gray-100 dark:bg-gray-700 shrink-0">
                               <Image
                                 src={post.image_url}
-                                alt={post.title || 'Post image'}
+                                alt={post.title || t('profile.post_image_alt')}
                                 fill
                                 sizes="224px"
                                 className={(post.image_fit || 'cover') === 'contain' ? 'object-contain' : 'object-cover'}
@@ -1462,7 +1473,7 @@ export default function ProfileContent({ viewUserId }) {
                   ) : (
                     <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
                       <Heart size={28} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-                      <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No liked posts yet.</p>
+                      <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('profile.no_liked')}</p>
                     </div>
                   )}
                 </div>
@@ -1471,7 +1482,7 @@ export default function ProfileContent({ viewUserId }) {
               {/* OPPORTUNITIES (JOBS) SECTION */}
               <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">
                 <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Opportunities</h3>
+                  <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t('profile.opportunities')}</h3>
                   {isOwnProfile && (
                     <button 
                       onClick={() => {
@@ -1481,7 +1492,7 @@ export default function ProfileContent({ viewUserId }) {
                       }} 
                       className="flex items-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-full transition-all shadow-md hover:shadow-lg active:scale-95"
                     >
-                      <Plus size={16} /> Post a Job
+                      <Plus size={16} /> {t('profile.post_job')}
                     </button>
                   )}
                 </div>
@@ -1505,7 +1516,7 @@ export default function ProfileContent({ viewUserId }) {
                                   handleViewApplicants(job);
                                 }}
                                 className="text-gray-400 hover:text-green-500 transition-colors p-1"
-                                title="View Applicants"
+                                title={t('profile.view_applicants_title')}
                               >
                                 <Users size={14} />
                               </button>
@@ -1523,14 +1534,14 @@ export default function ProfileContent({ viewUserId }) {
                                   setShowJobModal(true);
                                 }}
                                 className="text-gray-400 hover:text-blue-500 transition-colors p-1"
-                                title="Edit Job"
+                                title={t('profile.edit_job_title')}
                               >
                                 <Edit3 size={14} />
                               </button>
                               <button 
                                 onClick={(e) => handleDeleteClick(e, job)}
                                 className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                                title="Delete Job"
+                                title={t('profile.delete_job_title')}
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -1544,7 +1555,7 @@ export default function ProfileContent({ viewUserId }) {
                           {job.salary && <span className="flex items-center gap-1 shrink-0"><DollarSign size={12} className="shrink-0" /> {job.salary}</span>}
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {(job.tags || []).slice(0,3).map(t => <span key={t} className="text-xs bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-md text-gray-600 dark:text-gray-300 font-bold">{t}</span>)}
+                          {(job.tags || []).slice(0,3).map(tag => <span key={tag} className="text-xs bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-md text-gray-600 dark:text-gray-300 font-bold">{tag}</span>)}
                           {(job.tags || []).length > 3 && <span className="text-xs text-gray-400 font-bold px-1 py-1">+{(job.tags.length - 3)}</span>}
                         </div>
                         </div>
@@ -1554,51 +1565,51 @@ export default function ProfileContent({ viewUserId }) {
                 ) : (
                   <div className="text-center py-10 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
                     <Briefcase size={32} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No active opportunities posted.</p>
+                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('profile.no_opportunities')}</p>
                   </div>
                 )}
               </div>
 
               <div className="mt-12 pt-10 border-t border-gray-100 dark:border-gray-800/80">
-                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-8">Contact & Details</h3>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-8">{t('profile.contact_details')}</h3>
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
                     <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-blue-500 transition-colors"><Mail size={20} /></div>
                     <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{isOwnProfile ? "Email" : "Email Visibility"}</p>
-                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{isOwnProfile ? (currentUser?.email || 'N/A') : 'Protected by User'}</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{isOwnProfile ? t('profile.email') : t('profile.email_visibility')}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{isOwnProfile ? (currentUser?.email || t('profile.na')) : t('profile.protected')}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
                     <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-emerald-500 transition-colors"><Calendar size={20} /></div>
                     <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Date Joined</p>
-                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{isOwnProfile && currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Active Member'}</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{t('profile.date_joined')}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{isOwnProfile && currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : t('profile.active_member')}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
                     <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-purple-500 transition-colors"><Shield size={20} /></div>
                     <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Security Clearance</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{t('profile.security_clearance')}</p>
                       {profile?.is_verified ? (
-                        <p className="text-sm text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1.5"><VerifiedBadge size={16} /> Verified Identity</p>
+                        <p className="text-sm text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1.5"><VerifiedBadge size={16} /> {t('profile.verified_identity')}</p>
                       ) : (
-                        <p className="text-sm text-gray-700 dark:text-gray-300 font-bold">Standard Node</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 font-bold">{t('profile.standard_node')}</p>
                       )}
                     </div>
                   </div>
                   <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
                     <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-amber-500 transition-colors"><User size={20} /></div>
                     <div className="min-w-0 pr-4 flex flex-col justify-center">
-                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Account Node ID</p>
-                      <p className="text-xs text-gray-900 dark:text-gray-100 font-mono truncate font-bold" title={profile?.id || 'N/A'}>{profile?.id || 'N/A'}</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{t('profile.account_node_id')}</p>
+                      <p className="text-xs text-gray-900 dark:text-gray-100 font-mono truncate font-bold" title={profile?.id || t('profile.na')}>{profile?.id || t('profile.na')}</p>
                     </div>
                   </div>
                   {profile?.github && (
                     <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
                       <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white transition-colors"><GitBranch size={20} /></div>
                       <div className="min-w-0 pr-4 flex flex-col justify-center">
-                        <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">GitHub</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{t('profile.visibility_github')}</p>
                         <a href={`https://github.com/${profile.github}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline truncate block">
                           github.com/{profile.github}
                         </a>
@@ -1609,7 +1620,7 @@ export default function ProfileContent({ viewUserId }) {
                     <div className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all group">
                       <div className="p-3 bg-white dark:bg-gray-700 rounded-xl shadow-sm text-gray-400 dark:text-gray-500 group-hover:text-pink-500 transition-colors"><Link size={20} /></div>
                       <div className="min-w-0 pr-4 flex flex-col justify-center">
-                        <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Website</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{t('profile.visibility_website')}</p>
                         <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline truncate block">
                           {profile.website.replace(/^https?:\/\//, '')}
                         </a>
@@ -1627,24 +1638,24 @@ export default function ProfileContent({ viewUserId }) {
                       <Lock size={18} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Public Profile Visibility</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Control what others see on your public profile at <span className="font-bold text-blue-600 dark:text-blue-400">/u/{profile?.username}</span></p>
+                      <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t('profile.public_visibility')}</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">{t('profile.visibility_control')} <span className="font-bold text-blue-600 dark:text-blue-400">/u/{profile?.username}</span></p>
                     </div>
                   </div>
 
                   <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
-                      { key: 'bio',         label: 'Bio',         desc: 'Your about/bio text',           icon: FileText },
-                      { key: 'location',    label: 'Location',    desc: 'City or region you entered',    icon: MapPin },
-                      { key: 'github',      label: 'GitHub',      desc: 'Your GitHub profile link',      icon: GitBranch },
-                      { key: 'website',     label: 'Website',     desc: 'Your personal/portfolio URL',   icon: Link },
-                      { key: 'work_status', label: 'Work Status', desc: 'Open to work / hired etc.',     icon: Briefcase },
-                      { key: 'certificates',label: 'Certificates', desc: 'Earned course certificates',   icon: Award },
-                      { key: 'posts',       label: 'Recent Posts', desc: 'Your latest feed activity',    icon: Activity },
+                      { key: 'bio',         label: t('profile.visibility_bio'),         desc: t('profile.vis_bio_desc'),           icon: FileText },
+                      { key: 'location',    label: t('profile.visibility_location'),    desc: t('profile.vis_location_desc'),    icon: MapPin },
+                      { key: 'github',      label: t('profile.visibility_github'),      desc: t('profile.vis_github_desc'),      icon: GitBranch },
+                      { key: 'website',     label: t('profile.visibility_website'),     desc: t('profile.vis_website_desc'),   icon: Link },
+                      { key: 'work_status', label: t('profile.visibility_work_status'), desc: t('profile.vis_work_desc'),     icon: Briefcase },
+                      { key: 'certificates',label: t('profile.visibility_certificates'), desc: t('profile.vis_certs_desc'),   icon: Award },
+                      { key: 'posts',       label: t('profile.recent_posts'), desc: t('profile.vis_posts_desc'),    icon: Activity },
                       ...((profile?.is_premium || profile?.is_admin) ? [{
                         key: 'premium_badge',
-                        label: profile?.is_trial_premium ? 'Freemium Badge' : 'Premium Badge',
-                        desc: profile?.is_trial_premium ? 'Show your Freemium status publicly' : 'Show your Premium status publicly',
+                        label: profile?.is_trial_premium ? t('profile.freemium_badge') : t('profile.premium_badge'),
+                        desc: profile?.is_trial_premium ? t('profile.vis_freemium_desc') : t('profile.vis_premium_desc'),
                         icon: Award,
                       }] : []),
                     ].map(({ key, label, desc, icon: Icon }) => {
@@ -1669,7 +1680,7 @@ export default function ProfileContent({ viewUserId }) {
                           </div>
                           <div className={`shrink-0 flex items-center gap-1.5 text-xs font-black uppercase tracking-widest transition-colors ${on ? 'text-blue-500' : 'text-gray-400'}`}>
                             {on ? <Eye size={14} /> : <EyeOff size={14} />}
-                            <span className="hidden sm:inline">{on ? 'Public' : 'Hidden'}</span>
+                            <span className="hidden sm:inline">{on ? t('profile.public') : t('profile.hidden')}</span>
                           </div>
                         </button>
                       );
@@ -1683,9 +1694,9 @@ export default function ProfileContent({ viewUserId }) {
                       className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-bold py-2.5 px-6 rounded-xl transition-all text-sm shadow-sm active:scale-95"
                     >
                       {savingVisibility ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-                      {savingVisibility ? 'Saving…' : 'Save Visibility'}
+                      {savingVisibility ? t('profile.saving') : t('profile.save_visibility')}
                     </button>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Changes are applied instantly to your public profile.</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">{t('profile.visibility_instant')}</p>
                   </div>
                 </div>
               )}
@@ -1702,64 +1713,64 @@ export default function ProfileContent({ viewUserId }) {
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center shrink-0">
               <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  {editingJobId ? 'Edit Opportunity' : 'Post an Opportunity'}
+                  {editingJobId ? t('profile.edit_opportunity') : t('profile.post_opportunity')}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {editingJobId ? 'Update your job listing details.' : 'Broadcast a job to the BeOneOfUs network.'}
+                  {editingJobId ? t('profile.edit_opp_desc') : t('profile.post_opp_desc')}
                 </p>
               </div>
               <button onClick={() => { setShowJobModal(false); setEditingJobId(null); }} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors"><X size={20}/></button>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Job Title</label>
-                <input type="text" value={jobForm.title} onChange={e => setJobForm({...jobForm, title: e.target.value})} placeholder="e.g. Senior React Developer" className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">{t('profile.job_title')}</label>
+                <input type="text" value={jobForm.title} onChange={e => setJobForm({...jobForm, title: e.target.value})} placeholder={t('profile.job_title_ph')} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Company</label>
-                  <input type="text" value={jobForm.company} onChange={e => setJobForm({...jobForm, company: e.target.value})} placeholder="Company Name" className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
+                  <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">{t('profile.company')}</label>
+                  <input type="text" value={jobForm.company} onChange={e => setJobForm({...jobForm, company: e.target.value})} placeholder={t('profile.company_ph')} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Location</label>
-                  <input type="text" value={jobForm.location} onChange={e => setJobForm({...jobForm, location: e.target.value})} placeholder="Remote, City..." className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
+                  <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">{t('profile.job_location')}</label>
+                  <input type="text" value={jobForm.location} onChange={e => setJobForm({...jobForm, location: e.target.value})} placeholder={t('profile.job_location_ph')} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Job Type</label>
+                  <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">{t('profile.job_type')}</label>
                   <select value={jobForm.type} onChange={e => setJobForm({...jobForm, type: e.target.value})} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm appearance-none">
                     <option>Full-time</option><option>Part-time</option><option>Contract</option><option>Freelance</option><option>Internship</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Level</label>
+                  <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">{t('profile.level')}</label>
                   <select value={jobForm.experience_level} onChange={e => setJobForm({...jobForm, experience_level: e.target.value})} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm appearance-none">
                     <option>Junior</option><option>Mid-level</option><option>Senior</option><option>Lead / Manager</option><option>Executive</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Salary Range</label>
-                  <input type="text" value={jobForm.salary} onChange={e => setJobForm({...jobForm, salary: e.target.value})} placeholder="$100k - $150k" className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
+                  <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">{t('profile.salary_range')}</label>
+                  <input type="text" value={jobForm.salary} onChange={e => setJobForm({...jobForm, salary: e.target.value})} placeholder={t('profile.salary_ph')} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Tags (comma separated)</label>
-                <input type="text" value={jobForm.tags} onChange={e => setJobForm({...jobForm, tags: e.target.value})} placeholder="React, Node.js, Remote" className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">{t('profile.tags_label')}</label>
+                <input type="text" value={jobForm.tags} onChange={e => setJobForm({...jobForm, tags: e.target.value})} placeholder={t('profile.tags_ph')} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
               </div>
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">External Application Link</label>
-                <input type="url" value={jobForm.external_url} onChange={e => setJobForm({...jobForm, external_url: e.target.value})} placeholder="https://..." className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">{t('profile.external_link')}</label>
+                <input type="url" value={jobForm.external_url} onChange={e => setJobForm({...jobForm, external_url: e.target.value})} placeholder={t('profile.external_link_ph')} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm" />
               </div>
               <div>
-                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">Job Description</label>
-                <textarea rows="4" value={jobForm.description} onChange={e => setJobForm({...jobForm, description: e.target.value})} placeholder="Describe the role, responsibilities, and requirements..." className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm resize-none" />
+                <label className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 block">{t('profile.job_description')}</label>
+                <textarea rows="4" value={jobForm.description} onChange={e => setJobForm({...jobForm, description: e.target.value})} placeholder={t('profile.job_desc_ph')} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm resize-none" />
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shrink-0 flex gap-3">
-               <button onClick={() => { setShowJobModal(false); setEditingJobId(null); }} className="flex-1 py-3 px-4 rounded-xl text-gray-700 dark:text-gray-300 font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm">Cancel</button>
+               <button onClick={() => { setShowJobModal(false); setEditingJobId(null); }} className="flex-1 py-3 px-4 rounded-xl text-gray-700 dark:text-gray-300 font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm">{t('profile.cancel')}</button>
                <button onClick={handlePostJob} disabled={isPostingJob || !jobForm.title} className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
-                 {isPostingJob ? <Loader2 size={16} className="animate-spin" /> : (editingJobId ? 'Update Job' : 'Publish Job')}
+                 {isPostingJob ? <Loader2 size={16} className="animate-spin" /> : (editingJobId ? t('profile.update_job') : t('profile.publish_job'))}
                </button>
             </div>
           </div>
@@ -1773,9 +1784,9 @@ export default function ProfileContent({ viewUserId }) {
           <div className="relative w-full max-w-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 sm:p-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-start shrink-0">
               <div>
-                <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Applicants</h2>
+                <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{t('profile.applicants')}</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-bold mt-2">
-                  Reviewing applications for <span className="text-blue-600 dark:text-blue-400">{activeJobForApplicants.title}</span>
+                  {t('profile.reviewing_for')} <span className="text-blue-600 dark:text-blue-400">{activeJobForApplicants.title}</span>
                 </p>
               </div>
               <button onClick={() => { setShowApplicantsModal(false); setActiveJobForApplicants(null); }} className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm">
@@ -1789,8 +1800,8 @@ export default function ProfileContent({ viewUserId }) {
               ) : jobApplicants.length === 0 ? (
                 <div className="text-center py-12">
                   <Users size={40} className="mx-auto text-gray-300 dark:text-gray-700 mb-4" />
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">No Applicants Yet</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Applications for this role will appear here.</p>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t('profile.no_applicants')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('profile.no_applicants_desc')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1798,7 +1809,7 @@ export default function ProfileContent({ viewUserId }) {
                     <div key={app.id} onClick={() => setSelectedApplicant(app)} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[1.5rem] p-5 hover:border-blue-500/40 hover:shadow-lg transition-all cursor-pointer group flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                       <div className="flex items-center gap-4 min-w-0">
                         <div className="relative w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase">
-                          {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt="avatar" fill sizes="48px" className="object-cover" /> : app.profiles?.username?.substring(0, 2) || "??"}
+                          {app.profiles?.avatar_url ? <Image src={app.profiles.avatar_url} alt={t('profile.avatar_alt')} fill sizes="48px" className="object-cover" /> : app.profiles?.username?.substring(0, 2) || "??"}
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-gray-900 dark:text-gray-100 font-bold text-base flex items-center gap-1 truncate">
@@ -1806,11 +1817,11 @@ export default function ProfileContent({ viewUserId }) {
                             {app.profiles?.is_verified && <VerifiedBadge size={16} />}
                           </h4>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                            Applied on {new Date(app.created_at).toLocaleDateString()}
+                            {t('profile.applied_on')} {new Date(app.created_at).toLocaleDateString()}
                           </p>
                           {app.resume_url && (
                             <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800/50">
-                              <FileText size={10} /> Resume Attached
+                              <FileText size={10} /> {t('profile.resume_attached')}
                             </span>
                           )}
                         </div>
@@ -1823,7 +1834,7 @@ export default function ProfileContent({ viewUserId }) {
                           app.status === 'external_redirect' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50' :
                           'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
                         }`}>
-                          {app.status === 'external_redirect' ? 'External Redirect' : (app.status || 'pending')}
+                          {app.status === 'external_redirect' ? t('profile.external_redirect') : (app.status || 'pending')}
                         </span>
                         
                         {app.status !== 'accepted' && app.status !== 'declined' && app.status !== 'external_redirect' && (
@@ -1832,13 +1843,13 @@ export default function ProfileContent({ viewUserId }) {
                               onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'declined', app.user_id, activeJobForApplicants?.title); }}
                               className="flex-1 sm:flex-none px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold text-xs transition-colors border border-red-200 dark:border-red-800/50 uppercase"
                             >
-                              Decline
+                              {t('profile.decline')}
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleAppAction(app.id, 'accepted', app.user_id, activeJobForApplicants?.title); }}
                               className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white hover:bg-green-500 rounded-xl font-bold text-xs transition-colors shadow-sm uppercase"
                             >
-                              Accept
+                              {t('profile.accept')}
                             </button>
                           </div>
                         )}
@@ -1847,7 +1858,7 @@ export default function ProfileContent({ viewUserId }) {
                             onClick={(e) => { e.stopPropagation(); openInterviewModal(app, activeJobForApplicants); }}
                             className="flex items-center gap-1.5 mt-1 px-3 py-2 bg-blue-600 text-white hover:bg-blue-500 rounded-xl font-bold text-xs transition-colors shadow-sm"
                           >
-                            <Video size={12} /> Interview Room
+                            <Video size={12} /> {t('profile.interview_room')}
                           </button>
                         )}
                       </div>
@@ -1869,11 +1880,11 @@ export default function ProfileContent({ viewUserId }) {
               <X size={18} />
             </button>
             
-            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight pr-8 mb-4">Applicant Profile</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight pr-8 mb-4">{t('profile.applicant_profile')}</h2>
             
             <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
               <div className="relative w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 uppercase border border-gray-200 dark:border-gray-700">
-                {selectedApplicant.profiles?.avatar_url ? <Image src={selectedApplicant.profiles.avatar_url} alt="avatar" fill sizes="56px" className="object-cover" /> : selectedApplicant.profiles?.username?.substring(0, 2) || "??"}
+                {selectedApplicant.profiles?.avatar_url ? <Image src={selectedApplicant.profiles.avatar_url} alt={t('profile.avatar_alt')} fill sizes="56px" className="object-cover" /> : selectedApplicant.profiles?.username?.substring(0, 2) || "??"}
               </div>
               <div>
                 <h4 className="text-gray-900 dark:text-gray-100 font-bold text-lg flex items-center gap-1">
@@ -1889,7 +1900,7 @@ export default function ProfileContent({ viewUserId }) {
             <div className="space-y-4 mb-8">
               {(selectedApplicant.cover_letter || selectedApplicant.message || selectedApplicant.notes) && (
                 <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
-                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Cover Letter</p>
+                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">{t('profile.cover_letter')}</p>
                   <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selectedApplicant.cover_letter || selectedApplicant.message || selectedApplicant.notes}</p>
                 </div>
               )}
@@ -1897,24 +1908,24 @@ export default function ProfileContent({ viewUserId }) {
               {selectedApplicant.resume_url && (
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                   <div>
-                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">Attached Document</p>
-                    <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Candidate{`'`}s CV / Resume File</p>
+                    <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">{t('profile.attached_document')}</p>
+                    <p className="text-sm font-bold text-blue-900 dark:text-blue-100">{t('profile.candidate_cv')}</p>
                   </div>
                   <a href={selectedApplicant.resume_url} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs transition-colors shadow-sm shrink-0">
-                    <FileText size={16} /> Open Resume
+                    <FileText size={16} /> {t('profile.open_resume')}
                   </a>
                 </div>
               )}
 
               {(selectedApplicant.resume_url || selectedApplicant.portfolio_url || selectedApplicant.email || selectedApplicant.phone || selectedApplicant.profiles?.github || selectedApplicant.profiles?.website || selectedApplicant.profiles?.location) && (
                 <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl space-y-3">
-                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Contact & Links</p>
-                  {selectedApplicant.email && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">Email:</strong> <a href={`mailto:${selectedApplicant.email}`} className="text-blue-600 hover:underline">{selectedApplicant.email}</a></p>}
-                  {selectedApplicant.phone && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">Phone:</strong> {selectedApplicant.phone}</p>}
-                  {selectedApplicant.profiles?.location && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">Location:</strong> {selectedApplicant.profiles.location}</p>}
-                  {selectedApplicant.portfolio_url && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">Portfolio:</strong> <a href={selectedApplicant.portfolio_url.startsWith('http') ? selectedApplicant.portfolio_url : `https://${selectedApplicant.portfolio_url}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Portfolio Link</a></p>}
-                  {selectedApplicant.profiles?.github && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">GitHub:</strong> <a href={`https://github.com/${selectedApplicant.profiles.github}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">github.com/{selectedApplicant.profiles.github}</a></p>}
-                  {selectedApplicant.profiles?.website && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">Website:</strong> <a href={selectedApplicant.profiles.website.startsWith('http') ? selectedApplicant.profiles.website : `https://${selectedApplicant.profiles.website}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{selectedApplicant.profiles.website.replace(/^https?:\/\//, '')}</a></p>}
+                  <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">{t('profile.contact_links')}</p>
+                  {selectedApplicant.email && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">{t('profile.field_email')}</strong> <a href={`mailto:${selectedApplicant.email}`} className="text-blue-600 hover:underline">{selectedApplicant.email}</a></p>}
+                  {selectedApplicant.phone && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">{t('profile.field_phone')}</strong> {selectedApplicant.phone}</p>}
+                  {selectedApplicant.profiles?.location && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">{t('profile.field_location')}</strong> {selectedApplicant.profiles.location}</p>}
+                  {selectedApplicant.portfolio_url && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">{t('profile.field_portfolio')}</strong> <a href={selectedApplicant.portfolio_url.startsWith('http') ? selectedApplicant.portfolio_url : `https://${selectedApplicant.portfolio_url}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{t('profile.portfolio_link')}</a></p>}
+                  {selectedApplicant.profiles?.github && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">{t('profile.field_github')}</strong> <a href={`https://github.com/${selectedApplicant.profiles.github}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">github.com/{selectedApplicant.profiles.github}</a></p>}
+                  {selectedApplicant.profiles?.website && <p className="text-sm flex items-center gap-2"><strong className="text-gray-900 dark:text-gray-100">{t('profile.field_website')}</strong> <a href={selectedApplicant.profiles.website.startsWith('http') ? selectedApplicant.profiles.website : `https://${selectedApplicant.profiles.website}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{selectedApplicant.profiles.website.replace(/^https?:\/\//, '')}</a></p>}
                 </div>
               )}
             </div>
@@ -1926,19 +1937,19 @@ export default function ProfileContent({ viewUserId }) {
                     onClick={() => { handleAppAction(selectedApplicant.id, 'declined', selectedApplicant.user_id, activeJobForApplicants?.title); setSelectedApplicant(prev => ({...prev, status: 'declined'})); }}
                     className="flex-1 py-3.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl font-bold transition-colors border border-red-200 dark:border-red-800/50"
                   >
-                    Decline Application
+                    {t('profile.decline_application')}
                   </button>
                   <button
                     onClick={() => { handleAppAction(selectedApplicant.id, 'accepted', selectedApplicant.user_id, activeJobForApplicants?.title); setSelectedApplicant(prev => ({...prev, status: 'accepted'})); }}
                     className="flex-1 py-3.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-colors shadow-sm"
                   >
-                    Accept Application
+                    {t('profile.accept_application')}
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
                   <div className="flex-1 text-center py-3.5 bg-gray-50 dark:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-xs border border-gray-200 dark:border-gray-700">
-                    Status: {selectedApplicant.status === 'external_redirect' ? 'External Redirect' : (selectedApplicant.status || 'pending')}
+                    {t('profile.status_colon')} {selectedApplicant.status === 'external_redirect' ? t('profile.external_redirect') : (selectedApplicant.status || 'pending')}
                   </div>
                 </div>
               )}
@@ -1947,7 +1958,7 @@ export default function ProfileContent({ viewUserId }) {
                   onClick={() => { setSelectedApplicant(null); openInterviewModal(selectedApplicant, activeJobForApplicants); }}
                   className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-colors shadow-md shadow-blue-500/20 flex items-center justify-center gap-2"
                 >
-                  <Video size={18} /> Create Interview Room
+                  <Video size={18} /> {t('profile.create_interview_room')}
                 </button>
               )}
             </div>
@@ -1971,10 +1982,10 @@ export default function ProfileContent({ viewUserId }) {
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-start shrink-0 rounded-t-[2rem]">
               <div>
                 <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                  <Video size={20} className="text-blue-500" /> Create Interview Room
+                  <Video size={20} className="text-blue-500" /> {t('profile.create_interview_room')}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  For <span className="font-bold text-blue-600 dark:text-blue-400">@{interviewTarget.applicant.profiles?.username}</span> · {interviewTarget.job?.title}
+                  {t('profile.for_label')} <span className="font-bold text-blue-600 dark:text-blue-400">@{interviewTarget.applicant.profiles?.username}</span> · {interviewTarget.job?.title}
                 </p>
               </div>
               <button onClick={() => setShowInterviewModal(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors">
@@ -1985,7 +1996,7 @@ export default function ProfileContent({ viewUserId }) {
             {/* Questions list */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
               <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-                Interview Questions ({interviewQuestions.filter(q => q.text.trim()).length} valid)
+                {t('profile.interview_questions', { n: interviewQuestions.filter(q => q.text.trim()).length })}
               </p>
               {interviewQuestions.map((q, i) => (
                 <div key={i} className="space-y-2 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl">
@@ -2000,7 +2011,7 @@ export default function ProfileContent({ viewUserId }) {
                           next[i] = { ...next[i], text: e.target.value };
                           setInterviewQuestions(next);
                         }}
-                        placeholder="e.g. Explain how you would design a REST API..."
+                        placeholder={t('profile.question_ph')}
                         className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       />
                       <input
@@ -2011,7 +2022,7 @@ export default function ProfileContent({ viewUserId }) {
                           next[i] = { ...next[i], context: e.target.value };
                           setInterviewQuestions(next);
                         }}
-                        placeholder="Optional context or hint (shown to candidate)"
+                        placeholder={t('profile.context_ph')}
                         className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       />
                     </div>
@@ -2031,14 +2042,14 @@ export default function ProfileContent({ viewUserId }) {
                 onClick={() => setInterviewQuestions(prev => [...prev, { text: '', context: '' }])}
                 className="w-full py-2.5 border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-600 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
               >
-                <Plus size={16} /> Add Question
+                <Plus size={16} /> {t('profile.add_question')}
               </button>
             </div>
 
             {/* Footer */}
             <div className="p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shrink-0 flex gap-3 rounded-b-[2rem]">
               <button onClick={() => setShowInterviewModal(false)} className="flex-1 py-3 px-4 rounded-xl text-gray-700 dark:text-gray-300 font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
-                Cancel
+                {t('profile.cancel')}
               </button>
               <button
                 onClick={handleCreateInterview}
@@ -2046,7 +2057,7 @@ export default function ProfileContent({ viewUserId }) {
                 className="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {creatingInterview ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
-                {creatingInterview ? 'Creating…' : 'Send Interview Invite'}
+                {creatingInterview ? t('profile.creating') : t('profile.send_interview')}
               </button>
             </div>
           </div>
@@ -2073,10 +2084,10 @@ export default function ProfileContent({ viewUserId }) {
 
             {viewJob.tags && viewJob.tags.length > 0 && (
               <div className="mb-6">
-                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Tags / Tech Stack</p>
+                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('profile.tags_tech')}</p>
                 <div className="flex flex-wrap gap-2">
-                  {viewJob.tags.map(t => (
-                    <span key={t} className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg font-bold border border-blue-200 dark:border-blue-800/50">{t}</span>
+                  {viewJob.tags.map(tag => (
+                    <span key={tag} className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg font-bold border border-blue-200 dark:border-blue-800/50">{tag}</span>
                   ))}
                 </div>
               </div>
@@ -2084,7 +2095,7 @@ export default function ProfileContent({ viewUserId }) {
             
             {viewJob.description && (
               <div className="mb-6">
-                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">Description</p>
+                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 block pl-1">{t('profile.job_description')}</p>
                 <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{viewJob.description}</div>
               </div>
             )}
@@ -2097,7 +2108,7 @@ export default function ProfileContent({ viewUserId }) {
                   rel="noopener noreferrer" 
                   className="flex items-center justify-center gap-2 w-full py-3.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-bold rounded-xl transition-all shadow-md hover:bg-gray-800 dark:hover:bg-white active:scale-95 text-sm"
                 >
-                  <Link size={16} /> Apply Externally
+                  <Link size={16} /> {t('profile.apply_externally')}
                 </a>
               </div>
             )}
@@ -2113,16 +2124,16 @@ export default function ProfileContent({ viewUserId }) {
             <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100 dark:border-red-900/50">
               <AlertTriangle size={32} />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Opportunity?</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('profile.delete_opportunity_q')}</h3>
             <p className="text-gray-500 dark:text-gray-400 text-sm mb-8 leading-relaxed">
-              Are you sure you want to permanently remove <span className="font-bold text-gray-700 dark:text-gray-300">{jobToDelete.title}</span>? This action cannot be undone.
+              {t('profile.remove_confirm_pre')} <span className="font-bold text-gray-700 dark:text-gray-300">{jobToDelete.title}</span>{t('profile.remove_confirm_post')}
             </p>
             <div className="flex flex-col gap-3">
               <button onClick={executeDeleteJob} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-md active:scale-95 text-sm">
-                Confirm Delete
+                {t('profile.confirm_delete')}
               </button>
               <button onClick={() => setJobToDelete(null)} className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3.5 rounded-xl transition-all border border-gray-200 dark:border-gray-700 shadow-sm text-sm">
-                Cancel
+                {t('profile.cancel')}
               </button>
             </div>
           </div>
@@ -2176,11 +2187,12 @@ function StatTile({ icon: Icon, label, value }) {
 }
 
 function FeaturedCard({ post }) {
+  const { t } = useLanguage();
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-gray-50 dark:bg-gray-800/40">
-      {post.image_url && <div className="h-24 w-full overflow-hidden"><img src={post.image_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /></div>}
+      {post.image_url && <div className="h-24 w-full overflow-hidden relative"><Image src={post.image_url} alt="" fill className="object-cover" referrerPolicy="no-referrer" unoptimized /></div>}
       <div className="p-3">
-        <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1">{post.title || 'Post'}</p>
+        <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1">{post.title || t('profile.post_fallback')}</p>
         {post.content && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">{post.content}</p>}
         <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
           <span className="inline-flex items-center gap-1"><Heart size={11} />{post.likes?.length || 0}</span>
@@ -2192,6 +2204,7 @@ function FeaturedCard({ post }) {
 }
 
 function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
+  const { t } = useLanguage();
   const [manageFeatured, setManageFeatured] = useState(false);
   const [pinned, setPinned] = useState(() => Array.isArray(profile?.preferences?.pinned_posts) ? profile.preferences.pinned_posts : []);
   const [savingPins, setSavingPins] = useState(false);
@@ -2202,14 +2215,14 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
   const views = profile?.profile_views || 0;
 
   const checks = [
-    { key: 'avatar',     label: 'Add a profile photo',   done: !!profile?.avatar_url },
-    { key: 'banner',     label: 'Add a cover banner',    done: !!profile?.banner_url },
-    { key: 'headline',   label: 'Write a headline',      done: !!profile?.headline },
-    { key: 'bio',        label: 'Write your bio',        done: !!profile?.bio },
-    { key: 'location',   label: 'Add your location',     done: !!profile?.location },
-    { key: 'skills',     label: 'List your skills',      done: Array.isArray(profile?.skills) && profile.skills.length > 0 },
-    { key: 'experience', label: 'Add work experience',   done: Array.isArray(profile?.experience) && profile.experience.length > 0 },
-    { key: 'links',      label: 'Link GitHub or website',done: !!(profile?.github || profile?.website) },
+    { key: 'avatar',     label: t('profile.chk_avatar'),   done: !!profile?.avatar_url },
+    { key: 'banner',     label: t('profile.chk_banner'),    done: !!profile?.banner_url },
+    { key: 'headline',   label: t('profile.chk_headline'),      done: !!profile?.headline },
+    { key: 'bio',        label: t('profile.chk_bio'),        done: !!profile?.bio },
+    { key: 'location',   label: t('profile.chk_location'),     done: !!profile?.location },
+    { key: 'skills',     label: t('profile.chk_skills'),      done: Array.isArray(profile?.skills) && profile.skills.length > 0 },
+    { key: 'experience', label: t('profile.chk_experience'),   done: Array.isArray(profile?.experience) && profile.experience.length > 0 },
+    { key: 'links',      label: t('profile.chk_links'),done: !!(profile?.github || profile?.website) },
   ];
   const doneCount = checks.filter((c) => c.done).length;
   const pct = Math.round((doneCount / checks.length) * 100);
@@ -2220,7 +2233,7 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
     + Math.min(15, totalLikes)
     + Math.round((pct / 100) * 20);
   rep = Math.min(100, Math.round(rep));
-  const repTier = rep >= 80 ? 'Excellent' : rep >= 60 ? 'Strong' : rep >= 35 ? 'Building' : 'New';
+  const repTier = rep >= 80 ? t('profile.tier_excellent') : rep >= 60 ? t('profile.tier_strong') : rep >= 35 ? t('profile.tier_building') : t('profile.tier_new');
 
   const togglePin = async (id) => {
     const next = pinned.includes(id) ? pinned.filter((x) => x !== id) : [...pinned, id].slice(-6);
@@ -2244,15 +2257,15 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center shrink-0"><Award size={20} className="text-white" /></div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-white/70">Reputation</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/70">{t('profile.reputation')}</p>
               <p className="text-lg font-black text-white leading-none mt-0.5 truncate">{repTier} <span className="text-white/70 font-bold">· {rep}</span></p>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto sm:ml-auto sm:max-w-md">
-            <StatTile icon={Users} label="Network" value={fmtNum(followersCount)} />
-            <StatTile icon={Eye} label="Views" value={fmtNum(views)} />
-            <StatTile icon={Heart} label="Likes" value={fmtNum(totalLikes)} />
-            <StatTile icon={FileText} label="Posts" value={fmtNum(postCount)} />
+            <StatTile icon={Users} label={t('profile.stat_network')} value={fmtNum(followersCount)} />
+            <StatTile icon={Eye} label={t('profile.stat_views')} value={fmtNum(views)} />
+            <StatTile icon={Heart} label={t('profile.stat_likes')} value={fmtNum(totalLikes)} />
+            <StatTile icon={FileText} label={t('profile.stat_posts')} value={fmtNum(postCount)} />
           </div>
         </div>
       </div>
@@ -2270,8 +2283,8 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
               <span className="absolute inset-0 flex items-center justify-center text-sm font-black text-gray-900 dark:text-gray-100">{pct}%</span>
             </div>
             <div>
-              <p className="text-sm font-black text-gray-900 dark:text-gray-100">Profile strength</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{doneCount}/{checks.length} completed</p>
+              <p className="text-sm font-black text-gray-900 dark:text-gray-100">{t('profile.profile_strength')}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{doneCount}/{checks.length} {t('profile.completed')}</p>
             </div>
           </div>
           <div className="mt-3 space-y-1.5">
@@ -2280,32 +2293,32 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
                 <Plus size={12} /> {c.label}
               </button>
             ))}
-            {doneCount === checks.length && <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Check size={13} /> All set — great profile!</p>}
+            {doneCount === checks.length && <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Check size={13} /> {t('profile.all_set')}</p>}
           </div>
         </div>
 
         {/* Reputation */}
         <div className="rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><Award size={15} className="text-amber-500" /> Reputation</p>
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><Award size={15} className="text-amber-500" /> {t('profile.reputation')}</p>
             <span className="text-2xl font-black text-gray-900 dark:text-gray-100 tabular-nums">{rep}</span>
           </div>
           <div className="mt-2 h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
             <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-500 transition-all" style={{ width: `${rep}%` }} />
           </div>
           <ul className="mt-3 space-y-1.5 text-xs text-gray-600 dark:text-gray-300">
-            <li className="flex items-center gap-2"><Shield size={12} className={profile?.is_verified ? 'text-emerald-500' : 'text-gray-400'} /> {profile?.is_verified ? 'Verified identity' : 'Not verified yet'}</li>
-            <li className="flex items-center gap-2"><Users size={12} className="text-blue-500" /> {fmtNum(followersCount)} connections</li>
-            <li className="flex items-center gap-2"><FileText size={12} className="text-violet-500" /> {postCount} contributions</li>
-            <li className="flex items-center gap-2"><Heart size={12} className="text-rose-500" /> {fmtNum(totalLikes)} likes earned</li>
+            <li className="flex items-center gap-2"><Shield size={12} className={profile?.is_verified ? 'text-emerald-500' : 'text-gray-400'} /> {profile?.is_verified ? t('profile.verified_id') : t('profile.not_verified')}</li>
+            <li className="flex items-center gap-2"><Users size={12} className="text-blue-500" /> {fmtNum(followersCount)} {t('profile.connections_lc')}</li>
+            <li className="flex items-center gap-2"><FileText size={12} className="text-violet-500" /> {postCount} {t('profile.contributions')}</li>
+            <li className="flex items-center gap-2"><Heart size={12} className="text-rose-500" /> {fmtNum(totalLikes)} {t('profile.likes_earned')}</li>
           </ul>
         </div>
 
         {/* Analytics */}
         <div className="rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5">
-          <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5 mb-3"><Activity size={15} className="text-brand-500" /> Analytics</p>
+          <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5 mb-3"><Activity size={15} className="text-brand-500" /> {t('profile.analytics_label')}</p>
           <div className="grid grid-cols-2 gap-2.5">
-            {[['Views', views, Eye], ['Posts', postCount, FileText], ['Likes', totalLikes, Heart], ['Comments', totalComments, MessageSquare]].map(([l, v, Ic]) => (
+            {[[t('profile.stat_views'), views, Eye], [t('profile.stat_posts'), postCount, FileText], [t('profile.stat_likes'), totalLikes, Heart], [t('profile.stat_comments'), totalComments, MessageSquare]].map(([l, v, Ic]) => (
               <div key={l} className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-2.5">
                 <div className="flex items-center gap-1 text-gray-400"><Ic size={11} /><span className="text-[9px] font-bold uppercase tracking-wide">{l}</span></div>
                 <p className="text-lg font-black text-gray-900 dark:text-gray-100 tabular-nums">{fmtNum(v)}</p>
@@ -2318,13 +2331,13 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
       {/* Featured / pinned */}
       <div className="rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><Award size={15} className="text-premium-500" /> Featured</p>
+          <p className="text-sm font-black text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><Award size={15} className="text-premium-500" /> {t('profile.featured')}</p>
           {profilePosts.length > 0 && (
-            <button onClick={() => setManageFeatured((v) => !v)} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">{manageFeatured ? 'Done' : 'Manage'}</button>
+            <button onClick={() => setManageFeatured((v) => !v)} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">{manageFeatured ? t('profile.done') : t('profile.manage')}</button>
           )}
         </div>
         {pinnedPosts.length === 0 && !manageFeatured && (
-          <p className="text-sm text-gray-400 dark:text-gray-500">Pin your best posts to showcase them here. {profilePosts.length > 0 ? 'Tap Manage to choose.' : 'Create a post first.'}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">{t('profile.featured_empty')} {profilePosts.length > 0 ? t('profile.tap_manage') : t('profile.create_first')}</p>
         )}
         {pinnedPosts.length > 0 && !manageFeatured && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -2338,12 +2351,12 @@ function ProfileInsights({ profile, followersCount, profilePosts, onEdit }) {
               return (
                 <button key={p.id} onClick={() => togglePin(p.id)} className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-colors ${on ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
                   <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${on ? 'bg-brand-500 text-white' : 'border border-gray-300 dark:border-gray-700'}`}>{on && <Check size={12} />}</span>
-                  <span className="text-sm text-gray-700 dark:text-gray-200 truncate flex-1">{p.title || p.content?.slice(0, 60) || 'Untitled post'}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-200 truncate flex-1">{p.title || p.content?.slice(0, 60) || t('profile.untitled_post')}</span>
                   <span className="text-[10px] text-gray-400 shrink-0 inline-flex items-center gap-1"><Heart size={10} />{p.likes?.length || 0}</span>
                 </button>
               );
             })}
-            <p className="text-[11px] text-gray-400 pt-1">Up to 6 posts.{savingPins ? ' Saving…' : ''}</p>
+            <p className="text-[11px] text-gray-400 pt-1">{t('profile.up_to_6')}{savingPins ? ' ' + t('profile.saving') : ''}</p>
           </div>
         )}
       </div>

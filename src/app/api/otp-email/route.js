@@ -177,14 +177,12 @@ export async function POST(request) {
       return NextResponse.json({ success: true });
     }
 
-    // ── Direct call format: { email, code } ────────────────────────────────
-    const { email, code } = body ?? {};
-    if (!email || !code || !/^\d{6}$/.test(String(code))) {
-      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-    }
-
-    await sendOtpEmail(email, String(code));
-    return NextResponse.json({ success: true });
+    // ── Only the signed Supabase "Send Email" hook format is accepted. ───────
+    // The former unauthenticated direct { email, code } path was removed: it let
+    // anyone send a BeOneOfUs-branded "your sign-in code is …" email to any
+    // address (a phishing / spam relay), and no part of the app ever called it.
+    // OTP delivery for our own login flow goes through /api/auth/send-otp.
+    return NextResponse.json({ error: 'Unsupported request' }, { status: 400 });
   } catch (err) {
     console.error('[otp-email]', err.message);
     return NextResponse.json({ error: 'Failed to send email. Please try again.' }, { status: 500 });

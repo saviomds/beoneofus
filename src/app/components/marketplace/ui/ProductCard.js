@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Heart, Eye, Download } from "lucide-react";
@@ -98,7 +99,7 @@ export default function ProductCard({ product = {}, onOpen, onWishlist, onPrevie
         {creator?.name && (
           <div className="flex items-center gap-1.5 text-[12px] text-mkt-muted">
             {creator.avatar
-              ? <img src={creator.avatar} alt="" className="h-4 w-4 rounded-full object-cover" />
+              ? <Image src={creator.avatar} alt="" width={16} height={16} className="h-4 w-4 rounded-full object-cover" unoptimized />
               : <span className="grid h-4 w-4 place-items-center rounded-full bg-mkt-primary/25 text-[8px] font-bold text-mkt-text">{creator.name[0]}</span>}
             <span className="truncate">{creator.name}</span>
             {verified && <VerifiedBadge />}

@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   Building2, Plus, X, Loader2, Globe, Send, ChevronLeft,
   Trash2, Pencil, BadgeCheck, Check, AlertTriangle,
@@ -104,6 +104,14 @@ export default function PagesContent() {
     return () => window.removeEventListener("keydown", handler);
   }, [activePage, isModalOpen, showSort]);
 
+  const fetchPages = useCallback(async () => {
+    if (!supabase) return;
+    setLoading(true);
+    const { data, error } = await supabase.from("pages").select("*").order("created_at", { ascending: false });
+    if (!error && data) setPages(data);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
     if (!supabase) return;
     const init = async () => {
@@ -116,15 +124,7 @@ export default function PagesContent() {
       .on("postgres_changes", { event: "*", schema: "public", table: "pages" }, fetchPages)
       .subscribe();
     return () => supabase.removeChannel(ch);
-  }, []);
-
-  const fetchPages = async () => {
-    if (!supabase) return;
-    setLoading(true);
-    const { data, error } = await supabase.from("pages").select("*").order("created_at", { ascending: false });
-    if (!error && data) setPages(data);
-    setLoading(false);
-  };
+  }, [fetchPages]);
 
   useEffect(() => {
     if (!activePage || activeTab !== "updates" || !supabase) return;

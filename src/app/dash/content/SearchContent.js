@@ -235,13 +235,13 @@ export default function SearchContent() {
   const cancelRef   = useRef(false);
 
   /* Sync from URL */
-  useEffect(() => { setInputQ(urlQ); setActiveQ(urlQ); }, [urlQ]);
+  useEffect(() => { (() => { setInputQ(urlQ); setActiveQ(urlQ); })(); }, [urlQ]);
 
   /* Load history */
-  useEffect(() => { setHistory(getHistory()); }, []);
+  useEffect(() => { (() => { setHistory(getHistory()); })(); }, []);
 
   /* Reset on query change */
-  useEffect(() => { setTab("all"); setFilters({}); }, [activeQ]);
+  useEffect(() => { (() => { setTab("all"); setFilters({}); })(); }, [activeQ]);
 
   /* ⌘K / "/" shortcut */
   useEffect(() => {
@@ -271,12 +271,12 @@ export default function SearchContent() {
   /* ── Progressive search ─────────────────────────────────────── */
   useEffect(() => {
     const q = activeQ.trim();
-    if (!q) { setResults(EMPTY); setLoadingKeys(new Set()); return; }
+    if (!q) { (() => { setResults(EMPTY); setLoadingKeys(new Set()); })(); return; }
 
     // Cache hit — instant
     const cacheKey = `${q}|${tab}|${JSON.stringify(filters)}`;
     const cached = queryCache.current.get(cacheKey);
-    if (cached) { setResults(cached); setLoadingKeys(new Set()); return; }
+    if (cached) { (() => { setResults(cached); setLoadingKeys(new Set()); })(); return; }
 
     cancelRef.current = true;  // cancel previous run
     const cancelled = { v: false };
@@ -287,8 +287,7 @@ export default function SearchContent() {
     const keys = tab === "all" ? QUERY_ORDER : [tab];
 
     // Mark all keys as loading and clear old results
-    setLoadingKeys(new Set(keys));
-    setResults(EMPTY);
+    (() => { setLoadingKeys(new Set(keys)); setResults(EMPTY); })();
 
     const accumulated = { ...EMPTY };
     let remaining = keys.length;

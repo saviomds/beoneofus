@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { validate } from '../../../../lib/validate';
 
+// Public endpoint: a profile's connection count is public information (like a
+// social follower count). No auth is required, but `user_id` MUST be a valid
+// UUID — it is interpolated into a PostgREST `.or()` filter, so an unvalidated
+// value would be a filter-injection surface under the service-role client.
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('user_id');
 
-  if (!userId) {
-    return NextResponse.json({ error: 'user_id required' }, { status: 400 });
+  if (!validate.uuid(userId)) {
+    return NextResponse.json({ error: 'A valid user_id is required' }, { status: 400 });
   }
 
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {

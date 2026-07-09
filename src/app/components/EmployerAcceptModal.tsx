@@ -374,6 +374,9 @@ export default function MessagesContent() {
   /* ── Target chat from context ── */
   useEffect(() => {
     if (targetChatUser) {
+      // Open the chat requested via external context. This reacts to a context
+      // signal, so the state writes must happen in the effect.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveChat(targetChatUser);
       setContacts((prev) =>
         prev.find((c) => c.id === targetChatUser.id)
@@ -966,6 +969,10 @@ export default function MessagesContent() {
   /* ── Call duration ── */
   useEffect(() => {
     if (activeCall?.status !== "connected") return;
+    // Reset the on-screen timer to 0 the instant the call connects, then tick
+    // it up every second. The reset must be synchronous so no stale duration
+    // flashes before the first interval fires.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCallDuration(0);
     const id = setInterval(() => setCallDuration((d) => d + 1), 1000);
     return () => clearInterval(id);

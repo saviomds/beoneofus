@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTheme } from "next-themes";
 import {
@@ -10,9 +11,11 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, prism as syntaxLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from "../../../lib/i18n";
 
 // ─── Code block with copy button ──────────────────────────────────────────────
 function CodeBlock({ match, children, ...props }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -28,7 +31,7 @@ function CodeBlock({ match, children, ...props }) {
         <span className="text-[9px] font-mono text-gray-500 dark:text-gray-400 uppercase tracking-widest">{match[1]}</span>
         <button onClick={copy}
           className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-white/10 transition-all">
-          {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
+          {copied ? <><Check size={10} /> {t("ai.copied")}</> : <><Copy size={10} /> {t("ai.copy")}</>}
         </button>
       </div>
       <SyntaxHighlighter
@@ -48,6 +51,7 @@ function CodeBlock({ match, children, ...props }) {
 }
 
 function CopyButton({ text, className = "" }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const copy = () => {
     navigator.clipboard.writeText(text).catch(() => {});
@@ -55,8 +59,8 @@ function CopyButton({ text, className = "" }) {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <button onClick={copy} title="Copy" className={`flex items-center gap-1 text-[10px] transition-all ${className}`}>
-      {copied ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
+    <button onClick={copy} title={t("ai.copy")} className={`flex items-center gap-1 text-[10px] transition-all ${className}`}>
+      {copied ? <><Check size={11} /> {t("ai.copied")}</> : <><Copy size={11} /> {t("ai.copy")}</>}
     </button>
   );
 }
@@ -96,10 +100,10 @@ function TypewriterMessage({ content, onUpdate }) {
 
 // ─── Modes ────────────────────────────────────────────────────────────────────
 const MODES = [
-  { id: "general",   label: "General",   icon: <Sparkles size={12} /> },
-  { id: "code",      label: "Code",      icon: <Code size={12} /> },
-  { id: "career",    label: "Career",    icon: <Briefcase size={12} /> },
-  { id: "interview", label: "Interview", icon: <BookOpen size={12} /> },
+  { id: "general",   labelKey: "ai.modes.general",   icon: <Sparkles size={12} /> },
+  { id: "code",      labelKey: "ai.modes.code",      icon: <Code size={12} /> },
+  { id: "career",    labelKey: "ai.modes.career",    icon: <Briefcase size={12} /> },
+  { id: "interview", labelKey: "ai.modes.interview", icon: <BookOpen size={12} /> },
 ];
 
 const SYSTEM_PROMPTS = {
@@ -111,42 +115,43 @@ const SYSTEM_PROMPTS = {
 
 const SUGGESTIONS = {
   general: [
-    { label: "Career advice",     prompt: "Give me career advice for a developer looking to grow professionally." },
-    { label: "Review my code",    prompt: "Help me review and improve a piece of code." },
-    { label: "Interview prep",    prompt: "Help me prepare for a technical interview." },
-    { label: "Project ideas",     prompt: "Give me interesting portfolio project ideas for a developer." },
-    { label: "Cover letter",      prompt: "Help me write a professional cover letter for a developer role." },
-    { label: "Explain a concept", prompt: "Explain async/await in JavaScript with clear examples." },
+    { labelKey: "ai.suggestions.general.career_advice",   prompt: "Give me career advice for a developer looking to grow professionally." },
+    { labelKey: "ai.suggestions.general.review_code",     prompt: "Help me review and improve a piece of code." },
+    { labelKey: "ai.suggestions.general.interview_prep",  prompt: "Help me prepare for a technical interview." },
+    { labelKey: "ai.suggestions.general.project_ideas",   prompt: "Give me interesting portfolio project ideas for a developer." },
+    { labelKey: "ai.suggestions.general.cover_letter",    prompt: "Help me write a professional cover letter for a developer role." },
+    { labelKey: "ai.suggestions.general.explain_concept", prompt: "Explain async/await in JavaScript with clear examples." },
   ],
   code: [
-    { label: "Debug my code",   prompt: "I have a bug in my code, can you help me debug it?" },
-    { label: "Code review",     prompt: "Please review this code and suggest improvements." },
-    { label: "Binary search",   prompt: "Explain how to implement a binary search algorithm with code." },
-    { label: "Clean code tips", prompt: "What are the best practices for writing clean JavaScript?" },
-    { label: "Design patterns", prompt: "Explain the most useful design patterns for web development." },
-    { label: "API design",      prompt: "Help me design a RESTful API for a social media app." },
+    { labelKey: "ai.suggestions.code.debug",           prompt: "I have a bug in my code, can you help me debug it?" },
+    { labelKey: "ai.suggestions.code.code_review",     prompt: "Please review this code and suggest improvements." },
+    { labelKey: "ai.suggestions.code.binary_search",   prompt: "Explain how to implement a binary search algorithm with code." },
+    { labelKey: "ai.suggestions.code.clean_code",      prompt: "What are the best practices for writing clean JavaScript?" },
+    { labelKey: "ai.suggestions.code.design_patterns", prompt: "Explain the most useful design patterns for web development." },
+    { labelKey: "ai.suggestions.code.api_design",      prompt: "Help me design a RESTful API for a social media app." },
   ],
   career: [
-    { label: "Resume tips",        prompt: "Help me improve my developer resume to stand out." },
-    { label: "Salary negotiation", prompt: "How should I negotiate my salary as a software developer?" },
-    { label: "Cover letter",       prompt: "Help me write a cover letter for a senior frontend role." },
-    { label: "Career switch",      prompt: "How do I transition from backend to full-stack development?" },
-    { label: "LinkedIn profile",   prompt: "Help me optimize my LinkedIn profile as a developer." },
-    { label: "Portfolio advice",   prompt: "What should I include in my developer portfolio?" },
+    { labelKey: "ai.suggestions.career.resume_tips",        prompt: "Help me improve my developer resume to stand out." },
+    { labelKey: "ai.suggestions.career.salary_negotiation", prompt: "How should I negotiate my salary as a software developer?" },
+    { labelKey: "ai.suggestions.career.cover_letter",       prompt: "Help me write a cover letter for a senior frontend role." },
+    { labelKey: "ai.suggestions.career.career_switch",      prompt: "How do I transition from backend to full-stack development?" },
+    { labelKey: "ai.suggestions.career.linkedin",           prompt: "Help me optimize my LinkedIn profile as a developer." },
+    { labelKey: "ai.suggestions.career.portfolio",          prompt: "What should I include in my developer portfolio?" },
   ],
   interview: [
-    { label: "Mock interview",     prompt: "Give me a mock technical interview for a frontend developer role." },
-    { label: "System design",      prompt: "How do I approach system design questions in interviews?" },
-    { label: "Behavioural Qs",     prompt: "Help me prepare for common behavioral interview questions." },
-    { label: "LeetCode tips",      prompt: "How should I approach LeetCode problems effectively?" },
-    { label: "React interview Qs", prompt: "What are the most common questions asked in React interviews?" },
-    { label: "Coding challenge",   prompt: "Give me a coding challenge to practice my problem-solving skills." },
+    { labelKey: "ai.suggestions.interview.mock_interview",   prompt: "Give me a mock technical interview for a frontend developer role." },
+    { labelKey: "ai.suggestions.interview.system_design",    prompt: "How do I approach system design questions in interviews?" },
+    { labelKey: "ai.suggestions.interview.behavioural",      prompt: "Help me prepare for common behavioral interview questions." },
+    { labelKey: "ai.suggestions.interview.leetcode",         prompt: "How should I approach LeetCode problems effectively?" },
+    { labelKey: "ai.suggestions.interview.react_qs",         prompt: "What are the most common questions asked in React interviews?" },
+    { labelKey: "ai.suggestions.interview.coding_challenge", prompt: "Give me a coding challenge to practice my problem-solving skills." },
   ],
 };
 
 const INPUT_LIMIT = 2000;
 
 export default function AiAssistantContent() {
+  const { t } = useLanguage();
   const [messages, setMessages]           = useState([]);
   const [input, setInput]                 = useState("");
   const [isLoading, setIsLoading]         = useState(false);
@@ -201,7 +206,7 @@ export default function AiAssistantContent() {
     run();
   }, []);
 
-  useEffect(() => { if (hasMessages) scrollToBottom(); }, [messages]);
+  useEffect(() => { if (hasMessages) scrollToBottom(); }, [messages, hasMessages, scrollToBottom]);
 
   const adjustHeight = (el) => {
     if (!el) return;
@@ -261,7 +266,7 @@ export default function AiAssistantContent() {
       if (err.name !== "AbortError") {
         setMessages(prev => [...prev, {
           role: "assistant",
-          content: `Something went wrong: ${err.message}. Please try again.`,
+          content: t("ai.error_generic", { message: err.message }),
           created_at: new Date().toISOString(),
         }]);
       }
@@ -298,7 +303,7 @@ export default function AiAssistantContent() {
   };
 
   const exportChat = () => {
-    const text = messages.map(m => `${m.role === "user" ? "You" : "AI"}: ${m.content}`).join("\n\n---\n\n");
+    const text = messages.map(m => `${m.role === "user" ? t("ai.you") : t("ai.ai_label")}: ${m.content}`).join("\n\n---\n\n");
     const blob = new Blob([text], { type: "text/plain" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
@@ -317,13 +322,13 @@ export default function AiAssistantContent() {
       <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-gray-200 dark:border-white/[0.07] bg-white/90 dark:bg-[#0a1020]/90 backdrop-blur-md shrink-0 gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 shrink-0">
-            <img src="/ai.gif" alt="beoneofus AI" className="w-full h-full object-cover" />
+            <Image src="/ai.gif" alt="beoneofus AI" width={32} height={32} unoptimized className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-black text-gray-900 dark:text-white leading-none truncate">beoneofus AI</p>
             <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse inline-block" />
-              Online · {MODES.find(m => m.id === mode)?.label} mode
+              {t("ai.status", { mode: t(MODES.find(m => m.id === mode)?.labelKey || "ai.modes.general") })}
             </p>
           </div>
         </div>
@@ -331,13 +336,13 @@ export default function AiAssistantContent() {
         <div className="flex items-center gap-1.5 shrink-0">
           {hasMessages && (
             <>
-              <button onClick={exportChat} title="Export chat"
+              <button onClick={exportChat} title={t("ai.export_chat")}
                 className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/8 rounded-lg transition-all">
                 <Download size={14} />
               </button>
               <button onClick={clearChat}
                 className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 px-3 py-1.5 rounded-lg transition-all active:scale-95">
-                <RotateCcw size={11} /> New chat
+                <RotateCcw size={11} /> {t("ai.new_chat")}
               </button>
             </>
           )}
@@ -357,17 +362,17 @@ export default function AiAssistantContent() {
             <div className="absolute w-48 h-48 rounded-full bg-blue-500/10 dark:bg-blue-600/20 blur-3xl" />
             <div className="absolute w-32 h-32 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 blur-2xl" />
             <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border-2 border-blue-200 dark:border-blue-500/25 shadow-xl shadow-blue-100 dark:shadow-blue-500/20">
-              <img src="/ai.gif" alt="beoneofus AI" className="w-full h-full object-cover" />
+              <Image src="/ai.gif" alt="beoneofus AI" width={144} height={144} unoptimized className="w-full h-full object-cover" />
             </div>
           </div>
 
           <div className="text-center space-y-2">
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 dark:text-white">How can I help you?</h1>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 dark:text-white">{t("ai.how_can_help")}</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs">
-              {mode === "code"      && "Ask me to review, debug, or explain any code."}
-              {mode === "career"    && "Let's work on your resume, cover letter, or career path."}
-              {mode === "interview" && "I'll run mock interviews and help you prepare."}
-              {mode === "general"   && "Ask me about career, code, interviews, or anything on your mind."}
+              {mode === "code"      && t("ai.desc_code")}
+              {mode === "career"    && t("ai.desc_career")}
+              {mode === "interview" && t("ai.desc_interview")}
+              {mode === "general"   && t("ai.desc_general")}
             </p>
           </div>
 
@@ -375,7 +380,7 @@ export default function AiAssistantContent() {
             {SUGGESTIONS[mode].map((s, i) => (
               <button key={i} onClick={() => sendMessage(null, s.prompt)}
                 className="text-left px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.05] hover:bg-gray-100 dark:hover:bg-white/[0.10] border border-gray-200 dark:border-white/[0.07] hover:border-gray-300 dark:hover:border-white/[0.16] text-[11px] sm:text-[12px] text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95 font-semibold leading-snug">
-                {s.label}
+                {t(s.labelKey)}
               </button>
             ))}
           </div>
@@ -399,7 +404,7 @@ export default function AiAssistantContent() {
                 <div className="w-7 h-7 rounded-full shrink-0 mt-1 overflow-hidden flex items-center justify-center">
                   {isUser
                     ? <div className="w-full h-full bg-blue-600 flex items-center justify-center"><User size={13} className="text-white" /></div>
-                    : <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />}
+                    : <Image src="/ai.gif" alt="AI" width={28} height={28} unoptimized className="w-full h-full object-cover" />}
                 </div>
 
                 {/* Bubble */}
@@ -436,7 +441,7 @@ export default function AiAssistantContent() {
           {isLoading && (
             <div className="flex gap-2.5 max-w-3xl w-full mr-auto">
               <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-1">
-                <img src="/ai.gif" alt="AI" className="w-full h-full object-cover" />
+                <Image src="/ai.gif" alt="AI" width={28} height={28} unoptimized className="w-full h-full object-cover" />
               </div>
               <div className="bg-gray-100 dark:bg-white/[0.07] border border-gray-200 dark:border-white/[0.08] rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -465,12 +470,12 @@ export default function AiAssistantContent() {
           {isLoading ? (
             <button onClick={stopGenerating}
               className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 bg-gray-100 dark:bg-white/5 hover:bg-red-50 dark:hover:bg-red-500/10 border border-gray-200 dark:border-white/8 hover:border-red-200 dark:hover:border-red-500/30 px-3 py-1.5 rounded-full transition-all">
-              <Square size={10} className="fill-current" /> Stop generating
+              <Square size={10} className="fill-current" /> {t("ai.stop_generating")}
             </button>
           ) : hasLastAi ? (
             <button onClick={regenerate}
               className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 px-3 py-1.5 rounded-full transition-all">
-              <RefreshCw size={11} /> Regenerate
+              <RefreshCw size={11} /> {t("ai.regenerate")}
             </button>
           ) : null}
         </div>
@@ -488,7 +493,7 @@ export default function AiAssistantContent() {
               onKeyDown={e => {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(e); }
               }}
-              placeholder="Ask anything… (Enter to send, Shift+Enter for new line)"
+              placeholder={t("ai.input_placeholder")}
               disabled={isLoading || isFetchingHistory}
               className="w-full bg-gray-50 dark:bg-white/[0.07] border border-gray-200 dark:border-white/[0.12] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500/40 transition-all disabled:opacity-50 resize-none overflow-hidden leading-relaxed"
               style={{ minHeight: "48px", maxHeight: "140px" }}
@@ -516,11 +521,11 @@ export default function AiAssistantContent() {
                     ? "bg-blue-100 dark:bg-blue-600/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30"
                     : "text-gray-400 dark:text-white/20 hover:text-gray-600 dark:hover:text-white/50"
                 }`}>
-                {m.label}
+                {t(m.labelKey)}
               </button>
             ))}
           </div>
-          <p className="text-[9px] text-gray-400 dark:text-white/20">AI can make mistakes</p>
+          <p className="text-[9px] text-gray-400 dark:text-white/20">{t("ai.disclaimer")}</p>
         </div>
       </div>
     </div>

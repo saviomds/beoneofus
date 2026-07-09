@@ -289,7 +289,7 @@ export default function OnboardingPage() {
                 <CheckCircle2 size={36} className="text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-1">You're all set!</h1>
+                <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight mb-1">You&apos;re all set!</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
                   Your profile is ready. Start exploring the network, connecting with people, and building your presence.
                 </p>

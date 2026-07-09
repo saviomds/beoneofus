@@ -15,6 +15,7 @@ import {
   PanelRightOpen, PanelRightClose
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
+import { useLanguage } from '../../../lib/i18n';
 import ProfileContent from "./ProfileContent";
 import { useDashboard } from "./DashboardContext";
 import { useOnlineUsers } from "../../contexts/OnlineUsersContext";
@@ -31,15 +32,16 @@ function parseSnippet(text) {
 
 /* ── Status badge ── */
 function StatusBadge({ status }) {
+  const { t } = useLanguage();
   const map = {
-    new:        { label: "New",         bg: "#EFF6FF", color: "#1D4ED8", dot: "#3B82F6" },
-    active:     { label: "Active",      bg: "#FFF7ED", color: "#C2410C", dot: "#F97316" },
-    completed:  { label: "Done",        bg: "#F0FDF4", color: "#15803D", dot: "#22C55E" },
-    important:  { label: "Important",   bg: "#FDF4FF", color: "#A21CAF", dot: "#D946EF" },
-    waiting:    { label: "Waiting",     bg: "var(--mc-bg)", color: "var(--mc-t5)", dot: "#94A3B8" },
-    blocked:    { label: "Blocked",     bg: "#FFF1F2", color: "#BE123C", dot: "#F43F5E" },
-    incoming:   { label: "Pending",     bg: "#EFF6FF", color: "#1E40AF", dot: "#60A5FA" },
-    none:       { label: "Connect",     bg: "#F5F3FF", color: "#6D28D9", dot: "#8B5CF6" },
+    new:        { label: t("messages.status_new"),        bg: "#EFF6FF", color: "#1D4ED8", dot: "#3B82F6" },
+    active:     { label: t("messages.status_active"),     bg: "#FFF7ED", color: "#C2410C", dot: "#F97316" },
+    completed:  { label: t("messages.status_done"),       bg: "#F0FDF4", color: "#15803D", dot: "#22C55E" },
+    important:  { label: t("messages.status_important"),  bg: "#FDF4FF", color: "#A21CAF", dot: "#D946EF" },
+    waiting:    { label: t("messages.status_waiting"),    bg: "var(--mc-bg)", color: "var(--mc-t5)", dot: "#94A3B8" },
+    blocked:    { label: t("messages.status_blocked"),    bg: "#FFF1F2", color: "#BE123C", dot: "#F43F5E" },
+    incoming:   { label: t("messages.status_pending"),    bg: "#EFF6FF", color: "#1E40AF", dot: "#60A5FA" },
+    none:       { label: t("messages.status_connect"),    bg: "#F5F3FF", color: "#6D28D9", dot: "#8B5CF6" },
   };
   const s = map[status] || map.none;
   return (
@@ -57,6 +59,7 @@ function StatusBadge({ status }) {
 
 /* ── Code snippet block ── */
 function SnippetBlock({ snippet, isMine }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const copy = () => {
     navigator.clipboard.writeText(snippet.code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
@@ -79,7 +82,7 @@ function SnippetBlock({ snippet, isMine }) {
           fontSize: 10, fontWeight: 700, color: copied ? "#34D399" : "#94A3B8",
           background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
         }}>
-          {copied ? <><Check size={9} /> Copied</> : <><Copy size={9} /> Copy</>}
+          {copied ? <><Check size={9} /> {t("messages.copied")}</> : <><Copy size={9} /> {t("messages.copy")}</>}
         </button>
       </div>
       <pre style={{
@@ -93,6 +96,7 @@ function SnippetBlock({ snippet, isMine }) {
 
 /* ── Attachment card ── */
 function AttachmentCard({ url, name }) {
+  const { t } = useLanguage();
   const ext = (name || url || "").split(".").pop().toLowerCase();
   const isImage = ["jpg", "jpeg", "png", "gif", "webp"].includes(ext);
   return (
@@ -109,7 +113,7 @@ function AttachmentCard({ url, name }) {
       </div>
       <div style={{ minWidth: 0 }}>
         <p style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t2)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>
-          {name || "Attachment"}
+          {name || t("messages.attachment")}
         </p>
         <p style={{ fontSize: 11, color: "var(--mc-t6)", margin: 0 }}>{ext.toUpperCase()}</p>
       </div>
@@ -122,6 +126,7 @@ function AttachmentCard({ url, name }) {
 
 /* ── AI Summary panel ── */
 function AISummaryPanel({ messages, activeChat }) {
+  const { t } = useLanguage();
   const lastMessages = messages.slice(-5);
   const hasContent = lastMessages.length > 0;
   return (
@@ -136,17 +141,19 @@ function AISummaryPanel({ messages, activeChat }) {
         }}>
           <Sparkles size={14} color="white" />
         </div>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#5B21B6", letterSpacing: "0.03em" }}>AI Summary</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#5B21B6", letterSpacing: "0.03em" }}>{t("messages.ai_summary")}</span>
       </div>
       {hasContent ? (
         <p style={{ fontSize: 12, color: "#6D28D9", lineHeight: 1.6, margin: 0 }}>
-          This conversation with <strong>@{activeChat?.username}</strong> has {messages.length} message{messages.length !== 1 ? "s" : ""}. 
-          {messages.some(m => m.image_url) ? " Contains shared images." : ""}
-          {messages.some(m => parseSnippet(m.text)) ? " Includes code snippets." : ""}
+          {messages.length === 1
+            ? t("messages.convo_summary_one", { name: activeChat?.username, n: messages.length })
+            : t("messages.convo_summary_many", { name: activeChat?.username, n: messages.length })}
+          {messages.some(m => m.image_url) ? t("messages.contains_images") : ""}
+          {messages.some(m => parseSnippet(m.text)) ? t("messages.includes_snippets") : ""}
         </p>
       ) : (
         <p style={{ fontSize: 12, color: "#7C3AED", lineHeight: 1.6, margin: 0, fontStyle: "italic" }}>
-          No messages yet. Start a conversation to see AI insights.
+          {t("messages.no_messages_ai")}
         </p>
       )}
     </div>
@@ -155,6 +162,7 @@ function AISummaryPanel({ messages, activeChat }) {
 
 /* ── Task card ── */
 function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
   const inputRef = useRef(null);
@@ -197,7 +205,7 @@ function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
         ) : (
           <p
             onClick={() => { setEditing(true); setDraft(task.title); }}
-            title="Click to rename"
+            title={t("messages.click_rename")}
             style={{ fontSize: 13, fontWeight: 500, color: task.done ? "var(--mc-t6)" : "var(--mc-t2)", margin: 0, textDecoration: task.done ? "line-through" : "none", cursor: "text", wordBreak: "break-word" }}
           >
             {task.title}
@@ -216,7 +224,7 @@ function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
               background: task.priority === "high" ? "#FFF1F2" : "#FFF7ED",
               color: task.priority === "high" ? "#BE123C" : "#C2410C",
             }}>
-              {task.priority === "high" ? "🔥 High" : "⚡ Med"}
+              {task.priority === "high" ? t("messages.priority_high") : t("messages.priority_med")}
             </span>
           )}
           {task.assigned_to ? (
@@ -230,7 +238,7 @@ function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#6366F1"; e.currentTarget.style.color = "#6366F1"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#CBD5E1"; e.currentTarget.style.color = "#94A3B8"; }}
             >
-              <AtSign size={9} /> Assign to @{chatUsername}
+              <AtSign size={9} /> {t("messages.assign_to", { username: chatUsername })}
             </button>
           )}
         </div>
@@ -263,6 +271,7 @@ function NavIcon({ icon: Icon, active, onClick, tooltip }) {
    MAIN COMPONENT
 ══════════════════════════════════════════════════════════════ */
 export default function MessagesContent() {
+  const { t } = useLanguage();
   const [contacts, setContacts] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -315,7 +324,7 @@ export default function MessagesContent() {
       .then(({ data }) => {
         if (data) setTasksByUser(prev => ({ ...prev, [activeChat.id]: data }));
       });
-  }, [activeChat?.id, currentUserId]);
+  }, [activeChat, currentUserId]);
 
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
@@ -366,7 +375,7 @@ export default function MessagesContent() {
     // Send email notification to the assigned user
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
-      showToast("Task assigned, but couldn't send email — not authenticated.", "error");
+      showToast(t("messages.toast_task_email_not_auth"), "error");
       return;
     }
 
@@ -376,7 +385,7 @@ export default function MessagesContent() {
     ]);
 
     if (assigneeErr || !assigneeProfile?.email) {
-      showToast("Task assigned. Could not find assignee email to notify.", "error");
+      showToast(t("messages.toast_task_no_email"), "error");
       return;
     }
 
@@ -398,14 +407,14 @@ export default function MessagesContent() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        showToast(`Task assigned, but email failed: ${body.error || res.status}`, "error");
+        showToast(t("messages.toast_task_email_failed", { message: body.error || res.status }), "error");
       } else {
-        showToast(`Task assigned — @${assigneeProfile.username} notified by email.`);
+        showToast(t("messages.toast_task_notified", { username: assigneeProfile.username }));
       }
     } catch (err) {
-      showToast(`Task assigned, but email error: ${err.message}`, "error");
+      showToast(t("messages.toast_task_email_error", { message: err.message }), "error");
     }
-  }, [activeChat, currentUserId, showToast]);
+  }, [activeChat, currentUserId, showToast, t]);
 
   const forceScrollRef = useRef(false);
 
@@ -494,6 +503,7 @@ export default function MessagesContent() {
 
   useEffect(() => {
     if (targetChatUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing an incoming targetChatUser prop into local chat state; only runs when the prop is set
       setActiveChat(targetChatUser);
       setContacts(prev => prev.find(c => c.id === targetChatUser.id) ? prev : [targetChatUser, ...prev]);
       setTargetChatUser(null);
@@ -517,7 +527,7 @@ export default function MessagesContent() {
           counts[otherId] = (counts[otherId] || 0) + 1;
         if (!previews[otherId]) {
           const isSender = msg.sender_id === currentUserId;
-          previews[otherId] = { text: (isSender ? "You: " : "") + (msg.text || (msg.image_url ? "📷 Image" : "New message")), isSender, isRead: msg.is_read };
+          previews[otherId] = { text: (isSender ? t("messages.you_prefix") : "") + (msg.text || (msg.image_url ? t("messages.img_label") : t("messages.preview_new_message"))), isSender, isRead: msg.is_read };
         }
       });
       setUnreadCounts(counts); setLastMessagePreviews(previews);
@@ -528,6 +538,9 @@ export default function MessagesContent() {
       .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `sender_id=eq.${currentUserId}` }, fetchUnreadAndPreviews)
       .subscribe();
     return () => supabase.removeChannel(ch);
+    // t is only used for preview fallback text; excluding it avoids tearing
+    // down and resubscribing the realtime channel when translations load/switch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId]);
 
   /* ── 4. Messages ── */
@@ -538,11 +551,11 @@ export default function MessagesContent() {
       .or(`and(sender_id.eq.${uid},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${uid})`)
       .order("created_at", { ascending: true });
     setIsLoadingMessages(false);
-    if (error) { showToast("Failed to load messages: " + error.message, "error"); return; }
+    if (error) { showToast(t("messages.toast_load_failed", { message: error.message }), "error"); return; }
     setMessages(data || []);
     setUnreadCounts(prev => ({ ...prev, [chatId]: 0 }));
     await supabase.from("messages").update({ is_read: true }).eq("receiver_id", uid).eq("sender_id", chatId).eq("is_read", false);
-  }, [showToast]);
+  }, [showToast, t]);
 
   useEffect(() => {
     if (!activeChat || !currentUserId) return;
@@ -613,8 +626,8 @@ export default function MessagesContent() {
   const handleSendRequest = async () => {
     const { error } = await supabase.from("connections").insert({ sender_id: currentUserId, receiver_id: activeChat.id, status: "pending" });
     if (error) {
-      if (error.code === "23503") { showToast("This user no longer exists.", "error"); setContacts(p => p.filter(c => c.id !== activeChat.id)); setActiveChat(null); }
-      else showToast("Failed to send request: " + error.message, "error");
+      if (error.code === "23503") { showToast(t("messages.toast_user_gone"), "error"); setContacts(p => p.filter(c => c.id !== activeChat.id)); setActiveChat(null); }
+      else showToast(t("messages.toast_request_failed", { message: error.message }), "error");
       return;
     }
     setConnectionStatus("waiting");
@@ -645,7 +658,7 @@ export default function MessagesContent() {
       const { error } = await supabase.from("connections").update({ status: "blocked", blocked_by: currentUserId }).eq("id", activeConnectionId);
       if (error) throw error;
       setShowBlockConfirm(false); setShowMoreMenu(false);
-    } catch (e) { showToast("Could not block user: " + e.message, "error"); }
+    } catch (e) { showToast(t("messages.toast_block_failed", { message: e.message }), "error"); }
     finally { setIsProcessing(false); }
   };
 
@@ -656,7 +669,7 @@ export default function MessagesContent() {
       const { error } = await supabase.from("connections").update({ status: "accepted", blocked_by: null }).eq("id", activeConnectionId).eq("blocked_by", currentUserId);
       if (error) throw error;
       setShowMoreMenu(false);
-    } catch (e) { showToast("Could not unblock: " + e.message, "error"); }
+    } catch (e) { showToast(t("messages.toast_unblock_failed", { message: e.message }), "error"); }
     finally { setIsProcessing(false); }
   };
 
@@ -665,7 +678,7 @@ export default function MessagesContent() {
     setMessages(prev => prev.filter(m => m.id !== msgId));
     setShowDeleteConfirm(null);
     const { error } = await supabase.from("messages").delete().eq("id", msgId).eq("sender_id", currentUserId);
-    if (error) { showToast("Failed to delete message.", "error"); fetchMessages(activeChat.id, currentUserId); }
+    if (error) { showToast(t("messages.toast_delete_failed"), "error"); fetchMessages(activeChat.id, currentUserId); }
     setDeletingMsgId(null);
   };
 
@@ -682,8 +695,8 @@ export default function MessagesContent() {
         const res = await fetch("/api/chats", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }) });
         const textResponse = await res.text();
         let data;
-        try { data = JSON.parse(textResponse); } catch { throw new Error("AI API returned invalid response."); }
-        if (!res.ok) throw new Error(data?.error || "Failed to fetch AI response");
+        try { data = JSON.parse(textResponse); } catch { throw new Error(t("messages.toast_ai_invalid")); }
+        if (!res.ok) throw new Error(data?.error || t("messages.toast_ai_fetch_failed"));
         let suggested = "";
         if (typeof data?.message?.content === "string") suggested = data.message.content;
         else if (Array.isArray(data?.message?.content)) suggested = data.message.content.filter(b => b.type === "text").map(b => b.text).join("");
@@ -694,7 +707,7 @@ export default function MessagesContent() {
         break;
       } catch (err) {
         attempt++;
-        if (attempt >= 3) showToast("AI suggestion failed: " + err.message, "error");
+        if (attempt >= 3) showToast(t("messages.toast_ai_failed", { message: err.message }), "error");
         else await new Promise(r => setTimeout(r, 1000 * attempt));
       }
     }
@@ -715,7 +728,7 @@ export default function MessagesContent() {
     try {
       if (existing) { await supabase.from("message_reactions").delete().eq("id", existing.id); }
       else { const { error } = await supabase.from("message_reactions").insert({ message_id: msgId, user_id: currentUserId, emoji }); if (error) throw error; }
-    } catch { showToast("Reaction failed.", "error"); fetchMessages(activeChat.id, currentUserId); }
+    } catch { showToast(t("messages.toast_reaction_failed"), "error"); fetchMessages(activeChat.id, currentUserId); }
   };
 
   const handleInputChange = (e) => {
@@ -752,17 +765,19 @@ export default function MessagesContent() {
     const replyToId = replyingTo?.id;
     if (!msgText && !imageToUpload) return;
     setMessageSendError(null);
+    // eslint-disable-next-line react-hooks/purity -- unique id generated inside an async event handler, not during render
     const optimisticId = `opt-${Date.now()}`;
     const optimistic = { id: optimisticId, sender_id: currentUserId, receiver_id: activeChat.id, text: msgText, image_url: imagePreview, replied_message: replyingTo, created_at: new Date().toISOString(), isSending: true, message_reactions: [] };
     forceScrollRef.current = true;
     setMessages(prev => [...prev, optimistic]);
-    setLastMessagePreviews(prev => ({ ...prev, [activeChat.id]: { text: `You: ${msgText || (imageToUpload ? "📷 Image" : "New message")}`, isSender: true, isRead: false } }));
+    setLastMessagePreviews(prev => ({ ...prev, [activeChat.id]: { text: `${t("messages.you_prefix")}${msgText || (imageToUpload ? t("messages.img_label") : t("messages.preview_new_message"))}`, isSender: true, isRead: false } }));
     setInputValue(""); setImageFile(null); setImagePreview(null); setReplyingTo(null);
     if (imageInputRef.current) imageInputRef.current.value = "";
     try {
       let imageUrl = null;
       if (imageToUpload) {
         const ext = imageToUpload.name.split(".").pop();
+        // eslint-disable-next-line react-hooks/purity -- unique upload filename generated inside an async event handler, not during render
         const path = `${currentUserId}/msg-${Date.now()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("chat_images").upload(path, imageToUpload);
         if (upErr) throw new Error("Image upload failed: " + upErr.message);
@@ -780,14 +795,14 @@ export default function MessagesContent() {
     } catch (err) {
       setMessages(prev => prev.filter(m => m.id !== optimisticId));
       setMessageSendError(err.message);
-      showToast("Failed to send: " + err.message, "error");
+      showToast(t("messages.toast_send_failed", { message: err.message }), "error");
     }
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { showToast("Image must be under 10MB.", "error"); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast(t("messages.toast_image_size"), "error"); return; }
     setImageFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result);
@@ -802,7 +817,7 @@ export default function MessagesContent() {
     });
   };
 
-  const copyMessage = (text) => { navigator.clipboard.writeText(text).then(() => showToast("Copied to clipboard")); };
+  const copyMessage = (text) => { navigator.clipboard.writeText(text).then(() => showToast(t("messages.toast_copied"))); };
 
   const notifyRecipient = useCallback(async () => {
     if (!activeChat || !currentUserId) return;
@@ -826,8 +841,8 @@ export default function MessagesContent() {
         return prev.map(m => m.id === optimisticId ? { ...m, ...inserted, isSending: false } : m);
       });
       notifyRecipient();
-    } catch (err) { setMessages(prev => prev.filter(m => m.id !== optimisticId)); showToast("Failed to send snippet: " + err.message, "error"); }
-  }, [snippetCode, snippetLang, connectionStatus, currentUserId, activeChat, notifyRecipient, showToast]);
+    } catch (err) { setMessages(prev => prev.filter(m => m.id !== optimisticId)); showToast(t("messages.toast_snippet_failed", { message: err.message }), "error"); }
+  }, [snippetCode, snippetLang, connectionStatus, currentUserId, activeChat, notifyRecipient, showToast, t]);
 
   const handlePaste = useCallback((e) => {
     const pasted = e.clipboardData?.getData('text') || '';
@@ -850,7 +865,7 @@ export default function MessagesContent() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", background: "var(--mc-bg)" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
             <Loader2 size={28} color="#6366F1" className="animate-spin" />
-            <p style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t6)", letterSpacing: "0.1em", textTransform: "uppercase" }}>Loading…</p>
+            <p style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t6)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("messages.loading")}</p>
           </div>
         </div>
       );
@@ -862,11 +877,11 @@ export default function MessagesContent() {
             <MessageSquare size={24} color="#6366F1" />
           </div>
           <div>
-            <p style={{ fontSize: 16, fontWeight: 700, color: "var(--mc-t2)", marginBottom: 6 }}>Sign in to message</p>
-            <p style={{ fontSize: 13, color: "var(--mc-t6)", lineHeight: 1.5, maxWidth: 260 }}>Create an account or sign in to start conversations with professionals in your network.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "var(--mc-t2)", marginBottom: 6 }}>{t("messages.sign_in_to_message")}</p>
+            <p style={{ fontSize: 13, color: "var(--mc-t6)", lineHeight: 1.5, maxWidth: 260 }}>{t("messages.sign_in_desc")}</p>
           </div>
           <a href="/auth" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 22px", background: "#6366F1", color: "#fff", borderRadius: 12, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-            Sign in to continue
+            {t("messages.sign_in_continue")}
           </a>
         </div>
       </div>
@@ -932,12 +947,12 @@ export default function MessagesContent() {
             <div style={{ width: 56, height: 56, background: "#FFF7ED", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
               <ShieldAlert size={24} color="#F97316" />
             </div>
-            <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--mc-t1)", margin: "0 0 8px" }}>Block @{activeChat?.username}?</h3>
-            <p style={{ fontSize: 13, color: "var(--mc-t5)", margin: "0 0 24px", lineHeight: 1.6 }}>They won't be able to message you. You can unblock anytime.</p>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--mc-t1)", margin: "0 0 8px" }}>{t("messages.block_q", { name: activeChat?.username })}</h3>
+            <p style={{ fontSize: 13, color: "var(--mc-t5)", margin: "0 0 24px", lineHeight: 1.6 }}>{t("messages.block_desc")}</p>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setShowBlockConfirm(false)} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1.5px solid var(--mc-border2)", background: "var(--mc-surface)", fontSize: 13, fontWeight: 600, color: "var(--mc-t4)", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => setShowBlockConfirm(false)} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1.5px solid var(--mc-border2)", background: "var(--mc-surface)", fontSize: 13, fontWeight: 600, color: "var(--mc-t4)", cursor: "pointer" }}>{t("messages.cancel")}</button>
               <button onClick={handleBlockUser} disabled={isProcessing} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: "#F97316", fontSize: 13, fontWeight: 700, color: "white", cursor: "pointer", opacity: isProcessing ? 0.6 : 1 }}>
-                {isProcessing ? "Blocking…" : "Block User"}
+                {isProcessing ? t("messages.blocking") : t("messages.block_user")}
               </button>
             </div>
           </div>
@@ -949,11 +964,11 @@ export default function MessagesContent() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(6px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div className="slide-up" style={{ background: "var(--mc-surface)", borderRadius: 18, padding: 24, maxWidth: 320, width: "100%", textAlign: "center", boxShadow: "0 16px 50px rgba(0,0,0,0.1)" }}>
             <Trash2 size={22} color="#EF4444" style={{ margin: "0 auto 12px" }} />
-            <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t1)", margin: "0 0 6px" }}>Delete message?</p>
-            <p style={{ fontSize: 12, color: "var(--mc-t6)", margin: "0 0 20px" }}>This action cannot be undone.</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t1)", margin: "0 0 6px" }}>{t("messages.delete_q")}</p>
+            <p style={{ fontSize: 12, color: "var(--mc-t6)", margin: "0 0 20px" }}>{t("messages.delete_desc")}</p>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowDeleteConfirm(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1.5px solid var(--mc-border2)", background: "var(--mc-surface)", fontSize: 13, fontWeight: 600, color: "var(--mc-t4)", cursor: "pointer" }}>Cancel</button>
-              <button onClick={() => handleDeleteMessage(showDeleteConfirm)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: "#EF4444", fontSize: 13, fontWeight: 700, color: "white", cursor: "pointer" }}>Delete</button>
+              <button onClick={() => setShowDeleteConfirm(null)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "1.5px solid var(--mc-border2)", background: "var(--mc-surface)", fontSize: 13, fontWeight: 600, color: "var(--mc-t4)", cursor: "pointer" }}>{t("messages.cancel")}</button>
+              <button onClick={() => handleDeleteMessage(showDeleteConfirm)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: "#EF4444", fontSize: 13, fontWeight: 700, color: "white", cursor: "pointer" }}>{t("messages.delete_btn")}</button>
             </div>
           </div>
         </div>
@@ -998,7 +1013,7 @@ export default function MessagesContent() {
           {/* Inbox header */}
           <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid var(--mc-border)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--mc-t1)", margin: 0 }}>Inbox</h2>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--mc-t1)", margin: 0 }}>{t("messages.inbox")}</h2>
               {hasAnyUnread && (
                 <span style={{ fontSize: 11, fontWeight: 700, background: "#6366F1", color: "white", padding: "2px 8px", borderRadius: 100 }}>{totalUnread}</span>
               )}
@@ -1009,7 +1024,7 @@ export default function MessagesContent() {
               <Search size={13} color="#94A3B8" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
               <input
                 type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search conversations…"
+                placeholder={t("messages.search_placeholder")}
                 style={{ width: "100%", background: "var(--mc-bg)", border: "1px solid var(--mc-border)", borderRadius: 10, padding: "7px 28px 7px 30px", fontSize: 12, color: "var(--mc-t3)", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
               />
               {searchQuery && (
@@ -1021,7 +1036,7 @@ export default function MessagesContent() {
 
             {/* Filter tabs */}
             <div style={{ display: "flex", gap: 4 }}>
-              {[["all", "All"], ["unread", "Unread"]].map(([val, label]) => (
+              {[["all", t("messages.filter_all")], ["unread", t("messages.filter_unread")]].map(([val, label]) => (
                 <button key={val} onClick={() => setFilterTab(val)} style={{
                   flex: 1, padding: "5px 0", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600,
                   background: filterTab === val ? "#EEF2FF" : "transparent",
@@ -1029,7 +1044,7 @@ export default function MessagesContent() {
                   transition: "all 0.15s",
                 }}>
                   {label}
-                  {label === "Unread" && hasAnyUnread && <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: "#6366F1", marginLeft: 4, verticalAlign: "middle" }} />}
+                  {val === "unread" && hasAnyUnread && <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: "#6366F1", marginLeft: 4, verticalAlign: "middle" }} />}
                 </button>
               ))}
             </div>
@@ -1041,10 +1056,10 @@ export default function MessagesContent() {
               <div style={{ textAlign: "center", padding: "40px 16px" }}>
                 <MessageSquare size={28} color="#E2E8F0" style={{ margin: "0 auto 10px" }} />
                 <p style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t6)" }}>
-                  {filterTab === "unread" ? "No unread messages" : searchQuery ? `No results for "${searchQuery}"` : "No conversations yet"}
+                  {filterTab === "unread" ? t("messages.no_unread") : searchQuery ? t("messages.no_results", { q: searchQuery }) : t("messages.no_conversations")}
                 </p>
                 {filterTab === "unread" && (
-                  <button onClick={() => setFilterTab("all")} style={{ fontSize: 12, color: "#6366F1", fontWeight: 600, background: "none", border: "none", cursor: "pointer", marginTop: 6 }}>Show all</button>
+                  <button onClick={() => setFilterTab("all")} style={{ fontSize: 12, color: "#6366F1", fontWeight: 600, background: "none", border: "none", cursor: "pointer", marginTop: 6 }}>{t("messages.show_all")}</button>
                 )}
               </div>
             ) : filteredContacts.map((contact, i) => {
@@ -1091,7 +1106,7 @@ export default function MessagesContent() {
                       {unread > 0 && <span style={{ fontSize: 10, fontWeight: 800, background: "#6366F1", color: "white", padding: "1px 6px", borderRadius: 100, flexShrink: 0 }}>{unread}</span>}
                     </div>
                     <p style={{ fontSize: 11.5, color: isTyping ? "#6366F1" : unread > 0 ? "var(--mc-t3)" : "var(--mc-t6)", fontWeight: isTyping || unread > 0 ? 500 : 400, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: isTyping ? "italic" : "normal" }}>
-                      {isTyping ? "typing…" : preview?.text || (isOnline ? "Online" : "Start a conversation")}
+                      {isTyping ? t("messages.typing_ellipsis") : preview?.text || (isOnline ? t("messages.online") : t("messages.start_conversation"))}
                     </p>
                   </div>
                 </div>
@@ -1140,7 +1155,7 @@ export default function MessagesContent() {
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 1 }}>
                       <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: connectionStatus === "blocked" ? "#EF4444" : onlineUsers.has(activeChat.id) ? "#22C55E" : "var(--mc-t7)" }} />
                       <span style={{ fontSize: 11, fontWeight: 500, color: "var(--mc-t6)" }}>
-                        {connectionStatus === "blocked" ? "Blocked" : onlineUsers.has(activeChat.id) ? "Online" : "Offline"}
+                        {connectionStatus === "blocked" ? t("messages.status_blocked") : onlineUsers.has(activeChat.id) ? t("messages.online") : t("messages.offline")}
                       </span>
                     </div>
                   </div>
@@ -1153,7 +1168,7 @@ export default function MessagesContent() {
                 {/* Header right actions */}
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   {!isMobile && (
-                    <button onClick={() => setShowRightPanel(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid var(--mc-border)", background: showRightPanel ? "#EEF2FF" : "var(--mc-surface)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: showRightPanel ? "#6366F1" : "var(--mc-t5)", transition: "all 0.15s" }} title="Toggle panel">
+                    <button onClick={() => setShowRightPanel(p => !p)} style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid var(--mc-border)", background: showRightPanel ? "#EEF2FF" : "var(--mc-surface)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: showRightPanel ? "#6366F1" : "var(--mc-t5)", transition: "all 0.15s" }} title={t("messages.toggle_panel")}>
                       {showRightPanel ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
                     </button>
                   )}
@@ -1165,8 +1180,8 @@ export default function MessagesContent() {
                     {showMoreMenu && (
                       <div className="slide-up" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, width: 200, background: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: 14, boxShadow: "0 8px 32px rgba(0,0,0,0.08)", zIndex: 50, padding: "6px 0", overflow: "hidden" }}>
                         {[
-                          { label: "View Profile", icon: Users, action: () => { setSelectedUserId(activeChat.id); setShowMoreMenu(false); } },
-                          { label: mutedChats.includes(activeChat.id) ? "Unmute" : "Mute", icon: mutedChats.includes(activeChat.id) ? Bell : BellOff, action: () => { toggleMute(activeChat.id); setShowMoreMenu(false); } },
+                          { label: t("messages.view_profile"), icon: Users, action: () => { setSelectedUserId(activeChat.id); setShowMoreMenu(false); } },
+                          { label: mutedChats.includes(activeChat.id) ? t("messages.unmute") : t("messages.mute"), icon: mutedChats.includes(activeChat.id) ? Bell : BellOff, action: () => { toggleMute(activeChat.id); setShowMoreMenu(false); } },
                         ].map(item => (
                           <button key={item.label} onClick={item.action} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "var(--mc-t3)", textAlign: "left", transition: "background 0.1s" }}
                             onMouseEnter={e => e.currentTarget.style.background = "var(--mc-bg)"} onMouseLeave={e => e.currentTarget.style.background = "none"}>
@@ -1176,11 +1191,11 @@ export default function MessagesContent() {
                         <div style={{ borderTop: "1px solid var(--mc-border)", margin: "4px 0" }} />
                         {connectionStatus === "blocked" && blockerId === currentUserId ? (
                           <button onClick={handleUnblockUser} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#16A34A", textAlign: "left" }}>
-                            <ShieldCheck size={14} /> Unblock User
+                            <ShieldCheck size={14} /> {t("messages.unblock_user")}
                           </button>
                         ) : (
                           <button onClick={() => { setShowBlockConfirm(true); setShowMoreMenu(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#F97316", textAlign: "left" }}>
-                            <ShieldAlert size={14} /> Block User
+                            <ShieldAlert size={14} /> {t("messages.block_user")}
                           </button>
                         )}
                       </div>
@@ -1236,10 +1251,10 @@ export default function MessagesContent() {
                                 <CornerUpLeft size={11} color="#94A3B8" style={{ flexShrink: 0, marginTop: 1 }} />
                                 <div style={{ minWidth: 0 }}>
                                   <p style={{ fontSize: 10, fontWeight: 700, color: "#6366F1", margin: "0 0 1px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                                    @{msg.replied_message.sender_id === currentUserId ? "You" : activeChat.username}
+                                    @{msg.replied_message.sender_id === currentUserId ? t("messages.you") : activeChat.username}
                                   </p>
                                   <p style={{ fontSize: 11.5, color: "var(--mc-t5)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    {msg.replied_message.text || "📷 Image"}
+                                    {msg.replied_message.text || t("messages.img_label")}
                                   </p>
                                 </div>
                               </div>
@@ -1341,7 +1356,7 @@ export default function MessagesContent() {
                               </span>
                               {isMine && (
                                 msg.isSending ? <Clock size={10} color="#CBD5E1" /> :
-                                msg.is_read ? <><CheckCheck size={10} color="#6366F1" /><span style={{ fontSize: 10, color: "#6366F1", fontWeight: 600 }}>Seen</span></> :
+                                msg.is_read ? <><CheckCheck size={10} color="#6366F1" /><span style={{ fontSize: 10, color: "#6366F1", fontWeight: 600 }}>{t("messages.seen")}</span></> :
                                 <Check size={10} color="#CBD5E1" />
                               )}
                             </div>
@@ -1380,13 +1395,13 @@ export default function MessagesContent() {
                         <div style={{ width: 60, height: 60, background: "#FFF1F2", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <ShieldAlert size={26} color="#F43F5E" />
                         </div>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>Connection blocked</p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>{t("messages.connection_blocked")}</p>
                         {blockerId === currentUserId ? (
                           <button onClick={handleUnblockUser} style={{ fontSize: 13, color: "#6366F1", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
-                            Unblock @{activeChat.username}
+                            {t("messages.unblock_name", { name: activeChat.username })}
                           </button>
                         ) : (
-                          <p style={{ fontSize: 12, color: "var(--mc-t6)", fontStyle: "italic", margin: 0 }}>You've been blocked by this user.</p>
+                          <p style={{ fontSize: 12, color: "var(--mc-t6)", fontStyle: "italic", margin: 0 }}>{t("messages.been_blocked_by")}</p>
                         )}
                       </div>
                     ) : connectionStatus === "none" ? (
@@ -1395,13 +1410,13 @@ export default function MessagesContent() {
                           <UserPlus size={28} color="#7C3AED" />
                         </div>
                         <div>
-                          <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t2)", margin: "0 0 6px" }}>No connection yet</p>
-                          <p style={{ fontSize: 13, color: "var(--mc-t6)", margin: 0 }}>Send a request to start chatting.</p>
+                          <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t2)", margin: "0 0 6px" }}>{t("messages.no_connection")}</p>
+                          <p style={{ fontSize: 13, color: "var(--mc-t6)", margin: 0 }}>{t("messages.send_request_desc")}</p>
                         </div>
                         <button onClick={handleSendRequest} style={{ padding: "11px 28px", borderRadius: 12, background: "#6366F1", color: "white", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", boxShadow: "0 4px 14px rgba(99,102,241,0.3)", transition: "all 0.15s" }}
                           onMouseEnter={e => e.currentTarget.style.background = "#4F46E5"}
                           onMouseLeave={e => e.currentTarget.style.background = "#6366F1"}>
-                          Send Connection Request
+                          {t("messages.send_connection_request")}
                         </button>
                       </div>
                     ) : connectionStatus === "waiting" ? (
@@ -1409,24 +1424,24 @@ export default function MessagesContent() {
                         <div style={{ width: 60, height: 60, background: "var(--mc-bg)", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <Send size={24} color="#94A3B8" className="animate-pulse" />
                         </div>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>Request sent</p>
-                        <p style={{ fontSize: 12, color: "var(--mc-t6)", margin: 0 }}>Waiting for @{activeChat.username} to accept…</p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>{t("messages.request_sent")}</p>
+                        <p style={{ fontSize: 12, color: "var(--mc-t6)", margin: 0 }}>{t("messages.waiting_accept", { name: activeChat.username })}</p>
                       </div>
                     ) : connectionStatus === "incoming" ? (
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
                         <div style={{ width: 64, height: 64, background: "#F0FDF4", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <UserPlus size={28} color="#22C55E" />
                         </div>
-                        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>@{activeChat.username} wants to connect</p>
+                        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>{t("messages.wants_connect", { name: activeChat.username })}</p>
                         <div style={{ display: "flex", gap: 10 }}>
                           <button onClick={handleAcceptRequest} style={{ padding: "10px 22px", borderRadius: 11, background: "#22C55E", color: "white", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 12px rgba(34,197,94,0.25)" }}>
-                            <Check size={14} /> Accept
+                            <Check size={14} /> {t("messages.accept")}
                           </button>
                           <button onClick={() => { supabase.from("connections").delete().eq("id", activeConnectionId); setConnectionStatus("none"); }}
                             style={{ padding: "10px 22px", borderRadius: 11, background: "var(--mc-surface)", border: "1.5px solid var(--mc-border2)", color: "var(--mc-t4)", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
                             onMouseEnter={e => { e.currentTarget.style.background = "#FFF1F2"; e.currentTarget.style.borderColor = "#FECDD3"; e.currentTarget.style.color = "#EF4444"; }}
                             onMouseLeave={e => { e.currentTarget.style.background = "var(--mc-surface)"; e.currentTarget.style.borderColor = "var(--mc-border2)"; e.currentTarget.style.color = "var(--mc-t4)"; }}>
-                            Decline
+                            {t("messages.decline")}
                           </button>
                         </div>
                       </div>
@@ -1462,18 +1477,18 @@ export default function MessagesContent() {
                           @{activeChat.username}
                           {activeChat.is_verified && <BadgeCheck size={12} color="#6366F1" fill="#6366F1" stroke="white" strokeWidth={2} />}
                         </p>
-                        <p style={{ fontSize: 11, color: "var(--mc-t6)", margin: 0 }}>{activeChat.status || "Member"}</p>
+                        <p style={{ fontSize: 11, color: "var(--mc-t6)", margin: 0 }}>{activeChat.status || t("messages.member")}</p>
                       </div>
                       <ArrowRight size={13} color="#CBD5E1" />
                     </div>
                   </div>
                   <div style={{ marginBottom: 16 }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: "var(--mc-t6)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>Thread Info</p>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "var(--mc-t6)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>{t("messages.thread_info")}</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {[
-                        { label: "Status", value: <StatusBadge status={connectionStatus || "none"} /> },
-                        { label: "Messages", value: <span style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t3)" }}>{messages.length}</span> },
-                        { label: "Online", value: <span style={{ fontSize: 12, fontWeight: 600, color: onlineUsers.has(activeChat.id) ? "#22C55E" : "#94A3B8" }}>{onlineUsers.has(activeChat.id) ? "Yes" : "No"}</span> },
+                        { label: t("messages.label_status"), value: <StatusBadge status={connectionStatus || "none"} /> },
+                        { label: t("messages.label_messages"), value: <span style={{ fontSize: 12, fontWeight: 600, color: "var(--mc-t3)" }}>{messages.length}</span> },
+                        { label: t("messages.online"), value: <span style={{ fontSize: 12, fontWeight: 600, color: onlineUsers.has(activeChat.id) ? "#22C55E" : "#94A3B8" }}>{onlineUsers.has(activeChat.id) ? t("messages.yes") : t("messages.no")}</span> },
                       ].map(row => (
                         <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--mc-border)" }}>
                           <span style={{ fontSize: 12, color: "var(--mc-t6)" }}>{row.label}</span>
@@ -1483,20 +1498,20 @@ export default function MessagesContent() {
                     </div>
                   </div>
                   <div style={{ marginBottom: 16 }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: "var(--mc-t6)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>AI Summary</p>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "var(--mc-t6)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" }}>{t("messages.ai_summary")}</p>
                     <AISummaryPanel messages={messages} activeChat={activeChat} />
                   </div>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                      <p style={{ fontSize: 10, fontWeight: 700, color: "var(--mc-t6)", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>Tasks</p>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: "var(--mc-t6)", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>{t("messages.tasks")}</p>
                       <button
                         onClick={addTask}
                         style={{ fontSize: 11, fontWeight: 600, color: "#6366F1", background: "none", border: "none", cursor: "pointer" }}>
-                        + Add
+                        {t("messages.add_task_btn")}
                       </button>
                     </div>
                     {currentTasks.length === 0 && (
-                      <p style={{ fontSize: 12, color: "var(--mc-t7)", textAlign: "center", padding: "12px 0", margin: 0 }}>No tasks yet for this chat.</p>
+                      <p style={{ fontSize: 12, color: "var(--mc-t7)", textAlign: "center", padding: "12px 0", margin: 0 }}>{t("messages.no_tasks")}</p>
                     )}
                     {currentTasks.map(task => (
                       <TaskCard
@@ -1525,8 +1540,8 @@ export default function MessagesContent() {
                   <div className="slide-up" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#EEF2FF", border: "1px solid #C7D2FE", borderBottom: "none", borderRadius: "12px 12px 0 0", padding: "8px 12px", marginBottom: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                       <CornerUpLeft size={12} color="#6366F1" />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "#4F46E5" }}>@{replyingTo.sender_id === currentUserId ? "You" : activeChat.username}</span>
-                      <span style={{ fontSize: 12, color: "#818CF8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{replyingTo.text || "📷 Image"}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "#4F46E5" }}>@{replyingTo.sender_id === currentUserId ? t("messages.you") : activeChat.username}</span>
+                      <span style={{ fontSize: 12, color: "#818CF8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{replyingTo.text || t("messages.img_label")}</span>
                     </div>
                     <button onClick={() => setReplyingTo(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#818CF8", lineHeight: 0 }}>
                       <X size={13} />
@@ -1570,7 +1585,7 @@ export default function MessagesContent() {
                     <textarea
                       ref={textareaRef} value={inputValue} onChange={handleInputChange}
                       onKeyDown={handleKeyDown} onPaste={handlePaste}
-                      placeholder="Type a message…" rows={1}
+                      placeholder={t("messages.type_message")} rows={1}
                       style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 14, color: "var(--mc-t2)", lineHeight: 1.55, maxHeight: 120, fontFamily: "inherit", paddingTop: 2 }}
                     />
                     <button type="submit" disabled={!inputValue.trim() && !imageFile} style={{
@@ -1587,10 +1602,11 @@ export default function MessagesContent() {
 
                   {/* Action row */}
                   <div style={{ display: "flex", alignItems: "center", padding: "0 8px 8px", gap: 2 }}>
+                    {/* eslint-disable-next-line react-hooks/refs -- ref is read inside the button's onClick handler, not during render */}
                     {[
-                      { icon: Paperclip, label: "Attach", title: "Attach image", action: () => imageInputRef.current?.click(), color: "var(--mc-t5)", hoverBg: "#EEF2FF", hoverColor: "#4F46E5" },
-                      { icon: isSuggesting ? Loader2 : Sparkles, label: isSuggesting ? "Thinking…" : "AI Reply", title: "AI suggest reply", action: handleSuggestReply, color: "var(--mc-t5)", hoverBg: "#F5F3FF", hoverColor: "#7C3AED", spin: isSuggesting },
-                      { icon: Code2, label: "Snippet", title: "Send code snippet", action: () => setShowSnippetPanel(p => !p), color: showSnippetPanel ? "#7C3AED" : "var(--mc-t5)", hoverBg: "#F5F3FF", hoverColor: "#7C3AED" },
+                      { icon: Paperclip, label: t("messages.attach"), title: t("messages.attach_image"), action: () => imageInputRef.current?.click(), color: "var(--mc-t5)", hoverBg: "#EEF2FF", hoverColor: "#4F46E5" },
+                      { icon: isSuggesting ? Loader2 : Sparkles, label: isSuggesting ? t("messages.thinking") : t("messages.ai_reply"), title: t("messages.ai_suggest_reply"), action: handleSuggestReply, color: "var(--mc-t5)", hoverBg: "#F5F3FF", hoverColor: "#7C3AED", spin: isSuggesting },
+                      { icon: Code2, label: t("messages.snippet"), title: t("messages.send_snippet"), action: () => setShowSnippetPanel(p => !p), color: showSnippetPanel ? "#7C3AED" : "var(--mc-t5)", hoverBg: "#F5F3FF", hoverColor: "#7C3AED" },
                     ].map(btn => (
                       <button key={btn.label} type="button" onClick={btn.action} title={btn.title}
                         style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 9px", borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", fontSize: 12, fontWeight: 500, color: btn.color, transition: "all 0.12s" }}
@@ -1604,7 +1620,7 @@ export default function MessagesContent() {
                     {inputValue.length > 0 && (
                       <span style={{ fontSize: 11, fontFamily: "monospace", color: inputValue.length > 500 ? "#EF4444" : "#CBD5E1", paddingRight: 4 }}>{inputValue.length}</span>
                     )}
-                    <span style={{ fontSize: 11, color: "var(--mc-border2)", fontWeight: 500 }}>⏎ send</span>
+                    <span style={{ fontSize: 11, color: "var(--mc-border2)", fontWeight: 500 }}>{t("messages.enter_send")}</span>
                   </div>
                 </form>
 
@@ -1614,21 +1630,21 @@ export default function MessagesContent() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "var(--mc-bg)", borderBottom: "1px solid var(--mc-border)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <Code2 size={13} color="#7C3AED" />
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--mc-t3)" }}>Code / Long Text</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--mc-t3)" }}>{t("messages.code_long_text")}</span>
                       </div>
                       <select value={snippetLang} onChange={e => setSnippetLang(e.target.value)} style={{ background: "var(--mc-surface)", border: "1px solid var(--mc-border2)", borderRadius: 7, padding: "3px 8px", fontSize: 11, fontWeight: 700, color: "var(--mc-t3)", outline: "none" }}>
                         {SNIPPET_LANGS.map(l => <option key={l} value={l}>{l}</option>)}
                       </select>
                     </div>
                     <textarea value={snippetCode} onChange={e => setSnippetCode(e.target.value)} autoFocus rows={6}
-                      placeholder="// paste or type code here…"
+                      placeholder={t("messages.snippet_placeholder")}
                       style={{ width: "100%", background: "#0F172A", color: "#E2E8F0", fontSize: 12, fontFamily: "monospace", padding: "10px 14px", resize: "vertical", outline: "none", border: "none", minHeight: 120, maxHeight: 300, boxSizing: "border-box", display: "block" }}
                     />
                     <div style={{ display: "flex", gap: 8, padding: 10, background: "var(--mc-bg)", borderTop: "1px solid var(--mc-border)" }}>
                       <button type="button" onClick={sendSnippet} disabled={!snippetCode.trim()} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 16px", borderRadius: 9, background: "#7C3AED", color: "white", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: !snippetCode.trim() ? 0.4 : 1, transition: "all 0.15s" }}>
-                        <Send size={11} /> Send
+                        <Send size={11} /> {t("messages.send")}
                       </button>
-                      <button type="button" onClick={() => { setShowSnippetPanel(false); setSnippetCode(""); }} style={{ padding: "7px 14px", borderRadius: 9, background: "none", border: "none", color: "var(--mc-t5)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Cancel</button>
+                      <button type="button" onClick={() => { setShowSnippetPanel(false); setSnippetCode(""); }} style={{ padding: "7px 14px", borderRadius: 9, background: "none", border: "none", color: "var(--mc-t5)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>{t("messages.cancel")}</button>
                     </div>
                   </div>
                 )}
@@ -1640,8 +1656,8 @@ export default function MessagesContent() {
                 <MessageSquare size={28} color="#CBD5E1" />
               </div>
               <div>
-                <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t5)", margin: "0 0 6px" }}>No conversation selected</p>
-                <p style={{ fontSize: 13, color: "var(--mc-t7)", margin: 0 }}>Choose a contact from the sidebar</p>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t5)", margin: "0 0 6px" }}>{t("messages.no_conversation_selected")}</p>
+                <p style={{ fontSize: 13, color: "var(--mc-t7)", margin: 0 }}>{t("messages.choose_contact")}</p>
               </div>
             </div>
           )}

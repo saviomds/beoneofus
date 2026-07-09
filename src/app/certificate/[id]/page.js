@@ -349,7 +349,7 @@ export default function CertificatePage() {
                       {sponsors.map(s => (
                         <div key={s.id} className="flex flex-col items-center gap-1">
                           {s.logo_url ? (
-                            <img src={s.logo_url} alt={s.company_name} className="h-6 sm:h-8 object-contain" />
+                            <Image src={s.logo_url} alt={s.company_name} width={0} height={0} sizes="120px" unoptimized className="h-6 sm:h-8 object-contain" style={{ width: 'auto' }} />
                           ) : (
                             <span className="text-[10px] sm:text-xs font-black text-gray-400">{s.company_name}</span>
                           )}

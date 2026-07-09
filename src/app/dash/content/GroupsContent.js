@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Plus, Users, Lock, Globe, Search, ChevronRight, X,
   Image as ImageIcon, Loader2, Check, UserPlus, UserMinus,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import ProfileContent from "./ProfileContent";
+import { useLanguage } from '../../../lib/i18n';
 
 // ─── Channel colour palette (derived from group id) ──────────────────────────
 const CHANNEL_PALETTES = [
@@ -52,6 +53,7 @@ function formatDateLabel(iso) {
 }
 
 export default function GroupsContent() {
+  const { t } = useLanguage();
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -101,18 +103,13 @@ export default function GroupsContent() {
   const [chatImagePreview, setChatImagePreview] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
 
-  // Fetch Groups
-  useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const uid = session?.user?.id;
-      if (uid) setCurrentUserId(uid);
-      await fetchGroups(uid);
-    };
-    init();
+  const showToast = useCallback((msg, type = "success") => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => setToastMessage(""), 3000);
   }, []);
 
-  const fetchGroups = async (uid) => {
+  const fetchGroups = useCallback(async (uid) => {
     setLoading(true);
     try {
       const resolvedUid = uid || currentUserId;
@@ -130,7 +127,21 @@ export default function GroupsContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUserId]);
+
+  // Fetch Groups
+  useEffect(() => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id;
+      if (uid) setCurrentUserId(uid);
+      await fetchGroups(uid);
+    };
+    init();
+    // fetchGroups intentionally omitted: run once on mount; including it would
+    // re-fetch when currentUserId is set (double fetch on load).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // --- WORKSPACE CHAT LOGIC ---
   useEffect(() => {
@@ -145,7 +156,7 @@ export default function GroupsContent() {
       
       if (!error) setWorkspaceMessages(data || []);
       if (error) {
-        showToast(`Failed to load messages: ${error.message}`, "error");
+        showToast(t('groups.toast_load_failed', { message: error.message }), "error");
       } else {
         setWorkspaceMessages(data || []);
       }
@@ -172,7 +183,10 @@ export default function GroupsContent() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [activeWorkspace]);
+    // t is only used inside an error toast; excluding it avoids tearing down
+    // and resubscribing the realtime channel when translations load/switch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkspace, showToast]);
 
   useEffect(() => {
     if (workspaceScrollRef.current) workspaceScrollRef.current.scrollTop = workspaceScrollRef.current.scrollHeight;
@@ -218,12 +232,6 @@ export default function GroupsContent() {
     if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
-  const showToast = (msg, type = "success") => {
-    setToastMessage(msg);
-    setToastType(type);
-    setTimeout(() => setToastMessage(""), 3000);
-  };
-
   // --- CREATE GROUP ---
   const handleCreateGroup = async (e) => {
     e.preventDefault();
@@ -252,7 +260,7 @@ export default function GroupsContent() {
         throw memberError;
       }
 
-      showToast("Channel created successfully!");
+      showToast(t('groups.toast_channel_created'));
       setIsModalOpen(false);
       setName("");
       setDescription("");
@@ -260,7 +268,7 @@ export default function GroupsContent() {
       setImagePreview(null);
       fetchGroups();
     } catch (err) {
-      showToast("Failed to create channel: " + err.message, "error");
+      showToast(t('groups.toast_create_failed', { message: err.message }), "error");
     } finally {
       setIsProcessing(false);
     }
@@ -275,16 +283,16 @@ export default function GroupsContent() {
     try {
       // Find user by username
       const { data: profile, error: profileErr } = await supabase.from('profiles').select('id').eq('username', inviteUsername.trim()).maybeSingle();
-      if (profileErr || !profile) throw new Error(`User @${inviteUsername} not found.`);
+      if (profileErr || !profile) throw new Error(t('groups.toast_user_not_found', { username: inviteUsername }));
 
-      if (profile.id === currentUserId) throw new Error("You cannot invite yourself to the group.");
+      if (profile.id === currentUserId) throw new Error(t('groups.toast_invite_self'));
 
       // Insert into members
       const { error: inviteErr } = await supabase.from('group_members').insert({ group_id: selectedGroup.id, user_id: profile.id, role: 'member' });
       if (inviteErr) {
         // Catch PostgreSQL duplicate key error (code 23505)
         if (inviteErr.code === '23505' || inviteErr.message.includes('duplicate')) {
-          throw new Error(`@${inviteUsername} is already a member of this channel.`);
+          throw new Error(t('groups.toast_already_member', { username: inviteUsername }));
         }
         throw inviteErr;
       }
@@ -296,9 +304,9 @@ export default function GroupsContent() {
         type: 'group_invite',
         content: selectedGroup.name
       });
-      if (notifErr) throw new Error("Invite sent, but notification failed: " + notifErr.message);
+      if (notifErr) throw new Error(t('groups.toast_invite_notif_failed', { message: notifErr.message }));
 
-      showToast(`@${inviteUsername} has been granted access!`);
+      showToast(t('groups.toast_access_granted', { username: inviteUsername }));
       setInviteModalOpen(false);
       setInviteUsername("");
       fetchGroups();
@@ -325,15 +333,15 @@ export default function GroupsContent() {
       if (groupError) throw groupError;
       
       if (!deletedGroup || deletedGroup.length === 0) {
-        throw new Error("Deletion blocked by database (RLS). You don't have permission.");
+        throw new Error(t('groups.toast_rls_blocked'));
       }
 
-      showToast("Channel deleted successfully");
+      showToast(t('groups.toast_channel_deleted'));
       setDeleteModalOpen(false);
       setGroupToDelete(null);
       fetchGroups();
     } catch (err) {
-      showToast("Failed to delete channel: " + err.message, "error");
+      showToast(t('groups.toast_delete_failed', { message: err.message }), "error");
     } finally {
       setIsProcessing(false);
     }
@@ -357,15 +365,15 @@ export default function GroupsContent() {
         if (groupError) throw groupError;
         
         if (!deletedGroups || deletedGroups.length === 0) {
-          throw new Error("Deletion blocked by database (RLS). You don't have permission.");
+          throw new Error(t('groups.toast_rls_blocked'));
         }
       }
 
-      showToast("All your channels have been deleted.");
+      showToast(t('groups.toast_all_deleted'));
       setDeleteAllModalOpen(false);
       fetchGroups();
     } catch (err) {
-      showToast("Failed to delete all channels: " + err.message, "error");
+      showToast(t('groups.toast_delete_all_failed', { message: err.message }), "error");
     } finally {
       setIsProcessing(false);
     }
@@ -419,7 +427,7 @@ export default function GroupsContent() {
     try {
       const { error } = await supabase.from('group_members').delete().eq('group_id', activeWorkspace.id).eq('user_id', userId);
       if (error) throw error;
-      showToast(`@${username} has been removed from the channel.`);
+      showToast(t('groups.toast_member_removed', { username }));
       setWorkspaceMembers(prev => prev.filter(m => m.user_id !== userId));
     } catch(err) {
       showToast(err.message, "error");
@@ -481,7 +489,7 @@ export default function GroupsContent() {
         });
       }
     } catch (err) {
-      showToast('Failed to send message: ' + err.message, 'error');
+      showToast(t('groups.toast_send_failed', { message: err.message }), 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -515,7 +523,7 @@ export default function GroupsContent() {
          if (error) throw error;
       }
     } catch (err) {
-      showToast("Reaction failed. Make sure the 'group_message_reactions' table exists.", "error");
+      showToast(t('groups.toast_reaction_failed'), "error");
     }
   };
 
@@ -569,10 +577,10 @@ export default function GroupsContent() {
                 <h2 className="font-black text-sm text-gray-900 dark:text-gray-100 truncate leading-tight">{activeWorkspace.name}</h2>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="flex items-center gap-1 text-[9px] font-black tracking-[1.5px] text-emerald-500 uppercase">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Secure
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />{t('groups.secure')}
                   </span>
                   {activeWorkspace.is_private && (
-                    <span className="flex items-center gap-0.5 text-[9px] font-black text-amber-500 uppercase tracking-[1.5px]"><Lock size={8} />Private</span>
+                    <span className="flex items-center gap-0.5 text-[9px] font-black text-amber-500 uppercase tracking-[1.5px]"><Lock size={8} />{t('groups.private_group')}</span>
                   )}
                 </div>
               </div>
@@ -580,7 +588,7 @@ export default function GroupsContent() {
             <div className="relative flex items-center gap-2 shrink-0">
               <button onClick={() => { fetchWorkspaceMembers(); setMembersModalOpen(true); }}
                 className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06] hover:bg-gray-100 dark:hover:bg-white/[0.08] rounded-xl text-gray-600 dark:text-gray-400 text-xs font-bold transition-all">
-                <Users size={13} /> <span className="hidden sm:inline">Members</span>
+                <Users size={13} /> <span className="hidden sm:inline">{t('groups.members')}</span>
               </button>
             </div>
           </div>
@@ -592,8 +600,8 @@ export default function GroupsContent() {
                 <div className={`w-14 h-14 bg-gradient-to-br ${wspalette?.gradient} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}>
                   <Hash size={24} className="text-white" />
                 </div>
-                <p className="font-black text-gray-900 dark:text-gray-100 text-base tracking-tight mb-1">Channel initialized</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[200px] leading-relaxed">Be the first to post in <span className="font-bold text-gray-600 dark:text-gray-300">#{activeWorkspace.name}</span></p>
+                <p className="font-black text-gray-900 dark:text-gray-100 text-base tracking-tight mb-1">{t('groups.channel_initialized')}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[200px] leading-relaxed">{t('groups.be_first_post', { name: activeWorkspace.name })}</p>
               </div>
             ) : (
               groupedMessages.map(item => {
@@ -642,7 +650,7 @@ export default function GroupsContent() {
                         {item.replied_message && (
                           <div className="border-l-2 border-current/30 pl-2 mb-2 text-xs opacity-70">
                             <p className="font-bold">@{item.replied_message.profiles?.username}</p>
-                            <p className="opacity-80 line-clamp-1">{item.replied_message.text || "Image"}</p>
+                            <p className="opacity-80 line-clamp-1">{item.replied_message.text || t('groups.image_fallback')}</p>
                           </div>
                         )}
                         {item.image_url && (
@@ -707,9 +715,9 @@ export default function GroupsContent() {
               <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-xl px-3 py-2 mb-2">
                 <div className="min-w-0">
                   <p className="text-[10px] text-gray-500 flex items-center gap-1">
-                    Replying to <span className="font-black text-blue-600 dark:text-blue-400">@{replyingTo.profiles?.username}</span>
+                    {t('groups.reply_to')} <span className="font-black text-blue-600 dark:text-blue-400">@{replyingTo.profiles?.username}</span>
                   </p>
-                  <p className="text-[11px] text-gray-400 truncate">{replyingTo.text || "Image"}</p>
+                  <p className="text-[11px] text-gray-400 truncate">{replyingTo.text || t('groups.image_fallback')}</p>
                 </div>
                 <button onClick={() => setReplyingTo(null)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-2 shrink-0"><X size={14} /></button>
               </div>
@@ -731,7 +739,7 @@ export default function GroupsContent() {
               </button>
               <input type="text" value={messageInput} onChange={e => setMessageInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendWorkspaceMessage(e); }}}
-                placeholder={`Message #${activeWorkspace.name}…`}
+                placeholder={t('groups.message_placeholder', { name: activeWorkspace.name })}
                 className="flex-1 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600 py-1.5 min-w-0" />
               <button type="submit" disabled={isProcessing}
                 className={`bg-gradient-to-r ${wspalette?.gradient} text-white p-2.5 rounded-xl transition-all active:scale-95 disabled:opacity-50 shrink-0 shadow-sm`}>
@@ -755,32 +763,32 @@ export default function GroupsContent() {
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex items-center gap-1.5 bg-white/10 border border-white/10 px-2.5 py-1 rounded-full">
                     <Layers size={9} className="text-blue-400" />
-                    <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Network</span>
+                    <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">{t('groups.network')}</span>
                   </div>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tighter mb-1">Channels</h1>
-                <p className="text-sm text-white/50 font-medium">Communities & collaboration spaces.</p>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tighter mb-1">{t('groups.channels_title')}</h1>
+                <p className="text-sm text-white/50 font-medium">{t('groups.channels_subtitle')}</p>
               </div>
               <div className="flex flex-col sm:items-end gap-3 shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="text-center hidden sm:block">
                     <p className="text-xl font-black text-white">{groups.length}</p>
-                    <p className="text-[9px] text-white/40">channels</p>
+                    <p className="text-[9px] text-white/40">{t('groups.stat_channels')}</p>
                   </div>
                   <div className="w-px h-8 bg-white/10 hidden sm:block" />
                   <div className="text-center hidden sm:block">
                     <p className="text-xl font-black text-white">{memberGroupIds.size}</p>
-                    <p className="text-[9px] text-white/40">joined</p>
+                    <p className="text-[9px] text-white/40">{t('groups.stat_joined')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => setDeleteAllModalOpen(true)}
                     className="flex items-center gap-1.5 bg-white/10 hover:bg-red-500/20 border border-white/10 hover:border-red-400/30 text-white/60 hover:text-red-300 px-3 py-2 rounded-xl transition-all font-bold text-xs">
-                    <Trash2 size={13} /> <span className="hidden sm:inline">Clear</span>
+                    <Trash2 size={13} /> <span className="hidden sm:inline">{t('groups.clear')}</span>
                   </button>
                   <button onClick={() => setIsModalOpen(true)}
                     className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-400 text-white px-4 py-2 rounded-xl transition-all font-bold text-xs shadow-lg shadow-blue-500/30 active:scale-95">
-                    <Plus size={14} /> New Channel
+                    <Plus size={14} /> {t('groups.new_channel')}
                   </button>
                 </div>
               </div>
@@ -792,7 +800,7 @@ export default function GroupsContent() {
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600 pointer-events-none" size={14} />
               <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search channels…"
+                placeholder={t('groups.search_channels')}
                 className="w-full bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-white/[0.06] rounded-xl py-2.5 pl-10 pr-9 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-blue-400 dark:focus:border-blue-500/40 transition-all shadow-sm" />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"><X size={13} /></button>
@@ -800,10 +808,10 @@ export default function GroupsContent() {
             </div>
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-900/60 border border-gray-200 dark:border-white/[0.05] rounded-xl p-1 overflow-x-auto shrink-0">
               {[
-                { id: "all",     label: "All",     count: groups.length },
-                { id: "mine",    label: "Joined",  count: memberGroupIds.size },
-                { id: "public",  label: "Public",  count: groups.filter(g => !g.is_private).length },
-                { id: "private", label: "Private", count: groups.filter(g => g.is_private).length },
+                { id: "all",     label: t('groups.filter_all'),     count: groups.length },
+                { id: "mine",    label: t('groups.filter_joined'),  count: memberGroupIds.size },
+                { id: "public",  label: t('groups.filter_public'),  count: groups.filter(g => !g.is_private).length },
+                { id: "private", label: t('groups.filter_private'), count: groups.filter(g => g.is_private).length },
               ].map(f => (
                 <button key={f.id} onClick={() => setActiveFilter(f.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${activeFilter === f.id ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
@@ -836,13 +844,13 @@ export default function GroupsContent() {
               <div className="w-14 h-14 bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/15 rounded-2xl flex items-center justify-center mb-4 text-blue-400">
                 <Hash size={24} />
               </div>
-              <h3 className="text-base font-black text-gray-900 dark:text-gray-100 mb-1">No channels found</h3>
+              <h3 className="text-base font-black text-gray-900 dark:text-gray-100 mb-1">{t('groups.no_channels_found')}</h3>
               <p className="text-gray-400 dark:text-gray-500 text-sm text-center max-w-[220px] leading-relaxed">
-                {activeFilter !== "all" ? "No channels match this filter." : "Create the first channel to get started."}
+                {activeFilter !== "all" ? t('groups.no_channels_filter') : t('groups.create_first_channel')}
               </p>
               {activeFilter !== "all"
-                ? <button onClick={() => setActiveFilter("all")} className="mt-4 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">Show all channels</button>
-                : <button onClick={() => setIsModalOpen(true)} className="mt-5 flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95"><Plus size={13} /> Create Channel</button>
+                ? <button onClick={() => setActiveFilter("all")} className="mt-4 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">{t('groups.show_all_channels')}</button>
+                : <button onClick={() => setIsModalOpen(true)} className="mt-5 flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95"><Plus size={13} /> {t('groups.create_channel')}</button>
               }
             </div>
           ) : (
@@ -872,10 +880,10 @@ export default function GroupsContent() {
                           <div className="flex items-center gap-1 flex-wrap">
                             <span className={`flex items-center gap-0.5 text-[9px] uppercase font-black tracking-widest px-1.5 py-0.5 rounded-lg border ${group.is_private ? "border-amber-200 dark:border-amber-500/20 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10" : "border-blue-200 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10"}`}>
                               {group.is_private ? <Lock size={7} /> : <Globe size={7} />}
-                              {group.is_private ? "Private" : "Public"}
+                              {group.is_private ? t('groups.private_group') : t('groups.public_group')}
                             </span>
-                            {isAdmin && <span className="text-[9px] uppercase font-black tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-500/20">Admin</span>}
-                            {isMember && !isAdmin && <span className="text-[9px] uppercase font-black tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded-lg border border-blue-200 dark:border-blue-500/20">Joined</span>}
+                            {isAdmin && <span className="text-[9px] uppercase font-black tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-lg border border-emerald-200 dark:border-emerald-500/20">{t('groups.badge_admin')}</span>}
+                            {isMember && !isAdmin && <span className="text-[9px] uppercase font-black tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded-lg border border-blue-200 dark:border-blue-500/20">{t('groups.badge_joined')}</span>}
                           </div>
                         </div>
                       </div>
@@ -896,12 +904,12 @@ export default function GroupsContent() {
                             <>
                               <button onClick={() => { setSelectedGroup(group); setInviteModalOpen(true); }}
                                 className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
-                                title="Invite">
+                                title={t('groups.invite')}>
                                 <UserPlus size={13} />
                               </button>
                               <button onClick={() => { setGroupToDelete(group); setDeleteModalOpen(true); }}
                                 className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
-                                title="Delete">
+                                title={t('groups.delete')}>
                                 <Trash2 size={13} />
                               </button>
                             </>
@@ -930,7 +938,7 @@ export default function GroupsContent() {
           
           <div className="relative w-full max-w-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Create New Channel</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('groups.create_new_channel')}</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors">
                 <X size={20} />
               </button>
@@ -957,20 +965,20 @@ export default function GroupsContent() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Channel Icon</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">PNG, JPG up to 5MB</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('groups.channel_icon')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('groups.image_hint')}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Channel Name</label>
-                  <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Next.js Masters" className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">{t('groups.channel_name')}</label>
+                  <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('groups.channel_name_placeholder')} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Description</label>
-                  <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this channel about?" className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none" />
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">{t('groups.group_description')}</label>
+                  <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('groups.description_placeholder')} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -979,24 +987,24 @@ export default function GroupsContent() {
                     onClick={() => setIsPrivateSelection(false)}
                     className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all text-sm font-medium ${!isPrivateSelection ? 'border-blue-500 dark:border-blue-500/50 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
                   >
-                    <Globe size={16} /> Public
+                    <Globe size={16} /> {t('groups.public_group')}
                   </button>
                   <button 
                     type="button" 
                     onClick={() => setIsPrivateSelection(true)}
                     className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all text-sm font-medium ${isPrivateSelection ? 'border-amber-500 dark:border-amber-500/50 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
                   >
-                    <Lock size={16} /> Private
+                    <Lock size={16} /> {t('groups.private_group')}
                   </button>
                 </div>
               </div>
 
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 px-4 rounded-xl text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-all">
-                  Cancel
+                  {t('groups.cancel')}
                 </button>
                 <button type="submit" disabled={isProcessing} className="flex-1 flex justify-center py-3 px-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-sm transition-all disabled:opacity-50">
-                  {isProcessing ? <Loader2 size={20} className="animate-spin" /> : "Create Channel"}
+                  {isProcessing ? <Loader2 size={20} className="animate-spin" /> : t('groups.create_channel')}
                 </button>
               </div>
             </form>
@@ -1010,22 +1018,22 @@ export default function GroupsContent() {
           <div className="absolute inset-0 bg-gray-900/40 dark:bg-black/60 backdrop-blur-md" onClick={() => setInviteModalOpen(false)} />
           <div className="relative w-full max-w-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-              <h2 className="text-lg font-bold flex items-center gap-2"><UserPlus size={18} /> Invite to Channel</h2>
+              <h2 className="text-lg font-bold flex items-center gap-2"><UserPlus size={18} /> {t('groups.invite_to_channel')}</h2>
               <button onClick={() => setInviteModalOpen(false)} className="text-blue-400 hover:text-blue-600 transition-colors"><X size={18} /></button>
             </div>
             <form className="p-6 space-y-5" onSubmit={handleInviteUser}>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-                  Grant access to <span className="font-bold text-gray-900 dark:text-gray-100">{selectedGroup.name}</span>. Enter the exact username of the user you wish to invite.
+                  {t('groups.invite_intro', { name: selectedGroup.name })}
                 </p>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">Username</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">{t('groups.username')}</label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 font-bold">@</span>
-                  <input type="text" required value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} placeholder="john_doe" className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                  <input type="text" required value={inviteUsername} onChange={(e) => setInviteUsername(e.target.value)} placeholder={t('groups.username_placeholder')} className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                 </div>
               </div>
               <button type="submit" disabled={isProcessing} className="w-full flex justify-center py-3.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50">
-                  {isProcessing ? <Loader2 size={18} className="animate-spin" /> : "Send Invitation"}
+                  {isProcessing ? <Loader2 size={18} className="animate-spin" /> : t('groups.send_invitation')}
               </button>
             </form>
           </div>
@@ -1040,9 +1048,9 @@ export default function GroupsContent() {
             <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100 dark:border-red-900/50">
               <AlertTriangle size={32} />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Channel?</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('groups.delete_channel_q')}</h3>
             <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 leading-relaxed">
-              Are you sure you want to delete <span className="font-bold text-gray-900 dark:text-gray-100">{groupToDelete.name}</span>? This action cannot be undone.
+              {t('groups.delete_channel_body', { name: groupToDelete.name })}
             </p>
             <div className="flex flex-col gap-3">
               <button 
@@ -1050,13 +1058,13 @@ export default function GroupsContent() {
                 disabled={isProcessing} 
                 className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'Confirm Delete'}
+                {isProcessing ? <Loader2 size={18} className="animate-spin" /> : t('groups.confirm_delete')}
               </button>
-              <button 
-                onClick={() => setDeleteModalOpen(false)} 
+              <button
+                onClick={() => setDeleteModalOpen(false)}
                 className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700"
               >
-                Cancel
+                {t('groups.cancel')}
               </button>
             </div>
           </div>
@@ -1071,9 +1079,9 @@ export default function GroupsContent() {
           <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 border border-red-100 dark:border-red-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle size={32} />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Delete All Channels?</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('groups.delete_all_q')}</h3>
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 leading-relaxed">
-            Are you sure you want to delete <span className="font-bold text-gray-900 dark:text-gray-100">ALL</span> channels you created? This action cannot be undone.
+            {t('groups.delete_all_body')}
           </p>
           <div className="flex flex-col gap-3">
             <button 
@@ -1081,13 +1089,13 @@ export default function GroupsContent() {
               disabled={isProcessing} 
               className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'Confirm Delete All'}
+              {isProcessing ? <Loader2 size={18} className="animate-spin" /> : t('groups.confirm_delete_all')}
             </button>
-            <button 
-              onClick={() => setDeleteAllModalOpen(false)} 
+            <button
+              onClick={() => setDeleteAllModalOpen(false)}
               className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700"
             >
-              Cancel
+              {t('groups.cancel')}
             </button>
           </div>
         </div>
@@ -1102,9 +1110,9 @@ export default function GroupsContent() {
             <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
               <Hash size={32} />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Request Access?</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('groups.request_access_q')}</h3>
             <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 leading-relaxed">
-              You are not a member of <span className="font-bold text-gray-900 dark:text-gray-100">{groupToJoin.name}</span>. Would you like to request access from the administrator?
+              {t('groups.request_access_body', { name: groupToJoin.name })}
             </p>
             <div className="flex flex-col gap-3">
               <button 
@@ -1112,7 +1120,7 @@ export default function GroupsContent() {
                   setIsProcessing(true);
                   try {
                     if (!groupToJoin.created_by) {
-                      throw new Error("This channel has no assigned administrator to receive requests.");
+                      throw new Error(t('groups.toast_no_admin'));
                     }
                     
                     const { error } = await supabase.from('notifications').insert({
@@ -1122,7 +1130,7 @@ export default function GroupsContent() {
                       content: `${groupToJoin.id}|${groupToJoin.name}`
                     });
                     if (error) throw error;
-                    showToast("Join request sent to the admin.");
+                    showToast(t('groups.toast_join_sent'));
                     setGroupToJoin(null);
                   } catch(e) { showToast(e.message, "error"); } 
                   finally { setIsProcessing(false); }
@@ -1130,9 +1138,9 @@ export default function GroupsContent() {
                 disabled={isProcessing} 
                 className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'Send Join Request'}
+                {isProcessing ? <Loader2 size={18} className="animate-spin" /> : t('groups.send_join_request')}
               </button>
-              <button onClick={() => setGroupToJoin(null)} className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700">Cancel</button>
+              <button onClick={() => setGroupToJoin(null)} className="w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3 rounded-xl transition border border-gray-200 dark:border-gray-700">{t('groups.cancel')}</button>
             </div>
           </div>
         </div>
@@ -1145,7 +1153,7 @@ export default function GroupsContent() {
           <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-xl flex flex-col max-h-[80vh] overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center shrink-0">
               <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Channel Members</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('groups.channel_members')}</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{activeWorkspace.name}</p>
               </div>
               <button onClick={() => setMembersModalOpen(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition-colors">
@@ -1176,10 +1184,10 @@ export default function GroupsContent() {
                           <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-2">
                             @{member.profiles?.username}
                             {member.profiles?.is_verified && <BadgeCheck size={14} className="text-blue-500" fill="currentColor" stroke="white" />}
-                            {isMe && <span className="text-[9px] bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-widest">You</span>}
+                            {isMe && <span className="text-[9px] bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-widest">{t('groups.you')}</span>}
                           </h4>
                           <p className="text-[10px] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold mt-0.5">
-                            {isAdmin ? <span className="text-green-500">Administrator</span> : 'Member'}
+                            {isAdmin ? <span className="text-green-500">{t('groups.administrator')}</span> : t('groups.member')}
                           </p>
                         </div>
                       </div>
@@ -1189,7 +1197,7 @@ export default function GroupsContent() {
                           onClick={() => handleKickUser(member.user_id, member.profiles?.username)}
                           disabled={isProcessing}
                           className="p-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 hover:bg-red-600 dark:hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50"
-                          title={`Kick @${member.profiles?.username}`}
+                          title={t('groups.kick_user', { username: member.profiles?.username })}
                         >
                           <UserMinus size={16} />
                         </button>

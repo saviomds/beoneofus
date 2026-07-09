@@ -79,7 +79,7 @@ export default async function MaintenancePage() {
         {/* Headline */}
         <div className="space-y-3">
           <h1 className="text-3xl font-black text-white tracking-tight">
-            We'll be right back
+            We&apos;ll be right back
           </h1>
           <p className="text-sm text-gray-400 leading-relaxed max-w-sm mx-auto">
             {message}
@@ -93,7 +93,7 @@ export default async function MaintenancePage() {
 
         {/* Card */}
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 text-left space-y-4">
-          <p className="text-[11px] font-black text-gray-600 uppercase tracking-[0.2em]">What's happening</p>
+          <p className="text-[11px] font-black text-gray-600 uppercase tracking-[0.2em]">What&apos;s happening</p>
           <div className="space-y-3">
             {[
               { icon: "🔧", text: "Deploying platform updates" },

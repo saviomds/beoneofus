@@ -7,8 +7,17 @@ import { supabase } from "../app/supabaseClient";
 // and clearing them on every logout would needlessly slow the next load.
 const AUTH_SENSITIVE_CACHES = ["apis", "documents", "next-data"];
 
-// Every place the sidebar/app stashes per-user state in web storage.
-const AUTH_SENSITIVE_STORAGE = ["sidebar_profile_v1"];
+// Every place the sidebar/app stashes per-user state in web storage. These MUST
+// be purged on logout, otherwise the next account on the same tab is hydrated
+// from the previous user's cached data before the network refresh lands.
+const AUTH_SENSITIVE_STORAGE = [
+  "sidebar_profile_v1",
+  "rightsidebar_v2",
+  "member_auth",
+  "member_session_user",
+  "member_dashboard_tasks",
+  "member_dashboard_updates",
+];
 
 /**
  * Single, canonical sign-out. Use this everywhere instead of calling

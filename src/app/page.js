@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { getAvatarSrc } from "../lib/avatar";
+import { signOutEverywhere } from "../lib/signOutEverywhere";
 import { useLanguage } from "../lib/i18n";
 
 /* ─── Animation helpers ─────────────────────────────────────── */
@@ -215,7 +216,7 @@ export default function LandingPage() {
         const { data: { session: s }, error } = await supabase.auth.getSession();
         if (error) {
           if (error.message.includes("Refresh Token") || error.message.includes("Invalid Refresh")) {
-            await supabase.auth.signOut().catch(() => {});
+            await signOutEverywhere().catch(() => {});
           } else if (isMounted) setAuthError(error.message);
         }
         if (isMounted) setSession(s);
@@ -717,7 +718,7 @@ export default function LandingPage() {
                         {/* Sign out */}
                         <div className="border-t border-gray-100 dark:border-gray-800 py-1.5">
                           <button
-                            onClick={async () => { setProfileOpen(false); await supabase.auth.signOut(); }}
+                            onClick={async () => { setProfileOpen(false); await signOutEverywhere(); window.location.href = '/auth'; }}
                             className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
                           >
                             <LogOut size={15} className="shrink-0" />

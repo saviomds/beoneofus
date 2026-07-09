@@ -17,6 +17,26 @@ import ProfileContent from "../dash/content/ProfileContent";
 import NewPost from "./NewPost";
 import { useOnlineUsers } from "../contexts/OnlineUsersContext";
 
+// Read the currently signed-in user's id synchronously from the Supabase auth
+// token in localStorage, so the cached right-sidebar data below can be proven
+// to belong to THIS user. Without this, a logout→login on the same tab would
+// hydrate the panel with the previous account's suggestions/groups/spotlights.
+function getStoredUid() {
+  if (typeof window === 'undefined') return null;
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith('sb-') && k.endsWith('-auth-token')) {
+        let raw = localStorage.getItem(k);
+        if (!raw) continue;
+        if (raw.startsWith('base64-')) raw = atob(raw.slice(7));
+        const parsed = JSON.parse(raw);
+        return parsed?.user?.id ?? parsed?.currentSession?.user?.id ?? null;
+      }
+    }
+  } catch { /* fall through */ }
+  return null;
+}
+
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
@@ -172,12 +192,15 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
       try {
         const raw = sessionStorage.getItem(RS_CACHE_KEY);
         if (!raw) return null;
-        const { data, ts } = JSON.parse(raw);
-        return Date.now() - ts > RS_CACHE_TTL ? null : data;
+        const { uid, data, ts } = JSON.parse(raw);
+        if (Date.now() - ts > RS_CACHE_TTL) return null;
+        // Only trust the cache if it belongs to the user signed in RIGHT NOW.
+        if (!uid || uid !== getStoredUid()) return null;
+        return data;
       } catch { return null; }
     };
     const saveCache = (data) => {
-      try { sessionStorage.setItem(RS_CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch {}
+      try { sessionStorage.setItem(RS_CACHE_KEY, JSON.stringify({ uid: getStoredUid(), data, ts: Date.now() })); } catch {}
     };
 
     const fetchSidebarData = async (showLoader = true) => {

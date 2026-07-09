@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { consolePathFor } from '../../lib/orgVerticals';
+import { signOutEverywhere } from '../../lib/signOutEverywhere';
 import {
   AlertTriangle,
   ShieldCheck,
@@ -324,7 +325,7 @@ export default function AuthForm() {
     // (URL) state once at mount legitimately requires a synchronous setState.
     /* eslint-disable react-hooks/set-state-in-effect */
     if (errCode === 'session_expired') {
-      supabase?.auth.signOut().catch(() => {});
+      signOutEverywhere().catch(() => {});
       setError('Your session has expired. Please sign in again.');
     } else if (errCode === 'email_not_verified') {
       setError('Please verify your email address before accessing the platform.');
@@ -410,7 +411,7 @@ export default function AuthForm() {
             !session.user.email_confirmed_at
           ) {
             const unconfirmed = session.user.email;
-            await supabase.auth.signOut();
+            await signOutEverywhere();
             if (!mounted) return;
             setEmailNotConfirmed(unconfirmed);
             setIsCheckingAuth(false);
@@ -480,7 +481,7 @@ export default function AuthForm() {
           // Block access until email is confirmed (only when platform requires it)
           if (requireEmailVerifyRef.current && !session.user.email_confirmed_at) {
             const unconfirmed = session.user.email;
-            supabase.auth.signOut().then(() => {
+            signOutEverywhere().then(() => {
               if (!mounted) return;
               setEmailNotConfirmed(unconfirmed);
               setIsCheckingAuth(false);

@@ -495,7 +495,7 @@ export default function SettingsContent() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || t("settings.err_delete_account"));
       }
-      await supabase.auth.signOut();
+      await signOutEverywhere();
       window.location.href = "/auth";
     } catch (error) {
       setDeleteError(error.message);

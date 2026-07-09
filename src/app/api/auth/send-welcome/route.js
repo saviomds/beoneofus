@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
+import { fetchWithTimeout } from '../../../../lib/fetchWithTimeout';
 import { escapeHtml } from '../../../../lib/escapeHtml';
 
 export async function POST(request) {

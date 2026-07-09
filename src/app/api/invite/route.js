@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
+import { fetchWithTimeout } from '../../../lib/fetchWithTimeout';
 import { requireAuth } from '../../../lib/requireAuth';
 import { validate } from '../../../lib/validate';
 

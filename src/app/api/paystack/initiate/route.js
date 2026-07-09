@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
+import { fetchWithTimeout } from '../../../../lib/fetchWithTimeout';
 import { checkRateLimit } from '../../../../lib/rateLimit';
 import { createClient } from '@supabase/supabase-js';
 import { getSettingOr } from '../../../../lib/platformSettings';

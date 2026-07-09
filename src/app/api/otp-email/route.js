@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
+import { fetchWithTimeout } from '../../../lib/fetchWithTimeout';
 import { escapeHtml } from '../../../lib/escapeHtml';
 
 // Supabase signs hook requests with HMAC-SHA256 of the raw body.

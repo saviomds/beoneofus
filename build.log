@@ -1,0 +1,23 @@
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\Dell\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * C:\Users\Dell\beoneofus\package-lock.json
+
+▲ Next.js 16.2.2 (webpack)
+- Environments: .env.local
+- Experiments (use with caution):
+  · optimizePackageImports
+
+  Creating an optimized production build ...
+✓ (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+⚠ Compiled with warnings in 61s
+
+/_next/static/chunks/8509.4715eda5e004c722.js is 3.66 MB, and won't be precached. Configure maximumFileSizeToCacheInBytes to change this limit.
+
+/_next/static/chunks/1362bc85.34a58bd544399825.js is 3.45 MB, and won't be precached. Configure maximumFileSizeToCacheInBytes to change this limit.
+
+/_next/static/chunks/8ca2cfae.2fbcc55d3bdc3824.js is 3.21 MB, and won't be precached. Configure maximumFileSizeToCacheInBytes to change this limit.
+
+  Running TypeScript ...

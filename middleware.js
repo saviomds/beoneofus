@@ -29,27 +29,12 @@ const ACTIVITY_COOKIE = 'boo_last_active';
 // it only catches thrown errors. A slow Supabase response (cold start, pool
 // exhaustion, paused project, network blip) will hang the await forever,
 // which is what was producing FUNCTION_INVOCATION_TIMEOUT on every /dash/*
-// request. Race every external call against a hard deadline and abort any
-// in-flight fetches so the middleware can fall through to the existing safe
-// defaults in the catch blocks below.
+// request. Race every external call against a hard deadline so the middleware
+// can fall through to the existing safe defaults in the catch blocks below.
 function withTimeout(promiseFactory, ms = 3000) {
-  const controller = new AbortController();
   let timeoutId;
-  const originalFetch = globalThis.fetch;
-
-  globalThis.fetch = (input, init = {}) => {
-    const fetchInit = { ...init };
-    if (!fetchInit.signal) {
-      fetchInit.signal = controller.signal;
-    }
-    return originalFetch(input, fetchInit);
-  };
-
   const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => {
-      controller.abort();
-      reject(new Error('middleware timeout'));
-    }, ms);
+    timeoutId = setTimeout(() => reject(new Error('middleware timeout')), ms);
   });
 
   return Promise.race([
@@ -57,7 +42,6 @@ function withTimeout(promiseFactory, ms = 3000) {
     timeoutPromise,
   ]).finally(() => {
     clearTimeout(timeoutId);
-    globalThis.fetch = originalFetch;
   });
 }
 

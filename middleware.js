@@ -29,14 +29,36 @@ const ACTIVITY_COOKIE = 'boo_last_active';
 // it only catches thrown errors. A slow Supabase response (cold start, pool
 // exhaustion, paused project, network blip) will hang the await forever,
 // which is what was producing FUNCTION_INVOCATION_TIMEOUT on every /dash/*
-// request. Race every external call against a hard deadline so it always
-// resolves (or rejects) quickly and falls through to the existing safe
+// request. Race every external call against a hard deadline and abort any
+// in-flight fetches so the middleware can fall through to the existing safe
 // defaults in the catch blocks below.
-function withTimeout(promise, ms = 3000) {
+function withTimeout(promiseFactory, ms = 3000) {
+  const controller = new AbortController();
+  let timeoutId;
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (input, init = {}) => {
+    const fetchInit = { ...init };
+    if (!fetchInit.signal) {
+      fetchInit.signal = controller.signal;
+    }
+    return originalFetch(input, fetchInit);
+  };
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      reject(new Error('middleware timeout'));
+    }, ms);
+  });
+
   return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('middleware timeout')), ms)),
-  ]);
+    Promise.resolve().then(promiseFactory),
+    timeoutPromise,
+  ]).finally(() => {
+    clearTimeout(timeoutId);
+    globalThis.fetch = originalFetch;
+  });
 }
 
 // ── Platform settings cache ─────────────────────────────────────────────────
@@ -61,7 +83,7 @@ async function getPlatformSettings() {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  const { data: rows } = await withTimeout(
+  const { data: rows } = await withTimeout(() =>
     adminSupa
       .from('platform_settings')
       .select('key, value')
@@ -158,7 +180,7 @@ export async function middleware(request) {
           },
         }
       );
-      const { data } = await withTimeout(supabase.auth.getUser());
+      const { data } = await withTimeout(() => supabase.auth.getUser());
       user = data?.user ?? null;
       // NOTE: do NOT clear auth cookies here. getUser() can throw a transient
       // "fetch failed" at the edge, and clearing cookies on that would destroy a
@@ -195,7 +217,7 @@ export async function middleware(request) {
       let isAdmin = false;
       if (user) {
         try {
-          const { data } = await withTimeout(
+          const { data } = await withTimeout(() =>
             supabase.from('profiles').select('is_admin').eq('id', user.id).single()
           );
           isAdmin = !!data?.is_admin;

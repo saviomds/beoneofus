@@ -1,10 +1,50 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { useEffect, useState, Suspense } from 'react';
 import { supabase } from '../../supabaseClient';
 import NewPost from '../../components/NewPost';
+
+const HomeDashContent = dynamic(() => import('../content/HomeDashContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const AiAssistantContent = dynamic(() => import('../content/AiAssistantContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const FeedContent = dynamic(() => import('../content/FeedContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const ConnectionsContent = dynamic(() => import('../content/ConnectionsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const GroupsContent = dynamic(() => import('../content/GroupsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const PagesContent = dynamic(() => import('../content/PagesContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const MessagesContent = dynamic(() => import('../content/MessagesContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const BookmarksContent = dynamic(() => import('../content/BookmarksContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const MoreContent = dynamic(() => import('../content/MoreContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const NotificationsContent = dynamic(() => import('../content/NotificationsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const SettingsContent = dynamic(() => import('../content/SettingsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const ProfileContent = dynamic(() => import('../content/ProfileContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const DocsContent = dynamic(() => import('../content/DocsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const PremiumContent = dynamic(() => import('../content/PremiumContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const CoachingContent = dynamic(() => import('../content/CoachingContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const EventsContent = dynamic(() => import('../content/EventsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const MarketplaceContent = dynamic(() => import('../content/MarketplaceContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const PartnershipsContent = dynamic(() => import('../content/PartnershipsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const MentorshipContent = dynamic(() => import('../content/MentorshipContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const BlogContent = dynamic(() => import('../content/BlogContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const LearnContent = dynamic(() => import('../content/LearnContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const AnalyticsContent = dynamic(() => import('../content/AnalyticsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const ServicesContent = dynamic(() => import('../content/ServicesContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const InterviewContent = dynamic(() => import('../content/InterviewContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const PathwaysContent = dynamic(() => import('../content/PathwaysContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const LeaderboardContent = dynamic(() => import('../content/LeaderboardContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const ContractsContent = dynamic(() => import('../content/ContractsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const SearchContent = dynamic(() => import('../content/SearchContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const ResumeContent = dynamic(() => import('../content/ResumeContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const JobsContent = dynamic(() => import('../content/JobsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const MentorsContent = dynamic(() => import('../content/MentorsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const CareerAIContent = dynamic(() => import('../content/CareerAIContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const MatchesContent = dynamic(() => import('../content/MatchesContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const ProjectMarketplaceContent = dynamic(() => import('../content/ProjectMarketplaceContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const FreelanceContent = dynamic(() => import('../content/FreelanceContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const CompaniesContent = dynamic(() => import('../content/CompaniesContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const SkillsContent = dynamic(() => import('../content/SkillsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const StartupsContent = dynamic(() => import('../content/StartupsContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const TechHubContent = dynamic(() => import('../content/TechHubContent'), { ssr: false, loading: () => <TabSkeleton /> });
+const AdminContent = dynamic(() => import('../content/AdminContent'), { ssr: false, loading: () => <TabSkeleton /> });
 
 const TabSkeleton = () => (
   <div className="w-full h-full animate-pulse space-y-6">
@@ -22,50 +62,50 @@ const TabSkeleton = () => (
 );
 
 const contentMap = {
-  home:          dynamic(() => import('../content/HomeDashContent'),      { loading: () => <TabSkeleton /> }),
-  ai:            dynamic(() => import('../content/AiAssistantContent'),   { loading: () => <TabSkeleton /> }),
-  feed:          dynamic(() => import('../content/FeedContent'),          { loading: () => <TabSkeleton /> }),
-  connections:   dynamic(() => import('../content/ConnectionsContent'),   { loading: () => <TabSkeleton /> }),
-  groups:        dynamic(() => import('../content/GroupsContent'),        { loading: () => <TabSkeleton /> }),
-  pages:         dynamic(() => import('../content/PagesContent'),         { loading: () => <TabSkeleton /> }),
-  messages:      dynamic(() => import('../content/MessagesContent'),      { loading: () => <TabSkeleton /> }),
-  bookmarks:     dynamic(() => import('../content/BookmarksContent'),     { loading: () => <TabSkeleton /> }),
-  more:          dynamic(() => import('../content/MoreContent'),          { loading: () => <TabSkeleton /> }),
-  notifications: dynamic(() => import('../content/NotificationsContent'), { loading: () => <TabSkeleton /> }),
-  settings:      dynamic(() => import('../content/SettingsContent'),      { loading: () => <TabSkeleton /> }),
-  profile:       dynamic(() => import('../content/ProfileContent'),       { loading: () => <TabSkeleton /> }),
-  docs:          dynamic(() => import('../content/DocsContent'),          { loading: () => <TabSkeleton /> }),
-  premium:       dynamic(() => import('../content/PremiumContent'),       { loading: () => <TabSkeleton /> }),
-  coaching:      dynamic(() => import('../content/CoachingContent'),      { loading: () => <TabSkeleton /> }),
-  events:        dynamic(() => import('../content/EventsContent'),        { loading: () => <TabSkeleton /> }),
-  marketplace:   dynamic(() => import('../content/MarketplaceContent'),   { loading: () => <TabSkeleton /> }),
-  partnerships:  dynamic(() => import('../content/PartnershipsContent'),  { loading: () => <TabSkeleton /> }),
-  mentorship:    dynamic(() => import('../content/MentorshipContent'),    { loading: () => <TabSkeleton /> }),
-  blog:          dynamic(() => import('../content/BlogContent'),          { loading: () => <TabSkeleton /> }),
-  learn:         dynamic(() => import('../content/LearnContent'),         { loading: () => <TabSkeleton /> }),
-  analytics:     dynamic(() => import('../content/AnalyticsContent'),     { loading: () => <TabSkeleton /> }),
-  services:      dynamic(() => import('../content/ServicesContent'),      { loading: () => <TabSkeleton /> }),
-  interview:     dynamic(() => import('../content/InterviewContent'),     { loading: () => <TabSkeleton /> }),
-  pathways:      dynamic(() => import('../content/PathwaysContent'),      { loading: () => <TabSkeleton /> }),
-  leaderboard:   dynamic(() => import('../content/LeaderboardContent'),   { loading: () => <TabSkeleton /> }),
-  contracts:     dynamic(() => import('../content/ContractsContent'),      { loading: () => <TabSkeleton /> }),
-  search:        dynamic(() => import('../content/SearchContent'),         { loading: () => <TabSkeleton /> }),
-  resume:        dynamic(() => import('../content/ResumeContent'),         { loading: () => <TabSkeleton /> }),
-  jobs:          dynamic(() => import('../content/JobsContent'),           { loading: () => <TabSkeleton /> }),
-  mentors:       dynamic(() => import('../content/MentorsContent'),         { loading: () => <TabSkeleton /> }),
-  'career-ai':   dynamic(() => import('../content/CareerAIContent'),       { loading: () => <TabSkeleton /> }),
-  matches:       dynamic(() => import('../content/MatchesContent'),        { loading: () => <TabSkeleton /> }),
-  projects:      dynamic(() => import('../content/ProjectMarketplaceContent'), { loading: () => <TabSkeleton /> }),
-  freelance:     dynamic(() => import('../content/FreelanceContent'),      { loading: () => <TabSkeleton /> }),
-  companies:     dynamic(() => import('../content/CompaniesContent'),      { loading: () => <TabSkeleton /> }),
-  skills:        dynamic(() => import('../content/SkillsContent'),         { loading: () => <TabSkeleton /> }),
-  startups:      dynamic(() => import('../content/StartupsContent'),       { loading: () => <TabSkeleton /> }),
-  'tech-hub':    dynamic(() => import('../content/TechHubContent'),        { loading: () => <TabSkeleton /> }),
-  'company-pages': dynamic(() => import('../content/PagesContent'),       { loading: () => <TabSkeleton /> }),
-  discuss:       dynamic(() => import('../content/MessagesContent'),       { loading: () => <TabSkeleton /> }),
-  discover:      dynamic(() => import('../content/DiscoverContent'),       { loading: () => <TabSkeleton /> }),
-  apply:         dynamic(() => import('../content/JobsContent'),           { loading: () => <TabSkeleton /> }),
-  admin:         dynamic(() => import('../content/AdminContent'),          { loading: () => <TabSkeleton /> }),
+  home: HomeDashContent,
+  ai: AiAssistantContent,
+  feed: FeedContent,
+  connections: ConnectionsContent,
+  groups: GroupsContent,
+  pages: PagesContent,
+  messages: MessagesContent,
+  bookmarks: BookmarksContent,
+  more: MoreContent,
+  notifications: NotificationsContent,
+  settings: SettingsContent,
+  profile: ProfileContent,
+  docs: DocsContent,
+  premium: PremiumContent,
+  coaching: CoachingContent,
+  events: EventsContent,
+  marketplace: MarketplaceContent,
+  partnerships: PartnershipsContent,
+  mentorship: MentorshipContent,
+  blog: BlogContent,
+  learn: LearnContent,
+  analytics: AnalyticsContent,
+  services: ServicesContent,
+  interview: InterviewContent,
+  pathways: PathwaysContent,
+  leaderboard: LeaderboardContent,
+  contracts: ContractsContent,
+  search: SearchContent,
+  resume: ResumeContent,
+  jobs: JobsContent,
+  mentors: MentorsContent,
+  'career-ai': CareerAIContent,
+  matches: MatchesContent,
+  projects: ProjectMarketplaceContent,
+  freelance: FreelanceContent,
+  companies: CompaniesContent,
+  skills: SkillsContent,
+  startups: StartupsContent,
+  'tech-hub': TechHubContent,
+  'company-pages': PagesContent,
+  discuss: MessagesContent,
+  discover: dynamic(() => import('../content/DiscoverContent'), { ssr: false, loading: () => <TabSkeleton /> }),
+  apply: JobsContent,
+  admin: AdminContent,
 };
 
 export default function DashSection() {

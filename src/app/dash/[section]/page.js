@@ -1,50 +1,9 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import NewPost from '../../components/NewPost';
-
-const HomeDashContent = dynamic(() => import('../content/HomeDashContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const AiAssistantContent = dynamic(() => import('../content/AiAssistantContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const FeedContent = dynamic(() => import('../content/FeedContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const ConnectionsContent = dynamic(() => import('../content/ConnectionsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const GroupsContent = dynamic(() => import('../content/GroupsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const PagesContent = dynamic(() => import('../content/PagesContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const MessagesContent = dynamic(() => import('../content/MessagesContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const BookmarksContent = dynamic(() => import('../content/BookmarksContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const MoreContent = dynamic(() => import('../content/MoreContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const NotificationsContent = dynamic(() => import('../content/NotificationsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const SettingsContent = dynamic(() => import('../content/SettingsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const ProfileContent = dynamic(() => import('../content/ProfileContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const DocsContent = dynamic(() => import('../content/DocsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const PremiumContent = dynamic(() => import('../content/PremiumContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const CoachingContent = dynamic(() => import('../content/CoachingContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const EventsContent = dynamic(() => import('../content/EventsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const MarketplaceContent = dynamic(() => import('../content/MarketplaceContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const PartnershipsContent = dynamic(() => import('../content/PartnershipsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const MentorshipContent = dynamic(() => import('../content/MentorshipContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const BlogContent = dynamic(() => import('../content/BlogContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const LearnContent = dynamic(() => import('../content/LearnContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const AnalyticsContent = dynamic(() => import('../content/AnalyticsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const ServicesContent = dynamic(() => import('../content/ServicesContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const InterviewContent = dynamic(() => import('../content/InterviewContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const PathwaysContent = dynamic(() => import('../content/PathwaysContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const LeaderboardContent = dynamic(() => import('../content/LeaderboardContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const ContractsContent = dynamic(() => import('../content/ContractsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const SearchContent = dynamic(() => import('../content/SearchContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const ResumeContent = dynamic(() => import('../content/ResumeContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const JobsContent = dynamic(() => import('../content/JobsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const MentorsContent = dynamic(() => import('../content/MentorsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const CareerAIContent = dynamic(() => import('../content/CareerAIContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const MatchesContent = dynamic(() => import('../content/MatchesContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const ProjectMarketplaceContent = dynamic(() => import('../content/ProjectMarketplaceContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const FreelanceContent = dynamic(() => import('../content/FreelanceContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const CompaniesContent = dynamic(() => import('../content/CompaniesContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const SkillsContent = dynamic(() => import('../content/SkillsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const StartupsContent = dynamic(() => import('../content/StartupsContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const TechHubContent = dynamic(() => import('../content/TechHubContent'), { ssr: false, loading: () => <TabSkeleton /> });
-const AdminContent = dynamic(() => import('../content/AdminContent'), { ssr: false, loading: () => <TabSkeleton /> });
 
 const TabSkeleton = () => (
   <div className="w-full h-full animate-pulse space-y-6">
@@ -61,53 +20,6 @@ const TabSkeleton = () => (
   </div>
 );
 
-const contentMap = {
-  home: HomeDashContent,
-  ai: AiAssistantContent,
-  feed: FeedContent,
-  connections: ConnectionsContent,
-  groups: GroupsContent,
-  pages: PagesContent,
-  messages: MessagesContent,
-  bookmarks: BookmarksContent,
-  more: MoreContent,
-  notifications: NotificationsContent,
-  settings: SettingsContent,
-  profile: ProfileContent,
-  docs: DocsContent,
-  premium: PremiumContent,
-  coaching: CoachingContent,
-  events: EventsContent,
-  marketplace: MarketplaceContent,
-  partnerships: PartnershipsContent,
-  mentorship: MentorshipContent,
-  blog: BlogContent,
-  learn: LearnContent,
-  analytics: AnalyticsContent,
-  services: ServicesContent,
-  interview: InterviewContent,
-  pathways: PathwaysContent,
-  leaderboard: LeaderboardContent,
-  contracts: ContractsContent,
-  search: SearchContent,
-  resume: ResumeContent,
-  jobs: JobsContent,
-  mentors: MentorsContent,
-  'career-ai': CareerAIContent,
-  matches: MatchesContent,
-  projects: ProjectMarketplaceContent,
-  freelance: FreelanceContent,
-  companies: CompaniesContent,
-  skills: SkillsContent,
-  startups: StartupsContent,
-  'tech-hub': TechHubContent,
-  'company-pages': PagesContent,
-  discuss: MessagesContent,
-  discover: dynamic(() => import('../content/DiscoverContent'), { ssr: false, loading: () => <TabSkeleton /> }),
-  apply: JobsContent,
-  admin: AdminContent,
-};
-
 export default function DashSection() {
   const { section } = useParams();
   const [session, setSession] = useState(null);
@@ -120,33 +32,15 @@ export default function DashSection() {
   }, []);
 
   useEffect(() => {
-    const preload = () => {
-      import('../content/ConnectionsContent');
-      import('../content/GroupsContent');
-      import('../content/MessagesContent');
-      import('../content/NotificationsContent');
-      import('../content/ProfileContent');
-      import('../content/SettingsContent');
-    };
-    if (typeof window !== 'undefined') {
-      if ('requestIdleCallback' in window) requestIdleCallback(preload);
-      else setTimeout(preload, 2000);
+    if (section && section !== 'home' && section !== 'messages' && section !== 'feed') {
+      router.replace('/dash/home');
     }
-  }, []);
-
-  const Content = contentMap[section];
-  // Redirect unknown sections to home instead of calling notFound()
-  // in a client component (can cause hydration issues)
-  useEffect(() => {
-    if (section && !contentMap[section]) router.replace('/dash/home');
   }, [section, router]);
-  if (!Content) return <TabSkeleton />;
 
-  /* messages takes full height without page-level padding */
   const isFullHeight = section === 'messages' || section === 'ai';
   const outerCls = isFullHeight
     ? 'w-full h-full overflow-hidden'
-    : `w-full h-full overflow-x-hidden ${section === 'docs' ? 'p-3 md:p-5' : section === 'home' ? 'p-3 sm:p-4 md:p-5 lg:p-6' : 'p-3 sm:p-4 md:p-5 lg:p-6'}`;
+    : 'w-full h-full overflow-x-hidden p-3 sm:p-4 md:p-5 lg:p-6';
 
   return (
     <div className={outerCls}>
@@ -174,10 +68,8 @@ export default function DashSection() {
         </div>
       )}
 
-      <div key={section} className="w-full h-full animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
-        <Suspense fallback={<TabSkeleton />}>
-          <Content />
-        </Suspense>
+      <div className="w-full h-full animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
+        <TabSkeleton />
       </div>
     </div>
   );

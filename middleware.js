@@ -24,6 +24,69 @@ function isAlwaysAllowed(pathname) {
 // Rolling "last activity" marker used for idle-session timeout.
 const ACTIVITY_COOKIE = 'boo_last_active';
 
+// ── Timeout guard ─────────────────────────────────────────────────────────
+// try/catch alone does NOT protect against a hung/never-resolving promise —
+// it only catches thrown errors. A slow Supabase response (cold start, pool
+// exhaustion, paused project, network blip) will hang the await forever,
+// which is what was producing FUNCTION_INVOCATION_TIMEOUT on every /dash/*
+// request. Race every external call against a hard deadline so it always
+// resolves (or rejects) quickly and falls through to the existing safe
+// defaults in the catch blocks below.
+function withTimeout(promise, ms = 3000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('middleware timeout')), ms)),
+  ]);
+}
+
+// ── Platform settings cache ─────────────────────────────────────────────────
+// platform_settings barely ever changes, but was previously queried from
+// Postgres on EVERY navigation to /dash/* or /u/* for every user (logged in
+// or not). That's a lot of surface area for one slow response to take down
+// the whole app. Cache it in module scope with a short TTL — module scope
+// persists across invocations on a warm serverless/edge instance, so this
+// acts as a lightweight shared cache without needing an external store.
+const SETTINGS_TTL_MS = 30_000;
+let settingsCache = { data: null, expiresAt: 0 };
+
+async function getPlatformSettings() {
+  const now = Date.now();
+  if (settingsCache.data && settingsCache.expiresAt > now) {
+    return settingsCache.data;
+  }
+
+  const adminSupa = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
+  const { data: rows } = await withTimeout(
+    adminSupa
+      .from('platform_settings')
+      .select('key, value')
+      .in('key', [
+        'maintenance_mode',
+        'maintenance_message',
+        'registration_open',
+        'require_email_verification',
+        'session_timeout_hours',
+      ])
+  );
+
+  const m = Object.fromEntries((rows || []).map(r => [r.key, r.value]));
+  const settings = {
+    maintenanceMode: m.maintenance_mode ?? false,
+    maintenanceMessage: m.maintenance_message ?? "We're doing a quick upgrade. Be back shortly!",
+    registrationOpen: m.registration_open ?? true,
+    requireEmailVerify: m.require_email_verification ?? true,
+    sessionTimeoutHours: Number(m.session_timeout_hours ?? 24) || 24,
+  };
+
+  settingsCache = { data: settings, expiresAt: now + SETTINGS_TTL_MS };
+  return settings;
+}
+
 // Delete Supabase auth cookies (incl. chunked `.0`/`.1` variants) from both the
 // incoming request and the outgoing response so a dead session is fully cleared.
 function clearAuthCookies(request, response) {
@@ -95,14 +158,14 @@ export async function middleware(request) {
           },
         }
       );
-      const { data } = await supabase.auth.getUser();
+      const { data } = await withTimeout(supabase.auth.getUser());
       user = data?.user ?? null;
       // NOTE: do NOT clear auth cookies here. getUser() can throw a transient
       // "fetch failed" at the edge, and clearing cookies on that would destroy a
       // perfectly valid, freshly-created session — bouncing signed-in users from
       // /dash back to /auth. A stale/dead session is handled client-side instead.
     } catch {
-      // Transient auth check failure — let the request through, keep cookies.
+      // Transient auth check failure (or timeout) — let the request through, keep cookies.
     }
 
     if (isAlwaysAllowed(pathname)) {
@@ -112,44 +175,32 @@ export async function middleware(request) {
     // ── Dynamic maintenance check — query Supabase directly instead of
     // self-fetching /api/public-settings. A self-HTTP-fetch from middleware
     // to the same server doubles latency and causes recursive middleware runs.
+    // Settings are timeout-guarded and cached (see getPlatformSettings above)
+    // so a slow/paused Supabase project can't hang every request.
     let maintenanceMode = false;
-    let maintenanceMessage = "We're doing a quick upgrade. Be back shortly!";
     let registrationOpen = true;
-
     let requireEmailVerify = true;
     let sessionTimeoutHours = 24;
     try {
-      const adminSupa = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-      const { data: rows } = await adminSupa
-        .from('platform_settings')
-        .select('key, value')
-        .in('key', ['maintenance_mode', 'maintenance_message', 'registration_open', 'require_email_verification', 'session_timeout_hours']);
-      const m = Object.fromEntries((rows || []).map(r => [r.key, r.value]));
-      maintenanceMode      = m.maintenance_mode          ?? false;
-      maintenanceMessage   = m.maintenance_message       ?? maintenanceMessage;
-      registrationOpen     = m.registration_open         ?? true;
-      requireEmailVerify   = m.require_email_verification ?? true;
-      sessionTimeoutHours  = Number(m.session_timeout_hours ?? 24) || 24;
+      const settings = await getPlatformSettings();
+      maintenanceMode = settings.maintenanceMode;
+      registrationOpen = settings.registrationOpen;
+      requireEmailVerify = settings.requireEmailVerify;
+      sessionTimeoutHours = settings.sessionTimeoutHours;
     } catch {
-      // On any failure keep safe defaults and let the request through
+      // On any failure (including timeout) keep safe defaults and let the request through
     }
 
     if (maintenanceMode) {
       let isAdmin = false;
       if (user) {
         try {
-          const { data } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .single();
+          const { data } = await withTimeout(
+            supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+          );
           isAdmin = !!data?.is_admin;
         } catch {
-          // Can't verify admin — treat as non-admin
+          // Can't verify admin (or timed out) — treat as non-admin
         }
       }
 

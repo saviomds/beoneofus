@@ -24,14 +24,28 @@ function dbg(...args) {
   } catch { /* ignore */ }
 }
 
-/* Patch performance.measure at module load time */
-if (typeof globalThis !== 'undefined' && typeof globalThis.performance !== 'undefined') {
-  const _origMeasure = globalThis.performance.measure.bind(globalThis.performance);
-  globalThis.performance.measure = (...args) => {
+/* Patch performance.measure/mark — BROWSER ONLY.
+   `globalThis.performance` exists in Node.js too, and `typeof globalThis`
+   is never undefined in either environment — so the old `typeof globalThis
+   !== 'undefined'` guard never actually excluded the server. Because this
+   file is imported for SSR (Next still executes 'use client' module code
+   server-side to produce the initial HTML), the previous version silently
+   overwrote NODE'S global `performance.mark`/`.measure` — the very functions
+   Next.js's own internal response-streaming instrumentation (writeHead)
+   calls on every request. When the wrapped version's try/catch swallowed an
+   error, it returned `undefined` instead of a real PerformanceMark, and
+   Next's internal code then read `.name` off that `undefined` mid-stream,
+   producing "Cannot read properties of undefined (reading 'name')" /
+   "failed to pipe response" crashes across every /dash/* page. Checking
+   `typeof window` instead correctly detects browser-only, since `window`
+   is undefined in Node. */
+if (typeof window !== 'undefined' && typeof window.performance !== 'undefined') {
+  const _origMeasure = window.performance.measure.bind(window.performance);
+  window.performance.measure = (...args) => {
     try { return _origMeasure(...args); } catch { /* swallow negative-timestamp error */ }
   };
-  const _origMark = globalThis.performance.mark.bind(globalThis.performance);
-  globalThis.performance.mark = (...args) => {
+  const _origMark = window.performance.mark.bind(window.performance);
+  window.performance.mark = (...args) => {
     try { return _origMark(...args); } catch { /* swallow mark errors */ }
   };
 }

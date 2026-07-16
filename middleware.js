@@ -24,34 +24,43 @@ function isAlwaysAllowed(pathname) {
 // Rolling "last activity" marker used for idle-session timeout.
 const ACTIVITY_COOKIE = 'boo_last_active';
 
-// ── Timeout guard ─────────────────────────────────────────────────────────
-// try/catch alone does NOT protect against a hung/never-resolving promise —
-// it only catches thrown errors. A slow Supabase response (cold start, pool
-// exhaustion, paused project, network blip) will hang the await forever,
-// which is what was producing FUNCTION_INVOCATION_TIMEOUT on every /dash/*
-// request. Race every external call against a hard deadline so the middleware
-// can fall through to the existing safe defaults in the catch blocks below.
-function withTimeout(promiseFactory, ms = 3000) {
-  let timeoutId;
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error('middleware timeout')), ms);
-  });
+// ── Timeout guard (AbortController-based) ──────────────────────────────────
+// Plain Promise.race([promise, timeoutPromise]) stops YOUR CODE from waiting
+// past the deadline, but it does NOT cancel the underlying network request —
+// the fetch Supabase opened keeps running in the background even after your
+// function has "moved on". Under a real cross-region gap (Vercel iad1 ↔
+// Supabase eu-central-1, ~90-100ms one-way, ~150-200ms round trip) that
+// zombie request can hold a connection-pool slot for its full duration,
+// which compounds across requests and makes future requests queue for a
+// slot that never frees — the opposite of what a timeout is supposed to buy
+// you. An AbortController actually tears down the request.
+//
+// Supabase's PostgREST query builder supports cancellation natively via
+// `.abortSignal(signal)`. The Auth client's `getUser()` does NOT expose an
+// abort hook, so for that one call this still only protects your code path
+// (the underlying fetch may finish after we've moved on) — flagging that
+// honestly rather than pretending it's fully solved.
+function withTimeout(fn, ms = 4000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return Promise.resolve(fn(controller.signal)).finally(() => clearTimeout(timer));
+}
 
+// Separate helper for calls that can't take a signal (auth.getUser()) — still
+// bounds how long *we* wait, just can't cancel the in-flight fetch itself.
+function raceTimeout(promise, ms = 4000) {
   return Promise.race([
-    Promise.resolve().then(promiseFactory),
-    timeoutPromise,
-  ]).finally(() => {
-    clearTimeout(timeoutId);
-  });
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('middleware timeout')), ms)),
+  ]);
 }
 
 // ── Platform settings cache ─────────────────────────────────────────────────
 // platform_settings barely ever changes, but was previously queried from
 // Postgres on EVERY navigation to /dash/* or /u/* for every user (logged in
-// or not). That's a lot of surface area for one slow response to take down
-// the whole app. Cache it in module scope with a short TTL — module scope
-// persists across invocations on a warm serverless/edge instance, so this
-// acts as a lightweight shared cache without needing an external store.
+// or not). Cache it in module scope with a short TTL — module scope persists
+// across invocations on a warm serverless instance, so this acts as a
+// lightweight shared cache without an external store.
 const SETTINGS_TTL_MS = 30_000;
 let settingsCache = { data: null, expiresAt: 0 };
 
@@ -67,7 +76,7 @@ async function getPlatformSettings() {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  const { data: rows } = await withTimeout(() =>
+  const { data: rows } = await withTimeout((signal) =>
     adminSupa
       .from('platform_settings')
       .select('key, value')
@@ -78,6 +87,7 @@ async function getPlatformSettings() {
         'require_email_verification',
         'session_timeout_hours',
       ])
+      .abortSignal(signal)
   );
 
   const m = Object.fromEntries((rows || []).map(r => [r.key, r.value]));
@@ -164,7 +174,9 @@ export async function middleware(request) {
           },
         }
       );
-      const { data } = await withTimeout(() => supabase.auth.getUser());
+      // getUser() has no abortSignal hook — bounded with raceTimeout instead
+      // of a true cancellation (see comment on raceTimeout above).
+      const { data } = await raceTimeout(supabase.auth.getUser(), 4000);
       user = data?.user ?? null;
       // NOTE: do NOT clear auth cookies here. getUser() can throw a transient
       // "fetch failed" at the edge, and clearing cookies on that would destroy a
@@ -181,8 +193,9 @@ export async function middleware(request) {
     // ── Dynamic maintenance check — query Supabase directly instead of
     // self-fetching /api/public-settings. A self-HTTP-fetch from middleware
     // to the same server doubles latency and causes recursive middleware runs.
-    // Settings are timeout-guarded and cached (see getPlatformSettings above)
-    // so a slow/paused Supabase project can't hang every request.
+    // Settings are cancellation-guarded and cached (see getPlatformSettings
+    // above) so a slow/paused/cross-region Supabase project can't hang or
+    // pool-starve every request.
     let maintenanceMode = false;
     let registrationOpen = true;
     let requireEmailVerify = true;
@@ -194,19 +207,19 @@ export async function middleware(request) {
       requireEmailVerify = settings.requireEmailVerify;
       sessionTimeoutHours = settings.sessionTimeoutHours;
     } catch {
-      // On any failure (including timeout) keep safe defaults and let the request through
+      // On any failure (including timeout/abort) keep safe defaults and let the request through
     }
 
     if (maintenanceMode) {
       let isAdmin = false;
       if (user) {
         try {
-          const { data } = await withTimeout(() =>
-            supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+          const { data } = await withTimeout((signal) =>
+            supabase.from('profiles').select('is_admin').eq('id', user.id).abortSignal(signal).single()
           );
           isAdmin = !!data?.is_admin;
         } catch {
-          // Can't verify admin (or timed out) — treat as non-admin
+          // Can't verify admin (or timed out/aborted) — treat as non-admin
         }
       }
 

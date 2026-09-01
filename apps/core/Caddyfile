@@ -1,0 +1,25 @@
+# TLS is issued automatically by Caddy (ACME). Point {$SITE_ADDRESS}'s DNS at this host first.
+{$SITE_ADDRESS} {
+	encode gzip zstd
+
+	reverse_proxy core:3001 {
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "SAMEORIGIN"
+		Referrer-Policy           "strict-origin-when-cross-origin"
+		Permissions-Policy        "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MiB
+			roll_keep 10
+		}
+	}
+}

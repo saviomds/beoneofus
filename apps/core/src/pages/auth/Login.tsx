@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { ROLE_HOME } from '@/config/nav'
 import { ThemeToggle } from '@/components/ui'
+import { WEB_URL } from '@/config/platform'
 
 const DEMO: [string, string][] = [
   ['BOU-STU-10231', 'Student · School A'],
@@ -57,6 +58,9 @@ export function Login() {
           <span className="mark">BeOneOfUs</span>
         </div>
         <p className="tagline">One ecosystem for students, mentors, schools and institutions.</p>
+        <p style={{ marginTop: -4, marginBottom: 12 }}>
+          <a className="link-btn" href={WEB_URL}>← Back to beoneofus</a>
+        </p>
 
         <form onSubmit={onSubmit}>
           <label className="field">

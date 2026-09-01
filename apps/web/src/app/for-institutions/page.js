@@ -3,6 +3,7 @@ import {
   ArrowRight, ShieldCheck, BarChart3, Network, CheckCircle2,
 } from 'lucide-react';
 import { orgMeta, ORG_TYPE_ORDER } from '../../lib/orgTypes';
+import { CORE_URL } from '../../lib/platform';
 
 export const metadata = {
   title: 'For Institutions — beoneofus',
@@ -38,6 +39,7 @@ export default function ForInstitutionsPage() {
             </span>
           </Link>
           <div className="flex items-center gap-3">
+            <a href={CORE_URL} className="hidden sm:inline text-sm font-semibold text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Education &amp; Government portal</a>
             <Link href="/auth" className="text-sm font-semibold text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Sign in</Link>
             <Link href="/organizations/new" className="text-sm font-bold bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl transition-colors shadow-sm shadow-brand-500/30">
               Create organization
@@ -101,6 +103,28 @@ export default function ForInstitutionsPage() {
               </Link>
             );
           })}
+        </div>
+      </section>
+
+      {/* ── Education & Government portal ── */}
+      <section className="border-y border-gray-100 dark:border-white/10 bg-brand-500/[0.04]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20 flex flex-col lg:flex-row lg:items-center gap-8">
+          <div className="flex-1">
+            <p className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-3">Schools &amp; government</p>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight">The Education &amp; Government portal</h2>
+            <p className="mt-4 text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl">
+              Institutions and education authorities run day-to-day operations in the dedicated BeOneOfUs
+              portal — students, teachers, attendance, report cards, transfers, credential verification,
+              admissions, finance, and government oversight &amp; data campaigns. It has its own secure sign-in.
+            </p>
+          </div>
+          <a
+            href={CORE_URL}
+            className="group inline-flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-7 py-3.5 rounded-2xl text-sm font-black shadow-xl shadow-brand-500/25 transition-all hover:scale-[1.02] shrink-0"
+          >
+            Enter the portal
+            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </a>
         </div>
       </section>
 

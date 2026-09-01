@@ -18,6 +18,7 @@ import dynamic from "next/dynamic";
 import { getAvatarSrc } from "../lib/avatar";
 import { signOutEverywhere } from "../lib/signOutEverywhere";
 import { useLanguage } from "../lib/i18n";
+import { CORE_URL } from "../lib/platform";
 
 /* ─── Animation helpers ─────────────────────────────────────── */
 function useIntersect(options = {}) {
@@ -2037,6 +2038,7 @@ function Footer({ session }) {
     ]},
     { title: t('landing.footer.company_heading'), links: [
       { label: t('landing.footer.company.institutions'), href: "/for-institutions" },
+      { label: t('landing.footer.company.education_portal'), href: CORE_URL, external: true },
       { label: t('landing.footer.company.vision'), href: "/vision" },
       { label: t('landing.footer.company.roadmap'), href: "/roadmap" },
       { label: t('landing.footer.company.growth'), href: "/growth" },
@@ -2082,11 +2084,17 @@ function Footer({ session }) {
             <div key={col.title}>
               <p className="text-xs font-black uppercase tracking-widest text-gray-400 dark:text-gray-600 mb-4">{col.title}</p>
               <ul className="space-y-2.5">
-                {col.links.map(({ label, href }) => (
+                {col.links.map(({ label, href, external }) => (
                   <li key={label}>
-                    <Link href={href} className="text-sm text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors font-medium">
-                      {label}
-                    </Link>
+                    {external ? (
+                      <a href={href} className="text-sm text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors font-medium">
+                        {label}
+                      </a>
+                    ) : (
+                      <Link href={href} className="text-sm text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors font-medium">
+                        {label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

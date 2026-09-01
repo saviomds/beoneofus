@@ -1,0 +1,43 @@
+# apps/core — private self-hosted deployment.
+# Data lives on the host at ${BOU_HOST_DATA_DIR} (an ENCRYPTED, backed-up volume).
+# Caddy terminates TLS and is the only thing exposed to the internet.
+
+services:
+  core:
+    build:
+      context: .
+      args:
+        VITE_WEB_URL: ${VITE_WEB_URL:-https://beoneofus.work}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      BOU_DATA_DIR: /data
+      COOKIE_SECURE: "true"
+    volumes:
+      - ${BOU_HOST_DATA_DIR:-/srv/bou/data}:/data
+    expose:
+      - "3001"          # internal only — never `ports:`
+    networks: [edge]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [core]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-education.beoneofus.work}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+
+networks:
+  edge:
+
+volumes:
+  caddy_data:
+  caddy_config:

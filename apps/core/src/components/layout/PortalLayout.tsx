@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { NAV, ROLE_LABEL, ROLE_HOME } from '@/config/nav'
+import { WEB_URL } from '@/config/platform'
 import { notificationService } from '@/services/notificationService'
 import { searchService } from '@/services/searchService'
 import type { SearchHit } from '@/services/searchService'
@@ -43,6 +44,9 @@ export function PortalLayout() {
           ))}
         </nav>
         <div className="sidebar-foot">
+          <a className="btn btn-ghost btn-block" href={WEB_URL}>
+            ← beoneofus platform
+          </a>
           <button className="btn btn-ghost btn-block" onClick={logout}>
             Log out
           </button>

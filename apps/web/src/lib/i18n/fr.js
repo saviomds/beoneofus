@@ -481,6 +481,7 @@ const fr = {
       },
       company: {
         institutions: "Pour les institutions",
+        education_portal: "Éducation & Gouvernement",
         vision: "L'avenir (Vision)",
         roadmap: "Feuille de route",
         growth: "Stratégie de croissance",

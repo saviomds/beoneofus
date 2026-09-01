@@ -1,0 +1,65 @@
+[
+  {
+    "id": "CMP-2026-00001",
+    "reference": "CMP-2026-00001",
+    "title": "2026 National Enrolment Census",
+    "description": "All registered institutions must submit verified enrolment figures for the 2026 academic year.",
+    "createdBy": "BOU-GOV-00042",
+    "governmentOrganizationId": "ORG-RW-GOV-000001",
+    "fields": [
+      {
+        "key": "total_students",
+        "label": "Total enrolled students",
+        "type": "integer",
+        "required": true,
+        "options": [],
+        "help": "Head count as at 1 September 2026."
+      },
+      {
+        "key": "female_students",
+        "label": "Of which female",
+        "type": "integer",
+        "required": true,
+        "options": [],
+        "help": ""
+      },
+      {
+        "key": "teaching_staff",
+        "label": "Teaching staff (FTE)",
+        "type": "integer",
+        "required": true,
+        "options": [],
+        "help": ""
+      },
+      {
+        "key": "has_computer_lab",
+        "label": "Has a computer laboratory",
+        "type": "boolean",
+        "required": true,
+        "options": [],
+        "help": ""
+      },
+      {
+        "key": "notes",
+        "label": "Notes",
+        "type": "text",
+        "required": false,
+        "options": [],
+        "help": ""
+      }
+    ],
+    "audienceOrganizationTypes": [
+      "SCHOOL",
+      "UNIVERSITY",
+      "COLLEGE",
+      "TRAINING_CENTER"
+    ],
+    "targetOrganizationIds": [],
+    "opensAt": "2026-08-01T00:00:00.000Z",
+    "dueAt": "2026-09-30T23:59:59.000Z",
+    "status": "DRAFT",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

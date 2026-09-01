@@ -1,0 +1,29 @@
+[
+  {
+    "id": "FEE-A-ALEVEL-2026",
+    "organizationId": "ORG-RW-SCH-000001",
+    "name": "A-Level day — 2026",
+    "level": "A_LEVEL",
+    "academicYear": "2026",
+    "currency": "RWF",
+    "items": [
+      {
+        "label": "Tuition",
+        "amount": 250000
+      },
+      {
+        "label": "Laboratory & materials",
+        "amount": 40000
+      },
+      {
+        "label": "Meals",
+        "amount": 60000
+      }
+    ],
+    "total": 350000,
+    "isDefault": true,
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

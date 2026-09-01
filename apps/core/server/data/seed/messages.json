@@ -1,0 +1,39 @@
+[
+  {
+    "id": "MSG-001",
+    "conversationId": "CNV-001",
+    "senderId": "BOU-TEA-40871",
+    "body": "Let's review your React project before the next session.",
+    "readBy": [
+      "BOU-TEA-40871"
+    ],
+    "attachments": [],
+    "createdAt": "2026-08-20T09:42:00.000Z",
+    "updatedAt": "2026-08-20T09:42:00.000Z"
+  },
+  {
+    "id": "MSG-002",
+    "conversationId": "CNV-001",
+    "senderId": "BOU-STU-10231",
+    "body": "Thank you! I pushed the latest changes last night.",
+    "readBy": [
+      "BOU-STU-10231",
+      "BOU-TEA-40871"
+    ],
+    "attachments": [],
+    "createdAt": "2026-08-20T10:05:00.000Z",
+    "updatedAt": "2026-08-20T10:05:00.000Z"
+  },
+  {
+    "id": "MSG-003",
+    "conversationId": "CNV-002",
+    "senderId": "BOU-GOV-00042",
+    "body": "Request received and assigned for review.",
+    "readBy": [
+      "BOU-GOV-00042"
+    ],
+    "attachments": [],
+    "createdAt": "2026-08-13T14:05:00.000Z",
+    "updatedAt": "2026-08-13T14:05:00.000Z"
+  }
+]

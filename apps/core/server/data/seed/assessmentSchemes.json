@@ -1,0 +1,117 @@
+[
+  {
+    "id": "SCH-A-ALEVEL",
+    "organizationId": "ORG-RW-SCH-000001",
+    "name": "A-Level standard",
+    "level": "A_LEVEL",
+    "components": [
+      {
+        "key": "ca",
+        "label": "Continuous assessment",
+        "weight": 30
+      },
+      {
+        "key": "midterm",
+        "label": "Mid-term exam",
+        "weight": 30
+      },
+      {
+        "key": "final",
+        "label": "End-of-term exam",
+        "weight": 40
+      }
+    ],
+    "gradeBands": [
+      {
+        "min": 80,
+        "letter": "A",
+        "gpa": 4,
+        "label": "Excellent"
+      },
+      {
+        "min": 70,
+        "letter": "B",
+        "gpa": 3,
+        "label": "Good"
+      },
+      {
+        "min": 60,
+        "letter": "C",
+        "gpa": 2,
+        "label": "Satisfactory"
+      },
+      {
+        "min": 50,
+        "letter": "D",
+        "gpa": 1,
+        "label": "Pass"
+      },
+      {
+        "min": 0,
+        "letter": "F",
+        "gpa": 0,
+        "label": "Fail"
+      }
+    ],
+    "passMark": 50,
+    "isDefault": true,
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "SCH-B-OLEVEL",
+    "organizationId": "ORG-RW-SCH-000002",
+    "name": "O-Level standard",
+    "level": "O_LEVEL",
+    "components": [
+      {
+        "key": "ca",
+        "label": "Continuous assessment",
+        "weight": 40
+      },
+      {
+        "key": "exam",
+        "label": "Term exam",
+        "weight": 60
+      }
+    ],
+    "gradeBands": [
+      {
+        "min": 80,
+        "letter": "A",
+        "gpa": 4,
+        "label": "Excellent"
+      },
+      {
+        "min": 70,
+        "letter": "B",
+        "gpa": 3,
+        "label": "Good"
+      },
+      {
+        "min": 60,
+        "letter": "C",
+        "gpa": 2,
+        "label": "Satisfactory"
+      },
+      {
+        "min": 50,
+        "letter": "D",
+        "gpa": 1,
+        "label": "Pass"
+      },
+      {
+        "min": 0,
+        "letter": "F",
+        "gpa": 0,
+        "label": "Fail"
+      }
+    ],
+    "passMark": 50,
+    "isDefault": true,
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

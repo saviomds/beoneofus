@@ -1,0 +1,50 @@
+[
+  {
+    "id": "TTS-A-001",
+    "organizationId": "ORG-RW-SCH-000001",
+    "classId": "CLS-A-001",
+    "dayOfWeek": 1,
+    "period": 1,
+    "startTime": "08:00",
+    "endTime": "08:50",
+    "subjectId": "SUB-A-001",
+    "subjectName": "Web Development",
+    "teacherId": "TCH-A-001",
+    "room": "Lab 2",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "TTS-A-002",
+    "organizationId": "ORG-RW-SCH-000001",
+    "classId": "CLS-A-001",
+    "dayOfWeek": 1,
+    "period": 2,
+    "startTime": "09:00",
+    "endTime": "09:50",
+    "subjectId": "SUB-A-002",
+    "subjectName": "Data Structures",
+    "teacherId": "TCH-A-002",
+    "room": "Lab 2",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "TTS-A-003",
+    "organizationId": "ORG-RW-SCH-000001",
+    "classId": "CLS-A-001",
+    "dayOfWeek": 2,
+    "period": 1,
+    "startTime": "08:00",
+    "endTime": "08:50",
+    "subjectId": "SUB-A-002",
+    "subjectName": "Data Structures",
+    "teacherId": "TCH-A-002",
+    "room": "Lab 2",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

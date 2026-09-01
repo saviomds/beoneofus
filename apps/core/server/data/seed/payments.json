@@ -1,0 +1,18 @@
+[
+  {
+    "id": "PAY-A-001",
+    "receiptNumber": "RCPT-2026-00001",
+    "invoiceId": "INVF-2026-00001",
+    "organizationId": "ORG-RW-SCH-000001",
+    "studentId": "STD-A-001",
+    "amount": 150000,
+    "currency": "RWF",
+    "method": "mobile_money",
+    "reference": "MOMO-88213",
+    "note": "First instalment",
+    "recordedBy": "BOU-SCH-77120",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

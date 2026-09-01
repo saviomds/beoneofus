@@ -1,0 +1,67 @@
+[
+  {
+    "id": "NTF-001",
+    "recipientId": "BOU-STU-10231",
+    "organizationId": "ORG-RW-SCH-000001",
+    "type": "report",
+    "title": "New academic report",
+    "message": "Your Term 2 academic progress report is available.",
+    "read": false,
+    "actionUrl": "/student/reports",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "NTF-002",
+    "recipientId": "BOU-STU-10231",
+    "organizationId": "ORG-RW-SCH-000001",
+    "type": "mentorship",
+    "title": "Upcoming mentorship session",
+    "message": "React fundamentals review on 2026-08-25 at 14:00.",
+    "read": false,
+    "actionUrl": "/student/mentors",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "NTF-003",
+    "recipientId": "BOU-TEA-40871",
+    "organizationId": "ORG-RW-SCH-000001",
+    "type": "academic",
+    "title": "Report awaiting submission",
+    "message": "A report is still in draft.",
+    "read": false,
+    "actionUrl": "/teacher/reports",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "NTF-004",
+    "recipientId": "BOU-GOV-00042",
+    "organizationId": "ORG-RW-GOV-000001",
+    "type": "request",
+    "title": "School request under review",
+    "message": "REQ-2026-00042 from Kigali Innovation Academy is assigned to you.",
+    "read": false,
+    "actionUrl": "/government/requests",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "NTF-005",
+    "recipientId": "BOU-SCH-77120",
+    "organizationId": "ORG-RW-SCH-000001",
+    "type": "government",
+    "title": "Request update",
+    "message": "REQ-2026-00042 is now under review by MINEDUC.",
+    "read": true,
+    "actionUrl": "/school/government",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

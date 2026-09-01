@@ -1,0 +1,46 @@
+[
+  {
+    "id": "ANN-001",
+    "authorId": "BOU-SCH-77120",
+    "organizationId": "ORG-RW-SCH-000001",
+    "version": 1,
+    "audience": "all",
+    "scope": "school",
+    "title": "Term 2 examinations timetable published",
+    "body": "The Term 2 examination timetable is now available.",
+    "priority": "medium",
+    "pinned": true,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "ANN-002",
+    "authorId": "BOU-GOV-00042",
+    "organizationId": "ORG-RW-GOV-000001",
+    "version": 1,
+    "audience": [
+      "school"
+    ],
+    "scope": "government",
+    "title": "Annual enrolment data submission — deadline 30 September",
+    "body": "All registered institutions must submit verified enrolment statistics for 2026 by 30 September 2026.",
+    "priority": "high",
+    "pinned": true,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "ANN-003",
+    "authorId": "BOU-SCH-77121",
+    "organizationId": "ORG-RW-SCH-000002",
+    "version": 1,
+    "audience": "all",
+    "scope": "school",
+    "title": "Green Hills sports day",
+    "body": "Sports day is on Friday. All S1 classes participate.",
+    "priority": "low",
+    "pinned": false,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

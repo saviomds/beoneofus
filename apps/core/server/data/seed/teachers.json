@@ -1,0 +1,145 @@
+[
+  {
+    "classIds": [
+      "CLS-A-001",
+      "CLS-A-002"
+    ],
+    "departmentId": null,
+    "qualifications": [
+      "BSc Computer Science"
+    ],
+    "experienceYears": 7,
+    "employmentStatus": "full_time",
+    "isMentor": true,
+    "isLecturer": false,
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z",
+    "id": "TCH-A-001",
+    "userId": "BOU-TEA-40871",
+    "organizationId": "ORG-RW-SCH-000001",
+    "schoolId": "ORG-RW-SCH-000001",
+    "staffNumber": "KIA-T-014",
+    "firstName": "Dominique Savio",
+    "lastName": "M.",
+    "email": "d.savio@kia.ac.rw",
+    "phone": "+250 788 333 444",
+    "subjects": [
+      "Software Engineering",
+      "Web Development"
+    ]
+  },
+  {
+    "classIds": [
+      "CLS-A-001"
+    ],
+    "departmentId": null,
+    "qualifications": [],
+    "experienceYears": 5,
+    "employmentStatus": "full_time",
+    "isMentor": false,
+    "isLecturer": false,
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z",
+    "id": "TCH-A-002",
+    "userId": "usr_a_tea_mireille",
+    "organizationId": "ORG-RW-SCH-000001",
+    "schoolId": "ORG-RW-SCH-000001",
+    "staffNumber": "KIA-T-021",
+    "firstName": "Mireille",
+    "lastName": "Niyonzima",
+    "email": "m.niyonzima@kia.ac.rw",
+    "phone": "+250 788 666 777",
+    "subjects": [
+      "Mathematics",
+      "Data Science"
+    ]
+  },
+  {
+    "classIds": [
+      "CLS-B-001"
+    ],
+    "departmentId": null,
+    "qualifications": [],
+    "experienceYears": 8,
+    "employmentStatus": "full_time",
+    "isMentor": false,
+    "isLecturer": false,
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z",
+    "id": "TCH-B-001",
+    "userId": "usr_b_tea_1",
+    "organizationId": "ORG-RW-SCH-000002",
+    "schoolId": "ORG-RW-SCH-000002",
+    "staffNumber": "GHA-T-003",
+    "firstName": "Patrick",
+    "lastName": "Nkurunziza",
+    "email": "p.nkurunziza@gha.ac.rw",
+    "phone": "+250 788 700 300",
+    "subjects": [
+      "English",
+      "Social Studies"
+    ]
+  },
+  {
+    "classIds": [],
+    "departmentId": "DEP-U-001",
+    "qualifications": [
+      "PhD Computer Science"
+    ],
+    "experienceYears": 12,
+    "employmentStatus": "full_time",
+    "isMentor": false,
+    "isLecturer": true,
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z",
+    "id": "TCH-U-001",
+    "userId": "usr_u_lec_1",
+    "organizationId": "ORG-RW-UNI-000001",
+    "schoolId": "ORG-RW-UNI-000001",
+    "staffNumber": "KIT-L-101",
+    "firstName": "Immaculée",
+    "lastName": "Nyirahabimana",
+    "email": "i.nyira@kit.ac.rw",
+    "phone": "+250 788 800 300",
+    "subjects": [
+      "Software Architecture",
+      "Databases"
+    ]
+  },
+  {
+    "classIds": [],
+    "departmentId": "DEP-U-001",
+    "qualifications": [
+      "PhD Software Engineering"
+    ],
+    "experienceYears": 10,
+    "employmentStatus": "full_time",
+    "isMentor": false,
+    "isLecturer": true,
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z",
+    "id": "TCH-U-002",
+    "userId": "usr_u_lec_2",
+    "organizationId": "ORG-RW-UNI-000001",
+    "schoolId": "ORG-RW-UNI-000001",
+    "staffNumber": "KIT-L-102",
+    "firstName": "Emmanuel",
+    "lastName": "Rwigema",
+    "email": "e.rwigema@kit.ac.rw",
+    "phone": "+250 788 800 400",
+    "subjects": [
+      "Algorithms",
+      "Distributed Systems"
+    ]
+  }
+]

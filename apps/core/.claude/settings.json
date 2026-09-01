@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"TC ok=$?\")",
+      "Bash(echo \"lint ok=$?\")",
+      "Bash(git -C /c/Users/Dell diff --cached --name-only)",
+      "Bash(xargs echo \"staged files \\(should be 0\\):\")"
+    ]
+  }
+}

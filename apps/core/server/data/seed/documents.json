@@ -1,0 +1,47 @@
+[
+  {
+    "id": "DOC-001",
+    "ownerId": "BOU-STU-10231",
+    "organizationId": "ORG-RW-SCH-000001",
+    "version": 1,
+    "type": "Student ID",
+    "title": "Student ID card",
+    "fileName": "aline-uwase-id.pdf",
+    "size": 92160,
+    "uploadedBy": "BOU-SCH-77120",
+    "status": "verified",
+    "note": "",
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "DOC-002",
+    "ownerId": "BOU-SCH-77120",
+    "organizationId": "ORG-RW-SCH-000001",
+    "version": 1,
+    "type": "School registration",
+    "title": "REB accreditation certificate",
+    "fileName": "kia-accreditation.pdf",
+    "size": 210944,
+    "uploadedBy": "BOU-SCH-77120",
+    "status": "verified",
+    "note": "",
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "DOC-003",
+    "ownerId": "BOU-ORG-UNI-00001",
+    "organizationId": "ORG-RW-UNI-000001",
+    "version": 1,
+    "type": "Institution",
+    "title": "HEC charter",
+    "fileName": "kit-charter.pdf",
+    "size": 301120,
+    "uploadedBy": "BOU-ORG-UNI-00001",
+    "status": "verified",
+    "note": "",
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

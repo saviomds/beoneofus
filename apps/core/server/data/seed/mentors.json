@@ -1,0 +1,23 @@
+[
+  {
+    "id": "MEN-A-001",
+    "userId": "BOU-TEA-40871",
+    "organizationId": "ORG-RW-SCH-000001",
+    "schoolId": "ORG-RW-SCH-000001",
+    "specialization": "Software Engineering & AI",
+    "skills": [
+      "React",
+      "Career coaching"
+    ],
+    "experienceYears": 7,
+    "availability": "Weekdays 14:00–17:00",
+    "assignedStudentIds": [
+      "STD-A-001"
+    ],
+    "bio": "Software engineer and educator.",
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

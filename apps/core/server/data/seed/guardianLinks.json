@@ -1,0 +1,42 @@
+[
+  {
+    "id": "GDL-2026-00001",
+    "guardianUserId": "BOU-GDN-00001",
+    "studentId": "STD-A-001",
+    "organizationId": "ORG-RW-SCH-000001",
+    "relationship": "mother",
+    "status": "active",
+    "canViewRecordTypes": [
+      "IDENTITY",
+      "ACADEMIC_RECORDS",
+      "ATTENDANCE_SUMMARY",
+      "REPORTS"
+    ],
+    "isPrimary": true,
+    "addedBy": "BOU-SCH-77120",
+    "verifiedAt": "2026-01-15T08:00:00.000Z",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "GDL-2026-00002",
+    "guardianUserId": "BOU-GDN-00001",
+    "studentId": "STD-B-001",
+    "organizationId": "ORG-RW-SCH-000002",
+    "relationship": "guardian",
+    "status": "active",
+    "canViewRecordTypes": [
+      "IDENTITY",
+      "ACADEMIC_RECORDS",
+      "ATTENDANCE_SUMMARY",
+      "REPORTS"
+    ],
+    "isPrimary": false,
+    "addedBy": "BOU-SCH-77121",
+    "verifiedAt": "2026-01-15T08:00:00.000Z",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

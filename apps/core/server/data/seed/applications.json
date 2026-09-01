@@ -1,0 +1,40 @@
+[
+  {
+    "id": "APP-2026-00001",
+    "reference": "APP-2026-00001",
+    "organizationId": "ORG-RW-SCH-000001",
+    "applicantFirstName": "Divine",
+    "applicantLastName": "Ishimwe",
+    "dateOfBirth": "2010-05-12",
+    "gender": "female",
+    "nationality": "Rwandan",
+    "guardianName": "Beatrice Ishimwe",
+    "guardianPhone": "+250 788 444 999",
+    "guardianEmail": "b.ishimwe@example.rw",
+    "priorSchool": "Kigali Parents School",
+    "gradeApplyingFor": "S4",
+    "level": "A_LEVEL",
+    "studyCode": "MPC",
+    "intakeYear": "2027",
+    "notes": "Strong maths results.",
+    "status": "SUBMITTED",
+    "assessmentScore": null,
+    "decisionNote": "",
+    "offerExpiresAt": null,
+    "studentId": null,
+    "submittedBy": "BOU-SCH-77120",
+    "reviewedBy": null,
+    "timeline": [
+      {
+        "id": "atl_seed",
+        "at": "2026-01-15T08:00:00.000Z",
+        "actorId": "BOU-SCH-77120",
+        "action": "SUBMITTED",
+        "note": "",
+        "status": "SUBMITTED"
+      }
+    ],
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

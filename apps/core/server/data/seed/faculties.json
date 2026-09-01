@@ -1,0 +1,12 @@
+[
+  {
+    "id": "FAC-U-001",
+    "organizationId": "ORG-RW-UNI-000001",
+    "name": "Faculty of Computing & Engineering",
+    "code": "FCE",
+    "deanName": "Prof. Alice Karekezi",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

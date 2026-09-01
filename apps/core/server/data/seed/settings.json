@@ -1,0 +1,46 @@
+[
+  {
+    "id": "BOU-STU-10231",
+    "ownerId": "BOU-STU-10231",
+    "organizationId": "ORG-RW-SCH-000001",
+    "scope": "user",
+    "values": {
+      "emailUpdates": true,
+      "sessionReminders": true,
+      "compactMode": false,
+      "publicProfile": true,
+      "theme": "system"
+    },
+    "version": 1,
+    "updatedAt": "2026-01-15T08:00:00.000Z"
+  },
+  {
+    "id": "ORG-RW-SCH-000001",
+    "ownerId": "BOU-SCH-77120",
+    "organizationId": "ORG-RW-SCH-000001",
+    "scope": "school",
+    "values": {
+      "academicYear": "2026",
+      "gradingScale": "A–F (100 pt)",
+      "attendanceThreshold": 75,
+      "autoApproveReports": false,
+      "theme": "system"
+    },
+    "version": 1,
+    "updatedAt": "2026-01-15T08:00:00.000Z"
+  },
+  {
+    "id": "BOU-ADM-00001",
+    "ownerId": "BOU-ADM-00001",
+    "organizationId": null,
+    "scope": "platform",
+    "values": {
+      "maintenanceMode": false,
+      "allowRegistration": false,
+      "sessionTimeoutMinutes": 480,
+      "theme": "system"
+    },
+    "version": 1,
+    "updatedAt": "2026-01-15T08:00:00.000Z"
+  }
+]

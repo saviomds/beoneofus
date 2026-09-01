@@ -1,0 +1,80 @@
+[
+  {
+    "id": "CLS-A-001",
+    "organizationId": "ORG-RW-SCH-000001",
+    "schoolId": "ORG-RW-SCH-000001",
+    "classCode": "S5-A-MPC-2026",
+    "name": "S5 Software Engineering",
+    "level": "A_LEVEL",
+    "gradeLevel": "S5",
+    "section": "A",
+    "studyCode": "MPC",
+    "academicYear": "2026",
+    "homeroomTeacherId": "TCH-A-001",
+    "subjectIds": [
+      "SUB-A-001",
+      "SUB-A-002"
+    ],
+    "studentIds": [
+      "STD-A-001",
+      "STD-A-003"
+    ],
+    "capacity": 40,
+    "room": "Lab 2",
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "CLS-A-002",
+    "organizationId": "ORG-RW-SCH-000001",
+    "schoolId": "ORG-RW-SCH-000001",
+    "classCode": "S6-A-MPC-2026",
+    "name": "S6 Data Science",
+    "level": "A_LEVEL",
+    "gradeLevel": "S6",
+    "section": "A",
+    "studyCode": "MPC",
+    "academicYear": "2026",
+    "homeroomTeacherId": "TCH-A-001",
+    "subjectIds": [
+      "SUB-A-002"
+    ],
+    "studentIds": [
+      "STD-A-002"
+    ],
+    "capacity": 40,
+    "room": "Lab 1",
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "CLS-B-001",
+    "organizationId": "ORG-RW-SCH-000002",
+    "schoolId": "ORG-RW-SCH-000002",
+    "classCode": "S1-A-GEN-2026",
+    "name": "S1 A",
+    "level": "O_LEVEL",
+    "gradeLevel": "S1",
+    "section": "A",
+    "studyCode": "",
+    "academicYear": "2026",
+    "homeroomTeacherId": "TCH-B-001",
+    "subjectIds": [
+      "SUB-B-001"
+    ],
+    "studentIds": [
+      "STD-B-001",
+      "STD-B-002"
+    ],
+    "capacity": 45,
+    "room": "Room 4",
+    "status": "active",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

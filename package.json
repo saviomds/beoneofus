@@ -1,51 +1,29 @@
 {
-  "name": "beoneofus",
+  "name": "beoneofus-platform",
   "version": "0.1.0",
   "private": true,
+  "description": "BeOneOfUs platform monorepo — public opportunity ecosystem (apps/web) + education & government portal (apps/core).",
   "scripts": {
-    "dev": "node scripts/dev-sw.cjs && next dev --turbopack",
-    "build": "next build --webpack",
-    "start": "next start",
-    "lint": "eslint",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.104.2",
-    "@monaco-editor/react": "^4.7.0",
-    "@serwist/next": "^9.0.0",
-    "@supabase/ssr": "^0.5.2",
-    "@supabase/supabase-js": "^2.103.0",
-    "@webcontainer/api": "^1.6.4",
-    "@xterm/addon-fit": "^0.11.0",
-    "@xterm/xterm": "^6.0.0",
-    "framer-motion": "^12.42.2",
-    "groq-sdk": "^1.1.2",
-    "highlight.js": "^10.7.3",
-    "jszip": "^3.10.1",
-    "lucide-react": "^1.7.0",
-    "monaco-editor": "^0.55.1",
-    "next": "16.2.2",
-    "next-themes": "^0.4.6",
-    "openai": "^4.104.0",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "react-easy-crop": "^5.5.7",
-    "react-markdown": "^10.1.0",
-    "react-quill-new": "^3.8.3",
-    "react-syntax-highlighter": "^16.1.1",
-    "resend": "^3.2.0",
-    "serwist": "^9.0.0",
-    "web-push": "^3.6.7"
+    "dev": "concurrently -k -n web,core -c cyan,green \"npm:dev:web\" \"npm:dev:core\"",
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:core": "npm --prefix apps/core run dev",
+    "build": "npm run build:web && npm run build:core",
+    "build:web": "npm --prefix apps/web run build",
+    "build:core": "npm --prefix apps/core run build",
+    "start:core": "npm --prefix apps/core run start",
+    "test": "npm run test:core",
+    "test:core": "npm --prefix apps/core test",
+    "test:web": "npm --prefix apps/web run test:e2e",
+    "lint": "npm run lint:web && npm run lint:core",
+    "lint:web": "npm --prefix apps/web run lint",
+    "lint:core": "npm --prefix apps/core run lint",
+    "typecheck:core": "npm --prefix apps/core run typecheck",
+    "install:all": "npm --prefix apps/web install && npm --prefix apps/core install"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/react": "19.2.14",
-    "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.2",
-    "omggif": "^1.0.10",
-    "tailwindcss": "^4",
-    "typescript": "6.0.3"
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

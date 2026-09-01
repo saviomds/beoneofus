@@ -1,0 +1,16 @@
+[
+  {
+    "id": "SCL-A-001",
+    "organizationId": "ORG-RW-SCH-000001",
+    "name": "STEM merit bursary",
+    "kind": "percentage",
+    "value": 25,
+    "fundedBy": "KIA Foundation",
+    "studentIds": [
+      "STD-A-002"
+    ],
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

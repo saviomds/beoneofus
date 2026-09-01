@@ -1,0 +1,15 @@
+[
+  {
+    "id": "MAS-001",
+    "mentorId": "MEN-A-001",
+    "studentId": "STD-A-001",
+    "organizationId": "ORG-RW-SCH-000001",
+    "startDate": "2026-02-01",
+    "endDate": null,
+    "status": "active",
+    "permissions": [],
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

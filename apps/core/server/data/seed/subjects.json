@@ -1,0 +1,38 @@
+[
+  {
+    "id": "SUB-A-001",
+    "organizationId": "ORG-RW-SCH-000001",
+    "schoolId": "ORG-RW-SCH-000001",
+    "name": "Web Development",
+    "code": "WEB5",
+    "department": "Computing",
+    "description": "HTML, CSS, JavaScript, React.",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "SUB-A-002",
+    "organizationId": "ORG-RW-SCH-000001",
+    "schoolId": "ORG-RW-SCH-000001",
+    "name": "Data Structures",
+    "code": "DS5",
+    "department": "Computing",
+    "description": "Core data structures and algorithms.",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "SUB-B-001",
+    "organizationId": "ORG-RW-SCH-000002",
+    "schoolId": "ORG-RW-SCH-000002",
+    "name": "English Language",
+    "code": "ENG1",
+    "department": "Languages",
+    "description": "Lower secondary English.",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

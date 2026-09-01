@@ -1,0 +1,38 @@
+[
+  {
+    "id": "INVF-2026-00001",
+    "reference": "INVF-2026-00001",
+    "organizationId": "ORG-RW-SCH-000001",
+    "studentId": "STD-A-001",
+    "studentName": "Aline Uwase",
+    "feeStructureId": "FEE-A-ALEVEL-2026",
+    "academicYear": "2026",
+    "term": "Term 3 2026",
+    "currency": "RWF",
+    "lineItems": [
+      {
+        "label": "Tuition",
+        "amount": 250000
+      },
+      {
+        "label": "Laboratory & materials",
+        "amount": 40000
+      },
+      {
+        "label": "Meals",
+        "amount": 60000
+      }
+    ],
+    "gross": 350000,
+    "discount": 0,
+    "scholarshipId": null,
+    "total": 350000,
+    "paidAmount": 150000,
+    "status": "PARTIALLY_PAID",
+    "dueDate": "2026-09-30",
+    "issuedBy": "BOU-SCH-77120",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

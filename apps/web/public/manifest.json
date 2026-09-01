@@ -1,0 +1,94 @@
+{
+  "name": "beoneofus - The network for developers",
+  "short_name": "beoneofus",
+  "description": "Connect with developers worldwide. Find jobs, build a verified professional network, sell your work, and ship projects together.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["social", "productivity", "developer tools", "education"],
+  "iarc_rating_id": "",
+  "icons": [
+    {
+      "src": "/appIcon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/cropped_circle_image.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Network Feed",
+      "short_name": "Feed",
+      "description": "View your developer network feed",
+      "url": "/dash/feed",
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Messages",
+      "short_name": "Messages",
+      "description": "Check your private messages",
+      "url": "/dash/messages",
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Jobs Board",
+      "short_name": "Jobs",
+      "description": "Browse developer job opportunities",
+      "url": "/dash/marketplace",
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=work.beoneofus.app",
+      "id": "work.beoneofus.app"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/beoneofus/id000000000"
+    }
+  ],
+  "share_target": {
+    "action": "/dash/feed",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+beoneofus",
+      "url": "/dash/feed?share=%s"
+    }
+  ]
+}

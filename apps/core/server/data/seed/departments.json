@@ -1,0 +1,13 @@
+[
+  {
+    "id": "DEP-U-001",
+    "organizationId": "ORG-RW-UNI-000001",
+    "facultyId": "FAC-U-001",
+    "name": "Department of Software Engineering",
+    "code": "SE",
+    "headName": "Dr. Immaculée Nyirahabimana",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

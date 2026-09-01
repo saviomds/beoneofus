@@ -1,0 +1,51 @@
+[
+  {
+    "id": "INV-2026-00001",
+    "tokenHash": "c9f3c211566276e92e82e3a43c2945bbbe97a512a9eaef58a629a2a8cdc0718c",
+    "organizationName": "Nyamata College of Science",
+    "organizationType": "COLLEGE",
+    "institutionLevels": [
+      "COLLEGE"
+    ],
+    "recipientEmail": "principal@nyamatacollege.ac.rw",
+    "recipientName": "Mr. Théoneste Bizimana",
+    "issuedBy": "BOU-ADM-00001",
+    "issuedByType": "ADMIN",
+    "permissions": [
+      "institution.create",
+      "institution.manage"
+    ],
+    "expiresAt": "2026-12-31T23:59:59.000Z",
+    "status": "PENDING",
+    "acceptedAt": null,
+    "organizationId": null,
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  },
+  {
+    "id": "INV-2026-00002",
+    "tokenHash": "c2740cbde764536e1085888c818ea397c5a3d9b26eb1ebfeafac7f8249e549d4",
+    "organizationName": "Green Hills Academy",
+    "organizationType": "SCHOOL",
+    "institutionLevels": [
+      "PRIMARY",
+      "O_LEVEL"
+    ],
+    "recipientEmail": "info@greenhills.ac.rw",
+    "recipientName": "Ms. Diane Uwera",
+    "issuedBy": "BOU-ADM-00001",
+    "issuedByType": "ADMIN",
+    "permissions": [
+      "institution.create",
+      "institution.manage"
+    ],
+    "expiresAt": "2026-06-30T23:59:59.000Z",
+    "status": "ACCEPTED",
+    "acceptedAt": "2026-02-01T09:00:00.000Z",
+    "organizationId": "ORG-RW-SCH-000002",
+    "version": 1,
+    "createdAt": "2026-01-15T08:00:00.000Z",
+    "updatedAt": "2026-08-20T08:00:00.000Z"
+  }
+]

@@ -5,21 +5,7 @@ import { ROLE_HOME } from '@/config/nav'
 import { ThemeToggle } from '@/components/ui'
 import { WEB_URL } from '@/config/platform'
 
-// Demo sign-in codes are for local development only — the block below is gated on
-// `import.meta.env.DEV`, so `vite build` (production) drops it entirely. The full
-// list + walkthrough lives in apps/core/DEMO-ACCOUNTS.md. These credentials change
-// per deployment anyway (seed runs once; codes/passwords rotate), so they must not
-// ship on the public login screen.
-const DEMO: [string, string][] = [
-  ['BOU-STU-10231', 'Student · School A'],
-  ['BOU-TEA-40871', 'Teacher / Mentor · School A'],
-  ['BOU-SCH-77120', 'Institution admin · School A (Kigali Innovation Academy)'],
-  ['BOU-SCH-77121', 'Institution admin · School B (Green Hills Academy)'],
-  ['BOU-ORG-UNI-00001', 'Institution admin · University (Kigali Institute of Technology)'],
-  ['BOU-GDN-00001', 'Parent / Guardian (Josephine — children at School A & School B)'],
-  ['BOU-GOV-00042', 'Government (MINEDUC)'],
-  ['BOU-ADM-00001', 'Platform admin'],
-]
+// Demo sign-in codes / walkthrough: see apps/core/DEMO-ACCOUNTS.md (dev reference).
 
 export function Login() {
   const { login } = useAuth()
@@ -108,45 +94,6 @@ export function Login() {
             {status === 'loading' ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-
-        {import.meta.env.DEV && (
-          <div className="auth-demo">
-            <p style={{ marginBottom: 6 }}>
-              <strong>Dev only</strong> — demo sign-in codes, password <code>demo123</code> (click to fill)
-            </p>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              {DEMO.map(([c, r]) => (
-                <li key={c} style={{ marginBottom: 2 }}>
-                  <button
-                    className="link-btn"
-                    type="button"
-                    onClick={() => {
-                      setCode(c)
-                      setPassword('demo123')
-                      setStatus('idle')
-                    }}
-                  >
-                    {c}
-                  </button>{' '}
-                  — {r}
-                  {c.startsWith('BOU-GOV') && (
-                    <span className="field-hint"> — code rotates on every sign-in</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p style={{ marginTop: 10 }}>
-              Sign-in codes start with <code>BOU-</code>. Codes like{' '}
-              <code>ORG-RW-SCH-000002</code> are <strong>institution IDs</strong>, not logins — each
-              institution has its own <code>BOU-</code> admin account above.
-            </p>
-            <p style={{ marginTop: 8 }}>
-              The <strong>Government</strong> code changes after each sign-in. Your next code is shown
-              on the dashboard and in Settings → Security. If it&rsquo;s lost, an admin can read it in{' '}
-              <strong>Admin → Users</strong>. Full walkthrough: <code>DEMO-ACCOUNTS.md</code>.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   )

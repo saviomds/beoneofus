@@ -13,6 +13,7 @@ import { useTheme } from 'next-themes';
 import VerifiedBadge from './VerifiedBadge';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '../../lib/i18n';
+import { CORE_URL } from '../../lib/platform';
 
 // Escape regex metacharacters so queries containing ( [ \ etc. don't throw
 // a SyntaxError and blank the search results.
@@ -555,6 +556,14 @@ export default function Header({ setActiveTab }) {
 
           {/* Controls — sit at the top-mid-right of the bar */}
           <div className="flex items-center gap-1.5 shrink-0">
+            <a
+              href={CORE_URL}
+              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all border border-gray-200 dark:border-gray-700"
+              title={t('header.education_portal')}
+            >
+              <GraduationCap size={15} />
+              {t('header.education_portal')}
+            </a>
             <LanguageSwitcher />
             {mounted && (
               <button

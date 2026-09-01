@@ -43,6 +43,7 @@ const fr = {
     discover: "Découvrir",
     marketplace: "Marché",
     search_placeholder: "Rechercher des personnes, publications, groupes…",
+    education_portal: "Éducation & Gouvernement",
     toggle_theme: "Changer le thème",
     switch_lang: "Passer à l'anglais",
     nothing_found: "Aucun résultat pour",

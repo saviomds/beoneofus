@@ -39,6 +39,7 @@ const en = {
     discover: "Discover",
     marketplace: "Marketplace",
     search_placeholder: "Search people, posts, groups…",
+    education_portal: "Education & Government",
     toggle_theme: "Toggle Theme",
     switch_lang: "Switch to French",
     nothing_found: "Nothing found for",

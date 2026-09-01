@@ -150,6 +150,15 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
       </div>
 
       <div className="topbar-actions">
+        <a
+          className="icon-btn"
+          href={WEB_URL}
+          aria-label="Open the beoneofus platform"
+          title="beoneofus platform"
+          style={{ textDecoration: 'none' }}
+        >
+          ↗
+        </a>
         <ThemeToggle />
         <div style={{ position: 'relative' }}>
           <button

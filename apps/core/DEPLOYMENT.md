@@ -114,7 +114,7 @@ and **never** re-seeds or wipes (`server/index.ts`).
 
 ### 5. DNS + TLS
 
-Point `education.beoneofus.work` (A/AAAA) at the VPS. Caddy issues the certificate on
+Point `education.b1overs.com` (A/AAAA) at the VPS. Caddy issues the certificate on
 first request. Set `VITE_WEB_URL` to the public site so the "Back to beoneofus" link
 works (it is baked in at image build time — rebuild if you change it).
 

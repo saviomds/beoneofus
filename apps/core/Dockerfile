@@ -11,7 +11,7 @@ RUN npm ci
 # Build the client (vite) + typecheck client & server.
 COPY . .
 # VITE_WEB_URL is inlined at build time — pass it with --build-arg.
-ARG VITE_WEB_URL=https://beoneofus.work
+ARG VITE_WEB_URL=https://b1overs.com
 ENV VITE_WEB_URL=$VITE_WEB_URL
 RUN npm run build
 

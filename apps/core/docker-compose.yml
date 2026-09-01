@@ -7,7 +7,7 @@ services:
     build:
       context: .
       args:
-        VITE_WEB_URL: ${VITE_WEB_URL:-https://beoneofus.work}
+        VITE_WEB_URL: ${VITE_WEB_URL:-https://b1overs.com}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -28,7 +28,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:-education.beoneofus.work}
+      SITE_ADDRESS: ${SITE_ADDRESS:-education.b1overs.com}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

@@ -1,7 +1,15 @@
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
 import withSerwist from "@serwist/next";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Monorepo: this app is self-contained (no workspaces). Pin the tracing root to
+  // apps/web so Next stops walking up to stray lockfiles (C:\Users\Dell, repo root).
+  outputFileTracingRoot: __dirname,
+
   async redirects() {
     return [
       // /dashboard was a renamed route that only exists in the deployed branch;

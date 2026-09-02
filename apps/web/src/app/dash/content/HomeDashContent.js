@@ -9,7 +9,7 @@ import {
   Crown, UserPlus, Briefcase, Compass,
   ChevronRight, CalendarDays, TrendingUp,
   BarChart2, CheckCircle2, Circle, ArrowRight, Flame,
-  Bot, Award, Clock, FileText, Library,
+  Bot, Clock, FileText, Library,
   CheckCheck,
 } from 'lucide-react';
 import VerifiedBadge from '../../components/VerifiedBadge';
@@ -53,7 +53,7 @@ const HUBS = [
     bg: 'bg-amber-50 dark:bg-amber-900/20',
     border: 'border-amber-200 dark:border-amber-800/40',
     text: 'text-amber-600 dark:text-amber-400',
-    pills: ['Learn', 'Pathways', 'Blog', 'Bookmarks', 'Docs'],
+    pills: ['Stories', 'Pathways', 'Blog', 'Bookmarks', 'Docs'],
     pillStyle: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
   },
   {
@@ -65,7 +65,7 @@ const HUBS = [
     bg: 'bg-blue-50 dark:bg-blue-900/20',
     border: 'border-blue-200 dark:border-blue-800/40',
     text: 'text-blue-600 dark:text-blue-400',
-    pills: ['Jobs', 'Services', 'Contracts', 'Mentorship', 'Partnership'],
+    pills: ['Jobs', 'Internships', 'Freelance', 'Contracts', 'Partnership'],
     pillStyle: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
   },
 ];
@@ -76,8 +76,8 @@ const NAV_TILES = [
   { id: 'messages',      labelKey: 'home_dash.tiles.messages',  icon: MessageSquare, stat: 'messages',      color: 'text-sky-500' },
   { id: 'notifications', labelKey: 'home_dash.tiles.alerts',    icon: Bell,          stat: 'notifications', color: 'text-red-500' },
   { id: 'feed',          labelKey: 'home_dash.tiles.discovery', icon: Compass,       stat: null,            color: 'text-cyan-500' },
-  { id: 'ai',            labelKey: 'home_dash.tiles.ai',        icon: Bot,           stat: null,            color: 'text-violet-500' },
-  { id: 'coaching',      labelKey: 'home_dash.tiles.coaching',  icon: Award,         stat: null,            color: 'text-indigo-500' },
+  { id: 'jobs',          labelKey: 'home_dash.tiles.jobs',      icon: Briefcase,     stat: null,            color: 'text-violet-500' },
+  { id: 'pathways',      labelKey: 'home_dash.tiles.pathways',  icon: TrendingUp,    stat: null,            color: 'text-indigo-500' },
   { id: 'events',        labelKey: 'home_dash.tiles.events',    icon: CalendarDays,  stat: null,            color: 'text-purple-500' },
   { id: 'settings',      labelKey: 'home_dash.tiles.settings',  icon: Settings,      stat: null,            color: 'text-gray-400' },
 ];

@@ -3,30 +3,30 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
-  Terminal, ArrowLeft, BookOpen, Award, Laptop, Globe, FileText, Zap,
+  Terminal, ArrowLeft, Laptop, Globe, FileText, Zap,
   Shield, CheckCircle2, MessageSquare, Users, ChevronRight, Search,
   Code2, Play, Layers, Star, TrendingUp, Briefcase, Hash,
-  GraduationCap, Database, ArrowUpRight, Sparkles,
+  Database, ArrowUpRight, Sparkles,
 } from "lucide-react";
 
 const LEARN_RESOURCES = [
   {
-    icon: <BookOpen size={22} />,
-    label: "Academy",
-    desc: "200+ structured courses across engineering, design, business, and more. Learn at your own pace with project-based curriculum.",
-    href: "/resources",
+    icon: <Briefcase size={22} />,
+    label: "Jobs & Internships",
+    desc: "Real openings and internships across every industry, matched to your profile. One-click apply — no CV upload.",
+    href: "/dash/jobs",
     color: "blue",
-    badge: "200+ Courses",
-    tags: ["Self-paced", "Certificates", "Project-based"],
+    badge: "Matched to you",
+    tags: ["Remote", "Hybrid", "Internships"],
   },
   {
-    icon: <Award size={22} />,
-    label: "Certificates",
-    desc: "Earn verified, shareable credentials from courses and assessments. Add them to your profile and LinkedIn.",
-    href: "/dash/more",
+    icon: <TrendingUp size={22} />,
+    label: "Career Pathways",
+    desc: "Map a clear route from where you are to where you want to be — a role, studying or working abroad, or your own business.",
+    href: "/dash/pathways",
     color: "amber",
-    badge: "Verified Credentials",
-    tags: ["Shareable", "LinkedIn", "Industry-recognized"],
+    badge: "Your goal, step by step",
+    tags: ["Guidance", "Milestones", "Mentors"],
   },
   {
     icon: <Laptop size={22} />,
@@ -111,10 +111,10 @@ const SUPPORT_RESOURCES = [
 const TOOL_HIGHLIGHTS = [
   { icon: <Code2 size={18} />, label: "In-Browser IDE", desc: "Code without installing anything", href: "/IDEPage", color: "emerald" },
   { icon: <Hash size={18} />, label: "Community Hubs", desc: "6 professional communities", href: "/community", color: "blue" },
-  { icon: <GraduationCap size={18} />, label: "Academy Courses", desc: "200+ structured learning paths", href: "/resources", color: "violet" },
-  { icon: <Briefcase size={18} />, label: "Job Board", desc: "Remote-first opportunities", href: "/dash/more", color: "amber" },
+  { icon: <TrendingUp size={18} />, label: "Career Pathways", desc: "A route to your goal", href: "/dash/pathways", color: "violet" },
+  { icon: <Briefcase size={18} />, label: "Jobs & Internships", desc: "Remote-first opportunities", href: "/dash/jobs", color: "amber" },
   { icon: <Database size={18} />, label: "Project Showcase", desc: "Build your public portfolio", href: "/Explore_Projects", color: "rose" },
-  { icon: <Sparkles size={18} />, label: "AI Assistant", desc: "Built-in AI for every page", href: "/dash", color: "indigo" },
+  { icon: <Users size={18} />, label: "Mentors & Network", desc: "People who've done it", href: "/dash/connections", color: "indigo" },
 ];
 
 const colorMap = {
@@ -198,7 +198,7 @@ export default function ResourcesPage() {
               Resources & Tools
             </h1>
             <p className="text-blue-100 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
-              Courses, guides, documentation, a browser IDE, certificates, and community support — all in one place.
+              Jobs, career pathways, guides, documentation, a browser IDE, and community support — all in one place.
             </p>
             <div className="relative max-w-md mx-auto">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
@@ -253,10 +253,10 @@ export default function ResourcesPage() {
               {/* Learn */}
               <section>
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-xl flex items-center justify-center"><BookOpen size={16} /></div>
+                  <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-xl flex items-center justify-center"><Briefcase size={16} /></div>
                   <div>
-                    <h2 className="text-xl font-black">Learn</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Courses, hands-on tools, and project exploration</p>
+                    <h2 className="text-xl font-black">Opportunity</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Jobs, career pathways, and hands-on tools</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -298,7 +298,7 @@ export default function ResourcesPage() {
                 <div className="relative flex flex-col sm:flex-row items-center gap-8">
                   <div className="flex-1">
                     <h2 className="text-2xl sm:text-3xl font-black mb-3">Unlock everything with a free account</h2>
-                    <p className="text-gray-300 leading-relaxed">Full access to all resources, the community, job board, mentorship, and your own professional profile.</p>
+                    <p className="text-gray-300 leading-relaxed">Full access to all resources, the community, jobs &amp; internships, career pathways, and your own professional profile.</p>
                   </div>
                   <div className="flex flex-col gap-3 shrink-0">
                     <Link href="/auth" className="px-8 py-3.5 bg-white text-gray-900 font-black rounded-2xl hover:bg-gray-100 transition-colors text-sm text-center shadow-lg">
@@ -324,7 +324,7 @@ export default function ResourcesPage() {
             {[
               { href: "/community", label: "Community" },
               { href: "/quick-start", label: "Quick Start" },
-              { href: "/resources", label: "Academy" },
+              { href: "/dash/jobs", label: "Jobs" },
               { href: "/IDEPage", label: "IDE" },
               { href: "/docs", label: "Docs" },
               { href: "/blog", label: "Blog" },

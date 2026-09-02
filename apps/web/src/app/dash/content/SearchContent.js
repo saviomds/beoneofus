@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import {
-  Search, Users, MessageCircle, Hash, GraduationCap,
+  Search, Users, MessageCircle, Hash,
   CalendarDays, Briefcase, TrendingUp, MapPin, Building2, Globe,
   X, Clock, FileText, BadgeCheck, ArrowRight, SlidersHorizontal,
   ChevronDown, CheckCircle2, Loader2,
@@ -19,7 +19,7 @@ const LIMIT_TAB   = 40;
 const DEBOUNCE_MS = 380;
 
 // Priority order — fast/important first so they appear before slow tables
-const QUERY_ORDER = ["people", "posts", "groups", "pages", "events", "jobs", "courses", "pathways"];
+const QUERY_ORDER = ["people", "posts", "groups", "pages", "events", "jobs", "pathways"];
 
 const TABS = [
   { key: "all",      label: "All",      Icon: Search        },
@@ -29,11 +29,10 @@ const TABS = [
   { key: "pages",    label: "Pages",    Icon: FileText      },
   { key: "events",   label: "Events",   Icon: CalendarDays  },
   { key: "jobs",     label: "Jobs",     Icon: Briefcase     },
-  { key: "courses",  label: "Courses",  Icon: GraduationCap },
   { key: "pathways", label: "Pathways", Icon: TrendingUp    },
 ];
 
-const EMPTY = { people: [], posts: [], groups: [], pages: [], courses: [], events: [], jobs: [], pathways: [] };
+const EMPTY = { people: [], posts: [], groups: [], pages: [], events: [], jobs: [], pathways: [] };
 
 /* ── Filters config ─────────────────────────────────────────────── */
 const TAB_FILTERS = {
@@ -349,12 +348,6 @@ export default function SearchContent() {
           if (filters.type && filters.type !== "All") qb = qb.ilike("type", `%${filters.type}%`);
           return qb.order("created_at", { ascending: false }).limit(lim);
         }
-        case "courses":
-          return supabase
-            .from("courses")
-            .select("id, title, category, level, description")
-            .or(`title.ilike.${pat},category.ilike.${pat},description.ilike.${pat}`)
-            .limit(lim);
         case "pathways":
           return supabase
             .from("pathways")
@@ -436,10 +429,10 @@ export default function SearchContent() {
             </div>
             <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-2 tracking-tight">Search everything</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 font-medium max-w-xs mx-auto leading-relaxed">
-              People, posts, groups, pages, events, jobs, courses, pathways — all in one place.
+              People, posts, groups, pages, events, jobs, pathways — all in one place.
             </p>
             <div className="flex flex-wrap justify-center gap-2 mt-6">
-              {["React developer", "AWS certification", "Open Source", "Remote jobs", "Community", "Founders"].map(s => (
+              {["Frontend developer", "Internships", "Open Source", "Remote jobs", "Mentors", "Founders"].map(s => (
                 <button key={s} onClick={() => handleInput(s)}
                   className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-[12px] font-semibold text-gray-600 dark:text-gray-400 transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-800/50">
                   {s}
@@ -704,28 +697,6 @@ export default function SearchContent() {
                     {j.location && <span className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-0.5"><MapPin size={9} />{j.location}</span>}
                     {j.type     && <span className="text-[9px] font-black uppercase px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-md">{j.type}</span>}
                   </div>
-                </div>
-                <ArrowRight size={14} className="text-gray-300 dark:text-gray-600 group-hover:text-blue-500 shrink-0 transition-colors" />
-              </div>
-            ))}
-          </Section>
-        )}
-
-        {/* Courses */}
-        {(isAll || tab === "courses") && (results.courses.length > 0 || loadingKeys.has("courses")) && (
-          <Section title="Courses" Icon={GraduationCap} count={results.courses.length} isAll={isAll} onSeeAll={() => setTab("courses")} colorClass="text-blue-500" loading={loadingKeys.has("courses")}>
-            {results.courses.map(c => (
-              <div key={c.id} onClick={() => go("learn")} className="flex items-center gap-3 p-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group cursor-pointer">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center shrink-0">
-                  <GraduationCap size={15} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[14px] font-semibold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    <HL text={c.title} q={activeQ} />
-                  </p>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider mt-0.5">
-                    {c.category}{c.level ? ` · ${c.level}` : ""}
-                  </p>
                 </div>
                 <ArrowRight size={14} className="text-gray-300 dark:text-gray-600 group-hover:text-blue-500 shrink-0 transition-colors" />
               </div>

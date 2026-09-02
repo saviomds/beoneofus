@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Trophy, Award, Star, Loader2, Medal, Crown, Users, TrendingUp, BookOpen } from "lucide-react";
+import { Trophy, Loader2, Medal } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { supabase } from "../../supabaseClient";
 import { useLanguage } from "../../../lib/i18n";
 
 const MEDAL_COLORS = ["text-yellow-500", "text-gray-400", "text-orange-600"];
@@ -23,38 +22,18 @@ function timeAgo(d, t) {
 
 export default function LeaderboardContent() {
   const { t } = useLanguage();
-  const [tab, setTab] = useState("pathways");
   const [pathwayLeaders, setPathwayLeaders] = useState([]);
-  const [topUsers, setTopUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [pathwayRes, usersRes] = await Promise.all([
-        fetch("/api/pathways?leaderboard=true").then(r => r.json()),
-        supabase
-          .from("profiles")
-          .select("id, username, full_name, avatar_url, is_verified, is_premium")
-          .order("id", { ascending: true })
-          .limit(50)
-          .then(async ({ data: users }) => {
-            if (!users) return [];
-            // Attach cert counts
-            const withCerts = await Promise.all(
-              users.map(async u => {
-                const { count } = await supabase
-                  .from("user_certificates")
-                  .select("id", { count: "exact", head: true })
-                  .eq("user_id", u.id);
-                return { ...u, certCount: count || 0 };
-              })
-            );
-            return withCerts.sort((a, b) => b.certCount - a.certCount).slice(0, 20);
-          }),
-      ]);
-      setPathwayLeaders(pathwayRes.leaderboard || []);
-      setTopUsers(usersRes);
+      try {
+        const res = await fetch("/api/pathways?leaderboard=true").then(r => r.json());
+        setPathwayLeaders(res.leaderboard || []);
+      } catch {
+        setPathwayLeaders([]);
+      }
       setLoading(false);
     };
     load();
@@ -78,31 +57,11 @@ export default function LeaderboardContent() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2">
-        {[
-          { id: "pathways", labelKey: "tab_pathways", icon: TrendingUp },
-          { id: "certificates", labelKey: "tab_certificates", icon: Award },
-        ].map(({ id, labelKey, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              tab === id
-                ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            <Icon size={13} /> {t(`leaderboard.${labelKey}`)}
-          </button>
-        ))}
-      </div>
-
       {loading ? (
         <div className="flex justify-center py-16">
           <Loader2 size={24} className="animate-spin text-amber-500" />
         </div>
-      ) : tab === "pathways" ? (
+      ) : (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
             <h2 className="font-black text-sm text-gray-900 dark:text-white">{t("leaderboard.tab_pathways")}</h2>
@@ -142,52 +101,6 @@ export default function LeaderboardContent() {
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{entry.pathways?.title}</p>
                     </div>
                     <span className="text-[10px] font-bold text-gray-400 shrink-0">{timeAgo(entry.completed_at, t)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-            <h2 className="font-black text-sm text-gray-900 dark:text-white">{t("leaderboard.cert_earners_title")}</h2>
-          </div>
-          {topUsers.length === 0 ? (
-            <div className="py-16 text-center text-gray-400 dark:text-gray-600">
-              <Award size={32} className="mx-auto mb-3 opacity-30" />
-              <p className="font-bold text-sm">{t("leaderboard.empty_certs")}</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {topUsers.map((u, i) => {
-                const initial = u.username?.[0]?.toUpperCase() || "U";
-                return (
-                  <div key={u.id} className={`flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${i < 3 ? MEDAL_BG[i] + " border-l-4" : ""}`}>
-                    <div className="w-8 text-center shrink-0">
-                      {i < 3 ? (
-                        <Medal size={20} className={MEDAL_COLORS[i]} fill="currentColor" strokeWidth={0} />
-                      ) : (
-                        <span className="text-sm font-black text-gray-400">#{i + 1}</span>
-                      )}
-                    </div>
-                    <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-amber-500 to-orange-500 shrink-0 flex items-center justify-center">
-                      {u.avatar_url ? (
-                        <Image src={u.avatar_url} alt="" fill sizes="36px" className="object-cover" />
-                      ) : (
-                        <span className="text-white font-black text-sm">{initial}</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/u/${u.username}`} className="font-black text-sm text-gray-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
-                        @{u.username}
-                      </Link>
-                      {u.full_name && <p className="text-xs text-gray-500 truncate">{u.full_name}</p>}
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Award size={13} className="text-amber-500" />
-                      <span className="text-sm font-black text-gray-700 dark:text-gray-300">{u.certCount}</span>
-                    </div>
                   </div>
                 );
               })}

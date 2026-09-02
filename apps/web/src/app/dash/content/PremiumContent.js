@@ -300,7 +300,7 @@ export default function PremiumContent() {
                 </h1>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 font-medium max-w-sm leading-relaxed">
-                Advanced courses, 1-on-1 coaching, early event access, and verified certifications.
+                Exclusive job listings, advanced profile analytics, priority network access, and a verified badge.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">

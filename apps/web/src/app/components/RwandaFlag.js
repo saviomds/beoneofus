@@ -34,15 +34,15 @@ export default function RwandaFlag({ className = "" }) {
           background:linear-gradient(#e4e4e7,#a1a1aa);
         }
         .rw-flag{
-          display:block;width:40px;height:27px;margin-top:1px;overflow:hidden;
+          display:block;width:36px;height:24px;margin-top:1px;overflow:hidden;
           border-radius:1px 2px 2px 1px;transform-origin:left center;
-          animation:rwWave 3.4s ease-in-out infinite;will-change:transform;
+          animation:rwWave 3.8s ease-in-out infinite;will-change:transform;
         }
         @keyframes rwWave{
-          0%,100%{transform:perspective(80px) rotateY(0deg) skewY(0deg)}
-          25%{transform:perspective(80px) rotateY(-14deg) skewY(1.1deg)}
-          50%{transform:perspective(80px) rotateY(2deg) skewY(-.9deg)}
-          75%{transform:perspective(80px) rotateY(-8deg) skewY(.5deg)}
+          0%,100%{transform:perspective(90px) rotateY(0deg) skewY(0deg)}
+          25%{transform:perspective(90px) rotateY(-9deg) skewY(.7deg)}
+          50%{transform:perspective(90px) rotateY(1deg) skewY(-.6deg)}
+          75%{transform:perspective(90px) rotateY(-5deg) skewY(.35deg)}
         }
         @media (prefers-reduced-motion:reduce){.rw-flag{animation:none}}
       `}</style>

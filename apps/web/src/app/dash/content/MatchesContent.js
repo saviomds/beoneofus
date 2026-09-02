@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../supabaseClient';
 import { useLanguage } from "../../../lib/i18n";
-import { Bot, ArrowRight, Briefcase, GraduationCap, BookOpen, Sparkles, Loader2, Search } from 'lucide-react';
+import { Bot, ArrowRight, Briefcase, Globe, Code2, Sparkles, Loader2, Search } from 'lucide-react';
 
 const MODULE = {
-  job:    { labelKey: 'matches.module_job',    icon: Briefcase,     accent: 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/15' },
-  mentor: { labelKey: 'matches.module_mentor', icon: GraduationCap, accent: 'text-trust-600 dark:text-trust-500 bg-trust-50 dark:bg-trust-500/15' },
-  course: { labelKey: 'matches.module_course', icon: BookOpen,      accent: 'text-premium-600 dark:text-premium-500 bg-premium-50 dark:bg-premium-500/15' },
+  job:       { labelKey: 'matches.module_job',       icon: Briefcase, accent: 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/15' },
+  freelance: { labelKey: 'matches.module_freelance', icon: Globe,     accent: 'text-trust-600 dark:text-trust-500 bg-trust-50 dark:bg-trust-500/15' },
+  project:   { labelKey: 'matches.module_project',   icon: Code2,     accent: 'text-premium-600 dark:text-premium-500 bg-premium-50 dark:bg-premium-500/15' },
 };
 
 const CHIPS = ['matches.chip_1', 'matches.chip_2', 'matches.chip_3', 'matches.chip_4'];

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   Terminal, ArrowLeft, CheckCircle2, Circle, Users, User, Settings,
-  Globe, Briefcase, BookOpen, MessageSquare, Award, Zap, ChevronRight,
+  Globe, Briefcase, FileText, MessageSquare, Zap, ChevronRight,
   Code2, Star, Bell, Search, TrendingUp, Laptop, Hash,
 } from "lucide-react";
 
@@ -84,10 +84,10 @@ const STEPS = [
     time: "Ongoing",
     icon: <Briefcase size={20} />,
     color: "rose",
-    desc: "Browse jobs, contracts, mentorship, coaching, partnerships, and sponsorships tailored to your profile.",
+    desc: "Browse jobs, internships, contracts, freelance work, partnerships, and projects tailored to your profile.",
     actions: [
-      { label: "View job board", href: "/dash/more" },
-      { label: "Find a mentor", href: "/dash/connections" },
+      { label: "View jobs", href: "/dash/jobs" },
+      { label: "Career pathways", href: "/dash/pathways" },
       { label: "Marketplace", href: "/dash/marketplace" },
     ],
     tips: [
@@ -99,12 +99,12 @@ const STEPS = [
 ];
 
 const FEATURES = [
+  { icon: <Briefcase size={18} />, label: "Jobs & Internships", desc: "Matched to your profile", href: "/dash/jobs", color: "blue" },
+  { icon: <TrendingUp size={18} />, label: "Career Pathways", desc: "A route to your goal", href: "/dash/pathways", color: "rose" },
   { icon: <Code2 size={18} />, label: "Browser IDE", desc: "Code without setup", href: "/IDEPage", color: "emerald" },
-  { icon: <BookOpen size={18} />, label: "Academy", desc: "200+ courses", href: "/resources", color: "blue" },
-  { icon: <Award size={18} />, label: "Certificates", desc: "Verified credentials", href: "/dash/more", color: "amber" },
+  { icon: <Users size={18} />, label: "Mentors & Network", desc: "People who've done it", href: "/dash/connections", color: "amber" },
   { icon: <Globe size={18} />, label: "Projects", desc: "Portfolio & open source", href: "/Explore_Projects", color: "violet" },
-  { icon: <TrendingUp size={18} />, label: "Analytics", desc: "Track your growth", href: "/dash/analytics", color: "indigo" },
-  { icon: <Zap size={18} />, label: "AI Assistant", desc: "Powered by Claude", href: "/dash", color: "rose" },
+  { icon: <FileText size={18} />, label: "Resume", desc: "Shareable, always current", href: "/dash/profile", color: "indigo" },
 ];
 
 const colorMap = {
@@ -324,7 +324,7 @@ export default function QuickStartPage() {
             <Terminal size={20} className="text-blue-500" /> beone<span className="text-blue-600">of</span>us
           </Link>
           <div className="flex flex-wrap justify-center gap-4">
-            {[{ label: "Resources", href: "/resources" }, { label: "Community", href: "/community" }, { label: "Academy", href: "/resources" }, { label: "Docs", href: "/docs" }].map(({ label, href }) => (
+            {[{ label: "Resources", href: "/resources" }, { label: "Community", href: "/community" }, { label: "Jobs", href: "/dash/jobs" }, { label: "Docs", href: "/docs" }].map(({ label, href }) => (
               <Link key={label} href={href} className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors font-medium">{label}</Link>
             ))}
           </div>

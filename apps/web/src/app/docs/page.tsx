@@ -6,13 +6,13 @@ import { supabase } from "../supabaseClient";
 import { usePlatformVersion } from "../../hooks/usePlatformVersion";
 import {
   Terminal, Search, Menu, X, ChevronRight, ChevronDown,
-  ShieldCheck, Zap, Bot, BookOpen, ExternalLink,
+  ShieldCheck, Zap, BookOpen, ExternalLink,
   LayoutDashboard, MessageSquare, Briefcase, Network,
   Code2, GraduationCap, Users, Bell, Star, Globe,
   Cpu, Award, FileText, Sparkles, Hash, TrendingUp,
   ArrowRight, CheckCircle2, Lock, Rss, ShoppingBag,
   UserCircle, GitBranch, Laptop, ScrollText, BadgeCheck,
-  Crown, CalendarDays
+  Crown
 } from "lucide-react";
 
 // ─── Navigation tree ───────────────────────────────────────────────────────
@@ -45,14 +45,6 @@ const NAV = [
     ],
   },
   {
-    group: "Academy",
-    icon: GraduationCap,
-    links: [
-      { id: "courses",        label: "Courses & Lessons",   icon: BookOpen },
-      { id: "exams",          label: "Exams & Certificates",icon: Award },
-    ],
-  },
-  {
     group: "Projects & Code",
     icon: Code2,
     links: [
@@ -71,19 +63,10 @@ const NAV = [
     ],
   },
   {
-    group: "AI Features",
-    icon: Bot,
-    links: [
-      { id: "ai-assistant",   label: "AI Assistant",        icon: Sparkles },
-      { id: "cv-analysis",    label: "CV Analysis",         icon: FileText },
-    ],
-  },
-  {
     group: "Career & Business",
     icon: Briefcase,
     links: [
       { id: "job-matching",   label: "Jobs & Services",     icon: Briefcase },
-      { id: "mentorship",     label: "Mentorship & Coaching",icon: Users },
       { id: "founder-dash",   label: "Founder Dashboard",   icon: Crown },
       { id: "member-dash",    label: "Member Dashboard",    icon: ShieldCheck },
       { id: "sponsors",       label: "Sponsors",            icon: Star },
@@ -329,7 +312,7 @@ export default function DocsPage() {
           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 px-2">Resources</p>
           {[
             { href: "/dash",                   label: "Dashboard",      icon: LayoutDashboard },
-            { href: "/resources",                label: "Academy",        icon: GraduationCap },
+            { href: "/dash/jobs",              label: "Jobs",           icon: Briefcase },
             { href: "/Explore_Projects",       label: "Explore",        icon: Globe },
             { href: "/dash/more?tool=support", label: "Support Ticket", icon: ExternalLink },
           ].map(({ href, label, icon: Icon }) => (
@@ -462,7 +445,7 @@ export default function DocsPage() {
                 ))}
               </div>
               <Callout type="new" title={`Platform ${vTag} — ${vLabel}`}>
-                Public profiles, shareable resumes, 1-on-1 mentorship booking, course certificates, premium membership, Marketplace, in-browser IDE, and sponsor partnerships are now live and open to all members.
+                Public profiles, shareable resumes, job & internship matching, career pathways, premium membership, Marketplace, in-browser IDE, and sponsor partnerships are now live and open to all members.
               </Callout>
             </section>
 
@@ -476,7 +459,7 @@ export default function DocsPage() {
                 { n: 2, title: "Build your profile",          desc: "Add your avatar, bio, skills, and field. A strong profile puts you in front of recruiters, mentors, and collaborators." },
                 { n: 3, title: "Explore the feed",            desc: "Head to /dash/home to see what people in your field are building, sharing, and discussing right now." },
                 { n: 4, title: "Connect with someone",        desc: "Visit any public profile at /u/[username] and hit Connect. Once accepted, you can message each other directly." },
-                { n: 5, title: "Learn, work, or earn",        desc: "Take a course in the Academy, apply for a job, book a mentor, or list your services in the Marketplace." },
+                { n: 5, title: "Apply, connect, or earn",     desc: "Apply for a job or internship, reach out to a mentor in your network, map a career pathway, or list your services in the Marketplace." },
               ]} />
             </section>
 
@@ -486,12 +469,12 @@ export default function DocsPage() {
                 beone<span className="text-blue-600 dark:text-blue-400">of</span>us is open to every professional — developers, designers, marketers, founders, finance experts, educators, and more. Every feature is built to help you grow your career, earn more, and connect with the right people.
               </p>
               <FeatureGrid items={[
-                { icon: <GraduationCap size={13} />, title: "Learn and upskill",      desc: "Structured courses and AI-generated learning paths tailored to your field and level. Learn at your own pace, earn verified certificates." },
-                { icon: <Briefcase size={13} />,     title: "Find work",              desc: "Browse jobs across all industries and post freelance services. One-click apply with your profile — no CV upload needed." },
-                { icon: <Users size={13} />,         title: "Mentorship & coaching",  desc: "Book 1-on-1 sessions with experienced professionals. Get guidance on career pivots, salary negotiation, or specific skills." },
+                { icon: <Briefcase size={13} />,     title: "Find work & internships", desc: "Browse jobs and internships across all industries and post freelance services. One-click apply with your profile — no CV upload needed." },
+                { icon: <TrendingUp size={13} />,    title: "Career pathways",        desc: "Map a clear route to your goal — a role, studying or working abroad, or your own business — and track each step." },
+                { icon: <Users size={13} />,         title: "Mentors & network",     desc: "Connect with alumni, mentors and professionals who have done it. Verified profiles, safe messaging." },
                 { icon: <ShoppingBag size={13} />,   title: "Earn from your skills",  desc: "Sell services, consulting, and templates in the Marketplace. Set your rates and get paid directly through the platform." },
-                { icon: <Bot size={13} />,           title: "AI career partner",      desc: "Your AI assistant helps with job matching, CV analysis, skill coaching, interview prep, and messaging — 24/7." },
-                { icon: <Star size={13} />,          title: "Get discovered",         desc: "A verified public profile, portfolio projects, and certificates make you visible to recruiters and collaborators worldwide." },
+                { icon: <Code2 size={13} />,         title: "Build your own",         desc: "Find co-founders, join open projects, and turn an idea into a business with the right team." },
+                { icon: <Star size={13} />,          title: "Get discovered",         desc: "A verified public profile and portfolio projects make you visible to recruiters and collaborators worldwide." },
               ]} />
             </section>
 
@@ -517,8 +500,7 @@ export default function DocsPage() {
               </p>
               <FeatureGrid items={[
                 { icon: <GitBranch size={13} />,  title: "GitHub stats",       desc: "Live contribution graphs, top languages, and repo count from the GitHub API." },
-                { icon: <Award size={13} />,      title: "Certificates",       desc: "Academy certificates earned are pinned to the public profile automatically." },
-                { icon: <FileText size={13} />,   title: "AI CV import",       desc: "Paste your resume — AI extracts skills, experience years, and improvement tips." },
+                { icon: <ScrollText size={13} />, title: "Shareable resume",   desc: "A clean public resume at /resume/[username] you can send to any employer." },
                 { icon: <BadgeCheck size={13} />, title: "Verified badge",     desc: "Verified accounts show a blue checkmark across all platform surfaces." },
                 { icon: <Crown size={13} />,      title: "Premium badge",      desc: "Premium members get a gold crown badge on their profile and every post." },
                 { icon: <Star size={13} />,       title: "Skill endorsements", desc: "Connections can endorse your skills, adding social proof to your profile." },
@@ -568,34 +550,6 @@ export default function DocsPage() {
                 { icon: <Star size={13} />,        title: "Emoji reactions",       desc: "React to any individual message — reactions sync in real-time." },
                 { icon: <Code2 size={13} />,       title: "Code sharing",          desc: "Inline code snippets with language-aware syntax highlighting." },
                 { icon: <FileText size={13} />,    title: "Image sharing",         desc: "Upload images inline — full lightbox viewer included." },
-              ]} />
-            </section>
-
-            {/* ════ ACADEMY ════ */}
-
-            <section className="mb-16">
-              <SectionHeading id="courses" icon={<BookOpen size={15} />} label="Courses & Lessons" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                The Academy (<InlineCode>/Academy</InlineCode>) is your shortcut to skills that actually land jobs — structured courses across Frontend, Backend, AI, Networking, and Security taught by practitioners, not textbooks.
-              </p>
-              <FeatureGrid items={[
-                { icon: <GraduationCap size={13} />,title: "Structured curriculum",desc: "Step-by-step lessons from Beginner to Advanced. Know exactly where you stand and what's next." },
-                { icon: <Search size={13} />,       title: "Find the right course",desc: "Search by topic, skill, or goal. Filter by category to go straight to what you need." },
-                { icon: <Code2 size={13} />,        title: "Learn by doing",       desc: "Every lesson includes real code examples you can copy, run, and adapt for your own projects." },
-                { icon: <Award size={13} />,        title: "Earn as you learn",    desc: "Complete a course, pass the exam, and earn a shareable certificate that adds credibility to your profile." },
-              ]} />
-            </section>
-
-            <section className="mb-16">
-              <SectionHeading id="exams" icon={<Award size={15} />} label="Exams & Certificates" badge={{ text: "New", color: "purple" }} />
-              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Finish a course and take the final exam. Pass and you get a real, verifiable certificate — one recruiters and employers can check for themselves. No fluff, no participation trophies.
-              </p>
-              <FeatureGrid items={[
-                { icon: <FileText size={13} />,    title: "Quick exam",           desc: "Short, focused assessment that tests what you actually learned — graded instantly." },
-                { icon: <Award size={13} />,       title: "Verified certificate", desc: "Your certificate has a unique public link. Share it on LinkedIn, your resume, or your profile." },
-                { icon: <CheckCircle2 size={13} />,title: "Anyone can verify it", desc: "Employers can confirm your certificate is real at /verify/[hash] — no account needed." },
-                { icon: <UserCircle size={13} />,  title: "Profile showcase",     desc: "All your certificates display on your public profile, visible to recruiters at a glance." },
               ]} />
             </section>
 
@@ -662,34 +616,6 @@ export default function DocsPage() {
               </p>
             </section>
 
-            {/* ════ AI FEATURES ════ */}
-
-            <section className="mb-16">
-              <SectionHeading id="ai-assistant" icon={<Sparkles size={15} />} label="AI Assistant" badge={{ text: "Always on", color: "purple" }} />
-              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Your personal AI assistant is available on every page, around the clock. Whether you need help with code, writing a message, or deciding what to learn next — it&apos;s one click away.
-              </p>
-              <FeatureGrid items={[
-                { icon: <Sparkles size={13} />, title: "Understands context",  desc: "Ask about a course you&apos;re viewing, a project you&apos;re building, or your own profile — it knows what page you&apos;re on." },
-                { icon: <Zap size={13} />,      title: "Instant answers",      desc: "Responses arrive in under a second so you stay in flow without waiting." },
-                { icon: <Code2 size={13} />,    title: "Debug & review code",  desc: "Paste any snippet and get a plain-English explanation, bug fix, or refactor suggestion." },
-                { icon: <Globe size={13} />,    title: "Never out of reach",   desc: "The floating button lives in the bottom-right corner on every page — open it any time." },
-              ]} />
-            </section>
-
-            <section className="mb-16">
-              <SectionHeading id="cv-analysis" icon={<FileText size={15} />} label="AI CV Analysis" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Paste your resume into the CV Analyzer in your profile settings. The AI reads it, pulls out your skills and experience, and tells you exactly how to make it stronger — in seconds.
-              </p>
-              <FeatureGrid items={[
-                { icon: <Zap size={13} />,      title: "Instant experience read",desc: "Calculates your total years of experience automatically from your work history." },
-                { icon: <Star size={13} />,     title: "Skills auto-saved",      desc: "Your top skills are identified and added to your profile — no manual tagging." },
-                { icon: <FileText size={13} />, title: "Honest improvement tips",desc: "Get specific, actionable advice on what to add, remove, or reword to stand out." },
-                { icon: <Briefcase size={13} />,title: "Higher job match scores", desc: "Better profile data means the platform surfaces more relevant job opportunities for you." },
-              ]} />
-            </section>
-
             {/* ════ CAREER & BUSINESS ════ */}
 
             <section className="mb-16">
@@ -703,24 +629,6 @@ export default function DocsPage() {
                 { icon: <CheckCircle2 size={13} />,title: "Application tracking", desc: "Dashboard view with live status updates (Pending / Accepted / Rejected)." },
                 { icon: <MessageSquare size={13} />,title: "Employer messages",   desc: "Accepted applications include direct messages and next steps." },
               ]} />
-            </section>
-
-            <section className="mb-16">
-              <SectionHeading id="mentorship" icon={<Users size={15} />} label="Mentorship & Coaching" badge={{ text: "1-on-1", color: "green" }} />
-              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Get direct access to experienced professionals who have already done what you are trying to do. Book a session, bring your questions, and leave with a clear path forward.
-              </p>
-              <FeatureGrid items={[
-                { icon: <Users size={13} />,       title: "1-on-1 Mentorship",       desc: "Book private sessions with verified mentors in your field — tech, design, business, marketing, finance, and more." },
-                { icon: <Star size={13} />,        title: "Career coaching",          desc: "Get guidance on career pivots, promotions, salary negotiation, interview prep, and long-term planning." },
-                { icon: <CalendarDays size={13} />,title: "Scheduled sessions",       desc: "Pick a time that works for you. Sessions are tracked on your dashboard so you can review notes and action items." },
-                { icon: <CheckCircle2 size={13} />,title: "Actionable outcomes",      desc: "Every session focuses on concrete next steps — not generic advice. Walk away knowing exactly what to do next." },
-                { icon: <TrendingUp size={13} />,  title: "Skill gap analysis",       desc: "Your mentor helps you identify exactly which skills are holding you back and builds a plan to close the gap." },
-                { icon: <Award size={13} />,       title: "Become a mentor",          desc: "Experienced professionals can apply to become mentors, offer sessions at their own rate, and earn from their expertise." },
-              ]} />
-              <Callout type="tip" title="Premium feature">
-                Mentorship sessions are available to Premium members. Upgrade from your profile settings to unlock 1-on-1 bookings.
-              </Callout>
             </section>
 
             <section className="mb-16">
@@ -804,7 +712,7 @@ export default function DocsPage() {
               </Link>
               <div className="flex items-center gap-3">
                 <Link href="/resources" className="text-sm font-medium text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5">
-                  Academy <ChevronRight size={14} />
+                  Resources <ChevronRight size={14} />
                 </Link>
                 <Link href="/dash" className="inline-flex items-center gap-1.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 active:scale-95 px-4 py-2 rounded-xl transition-all shadow-md shadow-blue-500/20 whitespace-nowrap">
                   Open Dashboard <ArrowRight size={14} />
@@ -839,7 +747,7 @@ export default function DocsPage() {
               <ul className="space-y-1">
                 {[
                   { href: "/dash",                   label: "Dashboard", icon: LayoutDashboard },
-                  { href: "/resources",                label: "Academy",   icon: GraduationCap },
+                  { href: "/dash/jobs",              label: "Jobs",      icon: Briefcase },
                   { href: "/Explore_Projects",       label: "Explore",   icon: Globe },
                   { href: "/dash/more?tool=support", label: "Support",   icon: ExternalLink },
                 ].map(({ href, label, icon: Icon }) => (

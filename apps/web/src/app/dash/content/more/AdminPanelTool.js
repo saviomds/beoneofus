@@ -2926,7 +2926,7 @@ function AdminSettingsPanel({ showToast, currentUserId }) {
   const [premiumEnabled, setPremiumEnabled] = useState(true);
   const [premiumMonthlyLabel, setPremiumMonthlyLabel] = useState("Gold");
   const [premiumAnnualLabel, setPremiumAnnualLabel] = useState("Gold Annual");
-  const [premiumFeatures, setPremiumFeatures] = useState("Advanced courses\n1-on-1 coaching\nVerified certificate\nEvent access");
+  const [premiumFeatures, setPremiumFeatures] = useState("Exclusive job listings\nAdvanced profile analytics\nPriority network access\nVerified premium badge");
   const [premiumSaving, setPremiumSaving] = useState(false);
   const [premiumSaved, setPremiumSaved] = useState(false);
 
@@ -2983,7 +2983,7 @@ function AdminSettingsPanel({ showToast, currentUserId }) {
         setPremiumEnabled(bval("premium_enabled", true));
         setPremiumMonthlyLabel(val("premium_monthly_label", "Gold"));
         setPremiumAnnualLabel(val("premium_annual_label", "Gold Annual"));
-        setPremiumFeatures(val("premium_features", "Advanced courses\n1-on-1 coaching\nVerified certificate\nEvent access"));
+        setPremiumFeatures(val("premium_features", "Exclusive job listings\nAdvanced profile analytics\nPriority network access\nVerified premium badge"));
 
         // Verification
         setVerifyEnabled(bval("verification_enabled", true));
@@ -3208,7 +3208,7 @@ function AdminSettingsPanel({ showToast, currentUserId }) {
                 value={premiumFeatures}
                 onChange={e => setPremiumFeatures(e.target.value)}
                 rows={6}
-                placeholder={"Advanced courses\n1-on-1 coaching\nVerified certificate"}
+                placeholder={"Exclusive job listings\nAdvanced analytics\nVerified badge"}
                 className="w-full bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all resize-none"
               />
             </FieldRow>

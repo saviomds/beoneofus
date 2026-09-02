@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import {
-  UserPlus, Users, Briefcase, Bot,
-  ArrowRight, CheckCircle2, Zap, Globe, GraduationCap, MessageSquare,
+  UserPlus, Users, Briefcase, TrendingUp,
+  ArrowRight, CheckCircle2, Globe, MessageSquare,
 } from "lucide-react";
 
 const STEPS = [
@@ -36,20 +36,20 @@ const STEPS = [
   },
   {
     n: "04",
-    title: "Grow with AI",
-    desc: "Your 24/7 AI career partner helps you prepare for interviews, identify skill gaps, build learning pathways, and get personalised guidance at every stage of your career.",
-    icon: <Bot size={28} />,
+    title: "Follow Your Pathway",
+    desc: "Map a clear route from where you are to where you want to be — a first job, working or studying abroad, or your own business — and track every step with a network that gives you a push.",
+    icon: <TrendingUp size={28} />,
     color: "from-amber-500 to-orange-600",
     light: "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400",
-    features: ["AI interview coach", "Personalised skill roadmap", "Career guidance chat"],
+    features: ["Career pathways to your goal", "Mentors & alumni in your field", "Progress you can see"],
   },
 ];
 
 const PERKS = [
   { icon: <Globe size={20} />, label: "Global Network", desc: "Professionals from every country and industry" },
-  { icon: <GraduationCap size={20} />, label: "Learn & Earn", desc: "Academy courses, certificates, and paid projects" },
+  { icon: <Briefcase size={20} />, label: "Jobs & Internships", desc: "Real openings, matched to your profile" },
   { icon: <MessageSquare size={20} />, label: "Real Conversations", desc: "Groups, DMs, and community feeds" },
-  { icon: <Zap size={20} />, label: "AI-Powered", desc: "Intelligent tools built into every workflow" },
+  { icon: <TrendingUp size={20} />, label: "Career Pathways", desc: "A clear route to the goal that's yours" },
 ];
 
 export default function HowItWorksPage() {

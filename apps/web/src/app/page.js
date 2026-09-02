@@ -474,19 +474,16 @@ export default function LandingPage() {
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
 
-           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+           <div className="flex items-center gap-3.5 sm:gap-4 shrink-0">
             {/* Rwanda */}
-            <RwandaFlag className="-mt-1" />
+            <RwandaFlag className="-mt-1 -ml-1 sm:-ml-1.5" />
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0 group" onClick={() => setActiveDropdown(null)}>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform bg-gradient-to-br from-brand-500 to-trust-500">
-                <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                  <path d="M9 9 4 4.5M9 9l5-4.5M9 9v6" stroke="#fff" strokeWidth="1.3" opacity=".85"/>
-                  <circle cx="9" cy="9" r="2.4" fill="#fff"/>
-                  <circle cx="4" cy="4.5" r="1.6" fill="#fff" opacity=".92"/>
-                  <circle cx="14" cy="4.5" r="1.6" fill="#fff" opacity=".92"/>
-                  <circle cx="9" cy="15" r="1.6" fill="#fff" opacity=".92"/>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <polyline points="6,7 13,12 6,17" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  <line x1="13" y1="17" x2="19" y2="17" stroke="#fff" strokeWidth="2.6" strokeLinecap="round"/>
                 </svg>
               </div>
               <span className="font-black text-xl tracking-tight text-gray-900 dark:text-white">
@@ -2068,12 +2065,9 @@ function Footer({ session }) {
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4 w-fit">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-brand-500 to-trust-500">
-                <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                  <path d="M9 9 4 4.5M9 9l5-4.5M9 9v6" stroke="#fff" strokeWidth="1.3" opacity=".85"/>
-                  <circle cx="9" cy="9" r="2.4" fill="#fff"/>
-                  <circle cx="4" cy="4.5" r="1.6" fill="#fff" opacity=".92"/>
-                  <circle cx="14" cy="4.5" r="1.6" fill="#fff" opacity=".92"/>
-                  <circle cx="9" cy="15" r="1.6" fill="#fff" opacity=".92"/>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <polyline points="6,7 13,12 6,17" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  <line x1="13" y1="17" x2="19" y2="17" stroke="#fff" strokeWidth="2.6" strokeLinecap="round"/>
                 </svg>
               </div>
               <span className="font-black text-xl tracking-tight text-gray-900 dark:text-white">

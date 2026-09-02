@@ -443,15 +443,9 @@ function LibraryItemModal({ item, onClose }) {
           </p>
         </div>
         <div className="shrink-0 p-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
-          {listing.category === 'Course' ? (
-            <a href="/resources" className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 font-black text-sm rounded-xl hover:bg-blue-600 transition-all">
-              <BookOpen size={16} /> {t('marketplace.dash.open_academy')}
-            </a>
-          ) : (
-            <button onClick={onClose} className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-              {t('marketplace.dash.done')}
-            </button>
-          )}
+          <button onClick={onClose} className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+            {t('marketplace.dash.done')}
+          </button>
         </div>
       </div>
     </div>

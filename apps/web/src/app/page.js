@@ -140,12 +140,11 @@ function authLink(session, dest) {
 
 
 const TYPEWRITER_WORD_KEYS = [
-  "landing.hero.typewriter.future",
-  "landing.hero.typewriter.career",
-  "landing.hero.typewriter.mentor",
-  "landing.hero.typewriter.pathway",
-  "landing.hero.typewriter.chance",
+  "landing.hero.typewriter.profession",
   "landing.hero.typewriter.livelihood",
+  "landing.hero.typewriter.vocation",
+  "landing.hero.typewriter.venture",
+  "landing.hero.typewriter.path_abroad",
 ];
 
 /* ─── Component ─────────────────────────────────────────────── */
@@ -480,12 +479,7 @@ export default function LandingPage() {
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0 group" onClick={() => setActiveDropdown(null)}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform bg-gradient-to-br from-brand-500 to-trust-500">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <polyline points="6,7 13,12 6,17" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/>
-                  <line x1="13" y1="17" x2="19" y2="17" stroke="#fff" strokeWidth="2.6" strokeLinecap="round"/>
-                </svg>
-              </div>
+              <Image src="/logo.svg" alt="beoneofus" width={32} height={32} priority unoptimized className="w-8 h-8 rounded-lg shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform" />
               <span className="font-black text-xl tracking-tight text-gray-900 dark:text-white">
                 beone<span className="text-trust-500">of</span>us
               </span>
@@ -1129,15 +1123,22 @@ export default function LandingPage() {
               {t('landing.hero.badge')}
             </div>
 
-            {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[1.1] mb-6">
-              <span className="block text-gray-900 dark:text-white">{t('landing.hero.headline_pre')}</span>
-              <span className="block mt-1"><span className="gradient-text inline-block pb-1">{typeText || " "}</span><span className="cursor-blink text-brand-500 font-light">|</span></span>
-              <span className="block text-gray-900 dark:text-white">{t('landing.hero.headline_post')}</span>
+            {/* Headline — a deliberate crescendo: lead-in → the promise → the resolution */}
+            <h1 className="mb-6">
+              <span className="block text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-gray-500 dark:text-gray-400 mb-2 sm:mb-3">
+                {t('landing.hero.headline_pre')}
+              </span>
+              <span className="block text-4xl sm:text-6xl md:text-7xl font-black tracking-tighter leading-[1.02]">
+                <span className="gradient-text inline-block pb-1">{typeText || " "}</span>
+                <span className="cursor-blink text-brand-500 font-light">|</span>
+              </span>
+              <span className="block text-xl sm:text-2xl md:text-[1.75rem] font-black tracking-tight text-gray-900 dark:text-white mt-3 sm:mt-4">
+                {t('landing.hero.headline_post')}
+              </span>
             </h1>
 
             {/* Sub */}
-            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto font-medium leading-relaxed mb-8">
+            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto font-medium leading-relaxed mb-8">
               {t('landing.hero.subtitle')}
             </p>
 
@@ -2064,12 +2065,7 @@ function Footer({ session }) {
           {/* Brand */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4 w-fit">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-brand-500 to-trust-500">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <polyline points="6,7 13,12 6,17" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/>
-                  <line x1="13" y1="17" x2="19" y2="17" stroke="#fff" strokeWidth="2.6" strokeLinecap="round"/>
-                </svg>
-              </div>
+              <Image src="/logo.svg" alt="beoneofus" width={32} height={32} unoptimized className="w-8 h-8 rounded-lg" />
               <span className="font-black text-xl tracking-tight text-gray-900 dark:text-white">
                 beone<span className="text-trust-500">of</span>us
               </span>

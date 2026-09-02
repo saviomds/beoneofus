@@ -19,6 +19,7 @@ import { getAvatarSrc } from "../lib/avatar";
 import { signOutEverywhere } from "../lib/signOutEverywhere";
 import { useLanguage } from "../lib/i18n";
 import { CORE_URL } from "../lib/platform";
+import RwandaFlag from "./components/RwandaFlag";
 
 /* ─── Animation helpers ─────────────────────────────────────── */
 function useIntersect(options = {}) {
@@ -139,13 +140,12 @@ function authLink(session, dest) {
 
 
 const TYPEWRITER_WORD_KEYS = [
-  "landing.hero.typewriter.individuals",
-  "landing.hero.typewriter.businesses",
-  "landing.hero.typewriter.governments",
-  "landing.hero.typewriter.schools",
-  "landing.hero.typewriter.hospitals",
-  "landing.hero.typewriter.ngos",
-  "landing.hero.typewriter.communities",
+  "landing.hero.typewriter.future",
+  "landing.hero.typewriter.career",
+  "landing.hero.typewriter.mentor",
+  "landing.hero.typewriter.pathway",
+  "landing.hero.typewriter.chance",
+  "landing.hero.typewriter.livelihood",
 ];
 
 /* ─── Component ─────────────────────────────────────────────── */
@@ -474,6 +474,10 @@ export default function LandingPage() {
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
 
+           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Rwanda */}
+            <RwandaFlag className="-mt-1" />
+
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0 group" onClick={() => setActiveDropdown(null)}>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform bg-gradient-to-br from-brand-500 to-trust-500">
@@ -489,6 +493,7 @@ export default function LandingPage() {
                 beone<span className="text-trust-500">of</span>us
               </span>
             </Link>
+           </div>
 
             {/* Desktop nav — mega menus */}
             <div className="hidden lg:flex items-center gap-0.5">

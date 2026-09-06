@@ -15,6 +15,7 @@
     "@serwist/next": "^9.0.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.103.0",
+    "@vercel/speed-insights": "^2.0.0",
     "framer-motion": "^12.42.2",
     "groq-sdk": "^1.1.2",
     "highlight.js": "^10.7.3",

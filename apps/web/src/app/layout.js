@@ -1,5 +1,6 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from './components/ThemeProvider';
 import { LanguageProvider } from '../lib/i18n';
 import ClientShell from './components/ClientShell';
@@ -72,6 +73,7 @@ export default function RootLayout({ children }) {
             <OnlineUsersProvider>
               <ClientShell />
               {children}
+              <SpeedInsights />
             </OnlineUsersProvider>
           </LanguageProvider>
         </ThemeProvider>

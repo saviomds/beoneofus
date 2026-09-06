@@ -10,9 +10,9 @@ import {
   AlertTriangle, Briefcase, GraduationCap, BookOpen, Star,
   Sparkles, Lock, CheckCircle2, MessageSquare, TrendingUp,
   Play, Shield, ChevronRight, Award, Pencil, Trash2,
-  Laptop, ShoppingBag, Trophy, FileText, Newspaper, Crown,
+  ShoppingBag, FileText, Newspaper, Crown,
   Heart, Check, ShieldAlert, ShieldCheck,
-  LogOut, User, Settings, LayoutDashboard,
+  LogOut, User, Settings, LayoutDashboard, Plane,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { getAvatarSrc } from "../lib/avatar";
@@ -161,6 +161,7 @@ export default function LandingPage() {
   const [liveStats, setLiveStats] = useState(FALLBACK_STATS);
   const [testimonials, setTestimonials] = useState(FALLBACK_TESTIMONIALS);
   const [sponsors, setSponsors] = useState([]);
+  const [partners, setPartners] = useState([]);
   const [heroVisible, setHeroVisible] = useState(false);
   const [navAvatarError, setNavAvatarError] = useState(false);
   const [typeText, setTypeText] = useState("");
@@ -238,6 +239,14 @@ export default function LandingPage() {
     fetch("/api/sponsors")
       .then(r => r.json())
       .then(d => setSponsors(d.sponsors || []))
+      .catch(() => {});
+  }, []);
+
+  /* accepted partners */
+  useEffect(() => {
+    fetch("/api/partners")
+      .then(r => r.json())
+      .then(d => setPartners(d.partners || []))
       .catch(() => {});
   }, []);
 
@@ -468,7 +477,7 @@ export default function LandingPage() {
 
         {/* ── Navbar ──────────────────────────── */}
         <nav
-          className="fixed top-0 w-full z-50 border-b border-gray-200/80 dark:border-white/5 bg-white/95 dark:bg-[#080c12]/95 backdrop-blur-2xl"
+          className="fixed top-0 w-full z-50 border-b border-gray-200/80 dark:border-white/5 bg-white/95 dark:bg-[#080c12]/95 backdrop-blur-2xl shadow-sm shadow-gray-900/[0.03] dark:shadow-none"
           onMouseLeave={() => setActiveDropdown(null)}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
@@ -487,7 +496,7 @@ export default function LandingPage() {
            </div>
 
             {/* Desktop nav — mega menus */}
-            <div className="hidden lg:flex items-center gap-0.5">
+            <div className="hidden lg:flex items-center gap-1">
               {[
                 { id: "product",   label: "landing.nav.product"   },
                 { id: "community", label: "landing.nav.community" },
@@ -497,19 +506,28 @@ export default function LandingPage() {
                 <button
                   key={item.id}
                   onMouseEnter={() => setActiveDropdown(item.id)}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-full transition-all duration-200 ${
                     activeDropdown === item.id
-                      ? "text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10"
+                      ? "text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-500/10"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
                   }`}
                 >
                   {t(item.label)}
-                  <ChevronDown size={13} className={`transition-transform duration-200 ${activeDropdown === item.id ? "rotate-180 text-brand-500" : ""}`} />
+                  <ChevronDown size={13} className={`transition-transform duration-200 ${activeDropdown === item.id ? "rotate-180 text-cyan-600 dark:text-cyan-400" : ""}`} />
                 </button>
               ))}
-              <Link href="/docs" onMouseEnter={() => setActiveDropdown(null)} className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-all">
+
+              <Link href="/docs" onMouseEnter={() => setActiveDropdown(null)} className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-all duration-200">
                 {t('landing.nav.docs')}
               </Link>
+
+              {/* Divider — Student Portal jumps to a different app (/core), so it's
+                  set apart as its own pill rather than blending into the plain nav links. */}
+              <span className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-1.5" aria-hidden="true" />
+
+              <a href={CORE_URL} onMouseEnter={() => setActiveDropdown(null)} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-white/10 hover:border-cyan-300 dark:hover:border-cyan-700/50 hover:text-cyan-700 dark:hover:text-cyan-300 rounded-full transition-all duration-200">
+                {t('landing.nav.student_portal')}
+              </a>
             </div>
 
             {/* Auth area */}
@@ -707,7 +725,7 @@ export default function LandingPage() {
                   </Link>
                   <Link href="/auth"
                     onMouseEnter={() => setActiveDropdown(null)}
-                    className="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 hover:scale-105">
+                    className="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-black rounded-full transition-all shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 hover:scale-105">
                     {t('landing.auth.get_started')}
                   </Link>
                 </>
@@ -740,7 +758,8 @@ export default function LandingPage() {
                           { icon: <Briefcase size={17} />,    label: t('landing.nav.product_menu.jobs_label'), desc: t('landing.nav.product_menu.jobs_desc'),    href: "/dash/services",    color: "blue"    },
                           { icon: <Users size={17} />,        label: t('landing.nav.product_menu.connections_label'),     desc: t('landing.nav.product_menu.connections_desc'),  href: "/dash/connections", color: "indigo"  },
                           { icon: <ShoppingBag size={17} />,  label: t('landing.nav.product_menu.marketplace_label'),     desc: t('landing.nav.product_menu.marketplace_desc'),  href: "/dash/marketplace", color: "amber"   },
-                          { icon: <Code2 size={17} />,        label: t('landing.nav.product_menu.projects_label'),        desc: t('landing.nav.product_menu.projects_desc'),     href: "/projects",         color: "emerald" },
+                          { icon: <GraduationCap size={17} />,label: t('landing.nav.product_menu.study_abroad_label'), desc: t('landing.nav.product_menu.study_abroad_desc'), href: "/study-abroad", color: "emerald" },
+                          { icon: <Plane size={17} />,        label: t('landing.nav.product_menu.work_abroad_label'),  desc: t('landing.nav.product_menu.work_abroad_desc'),  href: "/work-abroad",  color: "violet"  },
                         ].map(({ icon, label, desc, href, color }) => (
                           <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                             className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
@@ -764,11 +783,7 @@ export default function LandingPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.product_menu.tools_heading')}</p>
                       <div className="space-y-0.5">
                         {[
-                          { icon: <Laptop size={15} />,      label: t('landing.nav.product_menu.tool_ide'), href: "/IDEPage"            },
                           { icon: <ShoppingBag size={15} />, label: t('landing.nav.product_menu.tool_marketplace'),    href: "/dash/marketplace"   },
-                          { icon: <Code2 size={15} />,       label: t('landing.nav.product_menu.tool_projects'),       href: "/projects"           },
-                          { icon: <Trophy size={15} />,      label: t('landing.nav.product_menu.tool_leaderboard'),    href: "/dash/leaderboard"   },
-                          { icon: <FileText size={15} />,    label: t('landing.nav.product_menu.tool_resume'), href: "/dash/profile"       },
                           { icon: <Crown size={15} />,       label: t('landing.nav.product_menu.tool_premium'),        href: "/dash/premium"       },
                         ].map(({ icon, label, href }) => (
                           <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
@@ -797,27 +812,17 @@ export default function LandingPage() {
                   <div className="grid grid-cols-3 gap-10">
                     <div className="col-span-2">
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.community_menu.hubs_heading')}</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { label: t('landing.nav.community_menu.hub_tech'),   href: "/community/tech-engineering"    },
-                          { label: t('landing.nav.community_menu.hub_design'),  href: "/community/design-creativity"   },
-                          { label: t('landing.nav.community_menu.hub_founders'),  href: "/community/founders-startups"   },
-                          { label: t('landing.nav.community_menu.hub_marketing'),   href: "/community/marketing-growth"    },
-                          { label: t('landing.nav.community_menu.hub_finance'),   href: "/community/finance-business"    },
-                        ].map(({ label, href }) => (
-                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                            className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-brand-200 dark:hover:border-brand-500/20 hover:bg-brand-50/40 dark:hover:bg-brand-500/5 transition-all group">
-                            <div className="w-2 h-2 rounded-full bg-brand-500/60 shrink-0" />
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</span>
-                          </Link>
-                        ))}
-                      </div>
+                      <Link href="/dash/more?tool=community" onClick={() => setActiveDropdown(null)}
+                        className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-brand-200 dark:hover:border-brand-500/20 hover:bg-brand-50/40 dark:hover:bg-brand-500/5 transition-all group">
+                        <div className="w-2 h-2 rounded-full bg-brand-500/60 shrink-0" />
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{t('landing.nav.community_menu.hub_open')}</span>
+                      </Link>
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.community_menu.explore_heading')}</p>
                       <div className="space-y-0.5">
                         {[
-                          { icon: <Globe size={15} />,        label: t('landing.nav.community_menu.explore_projects'), href: "/Explore_Projects" },
+                          { icon: <Globe size={15} />,        label: t('landing.nav.community_menu.explore_projects'), href: "/dash/projects" },
                           { icon: <Newspaper size={15} />,    label: t('landing.nav.community_menu.blog'),             href: "/blog" },
                           { icon: <MessageSquare size={15} />,label: t('landing.nav.community_menu.messaging'),        href: "/dash/messages" },
                           { icon: <Users size={15} />,        label: t('landing.nav.community_menu.connections'),      href: "/dash/connections" },
@@ -839,8 +844,7 @@ export default function LandingPage() {
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.resources_menu.learn_heading')}</p>
                       {[
-                        { icon: <Laptop size={16} />,   label: t('landing.nav.resources_menu.ide_label'),   desc: t('landing.nav.resources_menu.ide_desc'), href: "/IDEPage"          },
-                        { icon: <Globe size={16} />,    label: t('landing.nav.resources_menu.projects_label'), desc: t('landing.nav.resources_menu.projects_desc'), href: "/Explore_Projects" },
+                        { icon: <Globe size={16} />,    label: t('landing.nav.resources_menu.projects_label'), desc: t('landing.nav.resources_menu.projects_desc'), href: "/dash/projects" },
                       ].map(({ icon, label, desc, href }) => (
                         <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                           className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
@@ -878,7 +882,7 @@ export default function LandingPage() {
                       {[
                         { icon: <Globe size={14} />,         label: t('landing.nav.resources_menu.all_resources'),          href: "/resources" },
                         { icon: <MessageSquare size={14} />, label: t('landing.nav.resources_menu.support_ticket'),  href: "/dash/more?tool=support" },
-                        { icon: <Users size={14} />,         label: t('landing.nav.resources_menu.community_forum'),         href: "/community" },
+                        { icon: <Users size={14} />,         label: t('landing.nav.resources_menu.community_forum'),         href: "/dash/more?tool=community" },
                       ].map(({ icon, label, href }) => (
                         <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
                           className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
@@ -898,7 +902,7 @@ export default function LandingPage() {
                         {[
                           { icon: <Star size={17} />,      label: t('landing.nav.company_menu.sponsors_label'),          desc: t('landing.nav.company_menu.sponsors_desc'),      href: "/sponsors",         color: "amber"  },
                           { icon: <Newspaper size={17} />, label: t('landing.nav.company_menu.blog_label'),              desc: t('landing.nav.company_menu.blog_desc'),    href: "/blog",             color: "gray"   },
-                          { icon: <Users size={17} />,     label: t('landing.nav.company_menu.community_label'),         desc: t('landing.nav.company_menu.community_desc'),   href: "/community",        color: "indigo" },
+                          { icon: <Users size={17} />,     label: t('landing.nav.company_menu.community_label'),         desc: t('landing.nav.company_menu.community_desc'),   href: "/dash/more?tool=community",        color: "indigo" },
                           { icon: <Shield size={17} />,    label: t('landing.nav.company_menu.founder_label'), desc: t('landing.nav.company_menu.founder_desc'),      href: "/founder-dashboard",color: "blue"   },
                         ].map(({ icon, label, desc, href, color }) => (
                           <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
@@ -966,15 +970,15 @@ export default function LandingPage() {
                     { label: t('landing.nav.product_menu.jobs_label'), href: "/dash/services"    },
                     { label: t('landing.nav.product_menu.connections_label'),     href: "/dash/connections" },
                     { label: t('landing.nav.product_menu.tool_marketplace'),     href: "/dash/marketplace" },
-                    { label: t('landing.nav.product_menu.tool_projects'),        href: "/projects"         },
-                    { label: t('landing.nav.product_menu.tool_ide'),  href: "/IDEPage"          },
+                    { label: t('landing.nav.product_menu.study_abroad_label'), href: "/study-abroad" },
+                    { label: t('landing.nav.product_menu.work_abroad_label'),  href: "/work-abroad"  },
                   ],
                 },
                 {
                   id: "community", label: t('landing.nav.community'),
                   links: [
-                    { label: t('landing.nav.community_menu.explore_projects'),       href: "/Explore_Projects" },
-                    { label: t('landing.nav.community_menu.hubs_heading'),         href: "/community"        },
+                    { label: t('landing.nav.community_menu.explore_projects'),       href: "/dash/projects" },
+                    { label: t('landing.nav.community_menu.hub_open'),         href: "/dash/more?tool=community"        },
                     { label: t('landing.nav.community_menu.blog'),                   href: "/blog"             },
                     { label: t('landing.nav.community_menu.messaging'),              href: "/dash/messages"    },
                   ],
@@ -992,7 +996,7 @@ export default function LandingPage() {
                   links: [
                     { label: t('landing.nav.company_menu.sponsors_label'), href: "/sponsors"          },
                     { label: t('landing.nav.company_menu.blog_label'),     href: "/blog"              },
-                    { label: t('landing.nav.company_menu.community_label'),href: "/community"         },
+                    { label: t('landing.nav.company_menu.community_label'),href: "/dash/more?tool=community"         },
                   ],
                 },
               ].map(section => (
@@ -1178,6 +1182,9 @@ export default function LandingPage() {
         {/* ── Sponsors strip ──────────────────── */}
         <SponsorsStrip sponsors={sponsors} />
 
+        {/* ── Partners strip ──────────────────── */}
+        <PartnersStrip partners={partners} />
+
         {/* ── What is beoneofus ───────────────── */}
         <WhatIsSection />
 
@@ -1309,6 +1316,48 @@ function SponsorsStrip({ sponsors }) {
           >
             <Handshake size={12} /> {t('landing.sponsors.become_sponsor')}
           </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PartnersStrip({ partners }) {
+  const { t } = useLanguage();
+  const [ref, visible] = useIntersect();
+  if (!partners.length) return null;
+
+  return (
+    <section ref={ref} className={`relative z-10 border-b border-gray-200 dark:border-white/5 bg-white/40 dark:bg-white/[0.01] py-12 px-4 reveal ${visible ? "visible" : ""}`}>
+      <div className="max-w-6xl mx-auto">
+        <p className="text-center text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-600 mb-10">
+          {t('landing.partners.heading')}
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-10 sm:gap-14">
+          {partners.map((p) => {
+            const inner = p.logo_url ? (
+              <Image
+                src={p.logo_url}
+                alt={p.company_name}
+                width={130}
+                height={44}
+                unoptimized
+                className="h-9 sm:h-11 w-auto max-w-[130px] object-contain opacity-50 dark:opacity-35 grayscale group-hover:opacity-100 group-hover:grayscale-0 transition-all duration-300"
+              />
+            ) : (
+              <div className="h-10 px-5 flex items-center bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-xl text-sm font-bold text-gray-500 dark:text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white transition-all">
+                {p.company_name}
+              </div>
+            );
+            return p.website ? (
+              <a key={p.id} href={p.website} target="_blank" rel="noopener noreferrer" title={p.company_name}
+                className="group flex items-center transition-all duration-200 hover:-translate-y-1">
+                {inner}
+              </a>
+            ) : (
+              <div key={p.id} title={p.company_name} className="group flex items-center">{inner}</div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -2033,9 +2082,8 @@ function Footer({ session }) {
   const { t } = useLanguage();
   const cols = [
     { title: t('landing.footer.platform_heading'), links: [
-      { label: t('landing.footer.platform.explore'), href: "/Explore_Projects" },
+      { label: t('landing.footer.platform.explore'), href: "/dash/projects" },
       { label: t('landing.footer.platform.job_board'), href: authLink(session, "/dash/marketplace") },
-      { label: t('landing.footer.platform.projects'), href: authLink(session, "/projects") },
       { label: t('landing.footer.platform.connections'), href: authLink(session, "/dash/connections") },
       { label: t('landing.footer.platform.premium'), href: authLink(session, "/dash/premium") },
     ]},

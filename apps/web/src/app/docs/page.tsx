@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { supabase } from "../supabaseClient";
 import { usePlatformVersion } from "../../hooks/usePlatformVersion";
 import {
-  Terminal, Search, Menu, X, ChevronRight, ChevronDown,
+  Search, Menu, X, ChevronRight, ChevronDown,
   ShieldCheck, Zap, BookOpen, ExternalLink,
   LayoutDashboard, MessageSquare, Briefcase, Network,
-  Code2, GraduationCap, Users, Bell, Star, Globe,
-  Cpu, Award, FileText, Sparkles, Hash, TrendingUp,
+  Code2, Users, Bell, Star, Globe,
+  Cpu, Award, FileText, Sparkles, Hash,
   ArrowRight, CheckCircle2, Lock, Rss, ShoppingBag,
-  UserCircle, GitBranch, Laptop, ScrollText, BadgeCheck,
+  UserCircle, GitBranch, ScrollText, BadgeCheck,
   Crown
 } from "lucide-react";
 
@@ -32,7 +33,7 @@ const NAV = [
     icon: LayoutDashboard,
     links: [
       { id: "home-feed",      label: "Home Feed",           icon: Rss },
-      { id: "profile",        label: "Profile & Resume",    icon: UserCircle },
+      { id: "profile",        label: "Profile",             icon: UserCircle },
       { id: "notifications",  label: "Notifications",       icon: Bell },
     ],
   },
@@ -49,7 +50,6 @@ const NAV = [
     icon: Code2,
     links: [
       { id: "projects",       label: "Project Management",  icon: GitBranch },
-      { id: "ide",            label: "In-Browser IDE",      icon: Laptop },
       { id: "explore",        label: "Explore Projects",    icon: Globe },
     ],
   },
@@ -57,7 +57,7 @@ const NAV = [
     group: "Community",
     icon: Users,
     links: [
-      { id: "community-hubs", label: "Community Hubs",     icon: Cpu },
+      { id: "community-hubs", label: "Community Hub",     icon: Cpu },
       { id: "posts-feed",     label: "Posts & Feed",        icon: Rss },
       { id: "blog",           label: "Blog",                icon: ScrollText },
     ],
@@ -313,7 +313,7 @@ export default function DocsPage() {
           {[
             { href: "/dash",                   label: "Dashboard",      icon: LayoutDashboard },
             { href: "/dash/jobs",              label: "Jobs",           icon: Briefcase },
-            { href: "/Explore_Projects",       label: "Explore",        icon: Globe },
+            { href: "/dash/projects",       label: "Explore",        icon: Globe },
             { href: "/dash/more?tool=support", label: "Support Ticket", icon: ExternalLink },
           ].map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors py-1.5 px-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800/50">
@@ -332,7 +332,7 @@ export default function DocsPage() {
       <header className="fixed top-0 left-0 right-0 h-14 border-b border-gray-200 dark:border-gray-800 bg-white/90 dark:bg-[#080808]/90 backdrop-blur-xl z-50 flex items-center justify-between px-4 sm:px-6 gap-3">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
           <Link href="/" className="flex items-center gap-1.5 shrink-0">
-            <Terminal className="text-blue-600 dark:text-blue-400 shrink-0" size={20} />
+            <Image src="/logo.svg" alt="beoneofus" width={20} height={20} unoptimized className="shrink-0" />
             <BrandName size="base" />
           </Link>
           <span className="hidden sm:block text-gray-300 dark:text-gray-700 select-none">/</span>
@@ -445,7 +445,7 @@ export default function DocsPage() {
                 ))}
               </div>
               <Callout type="new" title={`Platform ${vTag} — ${vLabel}`}>
-                Public profiles, shareable resumes, job & internship matching, career pathways, premium membership, Marketplace, in-browser IDE, and sponsor partnerships are now live and open to all members.
+                Public profiles, jobs & internships, premium membership, Marketplace, and sponsor partnerships are now live and open to all members.
               </Callout>
             </section>
 
@@ -459,7 +459,7 @@ export default function DocsPage() {
                 { n: 2, title: "Build your profile",          desc: "Add your avatar, bio, skills, and field. A strong profile puts you in front of recruiters, mentors, and collaborators." },
                 { n: 3, title: "Explore the feed",            desc: "Head to /dash/home to see what people in your field are building, sharing, and discussing right now." },
                 { n: 4, title: "Connect with someone",        desc: "Visit any public profile at /u/[username] and hit Connect. Once accepted, you can message each other directly." },
-                { n: 5, title: "Apply, connect, or earn",     desc: "Apply for a job or internship, reach out to a mentor in your network, map a career pathway, or list your services in the Marketplace." },
+                { n: 5, title: "Apply, connect, or earn",     desc: "Apply for a job or internship, reach out to a mentor in your network, or list your services in the Marketplace." },
               ]} />
             </section>
 
@@ -470,7 +470,6 @@ export default function DocsPage() {
               </p>
               <FeatureGrid items={[
                 { icon: <Briefcase size={13} />,     title: "Find work & internships", desc: "Browse jobs and internships across all industries and post freelance services. One-click apply with your profile — no CV upload needed." },
-                { icon: <TrendingUp size={13} />,    title: "Career pathways",        desc: "Map a clear route to your goal — a role, studying or working abroad, or your own business — and track each step." },
                 { icon: <Users size={13} />,         title: "Mentors & network",     desc: "Connect with alumni, mentors and professionals who have done it. Verified profiles, safe messaging." },
                 { icon: <ShoppingBag size={13} />,   title: "Earn from your skills",  desc: "Sell services, consulting, and templates in the Marketplace. Set your rates and get paid directly through the platform." },
                 { icon: <Code2 size={13} />,         title: "Build your own",         desc: "Find co-founders, join open projects, and turn an idea into a business with the right team." },
@@ -494,13 +493,12 @@ export default function DocsPage() {
             </section>
 
             <section className="mb-16">
-              <SectionHeading id="profile" icon={<UserCircle size={15} />} label="Profile & Resume" badge={{ text: "New", color: "purple" }} />
+              <SectionHeading id="profile" icon={<UserCircle size={15} />} label="Profile" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Every user has a private settings profile at <InlineCode>/dash/profile</InlineCode>, a public profile at <InlineCode>/u/[username]</InlineCode>, and a shareable resume at <InlineCode>/resume/[username]</InlineCode>.
+                Every user has a private settings profile at <InlineCode>/dash/profile</InlineCode> and a public profile at <InlineCode>/u/[username]</InlineCode>.
               </p>
               <FeatureGrid items={[
                 { icon: <GitBranch size={13} />,  title: "GitHub stats",       desc: "Live contribution graphs, top languages, and repo count from the GitHub API." },
-                { icon: <ScrollText size={13} />, title: "Shareable resume",   desc: "A clean public resume at /resume/[username] you can send to any employer." },
                 { icon: <BadgeCheck size={13} />, title: "Verified badge",     desc: "Verified accounts show a blue checkmark across all platform surfaces." },
                 { icon: <Crown size={13} />,      title: "Premium badge",      desc: "Premium members get a gold crown badge on their profile and every post." },
                 { icon: <Star size={13} />,       title: "Skill endorsements", desc: "Connections can endorse your skills, adding social proof to your profile." },
@@ -563,42 +561,27 @@ export default function DocsPage() {
               <FeatureGrid items={[
                 { icon: <FileText size={13} />, title: "Full project page",   desc: "Add a description, tech stack, live demo URL, and GitHub link. Tell the story of what you built." },
                 { icon: <Globe size={13} />,    title: "Get discovered",      desc: "Public projects show up in Explore and in the Spotlight sidebar seen by thousands of members." },
-                { icon: <Laptop size={13} />,   title: "Code in the browser", desc: "Jump into the In-Browser IDE from any project and start editing without any local setup." },
                 { icon: <Star size={13} />,     title: "Community recognition",desc: "Other members can star your work. Stars signal quality and push your project up the Explore rankings." },
               ]} />
             </section>
 
             <section className="mb-16">
-              <SectionHeading id="ide" icon={<Laptop size={15} />} label="In-Browser IDE" badge={{ text: "New", color: "purple" }} />
-              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                No local setup, no installs. The In-Browser IDE at <InlineCode>/IDEPage</InlineCode> gives you a full code editor right in your browser — open any project and start building immediately.
-              </p>
-              <Callout type="tip" title="Zero setup required">
-                Open any project and click &quot;Open in IDE&quot; to jump straight into editing. Your work saves automatically so you never lose progress.
-              </Callout>
-            </section>
-
-            <section className="mb-16">
               <SectionHeading id="explore" icon={<Globe size={15} />} label="Explore Projects" />
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm sm:text-base">
-                Browse thousands of community-built projects at <InlineCode>/Explore_Projects</InlineCode>. Filter by tech stack, sort by stars, get inspired, find collaborators, or hire directly from a project card.
+                Browse thousands of community-built projects at <InlineCode>/dash/projects</InlineCode>. Filter by tech stack, sort by stars, get inspired, find collaborators, or hire directly from a project card.
               </p>
             </section>
 
             {/* ════ COMMUNITY ════ */}
 
             <section className="mb-16">
-              <SectionHeading id="community-hubs" icon={<Cpu size={15} />} label="Community Hubs" />
+              <SectionHeading id="community-hubs" icon={<Cpu size={15} />} label="Community Hub" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Join topic rooms at <InlineCode>/community</InlineCode> to discuss real challenges, share wins, and grow alongside people who do what you do. Every hub has thousands of active members.
+                Jump into the live Community Hub at <InlineCode>/dash/more?tool=community</InlineCode> to discuss real challenges, share wins, and grow alongside people who do what you do.
               </p>
               <FeatureGrid items={[
-                { icon: <Code2 size={13} />,  title: "Tech & Engineering",     desc: "Software engineers, data scientists, DevOps, and all things technology. 31.5k members." },
-                { icon: <Sparkles size={13} />,title: "Design & Creativity",   desc: "UI/UX designers, brand strategists, illustrators, and visual creators. 19.7k members." },
-                { icon: <Zap size={13} />,    title: "Founders & Startups",    desc: "Entrepreneurs and bootstrappers sharing growth, funding, and lessons learned. 14.2k members." },
-                { icon: <TrendingUp size={13} />,title: "Marketing & Growth",  desc: "Performance marketers, content creators, SEO specialists, and growth hackers. 11.3k members." },
-                { icon: <Briefcase size={13} />,title: "Finance & Business",   desc: "Finance professionals, analysts, consultants, and business strategists. 8.6k members." },
-                { icon: <GraduationCap size={13} />,title: "Education & Research",desc: "Academics, educators, researchers, and lifelong learners sharing knowledge globally. 6.4k members." },
+                { icon: <MessageSquare size={13} />, title: "Live discussions", desc: "Real-time conversations with the rest of the network, right inside the dashboard." },
+                { icon: <Users size={13} />,         title: "Ask & answer",    desc: "Get unstuck fast with help from peers across every field." },
               ]} />
             </section>
 
@@ -621,13 +604,13 @@ export default function DocsPage() {
             <section className="mb-16">
               <SectionHeading id="job-matching" icon={<Briefcase size={15} />} label="Jobs & Services" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Stop scrolling through listings that don&apos;t fit. The platform matches your profile to active jobs across all industries and shows you the roles where you&apos;re most qualified — ranked by compatibility. You can also post your own freelance services and get hired by clients directly.
+                Browse jobs and internships across every industry at <InlineCode>/dash/jobs</InlineCode>, apply with your profile in one click, and track each application. You can also post your own freelance services and get hired by clients directly.
               </p>
               <FeatureGrid items={[
-                { icon: <Zap size={13} />,         title: "Match score (%)",      desc: "Each listing shows a percentage compatibility score against your skills." },
-                { icon: <FileText size={13} />,    title: "Match reason",         desc: "Plain-English explanation of why you're a good fit for each role." },
+                { icon: <Briefcase size={13} />,   title: "Jobs & internships",   desc: "Openings across all industries, filterable by type, location, and remote policy." },
                 { icon: <CheckCircle2 size={13} />,title: "Application tracking", desc: "Dashboard view with live status updates (Pending / Accepted / Rejected)." },
                 { icon: <MessageSquare size={13} />,title: "Employer messages",   desc: "Accepted applications include direct messages and next steps." },
+                { icon: <ShoppingBag size={13} />, title: "Sell your services",  desc: "List consulting, freelance work, and templates in the Marketplace." },
               ]} />
             </section>
 
@@ -748,7 +731,7 @@ export default function DocsPage() {
                 {[
                   { href: "/dash",                   label: "Dashboard", icon: LayoutDashboard },
                   { href: "/dash/jobs",              label: "Jobs",      icon: Briefcase },
-                  { href: "/Explore_Projects",       label: "Explore",   icon: Globe },
+                  { href: "/dash/projects",       label: "Explore",   icon: Globe },
                   { href: "/dash/more?tool=support", label: "Support",   icon: ExternalLink },
                 ].map(({ href, label, icon: Icon }) => (
                   <li key={href}>

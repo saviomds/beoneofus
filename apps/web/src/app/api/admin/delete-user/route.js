@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logAdminAction } from '../../../../lib/auditLog';
 
 export async function DELETE(request) {
   const supabaseAdmin = createClient(
@@ -43,12 +44,12 @@ export async function DELETE(request) {
     await supabaseAdmin.from('profiles').delete().eq('id', userId);
 
     // Audit log: record which admin deleted which user
-    await supabaseAdmin.from('admin_audit_log').insert({
-      actor_id: caller.id,
+    await logAdminAction(supabaseAdmin, {
+      actorId: caller.id,
       action: 'delete_user',
-      target_user_id: userId,
-      created_at: new Date().toISOString(),
-    }).catch(e => console.warn('audit log insert failed:', e.message));
+      targetType: 'user',
+      targetUserId: userId,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import {
-  Terminal, ArrowLeft, CheckCircle2, Circle, Users, User, Settings,
-  Globe, Briefcase, FileText, MessageSquare, Zap, ChevronRight,
-  Code2, Star, Bell, Search, TrendingUp, Laptop, Hash,
+  ArrowLeft, CheckCircle2, Circle, Users, User, Settings,
+  Globe, Briefcase, MessageSquare, Zap, ChevronRight,
+  Star, Bell, Search, Compass, Hash,
 } from "lucide-react";
 
 const STEPS = [
@@ -45,18 +46,15 @@ const STEPS = [
   },
   {
     step: 3,
-    title: "Join a Community Hub",
+    title: "Join the Community Hub",
     time: "1 min",
     icon: <Hash size={20} />,
     color: "emerald",
-    desc: "Pick the community that matches your profession. Join discussions, ask questions, and share what you know.",
+    desc: "Jump into live discussions, ask questions, and share what you know with the rest of the network.",
     actions: [
-      { label: "Browse all hubs", href: "/community" },
-      { label: "Tech & Engineering", href: "/community/tech-engineering" },
-      { label: "Founders & Startups", href: "/community/founders-startups" },
+      { label: "Open Community Hub", href: "/dash/more?tool=community" },
     ],
     tips: [
-      "You can participate in multiple communities",
       "Introduce yourself in the #introductions channel",
       "Trending discussions update daily — check them regularly",
     ],
@@ -70,7 +68,7 @@ const STEPS = [
     desc: "Connect with professionals in your field. Your network unlocks opportunities, mentorship, and collaborations.",
     actions: [
       { label: "Find connections", href: "/dash/connections" },
-      { label: "Explore profiles", href: "/Explore_Projects" },
+      { label: "Explore profiles", href: "/dash/projects" },
     ],
     tips: [
       "Send a personalized note with every connection request",
@@ -87,7 +85,7 @@ const STEPS = [
     desc: "Browse jobs, internships, contracts, freelance work, partnerships, and projects tailored to your profile.",
     actions: [
       { label: "View jobs", href: "/dash/jobs" },
-      { label: "Career pathways", href: "/dash/pathways" },
+      { label: "Discover people", href: "/dash/discover" },
       { label: "Marketplace", href: "/dash/marketplace" },
     ],
     tips: [
@@ -100,11 +98,9 @@ const STEPS = [
 
 const FEATURES = [
   { icon: <Briefcase size={18} />, label: "Jobs & Internships", desc: "Matched to your profile", href: "/dash/jobs", color: "blue" },
-  { icon: <TrendingUp size={18} />, label: "Career Pathways", desc: "A route to your goal", href: "/dash/pathways", color: "rose" },
-  { icon: <Code2 size={18} />, label: "Browser IDE", desc: "Code without setup", href: "/IDEPage", color: "emerald" },
   { icon: <Users size={18} />, label: "Mentors & Network", desc: "People who've done it", href: "/dash/connections", color: "amber" },
-  { icon: <Globe size={18} />, label: "Projects", desc: "Portfolio & open source", href: "/Explore_Projects", color: "violet" },
-  { icon: <FileText size={18} />, label: "Resume", desc: "Shareable, always current", href: "/dash/profile", color: "indigo" },
+  { icon: <Globe size={18} />, label: "Projects", desc: "Portfolio & open source", href: "/dash/projects", color: "violet" },
+  { icon: <Compass size={18} />, label: "Discover", desc: "Find people to connect with", href: "/dash/discover", color: "indigo" },
 ];
 
 const colorMap = {
@@ -321,10 +317,10 @@ export default function QuickStartPage() {
       <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-8">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <Link href="/" className="font-black text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Terminal size={20} className="text-blue-500" /> beone<span className="text-blue-600">of</span>us
+            <Image src="/logo.svg" alt="beoneofus" width={22} height={22} unoptimized /> beone<span className="text-blue-600">of</span>us
           </Link>
           <div className="flex flex-wrap justify-center gap-4">
-            {[{ label: "Resources", href: "/resources" }, { label: "Community", href: "/community" }, { label: "Jobs", href: "/dash/jobs" }, { label: "Docs", href: "/docs" }].map(({ label, href }) => (
+            {[{ label: "Resources", href: "/resources" }, { label: "Jobs", href: "/dash/jobs" }, { label: "Docs", href: "/docs" }].map(({ label, href }) => (
               <Link key={label} href={href} className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors font-medium">{label}</Link>
             ))}
           </div>

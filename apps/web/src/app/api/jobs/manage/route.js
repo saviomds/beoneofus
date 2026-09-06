@@ -33,7 +33,7 @@ export async function GET() {
     const [jobsRes, appsRes, profileRes] = await Promise.all([
       supabase
         .from('jobs')
-        .select('id, title, company, department, status, type, location, salary, tags, description, requirements, experience_level, views, featured, image_url, created_at')
+        .select('id, title, company, department, status, type, location, salary, tags, description, requirements, experience_level, views, featured, image_url, approved, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
       supabase
@@ -119,6 +119,8 @@ export async function POST(request) {
         experience_level: experience_level || 'Mid-level',
         image_url:        image_url?.trim() || null,
         featured:         featured || false,
+        // Every post is reviewed by an admin before it surfaces publicly.
+        approved:         false,
         user_id:          user.id,
         views:            0,
       })
@@ -174,6 +176,11 @@ export async function PATCH(request) {
     if (experience_level !== undefined) updates.experience_level = experience_level;
     if (image_url    !== undefined) updates.image_url        = image_url?.trim() || null;
     if (featured     !== undefined) updates.featured         = featured;
+
+    // Editing the public-facing content sends the post back for re-review.
+    if (['title', 'company', 'description', 'requirements', 'tags'].some((k) => k in updates)) {
+      updates.approved = false;
+    }
 
     const { data, error } = await supabase
       .from('jobs')

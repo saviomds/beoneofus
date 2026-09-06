@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  Home, Users, MessageSquare, Bookmark, FileText,
+  Home, Users, MessageSquare, Bookmark,
   Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
   CalendarDays, Handshake, Newspaper, LayoutDashboard,
-  ShoppingBag, User, Zap, Compass, BarChart2, Briefcase,
-  Map, Trophy, ScrollText, Building2, TrendingUp, Globe,
+  ShoppingBag, User, Compass, BarChart2, Briefcase,
+  Map, ScrollText, Building2, Globe,
   Search, ChevronLeft, ChevronRight, ChevronDown, Plus, Store, Orbit, Rocket,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -144,11 +144,10 @@ function setCachedProfile(data) {
    there's no duplication and the active workspace can auto-expand.        */
 const SECTION_WORKSPACE = {
   home: 'universe', feed: 'universe', messages: 'universe', notifications: 'universe',
-  resume: 'career', pathways: 'career', matches: 'career',
   jobs: 'opportunity', freelance: 'opportunity', companies: 'opportunity', contracts: 'opportunity', partnerships: 'opportunity', discover: 'opportunity', apply: 'opportunity',
   market: 'creator', marketplace: 'creator', services: 'creator', blog: 'creator', orders: 'creator',
   projects: 'innovation', 'tech-hub': 'innovation', startups: 'innovation',
-  connections: 'network', groups: 'network', events: 'network', leaderboard: 'network',
+  connections: 'network', groups: 'network', events: 'network',
   analytics: 'command', admin: 'command',
   premium: 'account', settings: 'account', more: 'account', profile: 'account', search: 'account', docs: 'account', bookmarks: 'account', pages: 'account',
 };
@@ -444,14 +443,6 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
       ],
     },
     {
-      id: 'career', label: 'Career', icon: TrendingUp, accent: 'violet',
-      items: [
-        { id: 'resume',    icon: FileText, label: 'Resume Builder' },
-        { id: 'pathways',  icon: Map,      label: 'Career Pathways' },
-        { id: 'matches',   icon: Zap,      label: 'Matches' },
-      ],
-    },
-    {
       id: 'opportunity', label: 'Opportunity Engine', icon: Compass, accent: 'cyan',
       items: [
         { id: 'jobs',         icon: Briefcase,  label: 'Jobs' },
@@ -484,14 +475,12 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
         { id: 'connections', icon: UserPlus,     label: t('nav.items.connections') },
         { id: 'groups',      icon: Users,        label: t('nav.items.groups'), badge: unreadGroups, onBadge: handleMarkAllGroupsRead, isRinging: isGroupRinging },
         { id: 'events',      icon: CalendarDays, label: t('nav.items.events') },
-        { id: 'leaderboard', icon: Trophy,       label: 'Leaderboard' },
       ],
     },
     {
       id: 'command', label: 'Command Center', icon: BarChart2, accent: 'slate',
       items: [
         { id: 'analytics', icon: BarChart2, label: 'Analytics' },
-        ...(profile?.is_admin ? [{ id: 'admin', icon: Terminal, label: 'Admin' }] : []),
       ],
     },
     {
@@ -529,8 +518,8 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
         <aside className="w-full h-full flex flex-col items-center py-4 gap-1 bg-transparent">
 
           {/* Logo icon */}
-          <Link href="/" title="BeOneOfUs" className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/25 hover:scale-110 transition-transform duration-200 shrink-0 mb-3">
-            <Terminal size={15} className="text-white" />
+          <Link href="/" title="BeOneOfUs" className="w-9 h-9 rounded-xl flex items-center justify-center hover:scale-110 transition-transform duration-200 shrink-0 mb-3">
+            <Image src="/logo.svg" alt="beoneofus" width={28} height={28} unoptimized className="w-7 h-7" />
           </Link>
 
           {/* Nav icons */}
@@ -607,9 +596,7 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
             title="Go Home"
             className="font-black text-[17px] tracking-tighter flex items-center gap-2.5 text-gray-900 dark:text-gray-100 hover:opacity-80 transition-opacity select-none group min-w-0"
           >
-            <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/25 group-hover:scale-105 transition-transform duration-200 shrink-0">
-              <Terminal size={14} className="text-white" />
-            </div>
+            <Image src="/logo.svg" alt="beoneofus" width={32} height={32} unoptimized className="w-8 h-8 shrink-0 group-hover:scale-105 transition-transform duration-200" />
             <span className="truncate">beone<span className="text-blue-600">of</span>us</span>
           </Link>
 

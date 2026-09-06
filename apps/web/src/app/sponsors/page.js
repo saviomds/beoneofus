@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Terminal, Award, Star, Shield, Crown, CheckCircle2,
+  Award, Star, Shield, Crown, CheckCircle2,
   Building2, Globe, Mail, ArrowRight, Loader2, Check,
   Users, BarChart3, Handshake, Sparkles, TrendingUp,
 } from "lucide-react";
@@ -121,7 +121,7 @@ export default function SponsorsPage() {
       <nav className="fixed top-0 w-full border-b border-gray-800 bg-gray-950/80 backdrop-blur-xl z-50">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="font-black text-lg tracking-tighter flex items-center gap-2">
-            <Terminal className="text-blue-500" size={20} />
+            <Image src="/logo.svg" alt="beoneofus" width={20} height={20} unoptimized />
             beone<span className="text-blue-500">of</span>us
           </Link>
           <div className="flex items-center gap-3">
@@ -243,7 +243,7 @@ export default function SponsorsPage() {
               <div className="bg-white rounded-2xl p-6 shadow-2xl">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Terminal size={14} className="text-blue-600" />
+                    <Image src="/logo.svg" alt="beoneofus" width={16} height={16} unoptimized />
                     <span className="font-black text-gray-900 text-sm">beone<span className="text-blue-600">of</span>us</span>
                   </div>
                   <Award size={14} className="text-amber-500" />

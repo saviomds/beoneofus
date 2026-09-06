@@ -375,7 +375,7 @@ const templates = {
           <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
             You now have access to the Live Code editor, team chat, video calls, and merge request tools.
           </p>
-          ${ctaButton('Open Workspace →', SITE_URL + '/Explore_Projects', '#2563eb')}
+          ${ctaButton('Open Workspace →', SITE_URL + '/dash/projects', '#2563eb')}
         </td></tr></table>`
       ),
     };
@@ -406,7 +406,7 @@ const templates = {
               ${ru ? `<p style="margin:4px 0 0;font-size:12px;color:#b45309;">@${ru}</p>` : ''}
             </td></tr>
           </table>
-          ${ctaButton('Review Request →', SITE_URL + '/Explore_Projects', '#f59e0b')}
+          ${ctaButton('Review Request →', SITE_URL + '/dash/projects', '#f59e0b')}
         </td></tr></table>`
       ),
     };
@@ -437,7 +437,7 @@ const templates = {
           <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
             Open the workspace to start using Live Code, team chat, video calls, and more.
           </p>
-          ${ctaButton('Open Workspace →', SITE_URL + '/Explore_Projects', '#10b981')}
+          ${ctaButton('Open Workspace →', SITE_URL + '/dash/projects', '#10b981')}
         </td></tr></table>`
       ),
     };
@@ -464,7 +464,7 @@ const templates = {
               </p>
             </td></tr>
           </table>
-          ${ctaButton('Explore Other Projects', SITE_URL + '/Explore_Projects', '#3b82f6')}
+          ${ctaButton('Explore Other Projects', SITE_URL + '/dash/projects', '#3b82f6')}
         </td></tr></table>`
       ),
     };
@@ -510,7 +510,7 @@ const templates = {
           <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
             Click the status circle in the Team tab to update your progress (To Do → In Progress → Done).
           </p>
-          ${ctaButton('View Task →', SITE_URL + '/Explore_Projects', '#7c3aed')}
+          ${ctaButton('View Task →', SITE_URL + '/dash/projects', '#7c3aed')}
         </td></tr></table>`
       ),
     };
@@ -541,7 +541,7 @@ const templates = {
               </p>
             </td></tr>
           </table>
-          ${ctaButton('Open Workspace →', SITE_URL + '/Explore_Projects', color)}
+          ${ctaButton('Open Workspace →', SITE_URL + '/dash/projects', color)}
         </td></tr></table>`
       ),
     };

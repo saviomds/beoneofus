@@ -70,6 +70,81 @@
   --radius-mkt:      20px;
   --radius-mkt-lg:   24px;
   --ease-mkt:        cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ─────────────────────────────────────────────────────────────────────
+     BeOneOfUs 2.0 — enterprise design system (v2-*).
+     One accent (brand). trust = verification only. premium = premium only.
+     Semantic surface/text/border tokens are LIGHT here and overridden for
+     dark on `.dark` below — utilities resolve var() live, so both themes
+     re-skin for free. Named so nothing collides with brand/trust/mkt/gray.
+     ───────────────────────────────────────────────────────────────────── */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Neutral ramp (light) — cool grey, Linear/Stripe register */
+  --color-v2-canvas:      #f7f8fa;   /* app background            */
+  --color-v2-surface:     #ffffff;   /* card / panel              */
+  --color-v2-surface-2:   #f2f3f6;   /* raised / hover / striped  */
+  --color-v2-surface-3:   #eaecf0;   /* sunken / input track      */
+  --color-v2-hairline:    #e6e8ec;   /* 1px separators / borders  */
+  --color-v2-hairline-2:  #d3d7de;   /* stronger border / divider */
+  --color-v2-ink:         #10131a;   /* primary text              */
+  --color-v2-ink-muted:   #5b616e;   /* secondary text            */
+  --color-v2-ink-faint:   #8b909c;   /* tertiary / placeholder    */
+  --color-v2-brand-soft:  #eef0fe;   /* subtle brand fill (active) */
+
+  /* Semantic (light) */
+  --color-v2-positive:      #12805c;
+  --color-v2-positive-soft: #dcf2eb;
+  --color-v2-caution:       #9a6b00;
+  --color-v2-caution-soft:  #f8eccb;
+  --color-v2-critical:      #c62f38;
+  --color-v2-critical-soft: #fbe3e4;
+  --color-v2-info:          #2f5fe8;
+  --color-v2-info-soft:     #e7edfd;
+
+  /* Shape */
+  --radius-v2-chip:  6px;
+  --radius-v2-field: 8px;
+  --radius-v2-card:  10px;
+  --radius-v2-lg:    14px;
+
+  /* Elevation (light) */
+  --shadow-v2-xs:      0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-v2-card:    0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-v2-raised:  0 6px 18px -4px rgba(16, 24, 40, 0.12), 0 2px 6px -2px rgba(16, 24, 40, 0.06);
+  --shadow-v2-overlay: 0 24px 48px -12px rgba(16, 24, 40, 0.22);
+
+  /* Motion */
+  --ease-v2: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Dark overrides for the v2 semantic tokens ─────────────────────────── */
+.dark {
+  --color-v2-canvas:      #0b0d12;
+  --color-v2-surface:     #14171e;
+  --color-v2-surface-2:   #1b1f27;
+  --color-v2-surface-3:   #232833;
+  --color-v2-hairline:    #262b35;
+  --color-v2-hairline-2:  #363c48;
+  --color-v2-ink:         #eef1f6;
+  --color-v2-ink-muted:   #aab1bd;
+  --color-v2-ink-faint:   #79808d;
+  --color-v2-brand-soft:  #1a2145;
+
+  --color-v2-positive:      #4ecfa3;
+  --color-v2-positive-soft: #10271f;
+  --color-v2-caution:       #e2b666;
+  --color-v2-caution-soft:  #2f2510;
+  --color-v2-critical:      #f2888f;
+  --color-v2-critical-soft: #331a1c;
+  --color-v2-info:          #6f95ff;
+  --color-v2-info-soft:     #182444;
+
+  --shadow-v2-xs:      0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-v2-card:    0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-v2-raised:  0 8px 24px -6px rgba(0, 0, 0, 0.6);
+  --shadow-v2-overlay: 0 28px 56px -12px rgba(0, 0, 0, 0.7);
 }
 
 /* ── Dark-mode surface overrides for the marketplace tokens ─────────────── */
@@ -132,9 +207,17 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Smooth global transition for light/dark mode switching */
+  /* Smooth light/dark switching — limited to the properties that actually
+     change on theme flip (was `transition-colors` on every element, which
+     also animated hover/state colour changes and cost paint on big trees). */
   *, ::before, ::after {
-    @apply transition-colors duration-300 ease-in-out;
+    transition-property: color, background-color, border-color, fill, stroke;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after,
+    .animate-in, .animate-out { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
 
   /* Thin scrollbars globally — visible but unobtrusive */
@@ -270,4 +353,60 @@
 @keyframes waveBar {
   0%, 100% { transform: scaleY(0.3); }
   50%       { transform: scaleY(1);   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Enter/exit animation utilities — a compact port of the tailwindcss-animate
+   convention (`animate-in fade-in slide-in-from-bottom-4 zoom-in-95 …`) which
+   is used ~190× across the app but had no backing CSS (the classes were inert
+   no-ops). No new dependency. Duration is fixed & subtle; the `duration-*`
+   classes already present still set transition-duration harmlessly.
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes v2-enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform:
+      translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), 1);
+  }
+}
+@keyframes v2-exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform:
+      translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+      scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), 1);
+  }
+}
+
+@layer utilities {
+  .animate-in  { animation: v2-enter 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-out { animation: v2-exit 0.15s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  .fade-in, .fade-in-0 { --tw-enter-opacity: 0; }
+  .fade-out, .fade-out-0 { --tw-exit-opacity: 0; }
+
+  .zoom-in-50  { --tw-enter-scale: 0.5; }
+  .zoom-in-75  { --tw-enter-scale: 0.75; }
+  .zoom-in-90  { --tw-enter-scale: 0.9; }
+  .zoom-in-95  { --tw-enter-scale: 0.95; }
+  .zoom-in     { --tw-enter-scale: 0.95; }
+  .zoom-out-95 { --tw-exit-scale: 0.95; }
+  .zoom-out    { --tw-exit-scale: 0.95; }
+
+  .slide-in-from-top-1    { --tw-enter-translate-y: -0.25rem; }
+  .slide-in-from-top-2    { --tw-enter-translate-y: -0.5rem; }
+  .slide-in-from-top-3    { --tw-enter-translate-y: -0.75rem; }
+  .slide-in-from-top-4    { --tw-enter-translate-y: -1rem; }
+  .slide-in-from-bottom-1 { --tw-enter-translate-y: 0.25rem; }
+  .slide-in-from-bottom-2 { --tw-enter-translate-y: 0.5rem; }
+  .slide-in-from-bottom-3 { --tw-enter-translate-y: 0.75rem; }
+  .slide-in-from-bottom-4 { --tw-enter-translate-y: 1rem; }
+  .slide-in-from-bottom-8 { --tw-enter-translate-y: 2rem; }
+  .slide-in-from-left-2   { --tw-enter-translate-x: -0.5rem; }
+  .slide-in-from-right-4  { --tw-enter-translate-x: 1rem; }
+  .slide-in-from-right-6  { --tw-enter-translate-x: 1.5rem; }
+  .slide-out-to-bottom-4  { --tw-exit-translate-y: 1rem; }
+  .slide-out-to-top-2     { --tw-exit-translate-y: -0.5rem; }
+  .slide-out-to-right-6   { --tw-exit-translate-x: 1.5rem; }
 }

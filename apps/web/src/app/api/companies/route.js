@@ -14,6 +14,16 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const hiring = searchParams.get('hiring');
   const search = searchParams.get('q');
+  const mine   = searchParams.get('mine') === 'true';
+
+  // Resolve the caller (optional) so owners can see their own unapproved
+  // companies while everyone else only sees approved ones.
+  let callerId = null;
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+  if (token) {
+    const { data: { user } } = await supabase.auth.getUser(token);
+    callerId = user?.id || null;
+  }
 
   let query = supabase
     .from('companies')
@@ -21,7 +31,16 @@ export async function GET(req) {
     .order('verified', { ascending: false })
     .order('hiring', { ascending: false })
     .order('created_at', { ascending: false })
-    .limit(40);
+    .limit(60);
+
+  if (mine && callerId) {
+    query = query.eq('owner_id', callerId);
+  } else if (callerId) {
+    // approved OR owned by the caller
+    query = query.or(`approved.eq.true,owner_id.eq.${callerId}`);
+  } else {
+    query = query.eq('approved', true);
+  }
 
   if (hiring === 'true') query = query.eq('hiring', true);
 
@@ -57,7 +76,9 @@ export async function POST(req) {
 
   const { data, error } = await supabase
     .from('companies')
-    .insert({ owner_id: user.id, name, slug: `${slug}-${Date.now()}`, description, industry, location, size, website, tech_stack: tech_stack || [], culture, remote_policy: remote_policy || 'Hybrid', hiring: hiring || false, founded_year })
+    // `approved` is always false on create — an admin reviews it before it
+    // becomes visible in the public directory.
+    .insert({ owner_id: user.id, name, slug: `${slug}-${Date.now()}`, description, industry, location, size, website, tech_stack: tech_stack || [], culture, remote_policy: remote_policy || 'Hybrid', hiring: hiring || false, founded_year, approved: false })
     .select()
     .single();
 

@@ -9,7 +9,7 @@ import {
   Crown, UserPlus, Briefcase, Compass,
   ChevronRight, CalendarDays, TrendingUp,
   BarChart2, CheckCircle2, Circle, ArrowRight, Flame,
-  Bot, Clock, FileText, Library,
+  Search, Clock, FileText, Library,
   CheckCheck,
 } from 'lucide-react';
 import VerifiedBadge from '../../components/VerifiedBadge';
@@ -53,7 +53,7 @@ const HUBS = [
     bg: 'bg-amber-50 dark:bg-amber-900/20',
     border: 'border-amber-200 dark:border-amber-800/40',
     text: 'text-amber-600 dark:text-amber-400',
-    pills: ['Stories', 'Pathways', 'Blog', 'Bookmarks', 'Docs'],
+    pills: ['Stories', 'Blog', 'Bookmarks', 'Docs'],
     pillStyle: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
   },
   {
@@ -77,7 +77,6 @@ const NAV_TILES = [
   { id: 'notifications', labelKey: 'home_dash.tiles.alerts',    icon: Bell,          stat: 'notifications', color: 'text-red-500' },
   { id: 'feed',          labelKey: 'home_dash.tiles.discovery', icon: Compass,       stat: null,            color: 'text-cyan-500' },
   { id: 'jobs',          labelKey: 'home_dash.tiles.jobs',      icon: Briefcase,     stat: null,            color: 'text-violet-500' },
-  { id: 'pathways',      labelKey: 'home_dash.tiles.pathways',  icon: TrendingUp,    stat: null,            color: 'text-indigo-500' },
   { id: 'events',        labelKey: 'home_dash.tiles.events',    icon: CalendarDays,  stat: null,            color: 'text-purple-500' },
   { id: 'settings',      labelKey: 'home_dash.tiles.settings',  icon: Settings,      stat: null,            color: 'text-gray-400' },
 ];
@@ -85,9 +84,8 @@ const NAV_TILES = [
 /* ── Onboarding steps ─────────────────────────────── */
 const STEPS = [
   { n: 1, labelKey: 'home_dash.steps.profile_label', descKey: 'home_dash.steps.profile_desc', key: 'profile' },
-  { n: 2, labelKey: 'home_dash.steps.pathway_label', descKey: 'home_dash.steps.pathway_desc', key: 'pathways' },
-  { n: 3, labelKey: 'home_dash.steps.explore_label', descKey: 'home_dash.steps.explore_desc', key: 'opportunities' },
-  { n: 4, labelKey: 'home_dash.steps.connect_label', descKey: 'home_dash.steps.connect_desc', key: 'connections' },
+  { n: 2, labelKey: 'home_dash.steps.explore_label', descKey: 'home_dash.steps.explore_desc', key: 'opportunities' },
+  { n: 3, labelKey: 'home_dash.steps.connect_label', descKey: 'home_dash.steps.connect_desc', key: 'connections' },
 ];
 
 export default function HomeDashContent() {
@@ -98,7 +96,6 @@ export default function HomeDashContent() {
   const [stats, setStats]             = useState({ connections: 0, messages: 0, notifications: 0 });
   const [loading, setLoading]         = useState(true);
   const [streak, setStreak]           = useState(0);
-  const [pathwayCount, setPathwayCount] = useState(0);
   const [feedPosts, setFeedPosts]     = useState([]);
   const [aiQuery, setAiQuery]         = useState('');
 
@@ -108,11 +105,10 @@ export default function HomeDashContent() {
 
   const go = (id) => router.push('/dash/' + id);
 
-  // Assistant-first: hand the goal to the unified match engine, then route
+  // Route the query into the unified platform search.
   const askAi = (query) => {
     const q = (query ?? aiQuery).trim();
-    try { if (q) sessionStorage.setItem('match_goal', q); } catch { /* no storage */ }
-    router.push('/dash/matches');
+    router.push(q ? `/dash/search?q=${encodeURIComponent(q)}` : '/dash/search');
   };
 
   useEffect(() => {
@@ -154,10 +150,6 @@ export default function HomeDashContent() {
           setStreak(sk);
         }
 
-        // Pathways
-        const { count: pc } = await supabase.from('user_pathways').select('id', { count: 'exact', head: true }).eq('user_id', uid);
-        setPathwayCount(pc || 0);
-
         // Blog feed
         const { data: posts } = await supabase
           .from('blog_posts')
@@ -194,9 +186,8 @@ export default function HomeDashContent() {
 
   /* Derive which onboarding steps are done */
   const stepsDone = [
-    score >= 60,           // profile built
-    pathwayCount > 0,      // pathway picked
-    stats.connections > 0, // explored/connected
+    score >= 60,            // profile built
+    stats.connections > 0,  // explored/connected
     stats.connections >= 3, // grown network
   ];
 
@@ -263,7 +254,7 @@ export default function HomeDashContent() {
       <div>
         <form onSubmit={(e) => { e.preventDefault(); askAi(); }}>
           <div className="flex items-center gap-2 bg-white dark:bg-[#18181B] border border-gray-200 dark:border-zinc-800 rounded-2xl p-2 pl-4 shadow-sm focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
-            <Bot size={18} className="text-brand-500 shrink-0" />
+            <Search size={18} className="text-brand-500 shrink-0" />
             <input
               value={aiQuery}
               onChange={(e) => setAiQuery(e.target.value)}
@@ -280,8 +271,6 @@ export default function HomeDashContent() {
         <div className="flex flex-wrap gap-1.5 mt-2.5">
           {[
             t('home_dash.suggest_job'),
-            t('home_dash.suggest_mentor'),
-            t('home_dash.suggest_course'),
             t('home_dash.suggest_network'),
           ].map((s) => (
             <button

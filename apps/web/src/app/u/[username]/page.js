@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   MapPin, Globe, GitBranch, Users, BookOpen, Award,
-  Terminal, Briefcase, Share2, CheckCircle2, Clock,
+  Briefcase, Share2, CheckCircle2, Clock,
   ArrowLeft, Loader2, Copy, Check, MessageSquare,
   Heart, Code, ExternalLink, BadgeCheck, Zap, Star,
   Eye, EyeOff, Wifi, FolderGit2, Tag, Link2,
@@ -279,7 +279,7 @@ export default function PublicProfilePage() {
   if (notFound) return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0D0D0D] flex flex-col items-center justify-center p-6 text-center">
       <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-        <Terminal size={32} className="text-gray-400" />
+        <Image src="/logo.svg" alt="beoneofus" width={32} height={32} unoptimized className="opacity-40" />
       </div>
       <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2">Profile not found</h1>
       <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm">@{username} doesn&apos;t exist on beoneofus.</p>
@@ -309,7 +309,7 @@ export default function PublicProfilePage() {
       <nav className="fixed top-0 w-full z-50 border-b border-gray-200/80 dark:border-gray-800/80 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
           <Link href="/" className="font-black text-lg tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100 shrink-0">
-            <Terminal className="text-blue-500" size={20} />
+            <Image src="/logo.svg" alt="beoneofus" width={20} height={20} unoptimized />
             <span>beone<span className="text-blue-600">of</span>us</span>
           </Link>
 
@@ -402,16 +402,9 @@ export default function PublicProfilePage() {
                 <>
                   <Link
                     href="/dash/profile"
-                    className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-sm rounded-xl transition-all border border-gray-200 dark:border-gray-700 shadow-sm"
-                  >
-                    Edit Profile
-                  </Link>
-                  <Link
-                    href={`/resume/${profile.username}`}
-                    target="_blank"
                     className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-blue-500/20"
                   >
-                    <Star size={13} /> Resume
+                    Edit Profile
                   </Link>
                 </>
               ) : currentUserId ? (
@@ -851,7 +844,7 @@ export default function PublicProfilePage() {
               <div className="absolute bottom-0 left-0 w-28 h-28 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/2" />
               <div className="relative z-10">
                 <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
-                  <Terminal size={24} className="text-white" />
+                  <Image src="/logo.svg" alt="" width={24} height={24} unoptimized />
                 </div>
                 <h3 className="text-xl font-black mb-2">Join beoneofus</h3>
                 <p className="text-sm text-white/80 mb-5 max-w-sm mx-auto">

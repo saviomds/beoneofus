@@ -15,6 +15,9 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '../supabaseClient';
+import AdminPanelTool from '../dash/content/more/AdminPanelTool';
+import AuditLogTab from './AuditLogTab';
+import { logAdminAction } from '../../lib/auditLog';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -92,7 +95,16 @@ const TABS = [
   { id: 'platform',     label: 'Platform',     icon: Zap,          protected: true  },
 ];
 
-const PROTECTED_TABS = new Set(['applications', 'users', 'orders', 'contracts', 'platform']);
+// Admin-only, appended at render time (needs isAdmin from component state) —
+// embeds the full platform Admin Panel (Requests, Premium, Users, Job
+// Applications, Study/Work Abroad, Founder Apps, Tasks, Sponsors, Hiring,
+// System Logs, Settings) as one console inside founder-dashboard, so this
+// page is the single place a founder/admin manages everything instead of
+// bouncing out to a separate /dash/admin screen.
+const ADMIN_CONSOLE_TAB = { id: 'admin_console', label: 'Admin Console', icon: Terminal, protected: true };
+const AUDIT_LOG_TAB = { id: 'audit_log', label: 'Audit Log', icon: History, protected: true };
+
+const PROTECTED_TABS = new Set(['applications', 'users', 'orders', 'contracts', 'platform', 'admin_console', 'audit_log']);
 
 export default function FounderDashboard() {
   const router = useRouter();
@@ -356,6 +368,15 @@ export default function FounderDashboard() {
         });
       } catch { /* non-blocking */ }
 
+      await logAdminAction(supabase, {
+        actorId: currentUserId,
+        action: status === 'accepted' ? 'accept_application' : 'decline_application',
+        targetType: 'application',
+        targetId: appId,
+        targetUserId: applicantId,
+        details: { appTitle },
+      });
+
       setApplications(prev => prev.map(a => a.id === appId ? { ...a, status } : a));
       if (selectedApp?.id === appId) setSelectedApp((prev: any) => ({ ...prev, status }));
       showToast(`Application ${status}.`);
@@ -566,6 +587,12 @@ export default function FounderDashboard() {
     if (error) { showToast('Failed to save: ' + error.message, 'error'); }
     else {
       setPvData({ ...pvForm });
+      await logAdminAction(supabase, {
+        actorId: currentUserId,
+        action: 'update_platform_version',
+        targetType: 'platform_settings',
+        details: { ...pvForm },
+      });
       showToast('Platform version updated!');
     }
     setPvSaving(false);
@@ -748,6 +775,12 @@ export default function FounderDashboard() {
       .eq('id', userId);
     if (!error) {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: suspend ? 'suspended' : 'active' } : u));
+      await logAdminAction(supabase, {
+        actorId: currentUserId,
+        action: suspend ? 'suspend_user' : 'unsuspend_user',
+        targetType: 'user',
+        targetUserId: userId,
+      });
       showToast(suspend ? 'User suspended.' : 'User reinstated.');
     } else {
       showToast(error.message, 'error');
@@ -802,6 +835,15 @@ export default function FounderDashboard() {
         content: `Your ${roleLabel} access has been revoked. You're welcome to re-apply when ready.`,
       });
 
+      await logAdminAction(supabase, {
+        actorId: currentUserId,
+        action: 'revoke_application',
+        targetType: 'application',
+        targetId: appId,
+        targetUserId: applicantId,
+        details: { intendedRole },
+      });
+
       setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'removed' } : a));
       if (selectedApp?.id === appId) setSelectedApp((prev: any) => ({ ...prev, status: 'removed' }));
       showToast(`${roleLabel} access revoked.`);
@@ -825,6 +867,13 @@ export default function FounderDashboard() {
         actor_id: currentUserId,
         type: 'message',
         content: `Your ${roleLabel} access has been revoked. You're welcome to re-apply when ready.`,
+      });
+      await logAdminAction(supabase, {
+        actorId: currentUserId,
+        action: 'revoke_access',
+        targetType: 'user',
+        targetUserId: userId,
+        details: { currentRole },
       });
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: null } : u));
       showToast(`${roleLabel} access revoked for @${username}.`);
@@ -874,6 +923,14 @@ export default function FounderDashboard() {
         actor_id: currentUserId,
         type: 'message',
         content: `You've been granted co-founder access! You can now use the Founder Workspace.`,
+      });
+
+      await logAdminAction(supabase, {
+        actorId: currentUserId,
+        action: 'promote_to_founder',
+        targetType: 'user',
+        targetUserId: userId,
+        details: { source, appId },
       });
 
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: 'founder' } : u));
@@ -1126,10 +1183,10 @@ export default function FounderDashboard() {
                 <Terminal size={13} /> Dashboard
               </Link>
               {isAdmin && (
-                <Link href="/dash/more"
+                <button onClick={() => handleTabClick('admin_console')}
                   className="flex items-center gap-1.5 px-4 py-2.5 bg-[#FFB020] hover:bg-amber-400 text-white rounded-2xl font-bold transition-all shadow-md shadow-amber-200 text-xs">
-                  <Shield size={13} /> Admin Panel <ArrowRight size={12} />
-                </Link>
+                  <Shield size={13} /> Admin Console <ArrowRight size={12} />
+                </button>
               )}
             </div>
           </div>
@@ -1151,8 +1208,11 @@ export default function FounderDashboard() {
                 contracts:    { color: '#14b8a6', grad: 'linear-gradient(135deg,#14b8a6,#0d9488)',
                                 badge: contractsList.length || 0 },
                 platform:     { color: '#f43f5e', grad: 'linear-gradient(135deg,#f43f5e,#e11d48)' },
+                admin_console:{ color: '#0f172a', grad: 'linear-gradient(135deg,#334155,#0f172a)' },
+                audit_log:    { color: '#475569', grad: 'linear-gradient(135deg,#0f172a,#334155)' },
               };
-              return TABS.map(tab => {
+              const visibleTabs = isAdmin ? [...TABS, AUDIT_LOG_TAB, ADMIN_CONSOLE_TAB] : TABS;
+              return visibleTabs.map(tab => {
                 const isActive = activeTab === tab.id;
                 const isLocked = tab.protected && !protectedUnlocked;
                 const m = META[tab.id] || { color: '#6b7280', grad: 'linear-gradient(135deg,#374151,#111827)' };
@@ -1189,6 +1249,18 @@ export default function FounderDashboard() {
             </button>
           )}
         </div>
+
+        {/* ── AUDIT LOG — who did what, when ───────────────────────────────────── */}
+        {activeTab === 'audit_log' && isAdmin && (
+          <AuditLogTab />
+        )}
+
+        {/* ── ADMIN CONSOLE — full platform Admin Panel, embedded ─────────────── */}
+        {activeTab === 'admin_console' && isAdmin && (
+          <div className="h-[80vh] min-h-[560px] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm">
+            <AdminPanelTool currentUserId={currentUserId} />
+          </div>
+        )}
 
         {/* ── OVERVIEW — Bento Grid ──────────────────────────────────────────── */}
         {activeTab === 'overview' && (

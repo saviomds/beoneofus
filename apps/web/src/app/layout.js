@@ -1,8 +1,18 @@
 import './globals.css';
+import { Inter } from 'next/font/google';
 import { ThemeProvider } from './components/ThemeProvider';
 import { LanguageProvider } from '../lib/i18n';
 import ClientShell from './components/ClientShell';
 import { OnlineUsersProvider } from './contexts/OnlineUsersContext';
+
+// Self-hosted at build time (no runtime request to Google) — CSP `font-src 'self'` safe.
+// Exposed as `--font-inter`; globals.css maps `--font-sans` onto it so every
+// `font-sans` utility and the document default resolve to Inter.
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 
 export const metadata = {
   title: 'beoneofus — The Global Opportunity Ecosystem',
@@ -53,7 +63,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head />
       <body className="antialiased overflow-x-hidden overflow-y-auto" suppressHydrationWarning>
         {/* next-themes ThemeProvider injects its own blocking script for theme detection */}

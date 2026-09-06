@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Zap, HelpCircle, Code2, LogOut, ChevronRight, X, Search, Crown,
   Users, BarChart3, Briefcase, Bell, ArrowUpRight, Clock, ShieldAlert,
-  Terminal, Layers, UserCog, Globe, Quote,
+  Terminal, Layers, UserCog, Globe,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import { useLanguage } from "../../../lib/i18n";
@@ -16,9 +16,7 @@ import { Badge } from "./more/shared";
 import SystemStatusTool from "./more/SystemStatusTool";
 import ApiAccessTool from "./more/ApiAccessTool";
 import CommunityHubTool from "./more/CommunityHubTool";
-import AdminPanelTool from "./more/AdminPanelTool";
 import SupportTool from "./more/SupportTool";
-import QuoteTool from "./more/QuoteTool";
 
 // ─── Tool Registry ────────────────────────────────────────────────────────────
 
@@ -47,18 +45,6 @@ const TOOLS = [
     color: "orange", tagKeys: ["more.tags.ai_support", "more.tags.faq", "more.tags.tickets"], isNew: true,
     category: "community",
   },
-  {
-    id: "quotes", labelKey: "more.tools.quotes.label", icon: Quote,
-    descKey: "more.tools.quotes.desc",
-    color: "amber", tagKeys: ["more.tags.motivation", "more.tags.coding", "more.tags.career"], isNew: false,
-    category: "community",
-  },
-  {
-    id: "admin", labelKey: "more.tools.admin.label", icon: ShieldAlert,
-    descKey: "more.tools.admin.desc",
-    color: "red", tagKeys: ["more.tags.users", "more.tags.verification", "more.tags.moderation"], isNew: false,
-    category: "platform", adminOnly: true, route: "/dash/admin",
-  },
 ];
 
 const TOOL_CATEGORIES = [
@@ -74,7 +60,6 @@ const TOOL_COLOR_MAP = {
   emerald: { bg: "bg-emerald-100 dark:bg-emerald-950/50", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-800/40", gradient: "from-emerald-600 to-emerald-700", tag: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30", glow: "shadow-emerald-500/15" },
   indigo:  { bg: "bg-indigo-100 dark:bg-indigo-950/50", text: "text-indigo-600 dark:text-indigo-400", border: "border-indigo-200 dark:border-indigo-800/40", gradient: "from-indigo-600 to-indigo-700", tag: "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/30", glow: "shadow-indigo-500/15" },
   orange:  { bg: "bg-orange-100 dark:bg-orange-950/50", text: "text-orange-600 dark:text-orange-400", border: "border-orange-200 dark:border-orange-800/40", gradient: "from-orange-500 to-orange-600", tag: "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800/30", glow: "shadow-orange-500/15" },
-  amber:   { bg: "bg-amber-100 dark:bg-amber-950/50",  text: "text-amber-600 dark:text-amber-400",  border: "border-amber-200 dark:border-amber-800/40",  gradient: "from-amber-500 to-amber-600",  tag: "bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/30",  glow: "shadow-amber-500/15"  },
   red:     { bg: "bg-red-100 dark:bg-red-950/50",      text: "text-red-600 dark:text-red-400",      border: "border-red-200 dark:border-red-800/40",      gradient: "from-red-600 to-red-700",      tag: "bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/30",      glow: "shadow-red-500/15"      },
 };
 
@@ -172,7 +157,7 @@ export default function MoreContent() {
   }, []);
 
   const openTool = (tool) => {
-    // Tools that live on their own route (e.g. the unified Admin Console) navigate there.
+    // Tools that live on their own route navigate there instead of opening inline.
     if (tool.route) { router.push(tool.route); return; }
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("tool", tool.id);
@@ -458,14 +443,12 @@ export default function MoreContent() {
               </div>
 
               {/* Modal body */}
-              <div className={`flex-1 overflow-hidden ${activeItem.id === "admin" ? "flex flex-col" : "overflow-y-auto"}`}>
-                <div className={activeItem.id === "admin" ? "flex flex-col h-full" : "p-5"}>
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-5">
                   {activeItem.id === "status"         && <SystemStatusTool />}
                   {activeItem.id === "api"            && <ApiAccessTool />}
                   {activeItem.id === "community"      && <div className="h-full"><CommunityHubTool currentUserId={currentUserId} /></div>}
                   {activeItem.id === "support"        && <SupportTool />}
-                  {activeItem.id === "quotes"         && <QuoteTool />}
-                  {activeItem.id === "admin"          && <AdminPanelTool currentUserId={currentUserId} />}
                 </div>
               </div>
             </div>

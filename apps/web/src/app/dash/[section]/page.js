@@ -23,9 +23,10 @@ const TabSkeleton = () => (
 
 // ── Section content registry ────────────────────────────────────────────────
 // Each tab is code-split (its chunk only downloads when the tab is opened). The
-// `learning`, `mentorship`, `certifications` and user-facing `AI` sections were
-// removed from the product, so they are intentionally absent here — visiting
-// /dash/learn, /dash/mentors, /dash/ai, etc. redirects to /dash/home below.
+// `learning`, `mentorship`, `certifications`, user-facing `AI`, `resume`,
+// `pathways`, `matches` and `leaderboard` sections were removed from the product,
+// so they are intentionally absent here — visiting /dash/learn, /dash/matches,
+// /dash/pathways, etc. redirects to /dash/home below.
 const contentMap = {
   home:          dynamic(() => import('../content/HomeDashContent'),      { loading: () => <TabSkeleton /> }),
   feed:          dynamic(() => import('../content/FeedContent'),          { loading: () => <TabSkeleton /> }),
@@ -46,13 +47,9 @@ const contentMap = {
   blog:          dynamic(() => import('../content/BlogContent'),          { loading: () => <TabSkeleton /> }),
   analytics:     dynamic(() => import('../content/AnalyticsContent'),     { loading: () => <TabSkeleton /> }),
   services:      dynamic(() => import('../content/ServicesContent'),      { loading: () => <TabSkeleton /> }),
-  pathways:      dynamic(() => import('../content/PathwaysContent'),      { loading: () => <TabSkeleton /> }),
-  leaderboard:   dynamic(() => import('../content/LeaderboardContent'),   { loading: () => <TabSkeleton /> }),
   contracts:     dynamic(() => import('../content/ContractsContent'),     { loading: () => <TabSkeleton /> }),
   search:        dynamic(() => import('../content/SearchContent'),        { loading: () => <TabSkeleton /> }),
-  resume:        dynamic(() => import('../content/ResumeContent'),        { loading: () => <TabSkeleton /> }),
   jobs:          dynamic(() => import('../content/JobsContent'),          { loading: () => <TabSkeleton /> }),
-  matches:       dynamic(() => import('../content/MatchesContent'),       { loading: () => <TabSkeleton /> }),
   projects:      dynamic(() => import('../content/ProjectMarketplaceContent'), { loading: () => <TabSkeleton /> }),
   freelance:     dynamic(() => import('../content/FreelanceContent'),     { loading: () => <TabSkeleton /> }),
   companies:     dynamic(() => import('../content/CompaniesContent'),     { loading: () => <TabSkeleton /> }),

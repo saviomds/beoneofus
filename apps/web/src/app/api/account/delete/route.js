@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logAdminAction } from '../../../../lib/auditLog';
 
 // Self-serve account deletion. Authenticates the caller from their token and
 // deletes THEIR OWN auth user via the service role, so the erasure is complete
@@ -39,12 +40,12 @@ export async function POST(request) {
     await supabaseAdmin.from('profiles').delete().eq('id', uid);
 
     // Audit trail (best-effort — never block deletion on the log).
-    await supabaseAdmin.from('admin_audit_log').insert({
-      actor_id: uid,
+    await logAdminAction(supabaseAdmin, {
+      actorId: uid,
       action: 'self_delete_account',
-      target_user_id: uid,
-      created_at: new Date().toISOString(),
-    }).then(() => {}, (e) => console.warn('audit log insert failed:', e?.message));
+      targetType: 'user',
+      targetUserId: uid,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

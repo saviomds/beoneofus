@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Search, Users, MessageCircle, Hash,
-  CalendarDays, Briefcase, TrendingUp, MapPin, Building2, Globe,
+  CalendarDays, Briefcase, MapPin, Building2, Globe,
   X, Clock, FileText, BadgeCheck, ArrowRight, SlidersHorizontal,
   ChevronDown, CheckCircle2, Loader2,
 } from "lucide-react";
@@ -19,7 +19,7 @@ const LIMIT_TAB   = 40;
 const DEBOUNCE_MS = 380;
 
 // Priority order — fast/important first so they appear before slow tables
-const QUERY_ORDER = ["people", "posts", "groups", "pages", "events", "jobs", "pathways"];
+const QUERY_ORDER = ["people", "posts", "groups", "pages", "events", "jobs"];
 
 const TABS = [
   { key: "all",      label: "All",      Icon: Search        },
@@ -29,10 +29,9 @@ const TABS = [
   { key: "pages",    label: "Pages",    Icon: FileText      },
   { key: "events",   label: "Events",   Icon: CalendarDays  },
   { key: "jobs",     label: "Jobs",     Icon: Briefcase     },
-  { key: "pathways", label: "Pathways", Icon: TrendingUp    },
 ];
 
-const EMPTY = { people: [], posts: [], groups: [], pages: [], events: [], jobs: [], pathways: [] };
+const EMPTY = { people: [], posts: [], groups: [], pages: [], events: [], jobs: [] };
 
 /* ── Filters config ─────────────────────────────────────────────── */
 const TAB_FILTERS = {
@@ -344,16 +343,11 @@ export default function SearchContent() {
           let qb = supabase
             .from("jobs")
             .select("id, title, company, type, location, salary, created_at")
+            .eq("approved", true)
             .or(`title.ilike.${pat},company.ilike.${pat},location.ilike.${pat}`);
           if (filters.type && filters.type !== "All") qb = qb.ilike("type", `%${filters.type}%`);
           return qb.order("created_at", { ascending: false }).limit(lim);
         }
-        case "pathways":
-          return supabase
-            .from("pathways")
-            .select("id, title, target_role, category, description")
-            .or(`title.ilike.${pat},target_role.ilike.${pat},category.ilike.${pat}`)
-            .limit(lim);
         default:
           return null;
       }
@@ -429,7 +423,7 @@ export default function SearchContent() {
             </div>
             <h2 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-2 tracking-tight">Search everything</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 font-medium max-w-xs mx-auto leading-relaxed">
-              People, posts, groups, pages, events, jobs, pathways — all in one place.
+              People, posts, groups, pages, events, jobs — all in one place.
             </p>
             <div className="flex flex-wrap justify-center gap-2 mt-6">
               {["Frontend developer", "Internships", "Open Source", "Remote jobs", "Mentors", "Founders"].map(s => (
@@ -697,32 +691,6 @@ export default function SearchContent() {
                     {j.location && <span className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-0.5"><MapPin size={9} />{j.location}</span>}
                     {j.type     && <span className="text-[9px] font-black uppercase px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-md">{j.type}</span>}
                   </div>
-                </div>
-                <ArrowRight size={14} className="text-gray-300 dark:text-gray-600 group-hover:text-blue-500 shrink-0 transition-colors" />
-              </div>
-            ))}
-          </Section>
-        )}
-
-        {/* Pathways */}
-        {(isAll || tab === "pathways") && (results.pathways.length > 0 || loadingKeys.has("pathways")) && (
-          <Section title="Pathways" Icon={TrendingUp} count={results.pathways.length} isAll={isAll} onSeeAll={() => setTab("pathways")} colorClass="text-teal-500" loading={loadingKeys.has("pathways")}>
-            {results.pathways.map(p => (
-              <div key={p.id} onClick={() => go("pathways")} className="flex items-center gap-3 p-3.5 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group cursor-pointer">
-                <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-900/20 text-teal-500 flex items-center justify-center shrink-0">
-                  <TrendingUp size={15} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[14px] font-semibold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    <HL text={p.title} q={activeQ} />
-                  </p>
-                  {(p.target_role || p.category) && (
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider mt-0.5">
-                      {p.target_role && <HL text={p.target_role} q={activeQ} />}
-                      {p.target_role && p.category && " · "}
-                      {p.category}
-                    </p>
-                  )}
                 </div>
                 <ArrowRight size={14} className="text-gray-300 dark:text-gray-600 group-hover:text-blue-500 shrink-0 transition-colors" />
               </div>

@@ -49,6 +49,17 @@ function StatusBadge({ status }) {
   );
 }
 
+// Shown on a poster's own job while it waits for admin approval to go public.
+function PendingBadge({ job }) {
+  if (job?.approved !== false || job?.status === "draft") return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/40">
+      <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-amber-500" />
+      Pending review
+    </span>
+  );
+}
+
 // ─── Action Menu ──────────────────────────────────────────────────────────────
 
 function ActionMenu({ job, onView, onEdit, onDuplicate, onDelete }) {
@@ -497,7 +508,7 @@ function JobDetailDrawer({ job, onEdit, onClose }) {
             <div className="flex-1 min-w-0">
               <h2 className="font-black text-gray-900 dark:text-gray-100 text-lg leading-tight">{job.title}</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{job.company}{job.department ? ` · ${job.department}` : ""}</p>
-              <div className="mt-2"><StatusBadge status={job.status} /></div>
+              <div className="mt-2 flex flex-wrap items-center gap-2"><StatusBadge status={job.status} /><PendingBadge job={job} /></div>
             </div>
           </div>
 
@@ -637,7 +648,7 @@ function MobileJobCard({ job, onView, onEdit, onDuplicate, onDelete }) {
       </div>
 
       <div className="flex items-center justify-between mt-3">
-        <StatusBadge status={job.status} />
+        <div className="flex flex-wrap items-center gap-2"><StatusBadge status={job.status} /><PendingBadge job={job} /></div>
         <div className="flex items-center gap-3 text-xs text-gray-500">
           <span className="flex items-center gap-1"><Users size={10} /> {job.applicants}</span>
           <span className="flex items-center gap-1"><MapPin size={10} /> {job.location}</span>
@@ -1009,7 +1020,7 @@ export default function JobsContent() {
                       </span>
                     </td>
                     {/* Status */}
-                    <td className="px-4 py-3.5"><StatusBadge status={job.status || "active"} /></td>
+                    <td className="px-4 py-3.5"><div className="flex flex-wrap items-center gap-1.5"><StatusBadge status={job.status || "active"} /><PendingBadge job={job} /></div></td>
                     {/* Applicants */}
                     <td className="px-4 py-3.5 text-sm font-semibold text-purple-600 dark:text-purple-400">{job.applicants ?? 0}</td>
                     {/* Views */}

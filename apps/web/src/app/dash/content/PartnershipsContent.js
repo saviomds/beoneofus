@@ -46,6 +46,8 @@ export default function PartnershipsContent() {
     target_audience: "",
     budget_range:    "",
     contact_email:   "",
+    logo_url:        "",
+    website:         "",
   });
 
   const [proposals, setProposals]       = useState([]);
@@ -189,6 +191,8 @@ export default function PartnershipsContent() {
         target_audience: form.target_audience,
         budget_range:    form.budget_range,
         contact_email:   form.contact_email,
+        logo_url:        form.logo_url.trim() || null,
+        website:         form.website.trim() || null,
         status:          "pending",
       });
       if (dbErr) throw dbErr;
@@ -378,6 +382,36 @@ export default function PartnershipsContent() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{t('partnerships.dash.website_label')}</label>
+                <div className="relative">
+                  <Globe size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="url"
+                    value={form.website}
+                    onChange={e => setForm({ ...form, website: e.target.value })}
+                    placeholder="https://yourcompany.com"
+                    className={inputCls + " pl-10"}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{t('partnerships.dash.logo_label')}</label>
+                <div className="relative">
+                  <Camera size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="url"
+                    value={form.logo_url}
+                    onChange={e => setForm({ ...form, logo_url: e.target.value })}
+                    placeholder="https://…/logo.png"
+                    className={inputCls + " pl-10"}
+                  />
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-400 -mt-4 px-1">{t('partnerships.dash.logo_hint')}</p>
+
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{t('partnerships.dash.collab_type')}</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -451,12 +485,17 @@ export default function PartnershipsContent() {
                 className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2 duration-300"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-black text-gray-900 dark:text-white">{prop.company_name}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                      <Clock size={10} />
-                      {new Date(prop.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
-                    </p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    {prop.logo_url && (
+                      <Image src={prop.logo_url} alt="" width={36} height={36} unoptimized className="w-9 h-9 rounded-lg object-contain border border-gray-100 dark:border-gray-800 bg-white p-1 shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-gray-900 dark:text-white truncate">{prop.company_name}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
+                        <Clock size={10} />
+                        {new Date(prop.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                      </p>
+                    </div>
                   </div>
                   <span className={`shrink-0 flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-1 rounded-lg border ${STATUS_COLORS[prop.status]}`}>
                     {prop.status === "accepted" && <Check size={10} />}
@@ -563,7 +602,13 @@ export default function PartnershipsContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
                   <div>
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('partnerships.dash.field_company')}</p>
-                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{prop.company_name}</p>
+                    <div className="flex items-center gap-2">
+                      {prop.logo_url && (
+                        <Image src={prop.logo_url} alt="" width={20} height={20} unoptimized className="w-5 h-5 rounded object-contain bg-white shrink-0" />
+                      )}
+                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">{prop.company_name}</p>
+                      {prop.website && <a href={prop.website} target="_blank" rel="noreferrer" className="text-[10px] text-blue-500 hover:underline shrink-0">site</a>}
+                    </div>
                   </div>
                   <div>
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t('partnerships.dash.field_type')}</p>

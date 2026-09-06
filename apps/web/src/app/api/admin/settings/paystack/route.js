@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { fetchWithTimeout } from '../../../../../lib/fetchWithTimeout';
 import { createClient } from '@supabase/supabase-js';
 import { invalidatePlatformSettingsCache } from '../../../../../lib/platformSettings';
+import { logAdminAction } from '../../../../../lib/auditLog';
 
 function adminClient() {
   return createClient(
@@ -77,6 +78,14 @@ export async function POST(request) {
         .upsert(rows, { onConflict: 'key' });
       if (error) throw error;
       invalidatePlatformSettingsCache();
+
+      // Log which Paystack fields changed — never the values themselves.
+      await logAdminAction(supa, {
+        actorId: user.id,
+        action: 'update_paystack_keys',
+        targetType: 'platform_settings',
+        details: { fields: rows.map(r => r.key) },
+      });
     }
 
     return NextResponse.json({ success: true, saved: rows.length });

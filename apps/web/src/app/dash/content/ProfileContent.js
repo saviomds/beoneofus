@@ -850,15 +850,6 @@ export default function ProfileContent({ viewUserId }) {
                         >
                           <ExternalLink size={15} /> <span className="hidden sm:inline">{t('profile.public')}</span>
                         </a>
-                        <a
-                          href={`/resume/${profile.username}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={t('profile.generate_resume')}
-                          className="flex items-center gap-1.5 text-sm font-bold text-white bg-blue-600/90 hover:bg-blue-500 backdrop-blur-md px-3 sm:px-4 py-2.5 rounded-full transition-all shadow-sm hover:shadow-md active:scale-95"
-                        >
-                          <FileText size={15} /> <span className="hidden sm:inline">{t('profile.resume')}</span>
-                        </a>
                       </>
                     )}
                   </div>

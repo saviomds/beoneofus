@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { aiClient } from '../../../../lib/aiClient';
 import { sendNotificationEmail } from '../../../../lib/sendNotificationEmail';
 import { requireRole } from '../../../../lib/rbac';
+import { logAdminAction } from '../../../../lib/auditLog';
 
 export async function POST(req) {
   try {
@@ -117,6 +118,15 @@ Write 2-3 sentences assessing legitimacy (account age, profile completeness, any
         extra: { plan: sub.plan, expiresAt, note: note || '' },
       });
 
+      await logAdminAction(supabase, {
+        actorId: adminId,
+        action: 'premium_accept',
+        targetType: 'premium_subscription',
+        targetId: subscriptionId,
+        targetUserId: sub.user_id,
+        details: { plan: sub.plan, note: note || null },
+      });
+
       return NextResponse.json({ success: true, status: 'active' });
     }
 
@@ -148,6 +158,15 @@ Write 2-3 sentences assessing legitimacy (account age, profile completeness, any
         email: sub.profiles?.email,
         name: sub.profiles?.username || 'there',
         extra: { note: note || '' },
+      });
+
+      await logAdminAction(supabase, {
+        actorId: adminId,
+        action: 'premium_decline',
+        targetType: 'premium_subscription',
+        targetId: subscriptionId,
+        targetUserId: sub.user_id,
+        details: { plan: sub.plan, note: note || null },
       });
 
       return NextResponse.json({ success: true, status: 'declined' });

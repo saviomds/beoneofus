@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import {
-  Terminal, ArrowLeft, Laptop, Globe, FileText, Zap,
+  ArrowLeft, Globe, FileText, Zap,
   Shield, CheckCircle2, MessageSquare, Users, ChevronRight, Search,
-  Code2, Play, Layers, Star, TrendingUp, Briefcase, Hash,
+  Play, Layers, Star, Briefcase,
   Database, ArrowUpRight, Sparkles,
 } from "lucide-react";
 
@@ -20,28 +21,10 @@ const LEARN_RESOURCES = [
     tags: ["Remote", "Hybrid", "Internships"],
   },
   {
-    icon: <TrendingUp size={22} />,
-    label: "Career Pathways",
-    desc: "Map a clear route from where you are to where you want to be — a role, studying or working abroad, or your own business.",
-    href: "/dash/pathways",
-    color: "amber",
-    badge: "Your goal, step by step",
-    tags: ["Guidance", "Milestones", "Mentors"],
-  },
-  {
-    icon: <Laptop size={22} />,
-    label: "In-Browser IDE",
-    desc: "A fully-featured code editor in your browser. Practice problems, prototype projects, and run code without setup.",
-    href: "/IDEPage",
-    color: "emerald",
-    badge: "Zero Setup",
-    tags: ["JavaScript", "Python", "TypeScript", "Go"],
-  },
-  {
     icon: <Globe size={22} />,
     label: "Explore Projects",
     desc: "Browse open source and portfolio projects from community members. Find collaborators, get inspired, or contribute.",
-    href: "/Explore_Projects",
+    href: "/dash/projects",
     color: "violet",
     badge: "Open Source",
     tags: ["Portfolios", "Open Source", "Collaboration"],
@@ -97,23 +80,11 @@ const SUPPORT_RESOURCES = [
     badge: "24h Response",
     tags: ["Help", "Bug Reports", "Account"],
   },
-  {
-    icon: <Users size={22} />,
-    label: "Community Forum",
-    desc: "Get answers from 91k+ peers across all 6 community hubs. Often the fastest way to get unstuck.",
-    href: "/community",
-    color: "emerald",
-    badge: "91k+ Members",
-    tags: ["Peer Help", "Discussions", "Q&A"],
-  },
 ];
 
 const TOOL_HIGHLIGHTS = [
-  { icon: <Code2 size={18} />, label: "In-Browser IDE", desc: "Code without installing anything", href: "/IDEPage", color: "emerald" },
-  { icon: <Hash size={18} />, label: "Community Hubs", desc: "6 professional communities", href: "/community", color: "blue" },
-  { icon: <TrendingUp size={18} />, label: "Career Pathways", desc: "A route to your goal", href: "/dash/pathways", color: "violet" },
   { icon: <Briefcase size={18} />, label: "Jobs & Internships", desc: "Remote-first opportunities", href: "/dash/jobs", color: "amber" },
-  { icon: <Database size={18} />, label: "Project Showcase", desc: "Build your public portfolio", href: "/Explore_Projects", color: "rose" },
+  { icon: <Database size={18} />, label: "Project Showcase", desc: "Build your public portfolio", href: "/dash/projects", color: "rose" },
   { icon: <Users size={18} />, label: "Mentors & Network", desc: "People who've done it", href: "/dash/connections", color: "indigo" },
 ];
 
@@ -170,10 +141,9 @@ export default function ResourcesPage() {
       <nav className="fixed top-0 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <Link href="/" className="font-black text-xl tracking-tighter flex items-center gap-2 text-gray-900 dark:text-gray-100 shrink-0">
-            <Terminal className="text-blue-500" size={24} /> beone<span className="text-blue-600 dark:text-blue-400">of</span>us
+            <Image src="/logo.svg" alt="beoneofus" width={24} height={24} unoptimized className="inline-block" /> beone<span className="text-blue-600 dark:text-blue-400">of</span>us
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/community" className="hidden sm:flex text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Community</Link>
             <Link href="/quick-start" className="hidden md:flex text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Quick Start</Link>
             <Link href="/" className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-1.5 transition-colors">
               <ArrowLeft size={14} /> Home
@@ -198,7 +168,7 @@ export default function ResourcesPage() {
               Resources & Tools
             </h1>
             <p className="text-blue-100 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
-              Jobs, career pathways, guides, documentation, a browser IDE, and community support — all in one place.
+              Jobs, guides, documentation, and community support — all in one place.
             </p>
             <div className="relative max-w-md mx-auto">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
@@ -256,7 +226,7 @@ export default function ResourcesPage() {
                   <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-xl flex items-center justify-center"><Briefcase size={16} /></div>
                   <div>
                     <h2 className="text-xl font-black">Opportunity</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Jobs, career pathways, and hands-on tools</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Jobs, internships, and hands-on tools</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -298,7 +268,7 @@ export default function ResourcesPage() {
                 <div className="relative flex flex-col sm:flex-row items-center gap-8">
                   <div className="flex-1">
                     <h2 className="text-2xl sm:text-3xl font-black mb-3">Unlock everything with a free account</h2>
-                    <p className="text-gray-300 leading-relaxed">Full access to all resources, the community, jobs &amp; internships, career pathways, and your own professional profile.</p>
+                    <p className="text-gray-300 leading-relaxed">Full access to all resources, the community, jobs &amp; internships, and your own professional profile.</p>
                   </div>
                   <div className="flex flex-col gap-3 shrink-0">
                     <Link href="/auth" className="px-8 py-3.5 bg-white text-gray-900 font-black rounded-2xl hover:bg-gray-100 transition-colors text-sm text-center shadow-lg">
@@ -318,14 +288,12 @@ export default function ResourcesPage() {
       <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <Link href="/" className="font-black text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Terminal size={20} className="text-blue-500" /> beone<span className="text-blue-600">of</span>us
+            <Image src="/logo.svg" alt="beoneofus" width={20} height={20} unoptimized className="inline-block" /> beone<span className="text-blue-600">of</span>us
           </Link>
           <div className="flex flex-wrap justify-center gap-4">
             {[
-              { href: "/community", label: "Community" },
               { href: "/quick-start", label: "Quick Start" },
               { href: "/dash/jobs", label: "Jobs" },
-              { href: "/IDEPage", label: "IDE" },
               { href: "/docs", label: "Docs" },
               { href: "/blog", label: "Blog" },
             ].map(({ href, label }) => (

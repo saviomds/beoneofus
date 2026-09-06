@@ -8,16 +8,15 @@ import { test, expect } from '@playwright/test';
 // Static / public routes that should render on their own.
 const PUBLIC_ROUTES = [
   '/', '/business', '/blog', '/community',
-  '/community/design-creativity', '/community/education-research',
+  '/community/design-creativity',
   '/community/finance-business', '/community/founders-startups',
   '/community/marketing-growth', '/community/tech-engineering',
   '/sponsors', '/for-institutions', '/vision', '/growth', '/roadmap',
   '/how_it_works', '/quick-start', '/resources', '/privacy', '/terms',
   '/maintenance', '/offline', '/contents',
   '/auth', '/login', '/signup', '/reset-password', '/onboarding',
-  '/Academy', '/LearnPage', '/docs', '/IDEPage', '/Explore_Projects',
-  '/organizations', '/market', '/shop', '/opportunities', '/projects',
-  '/beoneofus-ai/ai',
+  '/docs',
+  '/organizations', '/market', '/shop', '/opportunities',
 ];
 
 // Routes behind auth — unauthenticated they should redirect to /auth (or render

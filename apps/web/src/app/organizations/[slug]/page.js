@@ -154,6 +154,7 @@ export default function OrganizationProfile() {
         .from('jobs')
         .select('id, title, type, location, salary, created_at, external_url, status, department, tags')
         .eq('user_id', o.owner_id)
+        .eq('approved', true)
         .order('created_at', { ascending: false })
         .limit(12);
       if (active) setPosts((j || []).filter((x) => (x.status || 'active') !== 'closed'));

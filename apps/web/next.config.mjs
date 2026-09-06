@@ -74,7 +74,6 @@ const nextConfig = {
       '@supabase/supabase-js',
       'groq-sdk',
       'openai',
-      'jszip',
     ],
   },
 

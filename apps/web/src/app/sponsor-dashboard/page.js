@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Terminal, Award, BarChart3, Eye, TrendingUp, Loader2,
+  Award, BarChart3, Eye, TrendingUp, Loader2,
   Shield, Star, Crown, ArrowLeft, Calendar, Hash,
   CheckCircle2, AlertCircle,
 } from "lucide-react";
@@ -72,7 +72,7 @@ export default function SponsorDashboard() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-6 text-center">
-        <Terminal size={40} className="text-blue-500 mb-4" />
+        <Image src="/logo.svg" alt="beoneofus" width={40} height={40} unoptimized className="mb-4" />
         <h1 className="text-2xl font-black text-white mb-2">Sponsor Login Required</h1>
         <p className="text-gray-400 mb-6 max-w-sm">Sign in with the email address you used to apply as a sponsor.</p>
         <Link href="/auth" className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl transition-all">
@@ -111,7 +111,7 @@ export default function SponsorDashboard() {
       <nav className="fixed top-0 w-full border-b border-gray-800 bg-gray-950/80 backdrop-blur-xl z-50">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="font-black text-lg tracking-tighter flex items-center gap-2">
-            <Terminal className="text-blue-500" size={18} />
+            <Image src="/logo.svg" alt="beoneofus" width={18} height={18} unoptimized />
             beone<span className="text-blue-500">of</span>us
           </Link>
           <Link href="/sponsors" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors">

@@ -7,7 +7,7 @@ import Image from "next/image";
 import { supabase } from "../../supabaseClient";
 import ReactMarkdown from "react-markdown";
 import {
-  Terminal, Heart, MessageSquare, Eye, Clock, ArrowLeft,
+  Heart, MessageSquare, Eye, Clock, ArrowLeft,
   Send, Loader2, Trash2, User, Copy, Check, Share2, Tag,
   ChevronRight, AlertTriangle, X,
 } from "lucide-react";
@@ -151,9 +151,7 @@ export default function BlogPostPage() {
             <ArrowLeft size={16} /> Blog
           </Link>
           <Link href="/" className="flex items-center gap-1.5 shrink-0">
-            <div className="w-6 h-6 bg-blue-600 rounded-md flex items-center justify-center">
-              <Terminal size={12} className="text-white" />
-            </div>
+            <Image src="/logo.svg" alt="beoneofus" width={24} height={24} unoptimized className="w-6 h-6 rounded-md" />
             <span className="font-black text-sm tracking-tight">beone<span className="text-blue-600">of</span>us</span>
           </Link>
           <div className="flex items-center gap-2">

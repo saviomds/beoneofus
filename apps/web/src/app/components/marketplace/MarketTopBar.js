@@ -8,7 +8,6 @@ import Button from "./ui/Button";
 const NAV = [
   ["Marketplace", "/market"],
   ["Opportunities", "/opportunities"],
-  ["Community", "/community"],
   ["Pricing", "/dash/premium"],
 ];
 

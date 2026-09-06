@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { invalidatePlatformSettingsCache } from '../../../../lib/platformSettings';
+import { logAdminAction } from '../../../../lib/auditLog';
 
 function adminClient() {
   return createClient(
@@ -97,6 +98,14 @@ export async function POST(request) {
     if (error) throw error;
 
     invalidatePlatformSettingsCache();
+
+    await logAdminAction(supa, {
+      actorId: user.id,
+      action: 'update_platform_settings',
+      targetType: 'platform_settings',
+      details: { keys: rows.map(r => r.key) },
+    });
+
     return NextResponse.json({ success: true, saved: rows.length });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -107,7 +116,7 @@ export async function POST(request) {
 export async function DELETE(request) {
   const auth = await requireAdmin(request);
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { supa } = auth;
+  const { supa, user } = auth;
 
   try {
     const { key } = await request.json();
@@ -115,6 +124,13 @@ export async function DELETE(request) {
 
     const { error } = await supa.from('platform_settings').delete().eq('key', key);
     if (error) throw error;
+
+    await logAdminAction(supa, {
+      actorId: user.id,
+      action: 'delete_platform_setting',
+      targetType: 'platform_settings',
+      details: { key },
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

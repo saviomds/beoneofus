@@ -41,6 +41,11 @@ function CompanyCard({ company, userId, onSelect }) {
             <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" /> {t('companies.hiring')}
           </span>
         )}
+        {isOwner && company.approved === false && (
+          <span className="absolute top-2.5 left-5 text-[9px] font-black text-amber-200 bg-amber-900/50 border border-amber-600/50 px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-amber-400 rounded-full" /> Pending review
+          </span>
+        )}
       </div>
 
       <div className="px-5 pb-5">
@@ -266,7 +271,11 @@ export default function CompaniesContent() {
     const params = new URLSearchParams();
     if (hiring) params.set('hiring', 'true');
     if (q) params.set('q', q);
-    const res = await fetch(`/api/companies?${params}`);
+    // Send the token so the owner also sees their own not-yet-approved companies.
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`/api/companies?${params}`, {
+      headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
+    });
     if (res.ok) { const { companies } = await res.json(); setCompanies(companies || []); }
     setLoading(false);
     setRefreshing(false);
@@ -291,6 +300,15 @@ export default function CompaniesContent() {
   return (
     <div className="max-w-2xl mx-auto w-full space-y-5">
       {showCreate && session && <CreateCompanyModal token={session.access_token} onClose={() => setShowCreate(false)} onCreated={c => { setCompanies(p => [c, ...p]); }} />}
+
+      {session && companies.some(c => c.owner_id === session.user.id && c.approved === false) && (
+        <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300">
+          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+          <p className="text-xs font-medium leading-relaxed">
+            One or more of your companies is awaiting admin review. It stays visible to you and becomes public once approved.
+          </p>
+        </div>
+      )}
 
       <div className="flex items-start justify-between">
         <div>

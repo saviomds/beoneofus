@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { supabase } from "../../supabaseClient";
 import {
-  Shield, ShieldCheck, LayoutGrid, BadgeCheck, UserCircle,
+  Shield, ShieldCheck, BadgeCheck, UserCircle,
   Crown, Lock, Loader2,
 } from "lucide-react";
 import OrgVerificationPanel from "./more/OrgVerificationPanel";
@@ -19,10 +19,6 @@ const PanelSkeleton = () => (
   </div>
 );
 
-const AdminPanelTool = dynamic(() => import("./more/AdminPanelTool"), {
-  ssr: false,
-  loading: () => <PanelSkeleton />,
-});
 // Personal dashboard — shared component (also the source for the old More tool).
 const UserDashboardTool = dynamic(() => import("./more/UserDashboardTool"), {
   ssr: false,
@@ -35,8 +31,9 @@ const FounderDashboard = dynamic(() => import("../../founder-dashboard/page"), {
   loading: () => <PanelSkeleton />,
 });
 
+// The "Admin Panel" workspace was merged into /founder-dashboard's "Admin
+// Console" tab (see founder-dashboard/page.tsx) so it isn't duplicated here.
 const WORKSPACES = [
-  { id: "admin",   label: "Admin Panel",  short: "Admin",   Icon: LayoutGrid, desc: "Platform management, users, requests & moderation" },
   { id: "verify",  label: "Verification", short: "Verify",  Icon: BadgeCheck, desc: "Organization trust & verification review" },
   { id: "founder", label: "Founder",      short: "Founder", Icon: Crown,      desc: "Team, founder applications & operations" },
   { id: "me",      label: "My Dashboard", short: "Me",      Icon: UserCircle, desc: "Your tasks, applications & notifications" },
@@ -53,13 +50,11 @@ function AdminConsoleInner() {
   const [pendingVerifs, setPendingVerifs] = useState(0);
 
   const wsParam = searchParams?.get("ws");
-  const ws = WORKSPACES.some((w) => w.id === wsParam) ? wsParam : "admin";
+  const ws = WORKSPACES.some((w) => w.id === wsParam) ? wsParam : WORKSPACES[0].id;
 
   const setWorkspace = useCallback((id) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("ws", id);
-    // A fresh workspace shouldn't inherit the previous panel's inner tab.
-    if (id !== "admin") params.delete("tab");
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }, [searchParams, router, pathname]);
 
@@ -178,14 +173,6 @@ function AdminConsoleInner() {
 
       {/* Active workspace */}
       <div key={ws} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
-        {ws === "admin" && (
-          // AdminPanelTool is a fixed-height, internally-scrolling app (h-full +
-          // overflow-hidden). Give it a bounded, tall container so its sidebar +
-          // scroll area lay out properly instead of collapsing/cramping.
-          <div className="h-[80vh] min-h-[560px] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm">
-            <AdminPanelTool currentUserId={userId} />
-          </div>
-        )}
         {ws === "verify" && (
           <OrgVerificationPanel onCount={setPendingVerifs} />
         )}

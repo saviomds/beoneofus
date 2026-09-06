@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "../supabaseClient";
 import {
-  Terminal, Search, X, Tag, Heart, MessageSquare,
+  Search, X, Tag, Heart, MessageSquare,
   Eye, Clock, Zap, Sparkles, RefreshCw, User,
   TrendingUp, BookOpen, Loader2, SlidersHorizontal,
   ArrowUpDown, History, Crown, ShieldCheck,
@@ -211,9 +211,7 @@ function BlogPageInner() {
       <nav className="fixed top-0 w-full z-50 border-b border-gray-200/80 dark:border-white/5 bg-white/80 dark:bg-[#080c12]/80 backdrop-blur-2xl">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center shadow shadow-blue-500/30">
-              <Terminal size={14} className="text-white" />
-            </div>
+            <Image src="/logo.svg" alt="beoneofus" width={28} height={28} unoptimized className="w-7 h-7 rounded-lg" />
             <span className="font-black text-base tracking-tight">beone<span className="text-blue-600">of</span>us</span>
           </Link>
           <div className="flex items-center gap-3">

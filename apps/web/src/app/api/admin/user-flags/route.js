@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logAdminAction } from '../../../../lib/auditLog';
 
 function adminClient() {
   return createClient(
@@ -54,6 +55,11 @@ export async function POST(request) {
     const { data, error } = await supa
       .from('profiles').update(patch).in('id', ids).select('id');
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const action = 'is_admin' in patch ? (patch.is_admin ? 'grant_admin' : 'revoke_admin') : 'update_user_flags';
+    for (const id of ids) {
+      await logAdminAction(supa, { actorId: caller.id, action, targetType: 'user', targetUserId: id, details: { patch } });
+    }
 
     return NextResponse.json({ ok: true, count: data.length, updated: Object.keys(patch) });
   } catch (err) {

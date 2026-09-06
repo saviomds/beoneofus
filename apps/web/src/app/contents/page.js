@@ -4,26 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  BookOpen, Map, Newspaper, Bookmark, FileText,
+  BookOpen, Newspaper, Bookmark, FileText,
   ChevronRight, Library, ArrowLeft, Moon, Sun,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useTheme } from 'next-themes';
 
 const ITEMS = [
-  {
-    id: 'pathways',
-    label: 'Pathways',
-    desc: 'Structured career roadmaps. Step-by-step progression toward your target role.',
-    icon: Map,
-    iconBg: 'bg-blue-600',
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    border: 'border-blue-200 dark:border-blue-800/40',
-    text: 'text-blue-600 dark:text-blue-400',
-    tag: 'Guided',
-    tagStyle: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-    dest: '/dash/pathways',
-  },
   {
     id: 'blog',
     label: 'Blog',

@@ -11,7 +11,7 @@ import {
   Zap, BookOpen, Copy, Plus, Mail, BadgeCheck, Briefcase, MessageCircle,
   Compass, Clock, TrendingUp, RefreshCw, Flame, Crown, Star, Rocket,
   Lightbulb, Calendar, FileText, Newspaper, MapPin, Hash, Activity,
-  Award, Code, LayoutGrid, GraduationCap, Layers
+  Award, Code, LayoutGrid, Layers
 } from 'lucide-react';
 import ProfileContent from "../dash/content/ProfileContent";
 import NewPost from "./NewPost";
@@ -61,8 +61,7 @@ const PLATFORM_SECTIONS = [
   { label: 'Jobs',        icon: Briefcase,      href: '/dash/more',         bg: 'bg-amber-50 dark:bg-amber-900/20',  text: 'text-amber-600 dark:text-amber-400',  border: 'border-amber-100 dark:border-amber-800/30' },
   { label: 'Marketplace', icon: Rocket,         href: '/dash/marketplace',  bg: 'bg-rose-50 dark:bg-rose-900/20',    text: 'text-rose-600 dark:text-rose-400',    border: 'border-rose-100 dark:border-rose-800/30' },
   { label: 'Connections', icon: Award,          href: '/dash/connections',  bg: 'bg-teal-50 dark:bg-teal-900/20',    text: 'text-teal-600 dark:text-teal-400',    border: 'border-teal-100 dark:border-teal-800/30' },
-  { label: 'Pathways',    icon: GraduationCap,  href: '/dash/pathways',     bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-100 dark:border-indigo-800/30' },
-  { label: 'Projects',    icon: Code,           href: '/Explore_Projects',  bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-100 dark:border-orange-800/30' },
+  { label: 'Projects',    icon: Code,           href: '/dash/projects',  bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-100 dark:border-orange-800/30' },
 ];
 
 const SectionHeader = ({ title, icon: Icon, iconColor, isCollapsible, isOpen, onToggle, action }) => (
@@ -969,9 +968,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
         <div className="space-y-1.5">
           {[
             { label: 'Platform Docs',     sub: 'Network reference manual', icon: FileText,    action: () => { router.push('/dash/docs'); onClose?.(); } },
-            { label: 'Community Hub',     sub: 'Browse all communities',  icon: Users,        href: '/community' },
             { label: 'Quick Start Guide', sub: 'Get started in minutes',  icon: Zap,          href: '/quick-start' },
-            { label: 'Learning Pathways', sub: 'Structured skill tracks',  icon: GraduationCap, action: () => { router.push('/dash/pathways'); onClose?.(); } },
           ].map(({ label, sub, icon: Icon, href, action }) => {
             const cls = "flex items-center gap-3 p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:border-blue-200 dark:hover:border-blue-800/50 hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition-all group w-full text-left";
             const inner = (
@@ -1006,7 +1003,6 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-1">
           {[
-            { label: 'Community', href: '/community' },
             { label: 'Resources', href: '/resources' },
             { label: 'Quick Start', href: '/quick-start' },
             { label: 'Premium', href: '/dash/premium' },

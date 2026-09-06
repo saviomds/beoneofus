@@ -579,32 +579,4 @@ const UserDashboardTool = ({ currentUserId }) => {
   );
 };
 
-// ─── Quote Tool ──────────────────────────────────────────────────────────────
-
-const QUOTES = [
-  { text: "First, solve the problem. Then, write the code.", author: "John Johnson", tag: "Coding" },
-  { text: "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.", author: "Martin Fowler", tag: "Coding" },
-  { text: "Make it work, make it right, make it fast.", author: "Kent Beck", tag: "Coding" },
-  { text: "Talk is cheap. Show me the code.", author: "Linus Torvalds", tag: "Coding" },
-  { text: "Simplicity is the soul of efficiency.", author: "Austin Freeman", tag: "Coding" },
-  { text: "Code is like humor. When you have to explain it, it's bad.", author: "Cory House", tag: "Coding" },
-  { text: "Programs must be written for people to read, and only incidentally for machines to execute.", author: "Harold Abelson", tag: "Coding" },
-  { text: "The best way to predict the future is to create it.", author: "Alan Kay", tag: "Innovation" },
-  { text: "An entrepreneur is someone who jumps off a cliff and builds a plane on the way down.", author: "Reid Hoffman", tag: "Entrepreneurship" },
-  { text: "If you are not embarrassed by the first version of your product, you've launched too late.", author: "Reid Hoffman", tag: "Entrepreneurship" },
-  { text: "Your most unhappy customers are your greatest source of learning.", author: "Bill Gates", tag: "Entrepreneurship" },
-  { text: "Done is better than perfect.", author: "Sheryl Sandberg", tag: "Entrepreneurship" },
-  { text: "Stay hungry, stay foolish.", author: "Steve Jobs", tag: "Motivation" },
-  { text: "The only way to do great work is to love what you do.", author: "Steve Jobs", tag: "Motivation" },
-  { text: "In the middle of difficulty lies opportunity.", author: "Albert Einstein", tag: "Motivation" },
-  { text: "Hard work beats talent when talent doesn't work hard.", author: "Tim Notke", tag: "Motivation" },
-  { text: "The secret of getting ahead is getting started.", author: "Mark Twain", tag: "Motivation" },
-  { text: "Every expert was once a beginner.", author: "Unknown", tag: "Learning" },
-  { text: "Learning never exhausts the mind.", author: "Leonardo da Vinci", tag: "Learning" },
-  { text: "The more I learn, the more I realize how much I don't know.", author: "Albert Einstein", tag: "Learning" },
-  { text: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin", tag: "Learning" },
-  { text: "The beautiful thing about learning is that no one can take it away from you.", author: "B.B. King", tag: "Learning" },
-];
-
-
 export default UserDashboardTool;

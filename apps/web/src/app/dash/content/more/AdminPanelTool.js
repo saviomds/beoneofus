@@ -5,25 +5,29 @@ import Image from "next/image";
 import {
   Terminal, Activity, Database, AlertTriangle, AlertCircle, Loader2,
   RefreshCw, CheckCircle2, ChevronDown, ChevronRight, XCircle, Check, X, Search,
-  Filter, Eye, EyeOff, Trash2, UserPlus, Briefcase, BarChart3, Crown,
+  Filter, Eye, EyeOff, Trash2, UserPlus, Briefcase, BarChart3, Crown, Building2,
   Users, Award, TrendingUp, BadgeCheck, ArrowUpRight, Shield, Handshake,
   BookOpen, Mail, Hash, MessageSquare, FileText, ClipboardList, User,
   ShieldCheck, ShieldAlert, UserCog, Bot, Layers, Bell, Plus, Copy,
   Clock, MoreHorizontal, Video, Sparkles, Heart, Zap, Code2,
   Settings, Key, Globe, CreditCard, DollarSign, Save, ToggleLeft, ToggleRight,
   Webhook, Lock, Package, Star, Wrench, AlertOctagon, ExternalLink, Send,
+  GraduationCap,
 } from "lucide-react";
 import { supabase } from "../../../supabaseClient";
 import SponsorsAdminContent from "../SponsorsAdminContent";
+import HiringAdminContent from "../HiringAdminContent";
+import StudyWorkAdminContent from "../StudyWorkAdminContent";
 import ProfileContent from "../ProfileContent";
 import VerifiedBadge from "../../../components/VerifiedBadge";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Toast, useToast, StatCard, Badge, statusColor } from "./shared";
+import { logAdminAction } from "../../../../lib/auditLog";
 
 
-function SystemLogsView() {
+function SystemLogsView({ currentUserId }) {
   const [logs, setLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(true);
   const [logStats, setLogStats] = useState({ total: 0, unresolved: 0, errors: 0, warnings: 0, thisWeek: 0 });
@@ -56,8 +60,8 @@ function SystemLogsView() {
     const [tot, unres, errs, warns, week] = await Promise.all([
       supabase.from("error_logs").select("id", { count: "exact", head: true }),
       supabase.from("error_logs").select("id", { count: "exact", head: true }).eq("resolved", false),
-      supabase.from("error_logs").select("id", { count: "exact", head: true }).eq("level", "error"),
-      supabase.from("error_logs").select("id", { count: "exact", head: true }).eq("level", "warn"),
+      supabase.from("error_logs").select("id", { count: "exact", head: true }).eq("level", "error").eq("resolved", false),
+      supabase.from("error_logs").select("id", { count: "exact", head: true }).eq("level", "warn").eq("resolved", false),
       supabase.from("error_logs").select("id", { count: "exact", head: true }).gte("created_at", weekAgo),
     ]);
     setLogStats({ total: tot.count ?? 0, unresolved: unres.count ?? 0, errors: errs.count ?? 0, warnings: warns.count ?? 0, thisWeek: week.count ?? 0 });
@@ -103,8 +107,21 @@ function SystemLogsView() {
       resolved_by: session?.user?.id,
       resolved_at: new Date().toISOString(),
     }).eq("id", logId);
+    const resolvedLog = logs.find(l => l.id === logId);
+    await logAdminAction(supabase, {
+      actorId: currentUserId,
+      action: "resolve_error_log",
+      targetType: "error_log",
+      targetId: logId,
+      details: { message: resolvedLog?.message?.slice(0, 200) },
+    });
     setLogs(prev => prev.map(l => l.id === logId ? { ...l, resolved: true } : l));
-    setLogStats(prev => ({ ...prev, unresolved: Math.max(0, prev.unresolved - 1) }));
+    setLogStats(prev => ({
+      ...prev,
+      unresolved: Math.max(0, prev.unresolved - 1),
+      errors: resolvedLog?.level === "error" ? Math.max(0, prev.errors - 1) : prev.errors,
+      warnings: resolvedLog?.level === "warn" ? Math.max(0, prev.warnings - 1) : prev.warnings,
+    }));
     setResolvingId(null);
   };
 
@@ -918,6 +935,9 @@ const AdminPanelTool = ({ currentUserId }) => {
         .delete()
         .in("id", ids);
       if (error) throw error;
+      for (const id of ids) {
+        await logAdminAction(supabase, { actorId: currentUserId, action: "delete_user", targetType: "user", targetUserId: id });
+      }
       showToast(`Purged ${ids.length} users from the network.`);
       setAllUsers(prev => prev.filter(u => !selectedUserIds.has(u.id)));
       setSelectedUserIds(new Set());
@@ -1048,6 +1068,7 @@ const AdminPanelTool = ({ currentUserId }) => {
     try {
       const { error } = await supabase.from("profiles").delete().eq("id", userId);
       if (error) throw error;
+      await logAdminAction(supabase, { actorId: currentUserId, action: "delete_user", targetType: "user", targetUserId: userId, details: { username } });
       setAllUsers(prev => prev.filter(u => u.id !== userId));
       showToast(`@${username} deleted.`);
       fetchStats();
@@ -1162,9 +1183,11 @@ const AdminPanelTool = ({ currentUserId }) => {
     { id: "premium_subs", label: "Premium",      icon: Crown       },
     { id: "users",        label: "Users",        icon: Users       },
     { id: "applications", label: "Applications", icon: Briefcase   },
+    { id: "study_work",   label: "Study/Work Abroad", icon: GraduationCap },
     { id: "founder_apps", label: "Founder Apps", icon: Crown       },
     { id: "tasks",        label: "Tasks",        icon: ClipboardList },
     { id: "sponsors",     label: "Sponsors",     icon: Handshake     },
+    { id: "hiring",       label: "Hiring",       icon: Building2      },
     { id: "system_logs",  label: "System Logs",  icon: Terminal      },
     { id: "settings",     label: "Settings",     icon: Shield        },
   ];
@@ -2180,9 +2203,18 @@ const AdminPanelTool = ({ currentUserId }) => {
           <SponsorsAdminContent showToast={showToast} />
         )}
 
+        {/* ── HIRING ── */}
+        {adminTab === "hiring" && (
+          <HiringAdminContent showToast={showToast} />
+        )}
+
+        {adminTab === "study_work" && (
+          <StudyWorkAdminContent showToast={showToast} />
+        )}
+
         {/* ── SYSTEM LOGS ── */}
         {adminTab === "system_logs" && (
-          <SystemLogsView />
+          <SystemLogsView currentUserId={currentUserId} />
         )}
 
         {/* ── SETTINGS ── */}

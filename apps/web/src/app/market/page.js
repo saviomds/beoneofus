@@ -107,7 +107,7 @@ export default function MarketPage() {
             <span className="text-[15px] font-black text-mkt-text">BeOneOfUs <span className="font-medium text-mkt-muted">Market</span></span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
-            {[["Marketplace", "/market"], ["Opportunities", "/opportunities"], ["Community", "/community"], ["Pricing", "/dash/premium"]].map(([label, href]) => (
+            {[["Marketplace", "/market"], ["Opportunities", "/opportunities"], ["Pricing", "/dash/premium"]].map(([label, href]) => (
               <Link key={label} href={href} className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-mkt-muted transition hover:bg-mkt-bg-2 hover:text-mkt-text mkt-focus">{label}</Link>
             ))}
           </nav>

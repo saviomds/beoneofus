@@ -690,7 +690,7 @@ export default function DocsPage() {
 
             {/* Footer nav */}
             <div className="flex flex-wrap items-center justify-between pt-8 mt-4 border-t border-gray-200 dark:border-gray-800 gap-3">
-              <Link href="/how_it_works" className="text-sm font-medium text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5">
+              <Link href="/how-it-works" className="text-sm font-medium text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5">
                 <ChevronRight size={14} className="rotate-180" /> How It Works
               </Link>
               <div className="flex items-center gap-3">

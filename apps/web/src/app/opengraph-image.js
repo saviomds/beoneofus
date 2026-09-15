@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 // Image metadata
-export const alt = 'beoneofus - The network for developers';
+export const alt = 'beoneofus - Study & Work Abroad in Mauritius';
 export const size = {
   width: 1200,
   height: 630,
@@ -27,7 +27,7 @@ export default async function Image() {
           <span>beone</span><span style={{ color: '#3b82f6' }}>of</span><span>us</span>
         </div>
         <p style={{ fontSize: 32, color: '#9ca3af', marginTop: 20, fontWeight: 600 }}>
-          The network for developers.
+          Study & Work Abroad in Mauritius
         </p>
       </div>
     ),

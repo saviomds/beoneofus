@@ -16,8 +16,8 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: 'beoneofus — The Global Opportunity Ecosystem',
-  description: 'An AI-powered network connecting individuals, businesses, governments, schools, healthcare providers, and NGOs — for jobs, mentorship, learning, coaching, and community, through one intelligent, verified graph.',
+  title: 'beoneofus — Study & Work Abroad in Mauritius',
+  description: 'beoneofus helps graduates and school-leavers study or work abroad in Mauritius — from your application and requirements to documents, review, and support at every step.',
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -39,8 +39,8 @@ export const metadata = {
     statusBarStyle: 'default',
   },
   openGraph: {
-    title: 'beoneofus — The Global Opportunity Ecosystem',
-    description: 'One AI-native network connecting individuals and institutions — for jobs, mentorship, learning, coaching, and community, through one verified graph.',
+    title: 'beoneofus — Study & Work Abroad in Mauritius',
+    description: 'Helping graduates and school-leavers study or work abroad in Mauritius — application, requirements, documents, and support at every step.',
     url: 'https://beoneofus.work',
     siteUrl: 'https://beoneofus.work',
     siteName: 'beoneofus',
@@ -49,8 +49,8 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'beoneofus — The Global Opportunity Ecosystem',
-    description: 'One AI-native network connecting individuals and institutions, through one verified graph.',
+    title: 'beoneofus — Study & Work Abroad in Mauritius',
+    description: 'Helping graduates and school-leavers study or work abroad in Mauritius.',
   },
 };
 

@@ -63,7 +63,7 @@ const DOC_RESOURCES = [
     icon: <CheckCircle2 size={22} />,
     label: "How It Works",
     desc: "A clear overview of the platform's architecture, community structure, and the value it creates for professionals.",
-    href: "/how_it_works",
+    href: "/how-it-works",
     color: "teal",
     badge: "Platform Overview",
     tags: ["Overview", "Community", "Platform"],

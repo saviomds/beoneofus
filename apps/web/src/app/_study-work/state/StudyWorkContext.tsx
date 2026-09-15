@@ -3,23 +3,20 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import * as auth from '../services/authService'
 import * as apps from '../services/applicationService'
-import type {
-  Application, ApplicationStatus, ApplicationType, ClientUser, RegisterInput,
-} from '../types'
+import type { Application, ApplicationType, ClientUser } from '../types'
 
 interface StudyWorkContextValue {
   loading: boolean
   user: ClientUser | null
-  authSource: 'beoneofus' | 'mock' | null
+  hasApplicantProfile: boolean
   applications: Application[]
   refresh: () => void
-  register: (input: RegisterInput) => Promise<ClientUser>
+  saveApplicantDetails: (input: auth.ApplicantDetailsInput) => Promise<void>
   logout: () => Promise<void>
-  updateProfile: (patch: Partial<ClientUser>) => void
-  createApplication: (type: ApplicationType, overrideUser?: ClientUser) => Application
-  saveDraft: (id: string, patch: Partial<Application>) => void
-  submitApplication: (id: string) => void
-  setDemoStatus: (id: string, status: ApplicationStatus) => void
+  updateProfile: (patch: Partial<ClientUser>) => Promise<void>
+  createApplication: (type: ApplicationType) => Promise<Application>
+  saveDraft: (id: string, patch: Partial<Application>) => Promise<void>
+  submitApplication: (id: string) => Promise<void>
 }
 
 const StudyWorkContext = createContext<StudyWorkContextValue | null>(null)
@@ -27,7 +24,7 @@ const StudyWorkContext = createContext<StudyWorkContextValue | null>(null)
 export function StudyWorkProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<ClientUser | null>(null)
-  const [authSource, setAuthSource] = useState<'beoneofus' | 'mock' | null>(null)
+  const [hasApplicantProfile, setHasApplicantProfile] = useState(false)
   const [applications, setApplications] = useState<Application[]>([])
   const [tick, setTick] = useState(0)
 
@@ -36,72 +33,64 @@ export function StudyWorkProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    auth.getCurrentUser().then((current) => {
+    auth.getCurrentUser().then(async (current) => {
       if (cancelled) return
       setUser(current?.user ?? null)
-      setAuthSource(current?.source ?? null)
-      setApplications(current ? apps.listApplicationsForUser(current.user.id) : [])
+      setHasApplicantProfile(current?.hasApplicantProfile ?? false)
+      const list = current ? await apps.listApplicationsForUser(current.user.id) : []
+      if (cancelled) return
+      setApplications(list)
       setLoading(false)
     })
     return () => { cancelled = true }
   }, [tick])
-
-  const register = useCallback(async (input: RegisterInput) => {
-    const registered = await auth.register(input)
-    // Set state synchronously from the result we already have, rather than
-    // relying on the background refetch effect (triggered below via
-    // `refresh`) — that round-trips through a Supabase session check and
-    // would otherwise leave `user` stale for a moment, which broke
-    // `createApplication` being called immediately after `register`.
-    setUser(registered)
-    setAuthSource('mock')
-    setApplications(apps.listApplicationsForUser(registered.id))
-    refresh()
-    return registered
-  }, [refresh])
 
   const logout = useCallback(async () => {
     await auth.logout()
     refresh()
   }, [refresh])
 
-  const updateProfile = useCallback((patch: Partial<ClientUser>) => {
-    if (!user || authSource !== 'mock') return
-    auth.updateMockProfile(user.id, patch)
+  const saveApplicantDetails = useCallback(async (input: auth.ApplicantDetailsInput) => {
+    if (!user) throw new Error('Not signed in')
+    await auth.saveApplicantDetails(user.id, user.email, input)
     refresh()
-  }, [user, authSource, refresh])
+  }, [user, refresh])
 
-  const createApplication = useCallback((type: ApplicationType, overrideUser?: ClientUser) => {
-    // `overrideUser` lets a caller that just registered (and so already has
-    // the freshly-created user in hand) skip the round-trip of waiting for
-    // this context's own `user` state to catch up — avoids a stale-closure
-    // race where the state update from `register()` hasn't landed yet.
-    const effectiveUser = overrideUser ?? user
-    if (!effectiveUser) throw new Error('Cannot create an application without a signed-in user')
-    const created = apps.createApplication(effectiveUser.id, type, effectiveUser)
+  const updateProfile = useCallback(async (patch: Partial<ClientUser>) => {
+    if (!user) return
+    await auth.saveApplicantDetails(user.id, user.email, {
+      firstName: patch.firstName ?? user.firstName,
+      middleName: patch.middleName ?? user.middleName,
+      lastName: patch.lastName ?? user.lastName,
+      phone: patch.phone ?? user.phone,
+      nationality: patch.nationality ?? user.nationality,
+      countryOfResidence: patch.countryOfResidence ?? user.countryOfResidence,
+      dateOfBirth: patch.dateOfBirth ?? user.dateOfBirth,
+    })
+    refresh()
+  }, [user, refresh])
+
+  const createApplication = useCallback(async (type: ApplicationType) => {
+    if (!user) throw new Error('Cannot create an application without a signed-in user')
+    const created = await apps.createApplication(user.id, type, user)
     refresh()
     return created
   }, [user, refresh])
 
-  const saveDraft = useCallback((id: string, patch: Partial<Application>) => {
-    apps.saveDraft(id, patch)
+  const saveDraft = useCallback(async (id: string, patch: Partial<Application>) => {
+    await apps.saveDraft(id, patch)
     refresh()
   }, [refresh])
 
-  const submitApplication = useCallback((id: string) => {
-    apps.submitApplication(id)
-    refresh()
-  }, [refresh])
-
-  const setDemoStatus = useCallback((id: string, status: ApplicationStatus) => {
-    apps.setStatus(id, status)
+  const submitApplication = useCallback(async (id: string) => {
+    await apps.submitApplication(id)
     refresh()
   }, [refresh])
 
   const value = useMemo<StudyWorkContextValue>(() => ({
-    loading, user, authSource, applications, refresh,
-    register, logout, updateProfile, createApplication, saveDraft, submitApplication, setDemoStatus,
-  }), [loading, user, authSource, applications, refresh, register, logout, updateProfile, createApplication, saveDraft, submitApplication, setDemoStatus])
+    loading, user, hasApplicantProfile, applications, refresh,
+    saveApplicantDetails, logout, updateProfile, createApplication, saveDraft, submitApplication,
+  }), [loading, user, hasApplicantProfile, applications, refresh, saveApplicantDetails, logout, updateProfile, createApplication, saveDraft, submitApplication])
 
   return <StudyWorkContext.Provider value={value}>{children}</StudyWorkContext.Provider>
 }

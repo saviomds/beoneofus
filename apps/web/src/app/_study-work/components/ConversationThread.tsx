@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { Send, MessageSquare } from 'lucide-react'
 import { MessageBubble } from './MessageBubble'
 import { EmptyState } from './EmptyState'
+import { supabase } from '../../supabaseClient'
 import type { Conversation, Message } from '../types'
 
 interface ConversationThreadProps {
@@ -14,6 +16,24 @@ interface ConversationThreadProps {
 
 export function ConversationThread({ conversation, messages, onSend }: ConversationThreadProps) {
   const [draft, setDraft] = useState('')
+  const [advisorAvatarUrl, setAdvisorAvatarUrl] = useState<string | null>(null)
+
+  // The conversation's advisorName is only a department placeholder set at
+  // creation time — once a real staff member has actually replied, show
+  // their real name (the sender_name on their message, "@username") instead,
+  // along with their actual profile picture. Falls back to the beoneofus
+  // logo when no one has replied yet, or that admin has no avatar set.
+  const lastAdvisorMessage = [...messages].reverse().find((m) => m.sender === 'advisor')
+  const displayName = lastAdvisorMessage?.senderName ?? conversation?.advisorName ?? ''
+  const advisorUsername = lastAdvisorMessage?.senderName?.startsWith('@') ? lastAdvisorMessage.senderName.slice(1) : null
+
+  useEffect(() => {
+    if (!advisorUsername) return
+    let cancelled = false
+    supabase.from('profiles').select('avatar_url').eq('username', advisorUsername).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setAdvisorAvatarUrl(data?.avatar_url ?? null) })
+    return () => { cancelled = true }
+  }, [advisorUsername])
 
   if (!conversation) {
     return <EmptyState icon={<MessageSquare size={20} />} title="No conversation yet" body="Your advisor conversation will appear here once your application starts." />
@@ -29,11 +49,16 @@ export function ConversationThread({ conversation, messages, onSend }: Conversat
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col h-[560px]">
       <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black shrink-0">
-          {conversation.advisorName.split(' ').map((p) => p[0]).join('').slice(0, 2)}
+        <div className={`w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center ${advisorAvatarUrl ? '' : 'bg-gray-100 dark:bg-gray-800 p-1.5'}`}>
+          {advisorAvatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage avatar URL, not a local static asset
+            <img src={advisorAvatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <Image src="/logo.svg" alt="" width={20} height={20} unoptimized />
+          )}
         </div>
         <div>
-          <p className="font-bold text-sm text-gray-900 dark:text-white">{conversation.advisorName}</p>
+          <p className="font-bold text-sm text-gray-900 dark:text-white">{displayName}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">{conversation.advisorRole}</p>
         </div>
       </div>

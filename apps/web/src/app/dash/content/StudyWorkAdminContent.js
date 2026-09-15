@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   GraduationCap, Briefcase, Loader2, RefreshCw, X, AlertTriangle,
-  AlertCircle, Info, Search, Send, FileText, CheckCircle2,
+  AlertCircle, Info, Search, Send, FileText, CheckCircle2, Eye,
 } from "lucide-react";
 import { supabase } from "../../supabaseClient";
 import { statusMeta, REQUIREMENT_STATUS_LABEL, DOCUMENT_STATUS_LABEL, requirementTone, documentTone } from "../../_study-work/lib/statusMachine";
@@ -22,6 +22,12 @@ const FLAG_STYLE = {
   warning: { icon: AlertCircle, className: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300" },
   info: { icon: Info, className: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300" },
 };
+
+async function openSignedDocument(path) {
+  const { data, error } = await supabase.storage.from("study-work-documents").createSignedUrl(path, 300);
+  if (error || !data?.signedUrl) throw new Error(error?.message || "Could not open this document.");
+  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+}
 
 function FlagChip({ flag }) {
   const style = FLAG_STYLE[flag.level] ?? FLAG_STYLE.info;
@@ -45,7 +51,7 @@ export default function StudyWorkAdminContent({ showToast }) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState("");
-  const [finalDoc, setFinalDoc] = useState({ name: "", category: "Admission Letter", fileName: "" });
+  const [finalDoc, setFinalDoc] = useState({ name: "", category: "Admission Letter", file: null });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setToken(session?.access_token ?? null));
@@ -141,11 +147,35 @@ export default function StudyWorkAdminContent({ showToast }) {
     if (ok) { setReply(""); loadDetail(selectedId); }
   }
 
+  async function callMultipart(formData) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/study-work/admin", {
+        method: "POST",
+        headers: { ...authHeaders() },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Action failed");
+      return data;
+    } catch (err) {
+      showToast?.(err.message, "error");
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleAddFinalDocument(e) {
     e.preventDefault();
-    if (!finalDoc.name.trim() || !finalDoc.fileName.trim()) return;
-    const ok = await call("addFinalDocument", { applicationId: selectedId, ...finalDoc });
-    if (ok) { showToast?.("Final document added."); setFinalDoc({ name: "", category: "Admission Letter", fileName: "" }); loadDetail(selectedId); }
+    if (!finalDoc.name.trim() || !finalDoc.file) return;
+    const formData = new FormData();
+    formData.append("applicationId", selectedId);
+    formData.append("name", finalDoc.name.trim());
+    formData.append("category", finalDoc.category);
+    formData.append("file", finalDoc.file);
+    const ok = await callMultipart(formData);
+    if (ok) { showToast?.("Final document added."); setFinalDoc({ name: "", category: "Admission Letter", file: null }); loadDetail(selectedId); }
   }
 
   const filtered = useMemo(() => {
@@ -305,6 +335,9 @@ export default function StudyWorkAdminContent({ showToast }) {
                     {(detail.application.status === "APPROVED" || detail.application.status === "COMPLETED") ? null : (
                       <p className="text-[11px] text-gray-400">Typically issued once the application reaches Approved/Completed.</p>
                     )}
+                    {detail.finalDocuments?.map((fd) => (
+                      <FinalDocumentRow key={fd.id} doc={fd} />
+                    ))}
                   </div>
                   <form onSubmit={handleAddFinalDocument} className="flex flex-col gap-1.5">
                     <input value={finalDoc.name} onChange={(e) => setFinalDoc((f) => ({ ...f, name: e.target.value }))} placeholder="Document name"
@@ -314,10 +347,10 @@ export default function StudyWorkAdminContent({ showToast }) {
                         className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-xs">
                         {["Admission Letter", "Employment Contract", "Permit Documents", "Application Documents", "Supporting Documents", "Other"].map((c) => <option key={c}>{c}</option>)}
                       </select>
-                      <input value={finalDoc.fileName} onChange={(e) => setFinalDoc((f) => ({ ...f, fileName: e.target.value }))} placeholder="file-name.pdf"
+                      <input type="file" onChange={(e) => setFinalDoc((f) => ({ ...f, file: e.target.files?.[0] ?? null }))}
                         className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-xs" />
                     </div>
-                    <button type="submit" disabled={busy} className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold">
+                    <button type="submit" disabled={busy || !finalDoc.name.trim() || !finalDoc.file} className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold disabled:opacity-50">
                       <FileText size={12} /> Add final document
                     </button>
                   </form>
@@ -351,8 +384,56 @@ export default function StudyWorkAdminContent({ showToast }) {
   );
 }
 
+function FinalDocumentRow({ doc }) {
+  const [viewing, setViewing] = useState(false);
+  const [viewError, setViewError] = useState("");
+
+  async function handleView() {
+    setViewing(true);
+    setViewError("");
+    try {
+      await openSignedDocument(doc.file_name);
+    } catch (err) {
+      setViewError(err.message || "Could not open this document.");
+    } finally {
+      setViewing(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 dark:bg-gray-800/60 px-2.5 py-2">
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{doc.name}</p>
+        <p className="text-[10px] text-gray-400">{doc.category} · issued {new Date(doc.issued_at).toLocaleDateString()}</p>
+        {viewError && <p className="text-[10px] text-rose-500">{viewError}</p>}
+      </div>
+      <button type="button" onClick={handleView} disabled={viewing}
+        className="shrink-0 flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50">
+        {viewing ? <Loader2 size={11} className="animate-spin" /> : <Eye size={11} />} View
+      </button>
+    </div>
+  );
+}
+
 function DocumentRow({ doc, busy, onChange }) {
   const [comment, setComment] = useState(doc.reviewer_comment ?? "");
+  const [viewing, setViewing] = useState(false);
+  const [viewError, setViewError] = useState("");
+  const fileLabel = doc.file_name ? doc.file_name.split("/").pop() : null;
+
+  async function handleView() {
+    if (!doc.file_name) return;
+    setViewing(true);
+    setViewError("");
+    try {
+      await openSignedDocument(doc.file_name);
+    } catch (err) {
+      setViewError(err.message || "Could not open this document.");
+    } finally {
+      setViewing(false);
+    }
+  }
+
   return (
     <div className="p-2.5 rounded-lg border border-gray-100 dark:border-gray-800 space-y-1.5">
       <div className="flex items-center justify-between gap-2">
@@ -362,7 +443,16 @@ function DocumentRow({ doc, busy, onChange }) {
           {DOCUMENT_STATUSES.map((s) => <option key={s} value={s}>{DOCUMENT_STATUS_LABEL[s]}</option>)}
         </select>
       </div>
-      {doc.file_name && <p className="text-[10px] text-gray-400">{doc.file_name}</p>}
+      {fileLabel && (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] text-gray-400 truncate">{fileLabel}</p>
+          <button type="button" onClick={handleView} disabled={viewing}
+            className="shrink-0 flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50">
+            {viewing ? <Loader2 size={11} className="animate-spin" /> : <Eye size={11} />} View document
+          </button>
+        </div>
+      )}
+      {viewError && <p className="text-[10px] text-rose-500">{viewError}</p>}
       <div className="flex gap-1.5">
         <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Reviewer comment"
           className="flex-1 px-2 py-1 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-[11px]" />

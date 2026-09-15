@@ -1,6 +1,5 @@
 // Core domain types for the Study Abroad / Work Abroad client application portal.
-// This whole feature runs on frontend mock/local state (see services/) so it can
-// be wired to a real backend later without touching the UI layer.
+// Backed by the real `study_work_*` Supabase tables (see services/applicationService.ts).
 
 export type ApplicationType = 'study' | 'work'
 
@@ -248,16 +247,4 @@ export interface ClientUser {
   countryOfResidence: string
   dateOfBirth: string
   createdAt: string
-}
-
-export interface RegisterInput {
-  firstName: string
-  middleName: string
-  lastName: string
-  email: string
-  phone: string
-  nationality: string
-  countryOfResidence: string
-  dateOfBirth: string
-  password: string
 }

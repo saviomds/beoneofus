@@ -1,16 +1,34 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, MessageSquareWarning } from 'lucide-react'
+import { FileText, MessageSquareWarning, Eye, Loader2 } from 'lucide-react'
 import { StatusBadge } from './StatusBadge'
 import { FileUpload } from './FileUpload'
 import { DOCUMENT_STATUS_LABEL, documentTone } from '../lib/statusMachine'
 import type { DocumentItem } from '../types'
 
-export function DocumentCard({ document, onUploaded }: { document: DocumentItem; onUploaded: (fileName: string) => void }) {
+interface DocumentCardProps {
+  document: DocumentItem
+  onUpload: (file: File) => Promise<void>
+  onView: () => Promise<string | null>
+}
+
+export function DocumentCard({ document, onUpload, onView }: DocumentCardProps) {
   const [uploading, setUploading] = useState(false)
+  const [viewing, setViewing] = useState(false)
   const hasFile = document.status !== 'MISSING'
   const needsAttention = document.status === 'NEEDS_CORRECTION' || document.status === 'REJECTED' || document.status === 'MISSING'
+  const displayName = document.fileName?.split('/').pop() ?? ''
+
+  async function handleView() {
+    setViewing(true)
+    try {
+      const url = await onView()
+      if (url) window.open(url, '_blank', 'noopener,noreferrer')
+    } finally {
+      setViewing(false)
+    }
+  }
 
   return (
     <div className={`rounded-2xl border p-5 bg-white dark:bg-gray-900 ${needsAttention ? 'border-rose-200 dark:border-rose-900/50' : 'border-gray-200 dark:border-gray-800'}`}>
@@ -31,8 +49,13 @@ export function DocumentCard({ document, onUploaded }: { document: DocumentItem;
 
       {hasFile && (
         <div className="flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/60 rounded-lg px-3 py-2 mb-3">
-          <span className="truncate">{document.fileName}</span>
-          {document.uploadedAt && <span className="shrink-0">{new Date(document.uploadedAt).toLocaleDateString()}</span>}
+          <span className="truncate">{displayName}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            {document.uploadedAt && <span>{new Date(document.uploadedAt).toLocaleDateString()}</span>}
+            <button type="button" onClick={handleView} disabled={viewing} className="flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50">
+              {viewing ? <Loader2 size={12} className="animate-spin" /> : <Eye size={12} />} View
+            </button>
+          </div>
         </div>
       )}
 
@@ -48,7 +71,7 @@ export function DocumentCard({ document, onUploaded }: { document: DocumentItem;
           <FileUpload
             acceptedFormats={document.acceptedFormats}
             maxSizeMb={document.maxSizeMb}
-            onUploaded={(fileName) => { onUploaded(fileName); setUploading(false) }}
+            onUpload={async (file) => { await onUpload(file); setUploading(false) }}
             compact
           />
         ) : (

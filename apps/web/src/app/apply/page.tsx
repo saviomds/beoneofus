@@ -34,17 +34,21 @@ export default function ApplySelectionPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const preselected = searchParams.get('type')
-  const { loading, user, applications, createApplication } = useStudyWork()
+  const { loading, user, hasApplicantProfile, applications, createApplication } = useStudyWork()
   const [starting, setStarting] = useState<ApplicationType | null>(null)
 
-  function handleChoose(type: ApplicationType) {
+  async function handleChoose(type: ApplicationType) {
     if (!user) {
-      router.push(`/apply/register?type=${type}`)
+      router.push(`/auth?mode=sign-up&next=${encodeURIComponent(`/apply/details?type=${type}`)}`)
+      return
+    }
+    if (!hasApplicantProfile) {
+      router.push(`/apply/details?type=${type}`)
       return
     }
     setStarting(type)
     const existing = applications.find((a) => a.type === type)
-    const application = existing ?? createApplication(type)
+    const application = existing ?? await createApplication(type)
     router.push(application.status === 'DRAFT' ? `/apply/wizard/${application.id}` : `/apply/dashboard/application/${application.id}`)
   }
 

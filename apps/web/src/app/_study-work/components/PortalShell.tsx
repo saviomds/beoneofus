@@ -10,7 +10,6 @@ import {
 } from 'lucide-react'
 import { useStudyWork } from '../state/StudyWorkContext'
 import { useNotifications } from '../hooks/useNotifications'
-import { DemoModeSwitcher } from './DemoModeSwitcher'
 
 const NAV = [
   { href: '/apply/dashboard', label: 'Dashboard', icon: LayoutDashboard, match: (p: string) => p === '/apply/dashboard' },
@@ -128,8 +127,6 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       <main className="lg:pl-64">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">{children}</div>
       </main>
-
-      <DemoModeSwitcher />
     </div>
   )
 }

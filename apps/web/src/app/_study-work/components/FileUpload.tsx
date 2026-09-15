@@ -6,13 +6,13 @@ import { UploadCloud, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
 interface FileUploadProps {
   acceptedFormats: string[]
   maxSizeMb: number
-  onUploaded: (fileName: string) => void
+  onUpload: (file: File) => Promise<void>
   compact?: boolean
 }
 
 type UploadState = 'idle' | 'uploading' | 'success' | 'error'
 
-export function FileUpload({ acceptedFormats, maxSizeMb, onUploaded, compact }: FileUploadProps) {
+export function FileUpload({ acceptedFormats, maxSizeMb, onUpload, compact }: FileUploadProps) {
   const [state, setState] = useState<UploadState>('idle')
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
@@ -20,7 +20,7 @@ export function FileUpload({ acceptedFormats, maxSizeMb, onUploaded, compact }: 
 
   const accept = acceptedFormats.map((f) => `.${f.toLowerCase()}`).join(',')
 
-  const handleFile = useCallback((file: File | undefined) => {
+  const handleFile = useCallback(async (file: File | undefined) => {
     if (!file) return
     const ext = file.name.split('.').pop()?.toUpperCase() ?? ''
     if (!acceptedFormats.includes(ext)) {
@@ -35,13 +35,14 @@ export function FileUpload({ acceptedFormats, maxSizeMb, onUploaded, compact }: 
     }
     setState('uploading')
     setError('')
-    // Simulated upload — this feature has no backend yet; a real integration
-    // would swap this timeout for an actual upload call.
-    window.setTimeout(() => {
+    try {
+      await onUpload(file)
       setState('success')
-      onUploaded(file.name)
-    }, 900)
-  }, [acceptedFormats, maxSizeMb, onUploaded])
+    } catch (err) {
+      setState('error')
+      setError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
+    }
+  }, [acceptedFormats, maxSizeMb, onUpload])
 
   if (state === 'success') {
     return (

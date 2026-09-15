@@ -16,7 +16,9 @@ export default function ApplicationSubmittedPage() {
   const [application, setApplication] = useState<Application | null | undefined>(undefined)
 
   useEffect(() => {
-    setApplication(getApplication(params.id))
+    let cancelled = false
+    getApplication(params.id).then((app) => { if (!cancelled) setApplication(app) })
+    return () => { cancelled = true }
   }, [params.id])
 
   if (application === undefined) return <div className="min-h-screen flex items-center justify-center"><LoadingState /></div>

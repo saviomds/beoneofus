@@ -16,6 +16,7 @@ export default function PersonalTab() {
   const [draft, setDraft] = useState<Application | null>(application)
   const [errors, setErrors] = useState<Errors>({})
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => { setDraft(application) }, [application])
 
@@ -26,21 +27,26 @@ export default function PersonalTab() {
     setSaved(false)
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!draft) return
     const stepErrors = validatePersonalStep(draft)
     setErrors(stepErrors)
     if (Object.keys(stepErrors).length > 0) return
-    saveDraft(draft.id, draft)
-    refresh()
-    setSaved(true)
+    setSaving(true)
+    try {
+      await saveDraft(draft.id, draft)
+      await refresh()
+      setSaved(true)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="space-y-5">
       <StepPersonal application={draft} onChange={updateDraft} errors={errors} />
       <div className="flex items-center gap-3">
-        <Button type="button" onClick={handleSave}>Save Changes</Button>
+        <Button type="button" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
         {saved && <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400"><CheckCircle2 size={15} /> Saved</span>}
       </div>
     </div>

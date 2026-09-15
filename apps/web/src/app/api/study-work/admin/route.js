@@ -21,8 +21,44 @@ async function requireAdmin(request) {
   if (!token) return null;
   const { data: { user }, error } = await supa.auth.getUser(token);
   if (error || !user) return null;
-  const { data } = await supa.from('profiles').select('is_admin, role').eq('id', user.id).single();
-  return (data?.is_admin || ['admin', 'founder'].includes(data?.role)) ? { supa, user } : null;
+  const { data } = await supa.from('profiles').select('is_admin, role, username').eq('id', user.id).single();
+  return (data?.is_admin || ['admin', 'founder'].includes(data?.role)) ? { supa, user, profile: data } : null;
+}
+
+// Mirrors the client-side stage list in _study-work/services/applicationService.ts
+// so an admin-driven status change keeps the applicant's timeline in sync too.
+const TIMELINE_STAGES = [
+  'Application Created', 'Application Submitted', 'Initial Review', 'Application Confirmed',
+  'Information Completed', 'Document Verification', 'Processing', 'Final Review', 'Completed',
+];
+const STATUS_TO_STAGE = {
+  SUBMITTED: 'Application Submitted',
+  UNDER_REVIEW: 'Initial Review',
+  CONFIRMED: 'Application Confirmed',
+  FULL_APPLICATION: 'Information Completed',
+  DOCUMENT_COLLECTION: 'Document Verification',
+  DOCUMENT_REVIEW: 'Document Verification',
+  ADDITIONAL_INFORMATION_REQUIRED: 'Document Verification',
+  PROCESSING: 'Processing',
+  APPROVED: 'Final Review',
+  COMPLETED: 'Completed',
+};
+
+async function advanceTimeline(supa, applicationId, throughLabel) {
+  const stageIdx = TIMELINE_STAGES.indexOf(throughLabel);
+  if (stageIdx === -1) return;
+  const { data: events } = await supa.from('study_work_timeline').select('*').eq('application_id', applicationId);
+  const today = new Date().toISOString().slice(0, 10);
+  await Promise.all((events ?? []).map((t) => {
+    const idx = TIMELINE_STAGES.indexOf(t.label);
+    if (idx === -1) return null;
+    let patch;
+    if (idx < stageIdx) patch = { status: 'done', date: t.date ?? today };
+    else if (idx === stageIdx) patch = { status: 'done', date: today };
+    else if (idx === stageIdx + 1) patch = { status: 'current' };
+    else patch = { status: 'upcoming' };
+    return supa.from('study_work_timeline').update(patch).eq('id', t.id);
+  }));
 }
 
 // GET /api/study-work/admin — list every application with applicant + document summary.
@@ -78,11 +114,44 @@ export async function GET(request) {
   return NextResponse.json({ applications: rows });
 }
 
+const FINAL_DOCUMENTS_BUCKET = 'study-work-documents';
+
 // POST /api/study-work/admin — { op: 'detail'|'updateStatus'|'updateRequirement'|'updateDocument'|'addFinalDocument'|'sendMessage', ... }
 export async function POST(request) {
   const auth = await requireAdmin(request);
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const { supa, user } = auth;
+  const { supa, profile } = auth;
+
+  // addFinalDocument carries a real file, so it's submitted as multipart/form-data
+  // instead of JSON — a real admission letter/contract, not just a typed-in name.
+  const contentType = request.headers.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    try {
+      const form = await request.formData();
+      const applicationId = form.get('applicationId');
+      const name = form.get('name');
+      const category = form.get('category') || 'Other';
+      const file = form.get('file');
+      if (!applicationId || !name || !(file instanceof File)) {
+        return NextResponse.json({ error: 'applicationId, name, and a file are required.' }, { status: 400 });
+      }
+
+      const id = `fdoc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const path = `${applicationId}/final/${id}/${file.name}`;
+      const { error: uploadErr } = await supa.storage.from(FINAL_DOCUMENTS_BUCKET).upload(path, file, {
+        contentType: file.type || 'application/octet-stream',
+      });
+      if (uploadErr) return NextResponse.json({ error: uploadErr.message }, { status: 500 });
+
+      const { data, error } = await supa.from('study_work_final_documents')
+        .insert({ id, application_id: applicationId, name, category, file_name: path, issued_at: new Date().toISOString() })
+        .select().single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ finalDocument: data });
+    } catch (err) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+  }
 
   let body;
   try {
@@ -95,12 +164,13 @@ export async function POST(request) {
   try {
     if (op === 'detail') {
       const { applicationId } = body;
-      const [{ data: application, error }, { data: requirements }, { data: documents }, { data: timeline }, { data: conversation }] = await Promise.all([
+      const [{ data: application, error }, { data: requirements }, { data: documents }, { data: timeline }, { data: conversation }, { data: finalDocuments }] = await Promise.all([
         supa.from('study_work_applications').select('*').eq('id', applicationId).single(),
         supa.from('study_work_requirements').select('*').eq('application_id', applicationId),
         supa.from('study_work_documents').select('*').eq('application_id', applicationId),
         supa.from('study_work_timeline').select('*').eq('application_id', applicationId),
         supa.from('study_work_conversations').select('*').eq('application_id', applicationId).maybeSingle(),
+        supa.from('study_work_final_documents').select('*').eq('application_id', applicationId).order('issued_at', { ascending: false }),
       ]);
       if (error) return NextResponse.json({ error: error.message }, { status: 404 });
       const { data: profile } = await supa.from('study_work_applicant_profiles').select('*').eq('user_id', application.user_id).maybeSingle();
@@ -109,7 +179,7 @@ export async function POST(request) {
         const { data } = await supa.from('study_work_messages').select('*').eq('conversation_id', conversation.id).order('created_at', { ascending: true });
         messages = data ?? [];
       }
-      return NextResponse.json({ application, profile, requirements: requirements ?? [], documents: documents ?? [], timeline: timeline ?? [], conversation, messages });
+      return NextResponse.json({ application, profile, requirements: requirements ?? [], documents: documents ?? [], timeline: timeline ?? [], conversation, messages, finalDocuments: finalDocuments ?? [] });
     }
 
     if (op === 'updateStatus') {
@@ -118,6 +188,8 @@ export async function POST(request) {
       if (status === 'CONFIRMED') patch.confirmed_at = new Date().toISOString();
       const { data, error } = await supa.from('study_work_applications').update(patch).eq('id', applicationId).select().single();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      const stage = STATUS_TO_STAGE[status];
+      if (stage) await advanceTimeline(supa, applicationId, stage);
       return NextResponse.json({ application: data });
     }
 
@@ -141,22 +213,13 @@ export async function POST(request) {
       return NextResponse.json({ document: data });
     }
 
-    if (op === 'addFinalDocument') {
-      const { applicationId, name, category, fileName } = body;
-      const id = `fdoc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const { data, error } = await supa.from('study_work_final_documents')
-        .insert({ id, application_id: applicationId, name, category, file_name: fileName, issued_at: new Date().toISOString() })
-        .select().single();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      return NextResponse.json({ finalDocument: data });
-    }
-
     if (op === 'sendMessage') {
       const { conversationId, body: messageBody } = body;
       const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const createdAt = new Date().toISOString();
+      const senderName = profile?.username ? `@${profile.username}` : 'Advisor';
       const { data, error } = await supa.from('study_work_messages')
-        .insert({ id, conversation_id: conversationId, sender: 'advisor', sender_name: user.email ?? 'Advisor', body: messageBody, attachments: [], created_at: createdAt })
+        .insert({ id, conversation_id: conversationId, sender: 'advisor', sender_name: senderName, body: messageBody, attachments: [], created_at: createdAt })
         .select().single();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       await supa.from('study_work_conversations').update({ last_message_at: createdAt }).eq('id', conversationId);

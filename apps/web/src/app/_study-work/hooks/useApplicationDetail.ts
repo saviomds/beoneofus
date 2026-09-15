@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import * as apps from '../services/applicationService'
-import type { Application, DocumentItem, Message, Requirement, TimelineEvent, Conversation } from '../types'
+import type { Application, DocumentItem, FinalDocument, Message, Requirement, TimelineEvent, Conversation } from '../types'
 
 interface ApplicationDetail {
   application: Application | null
@@ -11,10 +11,11 @@ interface ApplicationDetail {
   timeline: TimelineEvent[]
   conversation: Conversation | null
   messages: Message[]
+  finalDocuments: FinalDocument[]
   loading: boolean
-  refresh: () => void
-  uploadDocument: (documentId: string, fileName: string) => void
-  sendMessage: (body: string) => void
+  refresh: () => Promise<void>
+  uploadDocument: (documentId: string, file: File) => Promise<void>
+  sendMessage: (body: string) => Promise<void>
 }
 
 export function useApplicationDetail(applicationId: string | null): ApplicationDetail {
@@ -25,36 +26,46 @@ export function useApplicationDetail(applicationId: string | null): ApplicationD
   const [timeline, setTimeline] = useState<TimelineEvent[]>([])
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
+  const [finalDocuments, setFinalDocuments] = useState<FinalDocument[]>([])
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     if (!applicationId) {
       setApplication(null); setRequirements([]); setDocuments([]); setTimeline([])
-      setConversation(null); setMessages([]); setLoading(false)
+      setConversation(null); setMessages([]); setFinalDocuments([]); setLoading(false)
       return
     }
-    const app = apps.getApplication(applicationId)
+    setLoading(true)
+    const [app, reqs, docs, tl, conv, finals] = await Promise.all([
+      apps.getApplication(applicationId),
+      apps.getRequirements(applicationId),
+      apps.getDocuments(applicationId),
+      apps.getTimeline(applicationId),
+      apps.getConversationForApplication(applicationId),
+      apps.getFinalDocuments(applicationId),
+    ])
     setApplication(app)
-    setRequirements(apps.getRequirements(applicationId))
-    setDocuments(apps.getDocuments(applicationId))
-    setTimeline(apps.getTimeline(applicationId))
-    const conv = apps.getConversationForApplication(applicationId)
+    setRequirements(reqs)
+    setDocuments(docs)
+    setTimeline(tl)
     setConversation(conv)
-    setMessages(conv ? apps.getMessages(conv.id) : [])
+    setMessages(conv ? await apps.getMessages(conv.id) : [])
+    setFinalDocuments(finals)
     setLoading(false)
   }, [applicationId])
 
-  useEffect(() => { setLoading(true); load() }, [load])
+  useEffect(() => { load() }, [load])
 
-  const uploadDocument = useCallback((documentId: string, fileName: string) => {
-    apps.uploadDocument(documentId, fileName)
-    load()
-  }, [load])
+  const uploadDocument = useCallback(async (documentId: string, file: File) => {
+    if (!applicationId) return
+    await apps.uploadDocument(applicationId, documentId, file)
+    await load()
+  }, [applicationId, load])
 
-  const sendMessage = useCallback((body: string) => {
+  const sendMessage = useCallback(async (body: string) => {
     if (!conversation) return
-    apps.sendMessage(conversation.id, body)
-    load()
+    await apps.sendMessage(conversation.id, body)
+    await load()
   }, [conversation, load])
 
-  return { application, requirements, documents, timeline, conversation, messages, loading, refresh: load, uploadDocument, sendMessage }
+  return { application, requirements, documents, timeline, conversation, messages, finalDocuments, loading, refresh: load, uploadDocument, sendMessage }
 }

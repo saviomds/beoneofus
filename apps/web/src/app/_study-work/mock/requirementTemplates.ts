@@ -1,5 +1,5 @@
 import type { ApplicationType, Requirement, DocumentItem } from '../types'
-import { newId } from '../services/storage'
+import { newId } from '../lib/id'
 
 // Default requirement sets per application type. This is the "configurable"
 // layer the brief calls for: nothing about a requirement is hard-coded into a

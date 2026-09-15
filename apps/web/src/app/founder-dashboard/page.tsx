@@ -10,12 +10,13 @@ import {
   ScrollText, FileText, Send, DollarSign, PenLine, XCircle, Eye,
   Printer, History, Trash2, Ban, ExternalLink, AlertOctagon,
   ChevronRight, Mail, CalendarDays, Star, BookOpen, Lock, Unlock,
-  Package, Truck, ShoppingBag, Play, Pause, Square,
+  Package, Truck, ShoppingBag, Play, Pause, Square, GraduationCap,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '../supabaseClient';
 import AdminPanelTool from '../dash/content/more/AdminPanelTool';
+import StudyWorkAdminContent from '../dash/content/StudyWorkAdminContent';
 import AuditLogTab from './AuditLogTab';
 import { logAdminAction } from '../../lib/auditLog';
 
@@ -88,6 +89,7 @@ function CircularProgress({ rings }: { rings: { value: number; max: number; colo
 const TABS = [
   { id: 'overview',     label: 'Overview',     icon: BarChart3,    protected: false },
   { id: 'applications', label: 'Applications', icon: Crown,        protected: true  },
+  { id: 'apply_applications', label: 'Apply Applications', icon: GraduationCap, protected: true },
   { id: 'users',        label: 'Users',        icon: Users,        protected: true  },
   { id: 'orders',       label: 'Orders',       icon: Package,      protected: true  },
   { id: 'tasks',        label: 'Tasks',        icon: ClipboardList, protected: false },
@@ -104,7 +106,7 @@ const TABS = [
 const ADMIN_CONSOLE_TAB = { id: 'admin_console', label: 'Admin Console', icon: Terminal, protected: true };
 const AUDIT_LOG_TAB = { id: 'audit_log', label: 'Audit Log', icon: History, protected: true };
 
-const PROTECTED_TABS = new Set(['applications', 'users', 'orders', 'contracts', 'platform', 'admin_console', 'audit_log']);
+const PROTECTED_TABS = new Set(['applications', 'apply_applications', 'users', 'orders', 'contracts', 'platform', 'admin_console', 'audit_log']);
 
 export default function FounderDashboard() {
   const router = useRouter();
@@ -1201,6 +1203,7 @@ export default function FounderDashboard() {
                 overview:     { color: '#8b5cf6', grad: 'linear-gradient(135deg,#8b5cf6,#6d28d9)' },
                 applications: { color: '#f59e0b', grad: 'linear-gradient(135deg,#FFB020,#f97316)',
                                 badge: applications.filter((a: any) => a.status === 'pending').length || 0 },
+                apply_applications: { color: '#0ea5e9', grad: 'linear-gradient(135deg,#0ea5e9,#0284c7)' },
                 users:        { color: '#3b82f6', grad: 'linear-gradient(135deg,#3b82f6,#2563eb)',
                                 badge: allUsers.length || 0 },
                 orders:       { color: '#10b981', grad: 'linear-gradient(135deg,#10b981,#059669)' },
@@ -2033,6 +2036,11 @@ export default function FounderDashboard() {
               </div>
             )}
           </div>
+        )}
+
+        {/* ── APPLY APPLICATIONS — Study/Work Abroad portal submissions ──────────── */}
+        {activeTab === 'apply_applications' && (
+          <StudyWorkAdminContent showToast={showToast} />
         )}
 
         {/* ── ORDERS ───────────────────────────────────────────────────────────── */}

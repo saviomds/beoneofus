@@ -37,15 +37,20 @@ export default function ApplicationWizardPage() {
   const [errors, setErrors] = useState<Errors>({})
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
     if (loading) return
-    const app = getApplication(params.id)
-    if (app) {
-      setDraft(app)
-      setStep(Math.min(app.draftStep, 3))
-    }
-    setAttemptedLoad(true)
+    let cancelled = false
+    getApplication(params.id).then((app) => {
+      if (cancelled) return
+      if (app) {
+        setDraft(app)
+        setStep(Math.min(app.draftStep, 3))
+      }
+      setAttemptedLoad(true)
+    })
+    return () => { cancelled = true }
   }, [loading, params.id])
 
   const stepperIndex = step === 3 ? 4 : step // "Review" content step visually sits at 04, but the last node (05 Submit) lights up once you're on that screen too
@@ -106,12 +111,18 @@ export default function ApplicationWizardPage() {
     persist(draft)
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!draft) return
-    persist(draft)
     setSubmitting(true)
-    submitApplication(draft.id)
-    router.push(`/apply/wizard/${draft.id}/submitted`)
+    setSubmitError('')
+    try {
+      await persist(draft)
+      await submitApplication(draft.id)
+      router.push(`/apply/wizard/${draft.id}/submitted`)
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Could not submit your application. Please try again.')
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -164,12 +175,13 @@ export default function ApplicationWizardPage() {
           <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmOpen(false)} />
           <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-sm w-full p-6">
             <h2 id="confirm-title" className="font-black text-lg text-gray-900 dark:text-white mb-2">Submit your application?</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               Once submitted, your application will be reviewed by the BeOneOfUs team.
             </p>
+            {submitError && <p className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-4">{submitError}</p>}
             <div className="flex items-center justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-              <Button type="button" onClick={handleSubmit}>Yes, Submit</Button>
+              <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)} disabled={submitting}>Cancel</Button>
+              <Button type="button" onClick={handleSubmit} disabled={submitting}>{submitting ? 'Submitting…' : 'Yes, Submit'}</Button>
             </div>
           </div>
         </div>

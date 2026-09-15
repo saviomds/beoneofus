@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { FileStack, ArrowRight } from 'lucide-react'
 import { useStudyWork } from '../../_study-work/state/StudyWorkContext'
@@ -7,16 +8,26 @@ import { useApplicationDetail } from '../../_study-work/hooks/useApplicationDeta
 import { ApplicationCard } from '../../_study-work/components/ApplicationCard'
 import { Timeline } from '../../_study-work/components/Timeline'
 import { EmptyState } from '../../_study-work/components/EmptyState'
-import { getDocuments, summarizeDocuments } from '../../_study-work/services/applicationService'
+import { getDocuments, summarizeDocuments, type DocumentsSummary } from '../../_study-work/services/applicationService'
+
+const EMPTY_SUMMARY: DocumentsSummary = { required: 0, uploaded: 0, approved: 0, needsCorrection: 0, missing: 0 }
 
 export default function DashboardOverviewPage() {
   const { user, applications } = useStudyWork()
   const primary = applications[0] ?? null
   const primaryDetail = useApplicationDetail(primary?.id ?? null)
+  const [docSummaries, setDocSummaries] = useState<Record<string, DocumentsSummary>>({})
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all(applications.map(async (app) => [app.id, summarizeDocuments(await getDocuments(app.id))] as const))
+      .then((entries) => { if (!cancelled) setDocSummaries(Object.fromEntries(entries)) })
+    return () => { cancelled = true }
+  }, [applications])
 
   const combinedDocs = applications.reduce(
     (acc, app) => {
-      const s = summarizeDocuments(getDocuments(app.id))
+      const s = docSummaries[app.id] ?? EMPTY_SUMMARY
       return {
         required: acc.required + s.required,
         uploaded: acc.uploaded + s.uploaded,
@@ -52,7 +63,7 @@ export default function DashboardOverviewPage() {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {applications.map((app) => (
-              <ApplicationCardWithDocs key={app.id} applicationId={app.id} />
+              <ApplicationCard key={app.id} application={app} docsSummary={docSummaries[app.id] ?? EMPTY_SUMMARY} />
             ))}
           </div>
 
@@ -82,14 +93,6 @@ export default function DashboardOverviewPage() {
       )}
     </div>
   )
-}
-
-function ApplicationCardWithDocs({ applicationId }: { applicationId: string }) {
-  const { applications } = useStudyWork()
-  const app = applications.find((a) => a.id === applicationId)
-  if (!app) return null
-  const docsSummary = summarizeDocuments(getDocuments(applicationId))
-  return <ApplicationCard application={app} docsSummary={docsSummary} />
 }
 
 function SummaryRow({ label, value, tone }: { label: string; value: number; tone?: string }) {

@@ -5,6 +5,7 @@ import { useApplicationDetailScope } from '../../../../../_study-work/state/Appl
 import { DocumentCard } from '../../../../../_study-work/components/DocumentCard'
 import { EmptyState } from '../../../../../_study-work/components/EmptyState'
 import { isConfirmedOrLater } from '../../../../../_study-work/lib/statusMachine'
+import { getDocumentSignedUrl } from '../../../../../_study-work/services/applicationService'
 
 export default function DocumentsTab() {
   const { application, documents, uploadDocument } = useApplicationDetailScope()
@@ -27,7 +28,12 @@ export default function DocumentsTab() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {documents.map((doc) => (
-        <DocumentCard key={doc.id} document={doc} onUploaded={(fileName) => uploadDocument(doc.id, fileName)} />
+        <DocumentCard
+          key={doc.id}
+          document={doc}
+          onUpload={(file) => uploadDocument(doc.id, file)}
+          onView={() => (doc.fileName ? getDocumentSignedUrl(doc.fileName) : Promise.resolve(null))}
+        />
       ))}
     </div>
   )

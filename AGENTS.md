@@ -14,5 +14,5 @@
 
 `beoneofus core` (the education & government portal) is no longer part of this
 repo — it now lives independently at `C:\Users\Dell\beoneofus-core`. The two
-apps link to each other by env-driven URL only (`NEXT_PUBLIC_CORE_URL` in
-`apps/web`); do not import code between the two projects.
+are fully disconnected: no cross-links, no shared env vars, no code imports
+between the two projects.

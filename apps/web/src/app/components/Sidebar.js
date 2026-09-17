@@ -5,7 +5,7 @@ import {
   Bell, Settings, LogOut, Terminal, CheckCheck, UserPlus, Crown,
   CalendarDays, Handshake, Newspaper, LayoutDashboard,
   ShoppingBag, User, Compass, BarChart2, Briefcase,
-  Map, ScrollText, Building2, Globe,
+  ScrollText, Building2, Globe,
   Search, ChevronLeft, ChevronRight, ChevronDown, Plus, Store, Orbit, Rocket,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -146,7 +146,7 @@ const SECTION_WORKSPACE = {
   home: 'universe', feed: 'universe', messages: 'universe', notifications: 'universe',
   jobs: 'opportunity', freelance: 'opportunity', companies: 'opportunity', contracts: 'opportunity', partnerships: 'opportunity', discover: 'opportunity', apply: 'opportunity',
   market: 'creator', marketplace: 'creator', services: 'creator', blog: 'creator', orders: 'creator',
-  projects: 'innovation', 'tech-hub': 'innovation', startups: 'innovation',
+  'tech-hub': 'innovation', startups: 'innovation',
   connections: 'network', groups: 'network', events: 'network',
   analytics: 'command', admin: 'command',
   premium: 'account', settings: 'account', more: 'account', profile: 'account', search: 'account', docs: 'account', bookmarks: 'account', pages: 'account',
@@ -464,7 +464,6 @@ export default function Sidebar({ onClose, isCollapsed = false, onToggleCollapse
     {
       id: 'innovation', label: 'Innovation Hub', icon: Rocket, accent: 'orange',
       items: [
-        { id: 'projects', icon: Map,      label: 'Build Together' },
         { id: 'tech-hub', icon: Terminal, label: 'Tech Hub' },
         { id: 'startups', icon: Rocket,   label: 'Startups' },
       ],

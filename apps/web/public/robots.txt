@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dash
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /reset-password
+Disallow: /api
+
+Sitemap: https://b1overs.com/sitemap.xml

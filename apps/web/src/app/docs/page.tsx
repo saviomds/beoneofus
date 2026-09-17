@@ -46,14 +46,6 @@ const NAV = [
     ],
   },
   {
-    group: "Projects & Code",
-    icon: Code2,
-    links: [
-      { id: "projects",       label: "Project Management",  icon: GitBranch },
-      { id: "explore",        label: "Explore Projects",    icon: Globe },
-    ],
-  },
-  {
     group: "Community",
     icon: Users,
     links: [
@@ -198,12 +190,11 @@ export default function DocsPage() {
   const vLabel = versionData?.label   ?? "Core";
   const vDate  = versionData?.date    ?? "May 2026";
 
-  type StatKey = "professionals" | "jobs" | "connections" | "projects";
+  type StatKey = "professionals" | "jobs" | "connections";
   const [stats, setStats] = useState<Record<StatKey, string>>({
     professionals: "…",
     jobs:          "…",
     connections:   "…",
-    projects:      "…",
   });
 
   useEffect(() => {
@@ -211,8 +202,7 @@ export default function DocsPage() {
       supabase.from("profiles").select("id", { count: "exact", head: true }),
       supabase.from("jobs").select("id", { count: "exact", head: true }),
       supabase.from("connections").select("id", { count: "exact", head: true }).eq("status", "accepted"),
-      supabase.from("projects").select("id", { count: "exact", head: true }),
-    ]).then(([p, j, m, c]) => {
+    ]).then(([p, j, m]) => {
       const fmt = (n: number | null) =>
         n == null ? "—"
         : n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k+`
@@ -221,7 +211,6 @@ export default function DocsPage() {
         professionals: fmt(p.count),
         jobs:          fmt(j.count),
         connections:   fmt(m.count),
-        projects:      fmt(c.count),
       });
     });
   }, []);
@@ -313,7 +302,6 @@ export default function DocsPage() {
           {[
             { href: "/dash",                   label: "Dashboard",      icon: LayoutDashboard },
             { href: "/dash/jobs",              label: "Jobs",           icon: Briefcase },
-            { href: "/dash/projects",       label: "Explore",        icon: Globe },
             { href: "/dash/more?tool=support", label: "Support Ticket", icon: ExternalLink },
           ].map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors py-1.5 px-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800/50">
@@ -551,27 +539,6 @@ export default function DocsPage() {
               ]} />
             </section>
 
-            {/* ════ PROJECTS & CODE ════ */}
-
-            <section className="mb-16">
-              <SectionHeading id="projects" icon={<GitBranch size={15} />} label="Project Management" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Your projects are your proof of work. Publish them at <InlineCode>/projects</InlineCode> and let the community — and potential employers — see exactly what you&apos;ve built.
-              </p>
-              <FeatureGrid items={[
-                { icon: <FileText size={13} />, title: "Full project page",   desc: "Add a description, tech stack, live demo URL, and GitHub link. Tell the story of what you built." },
-                { icon: <Globe size={13} />,    title: "Get discovered",      desc: "Public projects show up in Explore and in the Spotlight sidebar seen by thousands of members." },
-                { icon: <Star size={13} />,     title: "Community recognition",desc: "Other members can star your work. Stars signal quality and push your project up the Explore rankings." },
-              ]} />
-            </section>
-
-            <section className="mb-16">
-              <SectionHeading id="explore" icon={<Globe size={15} />} label="Explore Projects" />
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm sm:text-base">
-                Browse thousands of community-built projects at <InlineCode>/dash/projects</InlineCode>. Filter by tech stack, sort by stars, get inspired, find collaborators, or hire directly from a project card.
-              </p>
-            </section>
-
             {/* ════ COMMUNITY ════ */}
 
             <section className="mb-16">
@@ -731,7 +698,6 @@ export default function DocsPage() {
                 {[
                   { href: "/dash",                   label: "Dashboard", icon: LayoutDashboard },
                   { href: "/dash/jobs",              label: "Jobs",      icon: Briefcase },
-                  { href: "/dash/projects",       label: "Explore",   icon: Globe },
                   { href: "/dash/more?tool=support", label: "Support",   icon: ExternalLink },
                 ].map(({ href, label, icon: Icon }) => (
                   <li key={href}>

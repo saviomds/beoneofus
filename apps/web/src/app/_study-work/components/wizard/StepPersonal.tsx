@@ -1,7 +1,18 @@
+import type { ComponentProps } from 'react'
 import { WizardSection } from './WizardSection'
 import { Field, TextInput, PhoneInput, DateInput, Select } from '../FormControls'
+import { COUNTRIES } from '../../lib/countries'
 import type { Application, EmergencyContact, PersonalInfo, TravelInfo } from '../../types'
 import type { Errors } from '../../lib/validation'
+
+function CountrySelect(props: ComponentProps<typeof Select>) {
+  return (
+    <Select {...props}>
+      <option value="">Select…</option>
+      {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+    </Select>
+  )
+}
 
 interface StepProps {
   application: Application
@@ -41,12 +52,12 @@ export function StepPersonal({ application, onChange, errors }: StepProps) {
             <DateInput id="p-dob" value={personal.dateOfBirth} onChange={(e) => updatePersonal({ dateOfBirth: e.target.value })} error={errors['personal.dateOfBirth']} max={new Date().toISOString().slice(0, 10)} />
           </Field>
           <Field label="Nationality" htmlFor="p-nat" required error={errors['personal.nationality']}>
-            <TextInput id="p-nat" value={personal.nationality} onChange={(e) => updatePersonal({ nationality: e.target.value })} error={errors['personal.nationality']} />
+            <CountrySelect id="p-nat" value={personal.nationality} onChange={(e) => updatePersonal({ nationality: e.target.value })} error={errors['personal.nationality']} />
           </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Country of residence" htmlFor="p-cor" required error={errors['personal.countryOfResidence']}>
-            <TextInput id="p-cor" value={personal.countryOfResidence} onChange={(e) => updatePersonal({ countryOfResidence: e.target.value })} error={errors['personal.countryOfResidence']} />
+            <CountrySelect id="p-cor" value={personal.countryOfResidence} onChange={(e) => updatePersonal({ countryOfResidence: e.target.value })} error={errors['personal.countryOfResidence']} />
           </Field>
           <Field label="City" htmlFor="p-city" required error={errors['personal.city']}>
             <TextInput id="p-city" value={personal.city} onChange={(e) => updatePersonal({ city: e.target.value })} error={errors['personal.city']} />
@@ -99,7 +110,7 @@ export function StepPersonal({ application, onChange, errors }: StepProps) {
               <TextInput id="t-num" value={travel.passportNumber} onChange={(e) => updateTravel({ passportNumber: e.target.value })} />
             </Field>
             <Field label="Issuing country" htmlFor="t-country">
-              <TextInput id="t-country" value={travel.issuingCountry} onChange={(e) => updateTravel({ issuingCountry: e.target.value })} />
+              <CountrySelect id="t-country" value={travel.issuingCountry} onChange={(e) => updateTravel({ issuingCountry: e.target.value })} />
             </Field>
             <Field label="Issue date" htmlFor="t-issue">
               <DateInput id="t-issue" value={travel.issueDate} onChange={(e) => updateTravel({ issueDate: e.target.value })} />

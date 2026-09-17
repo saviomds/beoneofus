@@ -18,7 +18,6 @@ import dynamic from "next/dynamic";
 import { getAvatarSrc } from "../lib/avatar";
 import { signOutEverywhere } from "../lib/signOutEverywhere";
 import { useLanguage } from "../lib/i18n";
-import { CORE_URL } from "../lib/platform";
 import RwandaFlag from "./components/RwandaFlag";
 
 /* ─── Animation helpers ─────────────────────────────────────── */
@@ -94,18 +93,6 @@ const FEATURES = [
     tag_color: "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-700/40",
     size: "sm",
   },
-  {
-    icon: <Code2 size={22} />,
-    label: "landing.features.projects.label",
-    title: "landing.features.projects.title",
-    desc: "landing.features.projects.desc",
-    color: "from-emerald-500/10 to-emerald-600/5",
-    border: "border-emerald-200 dark:border-emerald-800/40",
-    icon_bg: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
-    tag: "landing.features.projects.tag",
-    tag_color: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700/40",
-    size: "sm",
-  },
 ];
 
 const STEPS = [
@@ -127,7 +114,6 @@ const FALLBACK_STATS = [
   { label: "landing.stats.professionals", value: 0, suffix: "" },
   { label: "landing.stats.jobs",   value: 0, suffix: "" },
   { label: "landing.stats.connections",   value: 0, suffix: "" },
-  { label: "landing.stats.projects",      value: 0, suffix: "" },
 ];
 
 const FALLBACK_TESTIMONIALS = [];
@@ -224,7 +210,6 @@ export default function LandingPage() {
             { label: "landing.stats.professionals", value: statsRow.professionals ?? 0, suffix: "+" },
             { label: "landing.stats.jobs", value: statsRow.jobs ?? 0, suffix: "+" },
             { label: "landing.stats.connections", value: statsRow.connections ?? 0, suffix: "+" },
-            { label: "landing.stats.projects", value: statsRow.projects ?? 0, suffix: "+" },
           ]);
         }
       } catch (err) {
@@ -232,18 +217,16 @@ export default function LandingPage() {
         // is ever removed) — allSettled so one failing/RLS-empty count
         // doesn't blank out the others.
         console.warn("[stats] get_public_stats RPC failed, falling back to direct counts", err);
-        const [dev, jobs, conns, projects] = await Promise.allSettled([
+        const [dev, jobs, conns] = await Promise.allSettled([
           supabase.from("profiles").select("id", { count: "exact", head: true }),
           supabase.from("jobs").select("id", { count: "exact", head: true }),
           supabase.from("connections").select("id", { count: "exact", head: true }).eq("status", "accepted"),
-          supabase.from("projects").select("id", { count: "exact", head: true }),
         ]);
         const count = (r) => (r.status === "fulfilled" ? r.value.count ?? 0 : 0);
         setLiveStats([
           { label: "landing.stats.professionals", value: count(dev), suffix: "+" },
           { label: "landing.stats.jobs", value: count(jobs), suffix: "+" },
           { label: "landing.stats.connections", value: count(conns), suffix: "+" },
-          { label: "landing.stats.projects", value: count(projects), suffix: "+" },
         ]);
       }
 
@@ -505,10 +488,7 @@ export default function LandingPage() {
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
 
-           <div className="flex items-center gap-3.5 sm:gap-4 shrink-0">
-            {/* Rwanda */}
-            <RwandaFlag className="scale-[0.9]" />
-
+           <div className="flex items-center shrink-0">
             {/* Logo */}
             <Link href="/" className="flex items-center shrink-0 group" onClick={() => setActiveDropdown(null)}>
               <Image src="/logo.svg" alt="beoneofus" width={32} height={32} priority unoptimized className="w-8 h-8 rounded-lg shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform" />
@@ -541,17 +521,13 @@ export default function LandingPage() {
                 {t('landing.nav.docs')}
               </Link>
 
-              {/* Divider — Student Portal jumps to a different app (/core), so it's
-                  set apart as its own pill rather than blending into the plain nav links. */}
-              <span className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-1.5" aria-hidden="true" />
-
-              <a href={CORE_URL} onMouseEnter={() => setActiveDropdown(null)} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-white/10 hover:border-cyan-300 dark:hover:border-cyan-700/50 hover:text-cyan-700 dark:hover:text-cyan-300 rounded-full transition-all duration-200">
-                {t('landing.nav.student_portal')}
-              </a>
             </div>
 
             {/* Auth area */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Rwanda */}
+              <RwandaFlag className="scale-[0.9]" />
+
               {loading ? (
                 <div className="w-32 sm:w-48 h-9 bg-gray-100 dark:bg-white/5 animate-pulse rounded-xl" />
               ) : session ? (
@@ -863,7 +839,6 @@ export default function LandingPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.community_menu.explore_heading')}</p>
                       <div className="space-y-0.5">
                         {[
-                          { icon: <Globe size={15} />,        label: t('landing.nav.community_menu.explore_projects'), href: "/dash/projects" },
                           { icon: <Newspaper size={15} />,    label: t('landing.nav.community_menu.blog'),             href: "/blog" },
                           { icon: <MessageSquare size={15} />,label: t('landing.nav.community_menu.messaging'),        href: "/dash/messages" },
                           { icon: <Users size={15} />,        label: t('landing.nav.community_menu.connections'),      href: "/dash/connections" },
@@ -881,22 +856,7 @@ export default function LandingPage() {
 
                 {/* ── Resources ── */}
                 {activeDropdown === "resources" && (
-                  <div className="grid grid-cols-3 gap-10">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.resources_menu.learn_heading')}</p>
-                      {[
-                        { icon: <Globe size={16} />,    label: t('landing.nav.resources_menu.projects_label'), desc: t('landing.nav.resources_menu.projects_desc'), href: "/dash/projects" },
-                      ].map(({ icon, label, desc, href }) => (
-                        <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                          className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/5 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 shrink-0 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 group-hover:text-brand-500 transition-colors">{icon}</div>
-                          <div>
-                            <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{desc}</p>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
+                  <div className="grid grid-cols-2 gap-10">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.resources_menu.docs_heading')}</p>
                       {[
@@ -1018,7 +978,6 @@ export default function LandingPage() {
                 {
                   id: "community", label: t('landing.nav.community'),
                   links: [
-                    { label: t('landing.nav.community_menu.explore_projects'),       href: "/dash/projects" },
                     { label: t('landing.nav.community_menu.hub_open'),         href: "/dash/more?tool=community"        },
                     { label: t('landing.nav.community_menu.blog'),                   href: "/blog"             },
                     { label: t('landing.nav.community_menu.messaging'),              href: "/dash/messages"    },
@@ -2131,14 +2090,12 @@ function Footer({ session }) {
       { label: t('landing.nav.product_menu.study_abroad_label'), href: "/study-abroad" },
       { label: t('landing.nav.product_menu.work_abroad_label'), href: "/work-abroad" },
       { label: t('landing.footer.platform.apply'), href: "/apply" },
-      { label: t('landing.footer.platform.explore'), href: "/dash/projects" },
       { label: t('landing.footer.platform.job_board'), href: authLink(session, "/dash/marketplace") },
       { label: t('landing.footer.platform.connections'), href: authLink(session, "/dash/connections") },
       { label: t('landing.footer.platform.premium'), href: authLink(session, "/dash/premium") },
     ]},
     { title: t('landing.footer.company_heading'), links: [
       { label: t('landing.footer.company.institutions'), href: "/for-institutions" },
-      { label: t('landing.footer.company.education_portal'), href: CORE_URL, external: true },
       { label: t('landing.footer.company.vision'), href: "/vision" },
       { label: t('landing.footer.company.roadmap'), href: "/roadmap" },
       { label: t('landing.footer.company.growth'), href: "/growth" },

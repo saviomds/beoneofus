@@ -30,7 +30,7 @@ export async function GET() {
   const db = admin();
 
   const TABLES = [
-    'profiles', 'pages', 'organizations', 'connections', 'projects',
+    'profiles', 'pages', 'organizations', 'connections',
     'jobs', 'services', 'contracts', 'marketplace_listings', 'freelance_jobs',
     'posts', 'blog_posts', 'page_posts',
   ];
@@ -43,7 +43,6 @@ export async function GET() {
     members:       counts.profiles,
     organizations: counts.pages + counts.organizations,
     connections:   counts.connections,
-    projects:      counts.projects,
     opportunities: counts.jobs + counts.services + counts.contracts + counts.marketplace_listings + counts.freelance_jobs,
     posts:         counts.posts + counts.blog_posts + counts.page_posts,
     generated_at:  new Date().toISOString(),

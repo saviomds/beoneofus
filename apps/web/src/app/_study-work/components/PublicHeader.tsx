@@ -1,16 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Menu, X, ChevronDown, ArrowRight } from 'lucide-react'
+import { Menu, X, ChevronDown, ArrowRight, LayoutDashboard } from 'lucide-react'
 import { MegaMenuTrigger } from './nav/MegaMenu'
 import { MEGA_MENUS, SIMPLE_LINKS } from '../lib/navContent'
+import { supabase } from '../../supabaseClient'
 
 export function PublicHeader() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null)
+  // Study/Work Abroad share the main login, so a visitor who's already
+  // signed in on beoneofus shouldn't be told to "Sign in" / "Start
+  // Application" again here — point them at their dashboard instead.
+  const [signedIn, setSignedIn] = useState(false)
+
+  useEffect(() => {
+    if (!supabase) return
+    let isMounted = true
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (isMounted) setSignedIn(!!session)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted) setSignedIn(!!session)
+    })
+    return () => { isMounted = false; subscription.unsubscribe() }
+  }, [])
 
   return (
     <div className="sticky top-0 z-50 px-3 sm:px-4 pt-3">
@@ -43,15 +60,26 @@ export function PublicHeader() {
           </nav>
 
           <div className="hidden md:flex items-center gap-2 shrink-0">
-            <Link href="/login" className="px-3.5 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-              Sign in
-            </Link>
-            <Link
-              href="/apply"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 text-white text-sm font-bold transition-colors"
-            >
-              Start Application
-            </Link>
+            {signedIn ? (
+              <Link
+                href="/dash"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 text-white text-sm font-bold transition-colors"
+              >
+                <LayoutDashboard size={15} /> Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="px-3.5 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
+                  Sign in
+                </Link>
+                <Link
+                  href="/apply"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 text-white text-sm font-bold transition-colors"
+                >
+                  Start Application
+                </Link>
+              </>
+            )}
           </div>
 
           <button type="button" onClick={() => setMobileOpen((v) => !v)} className="md:hidden text-gray-600 dark:text-gray-300" aria-label="Menu" aria-expanded={mobileOpen}>
@@ -113,12 +141,20 @@ export function PublicHeader() {
           </div>
 
           <div className="flex gap-2 p-4 border-t border-gray-100 dark:border-gray-800">
-            <Link href="/login" onClick={() => setMobileOpen(false)} className="flex-1 text-center px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-200">
-              Sign in
-            </Link>
-            <Link href="/apply" onClick={() => setMobileOpen(false)} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold">
-              Start Application <ArrowRight size={14} />
-            </Link>
+            {signedIn ? (
+              <Link href="/dash" onClick={() => setMobileOpen(false)} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold">
+                <LayoutDashboard size={14} /> Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" onClick={() => setMobileOpen(false)} className="flex-1 text-center px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  Sign in
+                </Link>
+                <Link href="/apply" onClick={() => setMobileOpen(false)} className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-bold">
+                  Start Application <ArrowRight size={14} />
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: beoneofus-web
+    runtime: node
+    rootDir: apps/web
+    buildCommand: npm install && npm run build
+    startCommand: npm run start

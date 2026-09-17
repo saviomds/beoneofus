@@ -50,7 +50,6 @@ const contentMap = {
   contracts:     dynamic(() => import('../content/ContractsContent'),     { loading: () => <TabSkeleton /> }),
   search:        dynamic(() => import('../content/SearchContent'),        { loading: () => <TabSkeleton /> }),
   jobs:          dynamic(() => import('../content/JobsContent'),          { loading: () => <TabSkeleton /> }),
-  projects:      dynamic(() => import('../content/ProjectMarketplaceContent'), { loading: () => <TabSkeleton /> }),
   freelance:     dynamic(() => import('../content/FreelanceContent'),     { loading: () => <TabSkeleton /> }),
   companies:     dynamic(() => import('../content/CompaniesContent'),     { loading: () => <TabSkeleton /> }),
   startups:      dynamic(() => import('../content/StartupsContent'),      { loading: () => <TabSkeleton /> }),

@@ -64,7 +64,6 @@ export default function PublicProfilePage() {
   const [stats, setStats] = useState({ connections: 0, coursesCompleted: 0, certificates: 0, posts: 0 });
   const [certificates, setCertificates] = useState([]);
   const [recentPosts, setRecentPosts] = useState([]);
-  const [portfolioProjects, setPortfolioProjects] = useState([]);
   const [endorsements, setEndorsements] = useState({});
   const [endorsing, setEndorsing] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("none");
@@ -100,7 +99,7 @@ export default function PublicProfilePage() {
       if (error || !profileData) { setNotFound(true); setLoading(false); return; }
       setProfile(profileData);
 
-      const [connCountRes, coursesRes, certsRes, postsRes, recentPostsRes, projectsRes, endorsementsRes] = await Promise.all([
+      const [connCountRes, coursesRes, certsRes, postsRes, recentPostsRes, endorsementsRes] = await Promise.all([
         fetch(`/api/connections/count?user_id=${profileData.id}`)
           .then(r => r.ok ? r.json() : { count: 0 })
           .catch(() => ({ count: 0 })),
@@ -116,12 +115,6 @@ export default function PublicProfilePage() {
           .select("id, title, content, code_snippet, image_url, created_at, likes(user_id), comments(id)")
           .eq("user_id", profileData.id)
           .order("created_at", { ascending: false }).limit(4),
-        supabase.from("projects")
-          .select("id, title, description, tags, status, github_url, live_url, created_at")
-          .eq("user_id", profileData.id)
-          .eq("is_public", true)
-          .order("created_at", { ascending: false })
-          .limit(6),
         supabase.from("endorsements")
           .select("skill, endorser_id")
           .eq("endorsed_id", profileData.id),
@@ -134,7 +127,6 @@ export default function PublicProfilePage() {
         posts: postsRes.count ?? 0,
       });
 
-      if (projectsRes.data) setPortfolioProjects(projectsRes.data);
       if (endorsementsRes.data) {
         const map = {};
         endorsementsRes.data.forEach(e => {

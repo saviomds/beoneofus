@@ -22,6 +22,18 @@ Supporting seed people (login works): Eric `BOU-STU-RW-2026-000012`, Grace
 (inactive), Mireille, plus School B's Kevin/Sandrine/Patrick and the University's
 Yves/Chantal and two lecturers.
 
+## Credential verification (public, no sign-in)
+
+`/verify` checks a **credential** code — not an account code. Account codes
+(`BOU-STU-…`, `BOU-GOV-…`, etc.) correctly return **Not found** here.
+
+| Verification code | Result |
+|---|---|
+| `BOU-CRD-8842-AX` | Valid — *Web Development — Level 1*, holder Aline Uwase, issued by Kigali Innovation Academy |
+
+Issue more from **School A** (`BOU-SCH-77120`) → **Credentials** → *Issue*; each
+new code is `BOU-CRD-XXXX-XX` and shows on the student's Credentials page.
+
 ## Prove the isolation first
 
 1. Sign in as **`BOU-SCH-77120`** (School A). Note the students, teachers, reports.

@@ -6,6 +6,8 @@ import { PortalLayout } from '@/components/layout/PortalLayout'
 
 import { Login } from '@/pages/auth/Login'
 import { ForgotPassword } from '@/pages/auth/ForgotPassword'
+import { TroubleSigningIn } from '@/pages/auth/TroubleSigningIn'
+import { Landing } from '@/pages/marketing/Landing'
 import { VerifyCredential } from '@/pages/verify/VerifyCredential'
 import { NotFound, PortalNotFound } from '@/pages/system/NotFound'
 
@@ -29,11 +31,13 @@ import * as A from '@/pages/admin/AdminPages'
 import * as AX from '@/pages/admin/AdminExtra'
 import { RegisterInstitution } from '@/pages/onboarding/RegisterInstitution'
 
+/** "/" — the public landing page for unauthenticated visitors; signed-in users
+ *  are sent straight to their portal home instead of seeing it again. */
 function HomeRedirect() {
   const { role, isAuthenticated, initializing } = useAuth()
   if (initializing) return <div className="route-splash">Loading…</div>
-  if (!isAuthenticated || !role) return <Navigate to="/login" replace />
-  return <Navigate to={ROLE_HOME[role]} replace />
+  if (isAuthenticated && role) return <Navigate to={ROLE_HOME[role]} replace />
+  return <Landing />
 }
 
 /** Legacy /app/* links → nearest new route. */
@@ -57,6 +61,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/trouble-signing-in" element={<TroubleSigningIn />} />
       <Route path="/register/institution" element={<RegisterInstitution />} />
       <Route path="/verify" element={<VerifyCredential />} />
       <Route path="/verify/:code" element={<VerifyCredential />} />

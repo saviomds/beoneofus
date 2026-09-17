@@ -306,6 +306,72 @@ export interface MentorAssignment extends Timestamped {
   version: number
 }
 
+// --- Skills profile (evidence-backed; see server/services/skillService.ts) - --
+
+export type SkillCategory = 'technical' | 'soft' | 'language' | 'academic' | 'industry'
+
+/**
+ * A reference to a REAL record that backs a skill claim. Every entry must
+ * resolve to something the student already has — never free-standing proof.
+ */
+export interface SkillEvidenceRef {
+  type: 'assessment' | 'credential' | 'mentorSession'
+  id: Id
+  label: string
+}
+
+/**
+ * `self_reported` (the student's own claim) -> `endorsed` (a teacher/mentor/
+ * school staff member vouches for it, no evidence required) -> `verified`
+ * (school/admin, REQUIRES at least one evidence reference already attached).
+ * Never settable directly to `verified` by the student themself.
+ */
+export type SkillStatus = 'self_reported' | 'endorsed' | 'verified'
+
+export interface Skill extends Timestamped {
+  id: Id
+  studentId: Id
+  organizationId: Id
+  label: string
+  category: SkillCategory
+  proficiency: 1 | 2 | 3 | 4 | 5
+  evidence: SkillEvidenceRef[]
+  status: SkillStatus
+  verifiedBy: { actorId: Id; role: Role; at: ISODate } | null
+  version: number
+}
+
+export interface SkillEndorsement extends Timestamped {
+  id: Id
+  skillId: Id
+  studentId: Id
+  organizationId: Id
+  endorserId: Id
+  endorserRole: Role
+  note: string
+}
+
+// --- AI Learning Assistant (tutor only — never hands over final answers;
+//     see server/services/aiTutorService.ts) -------------------------- --
+
+export type AiTutorMode = 'explain' | 'practice' | 'quiz' | 'flashcards' | 'studyplan' | 'homework_hint'
+
+export interface AiTutorMessage {
+  role: 'user' | 'assistant'
+  content: string
+  at: ISODate
+}
+
+export interface AiTutorSession extends Timestamped {
+  id: Id
+  studentId: Id
+  organizationId: Id
+  subjectId: Id | null
+  mode: AiTutorMode
+  messages: AiTutorMessage[]
+  version: number
+}
+
 // --- Academic structure ------------------------------------------------- --
 
 export interface ClassRecord extends Timestamped, TenantOwned {
@@ -838,6 +904,9 @@ export interface Credential extends Timestamped {
   type: 'certificate' | 'badge' | 'diploma' | 'award'
   verificationCode: string
   status: 'issued' | 'revoked'
+  /** Free-text description of what earned this credential (never fabricated by the issuer UI). */
+  evidence: string
+  expiresAt: ISODate | null
 }
 
 // --- Inter-institution record requests / consent / grants --------------- --
@@ -1082,6 +1151,9 @@ export interface CollectionMap {
   auditLogs: AuditLog
   settings: SettingsRecord
   authSessions: SessionRecord
+  skills: Skill
+  skillEndorsements: SkillEndorsement
+  aiTutorSessions: AiTutorSession
 }
 
 export type CollectionName = keyof CollectionMap

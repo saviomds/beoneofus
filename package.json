@@ -1,27 +1,14 @@
 {
-  "name": "beoneofus-platform",
+  "name": "beoneofus-web",
   "version": "0.1.0",
   "private": true,
-  "description": "BeOneOfUs platform monorepo — public opportunity ecosystem (apps/web) + education & government portal (apps/core).",
+  "description": "beoneofus — public 'Global Opportunity Ecosystem' web app (apps/web). apps/core now lives independently in its own project.",
   "scripts": {
-    "dev": "concurrently -k -n web,core -c cyan,green \"npm:dev:web\" \"npm:dev:core\"",
-    "dev:web": "npm --prefix apps/web run dev",
-    "dev:core": "npm --prefix apps/core run dev",
-    "build": "npm run build:web && npm run build:core",
-    "build:web": "npm --prefix apps/web run build",
-    "build:core": "npm --prefix apps/core run build",
-    "start:core": "npm --prefix apps/core run start",
-    "test": "npm run test:core",
-    "test:core": "npm --prefix apps/core test",
-    "test:web": "npm --prefix apps/web run test:e2e",
-    "lint": "npm run lint:web && npm run lint:core",
-    "lint:web": "npm --prefix apps/web run lint",
-    "lint:core": "npm --prefix apps/core run lint",
-    "typecheck:core": "npm --prefix apps/core run typecheck",
-    "install:all": "npm --prefix apps/web install && npm --prefix apps/core install"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.0"
+    "dev": "npm --prefix apps/web run dev",
+    "build": "npm --prefix apps/web run build",
+    "test": "npm --prefix apps/web run test:e2e",
+    "lint": "npm --prefix apps/web run lint",
+    "install:all": "npm --prefix apps/web install"
   },
   "engines": {
     "node": ">=20"

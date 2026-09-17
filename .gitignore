@@ -11,9 +11,6 @@ apps/*/dist-server/
 apps/web/next-env.d.ts
 *.tsbuildinfo
 
-# ── Core runtime data (JSON store — never commit; lives on the encrypted volume) ──
-apps/core/data/
-
 # ── env ────────────────────────────────────────────────────────
 .env
 .env.*
@@ -34,3 +31,6 @@ apps/web/.vercel/
 
 # ── local migration backups (this restructure) ────────────────
 _backup_beoneofus_*
+
+.vercel
+.env*

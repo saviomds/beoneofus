@@ -6,9 +6,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Monorepo: this app is self-contained (no workspaces). Pin the tracing root to
-  // apps/web so Next stops walking up to stray lockfiles (C:\Users\Dell, repo root).
-  outputFileTracingRoot: __dirname,
+  // Monorepo: this app is self-contained (no workspaces). Locally, pin the tracing
+  // root to apps/web so Next stops walking up to stray lockfiles (C:\Users\Dell,
+  // repo root). On Vercel the platform sets the root itself — overriding it makes
+  // the deploy step look for .next at the repo root and fail.
+  ...(process.env.VERCEL ? {} : { outputFileTracingRoot: __dirname }),
 
   async redirects() {
     return [

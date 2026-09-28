@@ -4,7 +4,7 @@ import { logAdminAction } from '../../../../lib/auditLog';
 
 function adminClient() {
   return createClient(
-    process.env.SUPABASE_URL,
+    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
@@ -44,6 +44,10 @@ export async function POST(request) {
     // Lockout guard: an admin can't strip their own admin access here.
     if (flags.is_admin === false && ids.includes(caller.id)) {
       return NextResponse.json({ error: 'You cannot remove your own admin access.' }, { status: 400 });
+    }
+
+    if ('role' in flags && !VALID_ROLES.includes(flags.role)) {
+      return NextResponse.json({ error: 'Invalid role.' }, { status: 400 });
     }
 
     const patch = {};

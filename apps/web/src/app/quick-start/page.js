@@ -1,124 +1,112 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  ArrowLeft, CheckCircle2, Circle, Users, User, Settings,
-  Globe, Briefcase, MessageSquare, Zap, ChevronRight,
-  Star, Bell, Search, Compass, Hash,
+  CheckCircle2, Circle, User, ClipboardList, FileText, UserCircle, Users,
+  ChevronRight, GraduationCap, Plane, Briefcase, MessageSquare, LifeBuoy,
 } from "lucide-react";
+import { PublicHeader } from "../_study-work/components/PublicHeader";
+import { PublicFooter } from "../_study-work/components/PublicFooter";
+
+const STORAGE_KEY = "quickstart_done_v1";
 
 const STEPS = [
   {
     step: 1,
-    title: "Create Your Account",
+    title: "Create your account",
     time: "1 min",
-    icon: <User size={20} />,
-    color: "blue",
-    desc: "Sign up for free with your email or Google account. No credit card required — ever.",
-    actions: [
-      { label: "Sign up with email", href: "/auth" },
-      { label: "Continue with Google", href: "/auth" },
-    ],
+    icon: User,
+    desc: "Sign up free with your email, Google or GitHub. One account works for your application, your profile and the whole platform.",
+    actions: [{ label: "Create free account", href: "/auth?mode=sign-up" }],
     tips: [
-      "Use your professional email for better networking credibility",
-      "You can always upgrade to Premium later",
-      "Your account is free for life — no surprise charges",
+      "Confirm your email from the link we send you",
+      "Already have a beoneofus account? Just sign in — you don't need a new one",
     ],
   },
   {
     step: 2,
-    title: "Complete Your Profile",
-    time: "3–5 min",
-    icon: <Settings size={20} />,
-    color: "violet",
-    desc: "A complete profile gets 8x more visibility. Add your skills, experience, and a professional bio.",
-    actions: [
-      { label: "Edit your profile", href: "/dash/profile" },
-    ],
+    title: "Check the requirements",
+    time: "3 min",
+    icon: ClipboardList,
+    desc: "See what you'll need for Study Abroad or Work Abroad, so you can start gathering documents early.",
+    actions: [{ label: "View requirements", href: "/requirements" }],
     tips: [
-      "Add your current role and top 5 skills",
-      "Upload a professional headshot — profiles with photos get 4x more views",
-      "Write a short bio that says who you are and what you're building",
-      "Add your GitHub, LinkedIn, or portfolio links",
+      "Your passport should be valid for at least 12 months from your travel date",
+      "Study Abroad needs a transcript, proof of funds and a statement of purpose",
+      "Work Abroad needs a CV, police clearance and proof of work experience",
     ],
   },
   {
     step: 3,
-    title: "Join the Community Hub",
-    time: "1 min",
-    icon: <Hash size={20} />,
-    color: "emerald",
-    desc: "Jump into live discussions, ask questions, and share what you know with the rest of the network.",
+    title: "Start your application",
+    time: "5 min",
+    icon: FileText,
+    desc: "Choose Study Abroad or Work Abroad and send your initial application with your personal details.",
     actions: [
-      { label: "Open Community Hub", href: "/dash/more?tool=community" },
+      { label: "Apply to study", href: "/apply?type=study" },
+      { label: "Apply to work", href: "/apply?type=work" },
     ],
     tips: [
-      "Introduce yourself in the #introductions channel",
-      "Trending discussions update daily — check them regularly",
+      "Our team reviews your initial application — you don't need to do anything while it's under review",
+      "Once confirmed, you'll add your history and upload each required document",
+      "Follow every stage at any time from your application dashboard",
     ],
   },
   {
     step: 4,
-    title: "Build Your Network",
-    time: "2–3 min",
-    icon: <Users size={20} />,
-    color: "amber",
-    desc: "Connect with professionals in your field. Your network unlocks opportunities, mentorship, and collaborations.",
-    actions: [
-      { label: "Find connections", href: "/dash/connections" },
-      { label: "Explore profiles", href: "/dash/projects" },
-    ],
+    title: "Complete your profile",
+    time: "3 min",
+    icon: UserCircle,
+    desc: "Add a photo, a short bio, your location and your skills. Your home dashboard shows exactly what's still missing.",
+    actions: [{ label: "Edit your profile", href: "/dash/profile" }],
     tips: [
-      "Send a personalized note with every connection request",
-      "Connect with people whose work you admire or want to learn from",
-      "Engage with their posts before sending a request",
+      "Write one or two sentences about who you are and where you want to go",
+      "When your profile is complete, request a verified badge from Settings",
     ],
   },
   {
     step: 5,
-    title: "Explore Opportunities",
+    title: "Connect and explore",
     time: "Ongoing",
-    icon: <Briefcase size={20} />,
-    color: "rose",
-    desc: "Browse jobs, internships, contracts, freelance work, partnerships, and projects tailored to your profile.",
+    icon: Users,
+    desc: "Connect with people, join groups, and browse jobs and internships while your application moves forward.",
     actions: [
-      { label: "View jobs", href: "/dash/jobs" },
-      { label: "Discover people", href: "/dash/discover" },
-      { label: "Marketplace", href: "/dash/marketplace" },
+      { label: "Find people", href: "/dash/connections" },
+      { label: "Browse jobs", href: "/dash/jobs" },
+      { label: "Join groups", href: "/dash/groups" },
     ],
     tips: [
-      "Premium members see 5x more job opportunities",
-      "Contracts can be short-term gigs or long-term engagements",
-      "Set up job alerts for roles that match your skill set",
+      "Add a short personal note when you send a connection request",
+      "Only people you accept can send you messages",
     ],
   },
 ];
 
 const FEATURES = [
-  { icon: <Briefcase size={18} />, label: "Jobs & Internships", desc: "Matched to your profile", href: "/dash/jobs", color: "blue" },
-  { icon: <Users size={18} />, label: "Mentors & Network", desc: "People who've done it", href: "/dash/connections", color: "amber" },
-  { icon: <Globe size={18} />, label: "Projects", desc: "Portfolio & open source", href: "/dash/projects", color: "violet" },
-  { icon: <Compass size={18} />, label: "Discover", desc: "Find people to connect with", href: "/dash/discover", color: "indigo" },
+  { icon: GraduationCap, label: "Study Abroad",   desc: "Study in Mauritius",             href: "/study-abroad" },
+  { icon: Plane,         label: "Work Abroad",    desc: "Jobs & placements in Mauritius", href: "/work-abroad" },
+  { icon: Briefcase,     label: "Jobs",           desc: "Jobs, internships & remote work", href: "/dash/jobs" },
+  { icon: Users,         label: "Network",        desc: "Connections, groups & events",   href: "/dash/connections" },
 ];
 
-const colorMap = {
-  blue:    { bg: "bg-blue-50 dark:bg-blue-900/20",    text: "text-blue-600 dark:text-blue-400",    border: "border-blue-200 dark:border-blue-800/50",    num: "bg-blue-600",    badge: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" },
-  violet:  { bg: "bg-violet-50 dark:bg-violet-900/20", text: "text-violet-600 dark:text-violet-400", border: "border-violet-200 dark:border-violet-800/50", num: "bg-violet-600",  badge: "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300" },
-  emerald: { bg: "bg-emerald-50 dark:bg-emerald-900/20", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-800/50", num: "bg-emerald-600", badge: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" },
-  amber:   { bg: "bg-amber-50 dark:bg-amber-900/20",  text: "text-amber-600 dark:text-amber-400",  border: "border-amber-200 dark:border-amber-800/50",  num: "bg-amber-500",   badge: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" },
-  rose:    { bg: "bg-rose-50 dark:bg-rose-900/20",    text: "text-rose-600 dark:text-rose-400",    border: "border-rose-200 dark:border-rose-800/50",    num: "bg-rose-600",    badge: "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300" },
-  indigo:  { bg: "bg-indigo-50 dark:bg-indigo-900/20", text: "text-indigo-600 dark:text-indigo-400", border: "border-indigo-200 dark:border-indigo-800/50", num: "bg-indigo-600",  badge: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300" },
-};
-
 export default function QuickStartPage() {
-  const [completed, setCompleted] = useState(new Set());
+  const [completed, setCompleted] = useState(() => new Set());
+
+  // Restore checked steps after mount (localStorage isn't available during SSR).
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only storage; reading it during render would mismatch SSR
+      if (Array.isArray(saved) && saved.length) setCompleted(new Set(saved));
+    } catch { /* ignore */ }
+  }, []);
 
   const toggle = (step) => {
     setCompleted(prev => {
       const next = new Set(prev);
       if (next.has(step)) next.delete(step); else next.add(step);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
       return next;
     });
   };
@@ -126,207 +114,156 @@ export default function QuickStartPage() {
   const progress = Math.round((completed.size / STEPS.length) * 100);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 overflow-x-hidden">
-      <div className="fixed inset-0 bg-[linear-gradient(to_right,#00000006_1px,transparent_1px),linear-gradient(to_bottom,#00000006_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none" />
+    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+      <PublicHeader />
 
-      <nav className="fixed top-0 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl z-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/resources" className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-blue-600 flex items-center gap-1.5 shrink-0 transition-colors"><ArrowLeft size={15} /> Resources</Link>
-            <span className="text-gray-300 dark:text-gray-700">/</span>
-            <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">Quick Start</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {completed.size > 0 && (
-              <span className="hidden sm:block text-xs font-bold text-emerald-600 dark:text-emerald-400">{completed.size}/{STEPS.length} done</span>
-            )}
-            <Link href="/auth" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors">Get Started</Link>
-          </div>
-        </div>
-      </nav>
-
-      <main className="pt-16 relative z-10">
+      <main>
         {/* Hero */}
-        <div className="bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900 text-white relative overflow-hidden">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:24px_24px]" />
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20 relative">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-8">
-              <div className="flex-1">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold uppercase tracking-widest mb-6">
-                  <Zap size={11} className="text-yellow-300" /> 5 steps · under 10 minutes
-                </div>
-                <h1 className="text-4xl sm:text-5xl font-black tracking-tight mb-4 leading-tight">
-                  Quick Start Guide
-                </h1>
-                <p className="text-gray-300 text-lg leading-relaxed max-w-xl">
-                  Everything you need to go from zero to a fully set-up professional profile on beoneofus. Follow these 5 steps and you&apos;ll be ready.
-                </p>
-              </div>
-              {/* Progress widget */}
-              <div className="bg-white/10 border border-white/20 rounded-2xl p-6 sm:w-52 text-center backdrop-blur-sm shrink-0">
-                <div className="relative w-24 h-24 mx-auto mb-3">
-                  <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
-                    <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
-                    <circle cx="48" cy="48" r="40" fill="none" stroke="#3b82f6" strokeWidth="8"
-                      strokeDasharray={`${2 * Math.PI * 40}`}
-                      strokeDashoffset={`${2 * Math.PI * 40 * (1 - progress / 100)}`}
-                      strokeLinecap="round" className="transition-all duration-500" />
-                  </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-2xl font-black">{progress}%</span>
-                </div>
-                <p className="text-sm font-bold text-white">{completed.size} of {STEPS.length} steps</p>
-                <p className="text-xs text-gray-400 mt-0.5">Check off as you go</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-14 pb-10 sm:pt-20">
+          <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Quick start · 5 steps</p>
+          <h1 className="mt-3 text-4xl sm:text-5xl font-bold tracking-tight">Get started with beoneofus</h1>
+          <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
+            From creating your account to sending your Study or Work Abroad application — follow these steps and tick
+            them off as you go. Your progress is saved on this device.
+          </p>
+        </section>
 
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Steps */}
-            <div className="lg:col-span-2 space-y-5">
-              {STEPS.map(({ step, title, time, icon, color, desc, actions, tips }) => {
-                const c = colorMap[color] || colorMap.blue;
-                const done = completed.has(step);
-                return (
-                  <div key={step}
-                    className={`relative bg-white dark:bg-gray-900 border rounded-2xl p-6 transition-all duration-200 ${done ? "border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/30 dark:bg-emerald-900/5" : `border-gray-100 dark:border-gray-800 hover:shadow-md`}`}>
-                    {/* Step number & check */}
-                    <div className="flex items-start gap-4">
-                      <button
-                        onClick={() => toggle(step)}
-                        className="mt-0.5 shrink-0 transition-transform hover:scale-110 active:scale-95"
-                        title={done ? "Mark incomplete" : "Mark complete"}
-                      >
-                        {done
-                          ? <CheckCircle2 size={24} className="text-emerald-500" />
-                          : <Circle size={24} className="text-gray-300 dark:text-gray-600" />
-                        }
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2 flex-wrap">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${c.bg} ${c.text} shrink-0`}>{icon}</div>
-                          <h3 className={`text-lg font-black ${done ? "line-through text-gray-400 dark:text-gray-600" : "text-gray-900 dark:text-white"}`}>{title}</h3>
-                          <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ml-auto ${c.badge}`}>{time}</span>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">{desc}</p>
-
-                        {/* Actions */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {actions.map(({ label, href }) => (
-                            <Link key={label} href={href}
-                              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white ${c.num} hover:opacity-90 transition-opacity`}>
-                              {label} <ChevronRight size={12} />
-                            </Link>
-                          ))}
-                        </div>
-
-                        {/* Tips */}
-                        <div className="space-y-1.5">
-                          {tips.map((tip, i) => (
-                            <div key={i} className="flex items-start gap-2">
-                              <span className={`w-1 h-1 rounded-full mt-2 shrink-0 ${c.text.includes("text-") ? c.num : "bg-gray-400"}`} />
-                              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{tip}</p>
-                            </div>
-                          ))}
-                        </div>
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Steps */}
+          <ol className="lg:col-span-2 space-y-4">
+            {STEPS.map(({ step, title, time, icon: Icon, desc, actions, tips }) => {
+              const done = completed.has(step);
+              return (
+                <li
+                  key={step}
+                  className={`rounded-2xl border p-5 sm:p-6 transition-colors ${
+                    done ? "border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/40 dark:bg-emerald-900/10" : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <button
+                      type="button"
+                      onClick={() => toggle(step)}
+                      aria-pressed={done}
+                      aria-label={done ? `Mark "${title}" as not done` : `Mark "${title}" as done`}
+                      className="mt-0.5 shrink-0 rounded-full"
+                    >
+                      {done ? <CheckCircle2 size={24} className="text-emerald-500" /> : <Circle size={24} className="text-gray-300 dark:text-gray-600 hover:text-gray-400" />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                          <Icon size={17} />
+                        </span>
+                        <h2 className={`text-lg font-semibold ${done ? "text-gray-400 dark:text-gray-500 line-through" : "text-gray-900 dark:text-white"}`}>
+                          <span className="text-gray-400 dark:text-gray-500 font-medium mr-1.5">{step}.</span>{title}
+                        </h2>
+                        <span className="ml-auto text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">{time}</span>
                       </div>
+                      <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{desc}</p>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {actions.map(({ label, href }, i) => (
+                          <Link
+                            key={href}
+                            href={href}
+                            className={`inline-flex items-center gap-1 h-9 px-3.5 rounded-lg text-sm font-semibold transition-colors ${
+                              i === 0
+                                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                : "border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5"
+                            }`}
+                          >
+                            {label} <ChevronRight size={14} />
+                          </Link>
+                        ))}
+                      </div>
+
+                      <ul className="mt-4 space-y-1.5">
+                        {tips.map((tip) => (
+                          <li key={tip} className="flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                            <span className="w-1 h-1 rounded-full bg-gray-400 mt-2 shrink-0" /> {tip}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
-                );
-              })}
+                </li>
+              );
+            })}
 
-              {/* Completion message */}
-              {completed.size === STEPS.length && (
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white text-center">
-                  <p className="text-3xl mb-2">🎉</p>
-                  <h3 className="text-xl font-black mb-2">You&apos;re all set!</h3>
-                  <p className="text-emerald-100 text-sm mb-4">Your profile is ready. Time to explore the community and make your first connection.</p>
-                  <Link href="/dash" className="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-emerald-700 font-bold rounded-xl text-sm hover:bg-emerald-50 transition-colors">
-                    Go to Dashboard <ChevronRight size={14} />
-                  </Link>
-                </div>
-              )}
+            {completed.size === STEPS.length && (
+              <li className="rounded-2xl bg-emerald-600 p-6 text-white text-center list-none">
+                <h2 className="text-xl font-semibold">You&apos;re all set</h2>
+                <p className="mt-1.5 text-sm text-emerald-50">Your account and application are underway. Keep an eye on your dashboard for updates.</p>
+                <Link href="/apply/dashboard" className="mt-4 inline-flex items-center gap-1.5 h-10 px-5 bg-white text-emerald-700 font-semibold rounded-lg text-sm hover:bg-emerald-50 transition-colors">
+                  Open my application <ChevronRight size={14} />
+                </Link>
+              </li>
+            )}
+          </ol>
+
+          {/* Sidebar */}
+          <aside className="space-y-5 lg:sticky lg:top-24 h-fit">
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Your progress</h2>
+                <span className="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{progress}%</span>
+              </div>
+              <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-4">
+                <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+              </div>
+              <ul className="space-y-2.5">
+                {STEPS.map(({ step, title }) => {
+                  const done = completed.has(step);
+                  return (
+                    <li key={step}>
+                      <button type="button" onClick={() => toggle(step)} className="flex items-center gap-2.5 w-full text-left">
+                        {done ? <CheckCircle2 size={16} className="text-emerald-500 shrink-0" /> : <Circle size={16} className="text-gray-300 dark:text-gray-600 shrink-0" />}
+                        <span className={`text-sm ${done ? "line-through text-gray-400" : "text-gray-700 dark:text-gray-300"}`}>{title}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
 
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Progress */}
-              <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
-                <h3 className="font-black text-sm uppercase tracking-widest text-gray-400 mb-4">Your Progress</h3>
-                <div className="space-y-3">
-                  {STEPS.map(({ step, title, color }) => {
-                    const c = colorMap[color] || colorMap.blue;
-                    const done = completed.has(step);
-                    return (
-                      <button key={step} onClick={() => toggle(step)}
-                        className="flex items-center gap-3 w-full text-left group">
-                        {done
-                          ? <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                          : <div className={`w-4 h-4 rounded-full border-2 ${done ? "border-emerald-500" : "border-gray-300 dark:border-gray-600"} shrink-0 group-hover:border-gray-400 transition-colors`} />
-                        }
-                        <span className={`text-sm font-semibold ${done ? "line-through text-gray-400" : "text-gray-700 dark:text-gray-300"} group-hover:text-gray-900 dark:group-hover:text-white transition-colors`}>{title}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-4">
-                  <div className="flex justify-between text-xs text-gray-400 mb-1.5">
-                    <span>Progress</span><span>{progress}%</span>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
-                  </div>
-                </div>
-              </div>
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Explore</h2>
+              <ul className="space-y-1">
+                {FEATURES.map(({ icon: Icon, label, desc, href }) => (
+                  <li key={href}>
+                    <Link href={href} className="group flex items-center gap-3 p-2 -mx-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                      <span className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0"><Icon size={16} /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">{label}</span>
+                        <span className="block text-xs text-gray-500 dark:text-gray-400">{desc}</span>
+                      </span>
+                      <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500 shrink-0" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-              {/* Key Features */}
-              <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
-                <h3 className="font-black text-sm uppercase tracking-widest text-gray-400 mb-4">Platform Features</h3>
-                <div className="space-y-2">
-                  {FEATURES.map(({ icon, label, desc, href, color }) => {
-                    const c = colorMap[color] || colorMap.blue;
-                    return (
-                      <Link key={label} href={href}
-                        className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 group transition-colors">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${c.bg} ${c.text}`}>{icon}</div>
-                        <div className="min-w-0">
-                          <p className={`text-sm font-bold group-hover:${c.text} transition-colors text-gray-800 dark:text-gray-200`}>{label}</p>
-                          <p className="text-[10px] text-gray-400">{desc}</p>
-                        </div>
-                        <ChevronRight size={12} className="text-gray-300 group-hover:text-gray-500 transition-colors ml-auto shrink-0" />
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Need Help */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-5">
-                <h3 className="font-black text-sm text-blue-900 dark:text-blue-100 mb-2">Need help?</h3>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mb-3 leading-relaxed">Our support team and community are always available to help you get started.</p>
-                <Link href="/dash/more?tool=support" className="block text-center py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-colors">
-                  Open Support Ticket
+            <div className="rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 p-5">
+              <h2 className="text-sm font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2"><LifeBuoy size={16} /> Need help?</h2>
+              <p className="mt-2 text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
+                Questions about your application? Message our team from the Messages tab inside it.
+              </p>
+              <div className="mt-3 flex flex-col gap-2">
+                <Link href="/docs" className="inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors">
+                  <MessageSquare size={14} /> Read the docs
+                </Link>
+                <Link href="/contact" className="inline-flex items-center justify-center h-9 rounded-lg border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-200 text-sm font-semibold hover:bg-white/60 dark:hover:bg-white/5 transition-colors">
+                  Contact us
                 </Link>
               </div>
             </div>
-          </div>
-        </div>
+          </aside>
+        </section>
       </main>
 
-      <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 py-8">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Link href="/" className="font-black text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Image src="/logo.svg" alt="beoneofus" width={22} height={22} unoptimized /> beone<span className="text-blue-600">of</span>us
-          </Link>
-          <div className="flex flex-wrap justify-center gap-4">
-            {[{ label: "Resources", href: "/resources" }, { label: "Jobs", href: "/dash/jobs" }, { label: "Docs", href: "/docs" }].map(({ label, href }) => (
-              <Link key={label} href={href} className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors font-medium">{label}</Link>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400">© {new Date().getFullYear()} beoneofus</p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

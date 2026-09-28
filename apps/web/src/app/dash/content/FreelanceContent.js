@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useEffectEvent } from 'react';
+import { useDashboard } from './DashboardContext';
 import {
   Globe, Search, Plus, X, Loader2, ArrowLeft, Send, Briefcase,
   DollarSign, Clock, Tag, MapPin, ExternalLink, Filter, RefreshCw,
@@ -307,7 +308,7 @@ function PostJobModal({ token, onClose, onPosted }) {
 
 export default function FreelanceContent() {
   const { t } = useLanguage();
-  const [session, setSession] = useState(null);
+  const { session } = useDashboard();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -328,13 +329,9 @@ export default function FreelanceContent() {
     setRefreshing(false);
   }, []);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); fetchJobs(category, type, search); });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => { (async () => { setLoading(true); await fetchJobs(category, type, search); })(); }, [category, type]);
+  // Refetch when a filter changes; free-text search is applied on Enter.
+  const loadJobs = useEffectEvent(() => fetchJobs(category, type, search));
+  useEffect(() => { (async () => { setLoading(true); await loadJobs(); })(); }, [category, type]);
 
   if (selected) {
     return (

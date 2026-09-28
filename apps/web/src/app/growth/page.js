@@ -274,8 +274,8 @@ export default function GrowthPage() {
           <div className="relative overflow-hidden rounded-3xl border border-gray-200 dark:border-white/10 bg-gradient-to-br from-brand-600 via-brand-600 to-violet-700 p-8 sm:p-12 text-white shadow-2xl">
             <div aria-hidden className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "22px 22px" }} />
             <div className="relative max-w-2xl">
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-balance">Network effects, engineered</h2>
-              <p className="mt-3 text-white/80 leading-relaxed">Trusted institutions bring verified people. AI turns that trust into compounding growth. Partner with us early.</p>
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-balance">Grow opportunity with us</h2>
+              <p className="mt-3 text-white/80 leading-relaxed">Schools, universities, employers and programmes help more young people from Rwanda study and work in Mauritius. Partner with us early.</p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link href="/for-institutions" className="inline-flex items-center gap-2 bg-white text-gray-900 font-bold text-sm px-5 py-3 rounded-2xl hover:bg-white/90 transition-all active:scale-95">
                   Partner with us <ArrowRight size={16} />
@@ -286,7 +286,7 @@ export default function GrowthPage() {
               </div>
             </div>
           </div>
-          <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-8">BeOneOfUs — The Global Opportunity Ecosystem</p>
+          <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-8">beoneofus — Study &amp; work abroad in Mauritius, rooted in Rwanda</p>
         </Reveal>
       </section>
     </main>

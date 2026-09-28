@@ -31,17 +31,23 @@ export function StudyWorkProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(() => setTick((t) => t + 1), [])
 
   useEffect(() => {
+    // `loading` starts true and only covers the first load; later refreshes
+    // update data in place instead of blanking the portal.
     let cancelled = false
-    setLoading(true)
-    auth.getCurrentUser().then(async (current) => {
-      if (cancelled) return
-      setUser(current?.user ?? null)
-      setHasApplicantProfile(current?.hasApplicantProfile ?? false)
-      const list = current ? await apps.listApplicationsForUser(current.user.id) : []
-      if (cancelled) return
-      setApplications(list)
-      setLoading(false)
-    })
+    ;(async () => {
+      try {
+        const current = await auth.getCurrentUser()
+        const list = current ? await apps.listApplicationsForUser(current.user.id) : []
+        if (cancelled) return
+        setUser(current?.user ?? null)
+        setHasApplicantProfile(current?.hasApplicantProfile ?? false)
+        setApplications(list)
+      } catch (err) {
+        console.error('[study-work] failed to load session', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
     return () => { cancelled = true }
   }, [tick])
 

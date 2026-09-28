@@ -47,31 +47,31 @@ const ACCENT = {
 export const ORG_TYPES = {
   business: {
     label: 'Business', icon: Building2, accent: ACCENT.brand,
-    blurb: 'Hire, upskill, and engage talent through one verified channel — with AI insight into your talent pool.',
+    blurb: 'Post jobs and placements, and hire prepared candidates for work in Mauritius.',
   },
   government: {
     label: 'Government', icon: Landmark, accent: ACCENT.slate,
-    blurb: 'Reach citizens with employment, training, and civic programs on a trusted, measurable channel.',
+    blurb: 'Run scholarship, training and placement programmes and track every participant.',
   },
   education: {
     label: 'Education', icon: GraduationCap, accent: ACCENT.brand,
-    blurb: 'Connect courses and graduates directly to real-world opportunity and employer demand.',
+    blurb: 'Support students going abroad, or welcome international students to your programmes.',
   },
   healthcare: {
     label: 'Healthcare', icon: HeartPulse, accent: ACCENT.trust,
-    blurb: 'Extend access and wellbeing support into the professional network — verified and secure.',
+    blurb: 'Recruit healthcare workers and run placement programmes with a verified presence.',
   },
   ngo: {
     label: 'NGO', icon: HandHeart, accent: ACCENT.premium,
-    blurb: 'Reach and mobilize communities around programs and support, with a verified presence.',
+    blurb: 'Run support and mobility programmes for young people, with a verified presence.',
   },
   community: {
     label: 'Community', icon: Users2, accent: ACCENT.premium,
-    blurb: 'Give grassroots groups a verified, connected home inside the wider opportunity graph.',
+    blurb: 'Give your community group a verified home and share opportunities with members.',
   },
   other: {
     label: 'Organization', icon: Sparkles, accent: ACCENT.slate,
-    blurb: 'A verified presence on the opportunity graph.',
+    blurb: 'A verified organization page on beoneofus.',
   },
 };
 

@@ -9,11 +9,12 @@ import {
   Search, Menu, X, ChevronRight, ChevronDown,
   ShieldCheck, Zap, BookOpen, ExternalLink,
   LayoutDashboard, MessageSquare, Briefcase, Network,
-  Code2, Users, Bell, Star, Globe,
+  Users, Bell, Star, Globe,
   Cpu, Award, FileText, Sparkles, Hash,
-  ArrowRight, CheckCircle2, Lock, Rss, ShoppingBag,
+  ArrowRight, CheckCircle2, Rss, ShoppingBag,
   UserCircle, GitBranch, ScrollText, BadgeCheck,
-  Crown
+  Crown, Plane, GraduationCap, ListChecks, UploadCloud,
+  Building2, ClipboardList, LifeBuoy,
 } from "lucide-react";
 
 // ─── Navigation tree ───────────────────────────────────────────────────────
@@ -29,10 +30,31 @@ const NAV = [
     ],
   },
   {
+    group: "Study & Work Abroad",
+    icon: Plane,
+    links: [
+      { id: "study-abroad",   label: "Study Abroad",        icon: GraduationCap },
+      { id: "work-abroad",    label: "Work Abroad",         icon: Briefcase },
+      { id: "journey",        label: "Application Journey", icon: ListChecks },
+      { id: "requirements",   label: "Requirements",        icon: FileText },
+      { id: "documents",      label: "Documents & Review",  icon: UploadCloud },
+      { id: "advisor",        label: "Your Advisor",        icon: MessageSquare },
+    ],
+  },
+  {
+    group: "For Institutions",
+    icon: Building2,
+    links: [
+      { id: "institutions",   label: "Organization Pages",  icon: Building2 },
+      { id: "org-verification", label: "Organization Verification", icon: BadgeCheck },
+      { id: "programmes",     label: "Programmes & Jobs",   icon: ClipboardList },
+    ],
+  },
+  {
     group: "Dashboard",
     icon: LayoutDashboard,
     links: [
-      { id: "home-feed",      label: "Home Feed",           icon: Rss },
+      { id: "home-feed",      label: "Home & Feed",         icon: Rss },
       { id: "profile",        label: "Profile",             icon: UserCircle },
       { id: "notifications",  label: "Notifications",       icon: Bell },
     ],
@@ -42,25 +64,24 @@ const NAV = [
     icon: Network,
     links: [
       { id: "connections",    label: "Connections",         icon: Users },
-      { id: "messaging",      label: "Smart Messaging",     icon: MessageSquare },
+      { id: "messaging",      label: "Messaging",           icon: MessageSquare },
     ],
   },
   {
     group: "Community",
     icon: Users,
     links: [
-      { id: "community-hubs", label: "Community Hub",     icon: Cpu },
-      { id: "posts-feed",     label: "Posts & Feed",        icon: Rss },
+      { id: "community-hubs", label: "Groups & Community",  icon: Cpu },
+      { id: "posts-feed",     label: "Posts & Stories",     icon: Rss },
       { id: "blog",           label: "Blog",                icon: ScrollText },
     ],
   },
   {
-    group: "Career & Business",
+    group: "Jobs & Earning",
     icon: Briefcase,
     links: [
       { id: "job-matching",   label: "Jobs & Services",     icon: Briefcase },
-      { id: "founder-dash",   label: "Founder Dashboard",   icon: Crown },
-      { id: "member-dash",    label: "Member Dashboard",    icon: ShieldCheck },
+      { id: "marketplace",    label: "Marketplace",         icon: ShoppingBag },
       { id: "sponsors",       label: "Sponsors",            icon: Star },
     ],
   },
@@ -68,9 +89,9 @@ const NAV = [
     group: "Account",
     icon: ShieldCheck,
     links: [
-      { id: "premium",        label: "Premium Tier",        icon: Crown },
+      { id: "premium",        label: "Premium",             icon: Crown },
       { id: "verification",   label: "Verification Badge",  icon: BadgeCheck },
-      { id: "marketplace",    label: "Marketplace",         icon: ShoppingBag },
+      { id: "support",        label: "Help & Support",      icon: LifeBuoy },
     ],
   },
 ];
@@ -198,20 +219,22 @@ export default function DocsPage() {
   });
 
   useEffect(() => {
-    Promise.all([
-      supabase.from("profiles").select("id", { count: "exact", head: true }),
-      supabase.from("jobs").select("id", { count: "exact", head: true }),
-      supabase.from("connections").select("id", { count: "exact", head: true }).eq("status", "accepted"),
-    ]).then(([p, j, m]) => {
-      const fmt = (n: number | null) =>
-        n == null ? "—"
-        : n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k+`
-        : `${n}+`;
-      setStats({
-        professionals: fmt(p.count),
-        jobs:          fmt(j.count),
-        connections:   fmt(m.count),
-      });
+    const fmt = (n: number | null | undefined) =>
+      n == null ? "—"
+      : n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k+`
+      : `${n}+`;
+    // get_public_stats is a SECURITY DEFINER RPC, so signed-out visitors see real
+    // totals (direct counts are limited by row-level security).
+    supabase.rpc("get_public_stats").single().then(({ data, error }: { data: any; error: any }) => {
+      if (!error && data) {
+        setStats({ professionals: fmt(data.professionals), jobs: fmt(data.jobs), connections: fmt(data.connections) });
+        return;
+      }
+      Promise.all([
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("jobs").select("id", { count: "exact", head: true }),
+        supabase.from("connections").select("id", { count: "exact", head: true }).eq("status", "accepted"),
+      ]).then(([pr, j, m]) => setStats({ professionals: fmt(pr.count), jobs: fmt(j.count), connections: fmt(m.count) }));
     });
   }, []);
 
@@ -406,104 +429,216 @@ export default function DocsPage() {
               <div className="flex flex-wrap items-center gap-2 mb-5">
                 <Pill label="Documentation" color="gray" />
                 <Pill label={`${vTag} — ${vDate}`} color="purple" />
-                <Pill label="Updated" color="green" />
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4 leading-tight">
                 beone<span className="text-blue-600 dark:text-blue-400">of</span>us{" "}
                 <span className="text-blue-600 dark:text-blue-500">Documentation</span>
               </h1>
               <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed mb-8">
-                Everything you need to know about{" "}
                 <strong className="text-gray-900 dark:text-white">
                   beone<span className="text-blue-600 dark:text-blue-400">of</span>us
                 </strong>{" "}
-                — the professional network open to everyone. Whether you are a developer, designer, marketer, founder, or finance professional, this is where you grow your skills, build income, and connect with the right people.
+                helps graduates and school-leavers from Rwanda study or work abroad in Mauritius. We guide you through
+                your application, requirements, documents and review, and give you a professional network,
+                jobs and a community to grow with along the way.
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+              <div className="grid grid-cols-3 gap-3 mb-8">
                 {([
-                  { label: "Professionals", key: "professionals" as StatKey, color: "text-blue-600 dark:text-blue-400" },
-                  { label: "Jobs Posted",   key: "jobs"          as StatKey, color: "text-purple-600 dark:text-purple-400" },
-                  { label: "Connections",   key: "connections"   as StatKey, color: "text-emerald-600 dark:text-emerald-400" },
-                  { label: "Projects",      key: "projects"      as StatKey, color: "text-amber-600 dark:text-amber-400" },
+                  { label: "Students & graduates", key: "professionals" as StatKey, color: "text-blue-600 dark:text-blue-400" },
+                  { label: "Jobs & internships",   key: "jobs"          as StatKey, color: "text-purple-600 dark:text-purple-400" },
+                  { label: "Connections",          key: "connections"   as StatKey, color: "text-emerald-600 dark:text-emerald-400" },
                 ] as const).map(s => (
                   <div key={s.label} className="p-3 sm:p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 text-center">
                     <p className={`text-xl sm:text-2xl font-black tabular-nums ${s.color}`}>{stats[s.key]}</p>
-                    <p className="text-[10px] sm:text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-0.5 uppercase tracking-wide">{s.label}</p>
+                    <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mt-0.5">{s.label}</p>
                   </div>
                 ))}
               </div>
               <Callout type="new" title={`Platform ${vTag} — ${vLabel}`}>
-                Public profiles, jobs & internships, premium membership, Marketplace, and sponsor partnerships are now live and open to all members.
+                Study Abroad and Work Abroad applications are open, with document review, advisor messaging and final
+                documents in your application dashboard.
               </Callout>
             </section>
 
             <section className="mb-16">
               <SectionHeading id="quick-start" icon={<Zap size={15} />} label="Quick Start" badge={{ text: "5 min", color: "green" }} />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Go from new account to active member in under five minutes.
+                The fastest way to get going. The full guide is at <InlineCode>/quick-start</InlineCode>.
               </p>
               <StepList steps={[
-                { n: 1, title: "Create an account",           desc: "Sign up at /auth with your email and click the verification link. Takes about 30 seconds." },
-                { n: 2, title: "Build your profile",          desc: "Add your avatar, bio, skills, and field. A strong profile puts you in front of recruiters, mentors, and collaborators." },
-                { n: 3, title: "Explore the feed",            desc: "Head to /dash/home to see what people in your field are building, sharing, and discussing right now." },
-                { n: 4, title: "Connect with someone",        desc: "Visit any public profile at /u/[username] and hit Connect. Once accepted, you can message each other directly." },
-                { n: 5, title: "Apply, connect, or earn",     desc: "Apply for a job or internship, reach out to a mentor in your network, or list your services in the Marketplace." },
+                { n: 1, title: "Create your account",        desc: "Sign up at /auth with your email or Google, then confirm your email. One account works for everything on beoneofus." },
+                { n: 2, title: "Choose Study or Work Abroad", desc: "Go to /apply and pick the journey that fits you. You can see what each needs at /requirements first." },
+                { n: 3, title: "Send your initial application", desc: "Fill in your personal details and submit. Our team reviews it — you don't need to do anything while it's under review." },
+                { n: 4, title: "Complete your full application", desc: "Once confirmed, add your education or work history, then upload each required document." },
+                { n: 5, title: "Build your profile and network", desc: "Complete your profile, connect with people and follow jobs in the dashboard at /dash while your application moves forward." },
               ]} />
             </section>
 
             <section className="mb-16">
               <SectionHeading id="architecture" icon={<Globe size={15} />} label="What We Offer" />
               <p className="text-gray-600 dark:text-gray-400 mb-5 leading-relaxed text-sm sm:text-base">
-                beone<span className="text-blue-600 dark:text-blue-400">of</span>us is open to every professional — developers, designers, marketers, founders, finance experts, educators, and more. Every feature is built to help you grow your career, earn more, and connect with the right people.
+                One account gives you a guided path abroad and a place to grow your career.
               </p>
               <FeatureGrid items={[
-                { icon: <Briefcase size={13} />,     title: "Find work & internships", desc: "Browse jobs and internships across all industries and post freelance services. One-click apply with your profile — no CV upload needed." },
-                { icon: <Users size={13} />,         title: "Mentors & network",     desc: "Connect with alumni, mentors and professionals who have done it. Verified profiles, safe messaging." },
-                { icon: <ShoppingBag size={13} />,   title: "Earn from your skills",  desc: "Sell services, consulting, and templates in the Marketplace. Set your rates and get paid directly through the platform." },
-                { icon: <Code2 size={13} />,         title: "Build your own",         desc: "Find co-founders, join open projects, and turn an idea into a business with the right team." },
-                { icon: <Star size={13} />,          title: "Get discovered",         desc: "A verified public profile and portfolio projects make you visible to recruiters and collaborators worldwide." },
+                { icon: <GraduationCap size={13} />, title: "Study Abroad",             desc: "Apply to study in Mauritius — from certificates to PhDs — with an advisor guiding your application." },
+                { icon: <Plane size={13} />,         title: "Work Abroad",              desc: "Apply for jobs and work placements in Mauritius, with every document checked along the way." },
+                { icon: <ListChecks size={13} />,    title: "A clear, tracked journey",  desc: "Your application dashboard always shows your current stage, what's missing and what happens next." },
+                { icon: <Users size={13} />,         title: "Network & community",      desc: "Connect with people, join groups and events, and share updates in the feed." },
+                { icon: <Briefcase size={13} />,     title: "Jobs & opportunities",     desc: "Browse jobs, internships and remote work, and apply with your profile." },
+                { icon: <Building2 size={13} />,     title: "For institutions",         desc: "Schools, universities, employers and programmes create verified pages to open opportunities." },
+              ]} />
+            </section>
+
+            {/* ════ STUDY & WORK ABROAD ════ */}
+
+            <section className="mb-16">
+              <SectionHeading id="study-abroad" icon={<GraduationCap size={15} />} label="Study Abroad" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
+                Study in Mauritius at certificate, diploma, bachelor&apos;s, master&apos;s or PhD level, or on a short course.
+                Tell us your preferred field, programme, institution and intake when you apply — your advisor confirms what
+                is realistic for your background once your application is confirmed. Start at <InlineCode>/apply?type=study</InlineCode>.
+              </p>
+              <Callout type="tip" title="Before you apply">
+                Have a valid passport (or one in progress), your latest academic transcript, proof of funds and a short
+                statement of purpose ready. See <Link href="/study-abroad" className="text-blue-600 dark:text-blue-400 hover:underline">Study Abroad</Link> for details.
+              </Callout>
+            </section>
+
+            <section className="mb-16">
+              <SectionHeading id="work-abroad" icon={<Briefcase size={15} />} label="Work Abroad" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
+                Apply for roles and work placements in Mauritius across technology, hospitality, finance and more. Your
+                advisor reviews your application and requirements with you, and every document is checked before
+                approval. Start at <InlineCode>/apply?type=work</InlineCode>.
+              </p>
+            </section>
+
+            <section className="mb-16">
+              <SectionHeading id="journey" icon={<ListChecks size={15} />} label="Application Journey" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
+                Every application follows the same clear stages. You can follow yours at <InlineCode>/apply/dashboard</InlineCode>.
+              </p>
+              <StepList steps={[
+                { n: 1, title: "Create your account",          desc: "Already on beoneofus? Your existing account works — no need to sign up again." },
+                { n: 2, title: "Start your application",       desc: "Choose Study Abroad or Work Abroad and complete the initial application with your personal details." },
+                { n: 3, title: "Under review",                 desc: "Our team reviews your initial submission. Nothing else is needed from you at this stage." },
+                { n: 4, title: "Application confirmed",        desc: "The next stage unlocks: your full application, personalised requirements and documents." },
+                { n: 5, title: "Complete your full application", desc: "Add your education or employment history and travel information." },
+                { n: 6, title: "Upload your documents",        desc: "Upload each required document and track the status of every one." },
+                { n: 7, title: "Document review",              desc: "Each document is approved, or you are told exactly what to correct and why." },
+                { n: 8, title: "Approval & final documents",   desc: "Once everything is approved and processed, your final document package is ready to download." },
+              ]} />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                See the illustrated version at <Link href="/how-it-works" className="text-blue-600 dark:text-blue-400 hover:underline">How It Works</Link>.
+              </p>
+            </section>
+
+            <section className="mb-16">
+              <SectionHeading id="requirements" icon={<FileText size={15} />} label="Requirements" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
+                These are the general requirements. Your personalised list appears in your application once it is confirmed.
+              </p>
+              <FeatureGrid items={[
+                { icon: <GraduationCap size={13} />, title: "Study Abroad", desc: "Valid passport (12+ months), official academic transcript, proof of funds, statement of purpose. English test (IELTS/TOEFL) if your prior education was not in English." },
+                { icon: <Briefcase size={13} />,     title: "Work Abroad",  desc: "Valid passport (12+ months), police clearance (last 6 months), up-to-date CV, proof of work experience. An employment contract draft or medical certificate may also be needed." },
+              ]} />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Full list: <Link href="/requirements" className="text-blue-600 dark:text-blue-400 hover:underline">Requirements</Link>.
+              </p>
+            </section>
+
+            <section className="mb-16">
+              <SectionHeading id="documents" icon={<UploadCloud size={15} />} label="Documents & Review" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
+                Upload documents from the Documents tab of your application. PDF, JPG and PNG files up to 10 MB are accepted.
+                Each document shows its own status, so you always know what is approved and what still needs work.
+              </p>
+              <FeatureGrid items={[
+                { icon: <UploadCloud size={13} />,  title: "Upload & replace",   desc: "Upload each required document, and re-upload any time a correction is requested." },
+                { icon: <CheckCircle2 size={13} />, title: "Per-document status", desc: "See which documents are pending, approved or need changes." },
+                { icon: <MessageSquare size={13} />,title: "Clear feedback",     desc: "If something needs fixing, the reviewer explains exactly what and why." },
+                { icon: <Award size={13} />,        title: "Final documents",    desc: "When your application is complete, download your final document package from the application." },
+              ]} />
+              <Callout type="info" title="Your documents are private">
+                Application documents are stored privately and are only visible to you and the beoneofus team reviewing your application.
+              </Callout>
+            </section>
+
+            <section className="mb-16">
+              <SectionHeading id="advisor" icon={<MessageSquare size={15} />} label="Your Advisor" />
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm sm:text-base">
+                Every application has its own conversation with the beoneofus team, in the Messages tab of your application.
+                Ask questions, get updates and receive guidance there. You are also notified whenever your application
+                status or a document changes.
+              </p>
+            </section>
+
+            {/* ════ FOR INSTITUTIONS ════ */}
+
+            <section className="mb-16">
+              <SectionHeading id="institutions" icon={<Building2 size={15} />} label="Organization Pages" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
+                Schools and universities in Rwanda and Mauritius, employers, and scholarship or placement programmes can
+                create a free organization page at <InlineCode>/organizations/new</InlineCode>. Each page has its own
+                console for your team. Learn more at <Link href="/for-institutions" className="text-blue-600 dark:text-blue-400 hover:underline">For Institutions</Link>.
+              </p>
+              <FeatureGrid items={[
+                { icon: <Building2 size={13} />, title: "Public page",  desc: "Your organization's profile, what you offer and how to reach you." },
+                { icon: <Users size={13} />,     title: "Team access",  desc: "Invite colleagues as admins, recruiters or programme managers." },
+              ]} />
+            </section>
+
+            <section className="mb-16">
+              <SectionHeading id="org-verification" icon={<BadgeCheck size={15} />} label="Organization Verification" />
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm sm:text-base">
+                Request verification from your organization console. The beoneofus team reviews your information and, once
+                approved, a verified badge appears on your page so students, workers and partners know you are genuine.
+              </p>
+            </section>
+
+            <section className="mb-16">
+              <SectionHeading id="programmes" icon={<ClipboardList size={15} />} label="Programmes & Jobs" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
+                Run intakes, cohorts, scholarships or placement programmes from your console, and add participants to track
+                their progress. Employers can post jobs, internships and placements — every post is reviewed before it goes live.
+              </p>
+              <FeatureGrid items={[
+                { icon: <ClipboardList size={13} />, title: "Programmes & participants", desc: "Create programmes and keep each participant's status up to date." },
+                { icon: <Briefcase size={13} />,     title: "Job posts",                 desc: "Publish opportunities that appear on the Jobs board once approved." },
+                { icon: <Star size={13} />,          title: "Outcomes",                  desc: "See enrolment, completion and placement figures from your own data, with suggested next actions." },
               ]} />
             </section>
 
             {/* ════ DASHBOARD ════ */}
 
             <section className="mb-16">
-              <SectionHeading id="home-feed" icon={<Rss size={15} />} label="Home Feed" />
+              <SectionHeading id="home-feed" icon={<Rss size={15} />} label="Home & Feed" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Your home feed at <InlineCode>/dash/home</InlineCode> keeps you up to date with posts, project launches, and updates from the people you follow — new content appears instantly, no refresh needed.
+                <InlineCode>/dash/home</InlineCode> shows your connections, unread messages and notifications at a glance, with
+                quick actions and a getting-started checklist. The feed at <InlineCode>/dash/feed</InlineCode> shows posts and stories
+                from the community, updated live.
               </p>
-              <FeatureGrid items={[
-                { icon: <Rss size={13} />,     title: "Live feed",           desc: "New posts appear instantly without a page reload." },
-                { icon: <Code2 size={13} />,   title: "Code posts",          desc: "Share code snippets with full syntax highlighting." },
-                { icon: <Star size={13} />,    title: "Reactions & replies", desc: "React with emoji and nest threaded replies on any post." },
-                { icon: <Network size={13} />, title: "Spotlight sidebar",   desc: "Right panel surfaces verified users, trending projects, and suggestions." },
-              ]} />
             </section>
 
             <section className="mb-16">
               <SectionHeading id="profile" icon={<UserCircle size={15} />} label="Profile" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Every user has a private settings profile at <InlineCode>/dash/profile</InlineCode> and a public profile at <InlineCode>/u/[username]</InlineCode>.
+                Edit your profile at <InlineCode>/dash/profile</InlineCode>. Your public profile lives at <InlineCode>/u/[username]</InlineCode>.
               </p>
               <FeatureGrid items={[
-                { icon: <GitBranch size={13} />,  title: "GitHub stats",       desc: "Live contribution graphs, top languages, and repo count from the GitHub API." },
-                { icon: <BadgeCheck size={13} />, title: "Verified badge",     desc: "Verified accounts show a blue checkmark across all platform surfaces." },
-                { icon: <Crown size={13} />,      title: "Premium badge",      desc: "Premium members get a gold crown badge on their profile and every post." },
-                { icon: <Star size={13} />,       title: "Skill endorsements", desc: "Connections can endorse your skills, adding social proof to your profile." },
+                { icon: <UserCircle size={13} />, title: "Profile strength",   desc: "Add your photo, bio, location, skills and links — the home page shows what is still missing." },
+                { icon: <Star size={13} />,       title: "Skill endorsements", desc: "Connections can endorse your skills on your public profile." },
+                { icon: <BadgeCheck size={13} />, title: "Verified badge",     desc: "Verified accounts show a blue checkmark across the platform." },
+                { icon: <GitBranch size={13} />,  title: "GitHub activity",    desc: "Optionally link GitHub to show your contributions." },
               ]} />
             </section>
 
             <section className="mb-16">
               <SectionHeading id="notifications" icon={<Bell size={15} />} label="Notifications" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Stay on top of everything that matters. Every connection, message, job update, and post interaction reaches you instantly at <InlineCode>/dash/notifications</InlineCode>, grouped so you can act fast.
+                Connection requests, messages, application updates and post activity reach you instantly at{" "}
+                <InlineCode>/dash/notifications</InlineCode>. You can also turn on browser push notifications in Settings.
               </p>
-              <FeatureGrid items={[
-                { icon: <Users size={13} />,        title: "Connection events", desc: "Instant alerts when someone sends or accepts your connection request." },
-                { icon: <MessageSquare size={13} />,title: "Message previews",  desc: "New messages appear as cards with a direct link to the conversation." },
-                { icon: <Briefcase size={13} />,    title: "Job status",        desc: "Notified when an application changes (Pending → Accepted / Rejected)." },
-                { icon: <Star size={13} />,         title: "Post interactions", desc: "Alerts for reactions, comments, and reposts on your content." },
-              ]} />
             </section>
 
             {/* ════ NETWORKING ════ */}
@@ -511,147 +646,120 @@ export default function DocsPage() {
             <section className="mb-16">
               <SectionHeading id="connections" icon={<Users size={15} />} label="Connections" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Every connection on beone<span className="text-blue-600 dark:text-blue-400">of</span>us is mutual — no one can reach out to you unless you accept. This keeps your network quality high and your inbox free of unsolicited messages, regardless of your profession.
+                Connections are mutual — nobody can message you unless you accept their request.
               </p>
               <StepList steps={[
-                { n: 1, title: "Find a user",       desc: "Visit their public profile at /u/[username] or find them through Explore or Spotlight." },
-                { n: 2, title: "Send a request",    desc: 'Click "Connect". They receive a notification. Your status shows Pending until they respond.' },
-                { n: 3, title: "Request accepted",  desc: "Once accepted, a secure direct-message channel opens between you." },
-                { n: 4, title: "Manage connections",desc: "View all connections from /dash/connections. You can remove one at any time." },
+                { n: 1, title: "Find someone",       desc: "Use search, suggestions on the right of the dashboard, or visit their profile at /u/[username]." },
+                { n: 2, title: "Send a request",     desc: 'Click "Connect". It shows as pending until they respond.' },
+                { n: 3, title: "Start talking",      desc: "Once accepted, you can message each other directly." },
+                { n: 4, title: "Manage connections", desc: "See and remove connections any time at /dash/connections." },
               ]} />
-              <Callout type="info" title="Connection privacy">
-                Only connected users can initiate direct messages. Public profiles are visible to everyone without login.
-              </Callout>
             </section>
 
             <section className="mb-16">
-              <SectionHeading id="messaging" icon={<MessageSquare size={15} />} label="Smart Messaging" />
+              <SectionHeading id="messaging" icon={<MessageSquare size={15} />} label="Messaging" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Message any connection directly at <InlineCode>/dash/messages</InlineCode>. Conversations are instant, private, and packed with tools to help you communicate faster and smarter.
+                Message your connections at <InlineCode>/dash/messages</InlineCode>. Conversations are private and update in real time.
               </p>
               <FeatureGrid items={[
-                { icon: <Sparkles size={13} />,    title: "AI suggested replies",  desc: "Stuck on what to say? One tap generates a smart, context-aware reply for you." },
-                { icon: <CheckCircle2 size={13} />,title: "Read receipts",         desc: "Double-check marks appear once your message has been read." },
-                { icon: <MessageSquare size={13} />,title: "Typing indicators",    desc: 'Live "typing…" indicator while the other user composes a message.' },
-                { icon: <Star size={13} />,        title: "Emoji reactions",       desc: "React to any individual message — reactions sync in real-time." },
-                { icon: <Code2 size={13} />,       title: "Code sharing",          desc: "Inline code snippets with language-aware syntax highlighting." },
-                { icon: <FileText size={13} />,    title: "Image sharing",         desc: "Upload images inline — full lightbox viewer included." },
+                { icon: <CheckCircle2 size={13} />, title: "Read receipts",     desc: "See when your message has been read." },
+                { icon: <MessageSquare size={13} />,title: "Typing indicators", desc: "See when the other person is typing." },
+                { icon: <Star size={13} />,         title: "Reactions",         desc: "React to individual messages." },
+                { icon: <FileText size={13} />,     title: "Images & files",    desc: "Share images and files inside the conversation." },
               ]} />
             </section>
 
             {/* ════ COMMUNITY ════ */}
 
             <section className="mb-16">
-              <SectionHeading id="community-hubs" icon={<Cpu size={15} />} label="Community Hub" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Jump into the live Community Hub at <InlineCode>/dash/more?tool=community</InlineCode> to discuss real challenges, share wins, and grow alongside people who do what you do.
+              <SectionHeading id="community-hubs" icon={<Cpu size={15} />} label="Groups & Community" />
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm sm:text-base">
+                Join or create groups at <InlineCode>/dash/groups</InlineCode>, find events at <InlineCode>/dash/events</InlineCode>, and
+                talk with the wider community in the Community Hub at <InlineCode>/dash/more?tool=community</InlineCode>.
               </p>
-              <FeatureGrid items={[
-                { icon: <MessageSquare size={13} />, title: "Live discussions", desc: "Real-time conversations with the rest of the network, right inside the dashboard." },
-                { icon: <Users size={13} />,         title: "Ask & answer",    desc: "Get unstuck fast with help from peers across every field." },
-              ]} />
             </section>
 
             <section className="mb-16">
-              <SectionHeading id="posts-feed" icon={<Rss size={15} />} label="Posts & Feed" />
+              <SectionHeading id="posts-feed" icon={<Rss size={15} />} label="Posts & Stories" />
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm sm:text-base">
-                Share knowledge, ask for help, or show off what you built. Any member can post text, code snippets, or images. Your posts reach your followers instantly and live at a shareable public link.
+                Share updates, questions and photos in the feed. Stories — photo or text — appear at the top of the feed and
+                disappear after 24 hours. You can report any post that breaks the rules.
               </p>
             </section>
 
             <section className="mb-16">
               <SectionHeading id="blog" icon={<ScrollText size={15} />} label="Blog" />
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm sm:text-base">
-                In-depth articles, tutorials, and insights from the beone<span className="text-blue-600 dark:text-blue-400">of</span>us team and verified contributors. Stay informed, learn new approaches, and get ahead in your career — all at <InlineCode>/blog</InlineCode>.
+                Articles, guides and news from the beone<span className="text-blue-600 dark:text-blue-400">of</span>us team and
+                community at <InlineCode>/blog</InlineCode>. Members can write and publish from <InlineCode>/dash/blog</InlineCode>.
               </p>
             </section>
 
-            {/* ════ CAREER & BUSINESS ════ */}
+            {/* ════ JOBS & EARNING ════ */}
 
             <section className="mb-16">
               <SectionHeading id="job-matching" icon={<Briefcase size={15} />} label="Jobs & Services" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Browse jobs and internships across every industry at <InlineCode>/dash/jobs</InlineCode>, apply with your profile in one click, and track each application. You can also post your own freelance services and get hired by clients directly.
+                Browse jobs and internships at <InlineCode>/dash/jobs</InlineCode>, remote work at <InlineCode>/dash/freelance</InlineCode>,
+                and companies at <InlineCode>/dash/companies</InlineCode>. You can also offer your own services at <InlineCode>/dash/services</InlineCode>.
               </p>
               <FeatureGrid items={[
-                { icon: <Briefcase size={13} />,   title: "Jobs & internships",   desc: "Openings across all industries, filterable by type, location, and remote policy." },
-                { icon: <CheckCircle2 size={13} />,title: "Application tracking", desc: "Dashboard view with live status updates (Pending / Accepted / Rejected)." },
-                { icon: <MessageSquare size={13} />,title: "Employer messages",   desc: "Accepted applications include direct messages and next steps." },
-                { icon: <ShoppingBag size={13} />, title: "Sell your services",  desc: "List consulting, freelance work, and templates in the Marketplace." },
+                { icon: <Briefcase size={13} />,    title: "Apply with your profile", desc: "Apply to openings and follow each application's status." },
+                { icon: <CheckCircle2 size={13} />, title: "Reviewed listings",       desc: "Job posts and company pages are reviewed before they appear." },
               ]} />
             </section>
 
             <section className="mb-16">
-              <SectionHeading id="founder-dash" icon={<Crown size={15} />} label="Founder Dashboard" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                The Founder Dashboard (<InlineCode>/founder-dashboard</InlineCode>) is gated to accepted co-founders and provides team management, applicant review, billing, and platform-wide controls.
+              <SectionHeading id="marketplace" icon={<ShoppingBag size={15} />} label="Marketplace" />
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm sm:text-base">
+                The Marketplace at <InlineCode>/dash/marketplace</InlineCode> lets members list and buy digital products and
+                services. Paid purchases are processed securely through Paystack.
               </p>
-              <Callout type="info" title="Access requirements">
-                Submit a founder application at <InlineCode>/member/application</InlineCode> with role <em>co-founder</em> and get approved by an existing admin.
-              </Callout>
-              <FeatureGrid items={[
-                { icon: <Users size={13} />,       title: "Team management",       desc: "View all members, co-founders, and pending applicants in one place." },
-                { icon: <ShieldCheck size={13} />, title: "Verification controls", desc: "Grant or revoke verification badges for any user on the platform." },
-                { icon: <Star size={13} />,        title: "Billing overview",      desc: "Track premium subscribers, sponsor contracts, and revenue metrics." },
-                { icon: <Bell size={13} />,        title: "Platform alerts",       desc: "High-priority system notifications visible only to founders and admins." },
-              ]} />
-            </section>
-
-            <section className="mb-16">
-              <SectionHeading id="member-dash" icon={<ShieldCheck size={15} />} label="Member Dashboard" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                The Member Dashboard (<InlineCode>/member-dashboard</InlineCode>) surfaces tasks, notifications, and activity assigned by the founding team.
-              </p>
-              <Callout type="info" title="Access requirements">
-                Submit an application at <InlineCode>/member/application</InlineCode> with role <em>member</em> and wait for founder approval.
-              </Callout>
             </section>
 
             <section className="mb-16">
               <SectionHeading id="sponsors" icon={<Star size={15} />} label="Sponsors" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Companies can sponsor beone<span className="text-blue-600 dark:text-blue-400">of</span>us at <InlineCode>/sponsors</InlineCode> to put their brand in front of thousands of active developers, promote job openings, and hire directly from a curated talent pool.
+                Organizations can support beone<span className="text-blue-600 dark:text-blue-400">of</span>us and its students at{" "}
+                <InlineCode>/sponsors</InlineCode>. Applications are reviewed by our team, and active sponsors appear on the platform
+                with their own sponsor dashboard.
               </p>
               <FeatureGrid items={[
-                { icon: <Star size={13} />,  title: "Bronze",   desc: "Logo placement in the footer and sponsor listing page." },
-                { icon: <Zap size={13} />,   title: "Silver",   desc: "Feed banner and job postings promoted to matched candidates." },
-                { icon: <Award size={13} />, title: "Gold",     desc: "Featured sponsor card on the home feed with priority job matching." },
-                { icon: <Crown size={13} />, title: "Platinum", desc: "Dedicated profile page, newsletter inclusion, and direct candidate outreach." },
+                { icon: <Star size={13} />,  title: "Bronze", desc: "Listed on the sponsors page." },
+                { icon: <Zap size={13} />,   title: "Silver", desc: "Greater visibility across the platform." },
+                { icon: <Award size={13} />, title: "Gold",   desc: "Our most prominent sponsor placement." },
               ]} />
             </section>
 
             {/* ════ ACCOUNT ════ */}
 
             <section className="mb-16">
-              <SectionHeading id="premium" icon={<Crown size={15} />} label="Premium Tier" badge={{ text: "New", color: "amber" }} />
+              <SectionHeading id="premium" icon={<Crown size={15} />} label="Premium" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                Premium unlocks the full beone<span className="text-blue-600 dark:text-blue-400">of</span>us experience — more visibility, faster AI responses, and access to the Marketplace where you can earn from your skills.
+                Premium is an optional monthly or annual membership at <InlineCode>/dash/premium</InlineCode>. It adds a premium badge
+                to your profile and posts and gives you more visibility across the platform. Payment is handled securely by Paystack.
               </p>
-              <FeatureGrid items={[
-                { icon: <Crown size={13} />,       title: "Gold crown badge",        desc: "Stand out with a gold crown next to your name on your profile, posts, and in every conversation." },
-                { icon: <Zap size={13} />,         title: "Faster AI responses",     desc: "Skip the line — Premium members get priority access to the AI assistant for quicker answers." },
-                { icon: <Star size={13} />,        title: "More profile visibility", desc: "Premium profiles appear more often in Spotlight, getting seen by more recruiters and collaborators." },
-                { icon: <ShoppingBag size={13} />, title: "Marketplace access",      desc: "Offer your services — code reviews, consulting, templates — and get paid directly through the platform." },
-              ]} />
-              <Callout type="tip" title="How to go Premium">
-                Request Premium from your profile settings page. The team reviews and activates it — usually within 24 hours.
+              <Callout type="tip" title="Applying abroad is not a Premium feature">
+                You can create an account and start a Study Abroad or Work Abroad application without paying for Premium.
               </Callout>
             </section>
 
             <section className="mb-16">
               <SectionHeading id="verification" icon={<BadgeCheck size={15} />} label="Verification Badge" />
               <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed text-sm sm:text-base">
-                The blue checkmark tells the community your identity and skills have been reviewed by the beone<span className="text-blue-600 dark:text-blue-400">of</span>us team. Verified developers get more visibility in Spotlight and rank higher in job matching results.
+                The blue checkmark shows your account has been reviewed by the beone<span className="text-blue-600 dark:text-blue-400">of</span>us team.
               </p>
               <Callout type="info" title="How to get verified">
-                Open a support ticket at <InlineCode>/dash/more?tool=support</InlineCode> with a brief note about who you are and what you build. The team reviews and grants your badge.
+                Complete your profile, then go to <InlineCode>/dash/settings</InlineCode> and choose <em>Request verification</em>.
+                The team reviews your request and grants the badge.
               </Callout>
             </section>
 
             <section className="mb-16">
-              <SectionHeading id="marketplace" icon={<ShoppingBag size={15} />} label="Marketplace" />
+              <SectionHeading id="support" icon={<LifeBuoy size={15} />} label="Help & Support" />
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm sm:text-base">
-                The Marketplace at <InlineCode>/dash/marketplace</InlineCode> is where developers turn skills into income. Offer code reviews, 1-on-1 consulting sessions, starter templates, or any service you can deliver. Buyers find you, you set the price, and payment flows through the platform. Requires Premium membership to list or purchase.
+                Questions about your application? Use the Messages tab inside it. For anything else, open a support ticket at{" "}
+                <InlineCode>/dash/more?tool=support</InlineCode> or reach us through the <Link href="/contact" className="text-blue-600 dark:text-blue-400 hover:underline">contact page</Link>.
               </p>
             </section>
 

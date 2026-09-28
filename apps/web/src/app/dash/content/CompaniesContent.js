@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useEffectEvent } from 'react';
 import {
   Building2, Search, Plus, X, Loader2, ArrowLeft, Globe,
   MapPin, Users, Briefcase, Code2, CheckCircle2, Star, Edit2,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { useLanguage } from "../../../lib/i18n";
+import { useDashboard } from './DashboardContext';
 
 const REMOTE_POLICIES = ['Remote', 'Hybrid', 'On-site'];
 const COMPANY_SIZES = ['1–10', '11–50', '51–200', '201–500', '500+'];
@@ -258,7 +259,7 @@ function CreateCompanyModal({ token, onClose, onCreated }) {
 
 export default function CompaniesContent() {
   const { t } = useLanguage();
-  const [session, setSession] = useState(null);
+  const { session, sessionReady } = useDashboard();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -281,13 +282,14 @@ export default function CompaniesContent() {
     setRefreshing(false);
   }, []);
 
+  // Refetch when the filter or signed-in user changes; free-text search is
+  // applied on Enter, so it's read here without being a trigger.
+  const loadCompanies = useEffectEvent(() => fetchCompanies(hiringOnly, search));
+  const uid = session?.user?.id;
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); fetchCompanies(hiringOnly, search); });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => { (async () => { setLoading(true); await fetchCompanies(hiringOnly, search); })(); }, [hiringOnly]);
+    if (!sessionReady) return;
+    (async () => { setLoading(true); await loadCompanies(); })();
+  }, [sessionReady, hiringOnly, uid]);
 
   if (selected) {
     return (

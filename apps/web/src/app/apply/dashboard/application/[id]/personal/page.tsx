@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 import { useApplicationDetailScope } from '../../../../../_study-work/state/ApplicationDetailScope'
 import { useStudyWork } from '../../../../../_study-work/state/StudyWorkContext'
@@ -18,7 +18,12 @@ export default function PersonalTab() {
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { setDraft(application) }, [application])
+  // Re-seed the editable draft whenever a fresh application arrives.
+  const [seededFrom, setSeededFrom] = useState(application)
+  if (application !== seededFrom) {
+    setSeededFrom(application)
+    setDraft(application)
+  }
 
   if (!draft) return null
 

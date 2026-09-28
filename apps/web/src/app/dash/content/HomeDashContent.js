@@ -2,15 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '../../supabaseClient';
 import Image from 'next/image';
 import {
-  Users, MessageSquare, Bell, Settings,
-  Crown, UserPlus, Briefcase, Compass,
-  ChevronRight, CalendarDays, TrendingUp,
-  BarChart2, CheckCircle2, Circle, ArrowRight, Flame,
-  Search, Clock, FileText, Library,
-  CheckCheck,
+  Users, MessageSquare, Bell, Settings, Briefcase, Globe, Compass,
+  ChevronRight, CalendarDays, CheckCircle2, Circle, ArrowRight, Flame,
+  FileText, Library, PenLine, Clock,
 } from 'lucide-react';
 import VerifiedBadge from '../../components/VerifiedBadge';
 import PremiumBadge from '../../components/PremiumBadge';
@@ -42,51 +40,34 @@ function calcCompleteness(profile) {
   return { score: Math.round((done / checks.length) * 100), missing: checks.filter(c => !c.done).map(c => c.label) };
 }
 
-/* ── Hub cards ────────────────────────────────────── */
-const HUBS = [
-  {
-    href: '/contents',
-    labelKey: 'home_dash.hubs.contents_label',
-    descKey: 'home_dash.hubs.contents_desc',
-    icon: Library,
-    iconBg: 'bg-gradient-to-br from-amber-500 to-orange-500',
-    bg: 'bg-amber-50 dark:bg-amber-900/20',
-    border: 'border-amber-200 dark:border-amber-800/40',
-    text: 'text-amber-600 dark:text-amber-400',
-    pills: ['Stories', 'Blog', 'Bookmarks', 'Docs'],
-    pillStyle: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
-  },
-  {
-    href: '/opportunities',
-    labelKey: 'home_dash.hubs.opportunities_label',
-    descKey: 'home_dash.hubs.opportunities_desc',
-    icon: TrendingUp,
-    iconBg: 'bg-gradient-to-br from-blue-600 to-indigo-600',
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    border: 'border-blue-200 dark:border-blue-800/40',
-    text: 'text-blue-600 dark:text-blue-400',
-    pills: ['Jobs', 'Internships', 'Freelance', 'Contracts', 'Partnership'],
-    pillStyle: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-  },
-];
-
-/* ── Quick-nav ────────────────────────────────────── */
-const NAV_TILES = [
-  { id: 'connections',   labelKey: 'home_dash.tiles.network',   icon: UserPlus,      stat: null,            color: 'text-blue-500' },
-  { id: 'messages',      labelKey: 'home_dash.tiles.messages',  icon: MessageSquare, stat: 'messages',      color: 'text-sky-500' },
-  { id: 'notifications', labelKey: 'home_dash.tiles.alerts',    icon: Bell,          stat: 'notifications', color: 'text-red-500' },
-  { id: 'feed',          labelKey: 'home_dash.tiles.discovery', icon: Compass,       stat: null,            color: 'text-cyan-500' },
-  { id: 'jobs',          labelKey: 'home_dash.tiles.jobs',      icon: Briefcase,     stat: null,            color: 'text-violet-500' },
-  { id: 'events',        labelKey: 'home_dash.tiles.events',    icon: CalendarDays,  stat: null,            color: 'text-purple-500' },
-  { id: 'settings',      labelKey: 'home_dash.tiles.settings',  icon: Settings,      stat: null,            color: 'text-gray-400' },
-];
-
-/* ── Onboarding steps ─────────────────────────────── */
+/* ── Static config ────────────────────────────────── */
 const STEPS = [
-  { n: 1, labelKey: 'home_dash.steps.profile_label', descKey: 'home_dash.steps.profile_desc', key: 'profile' },
-  { n: 2, labelKey: 'home_dash.steps.explore_label', descKey: 'home_dash.steps.explore_desc', key: 'opportunities' },
-  { n: 3, labelKey: 'home_dash.steps.connect_label', descKey: 'home_dash.steps.connect_desc', key: 'connections' },
+  { labelKey: 'home_dash.steps.profile_label', descKey: 'home_dash.steps.profile_desc', href: '/dash/profile' },
+  { labelKey: 'home_dash.steps.explore_label', descKey: 'home_dash.steps.explore_desc', href: '/dash/jobs' },
+  { labelKey: 'home_dash.steps.connect_label', descKey: 'home_dash.steps.connect_desc', href: '/dash/connections' },
 ];
+
+const QUICK_ACTIONS = [
+  { labelKey: 'home_dash.actions.find_jobs',     icon: Briefcase,    href: '/dash/jobs' },
+  { labelKey: 'home_dash.actions.remote_work',   icon: Globe,        href: '/dash/freelance' },
+  { labelKey: 'home_dash.actions.opportunities', icon: Compass,      href: '/opportunities' },
+  { labelKey: 'home_dash.actions.create_post',   icon: PenLine,      href: '/dash/feed' },
+  { labelKey: 'home_dash.actions.content',       icon: Library,      href: '/contents' },
+  { labelKey: 'home_dash.actions.events',        icon: CalendarDays, href: '/dash/events' },
+  { labelKey: 'home_dash.actions.groups',        icon: Users,        href: '/dash/groups' },
+  { labelKey: 'home_dash.actions.settings',      icon: Settings,     href: '/dash/settings' },
+];
+
+const card = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl';
+
+function SectionTitle({ children, action }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{children}</h2>
+      {action}
+    </div>
+  );
+}
 
 export default function HomeDashContent() {
   const router = useRouter();
@@ -97,19 +78,10 @@ export default function HomeDashContent() {
   const [loading, setLoading]         = useState(true);
   const [streak, setStreak]           = useState(0);
   const [feedPosts, setFeedPosts]     = useState([]);
-  const [aiQuery, setAiQuery]         = useState('');
 
   const greetingHour = new Date().getHours();
   const greeting = greetingHour < 12 ? t('home_dash.greeting_morning') : greetingHour < 17 ? t('home_dash.greeting_afternoon') : t('home_dash.greeting_evening');
   const today = new Date().toLocaleDateString(lang, { weekday: 'long', month: 'long', day: 'numeric' });
-
-  const go = (id) => router.push('/dash/' + id);
-
-  // Route the query into the unified platform search.
-  const askAi = (query) => {
-    const q = (query ?? aiQuery).trim();
-    router.push(q ? `/dash/search?q=${encodeURIComponent(q)}` : '/dash/search');
-  };
 
   useEffect(() => {
     let isMounted = true;
@@ -131,6 +103,7 @@ export default function HomeDashContent() {
           supabase.from('messages').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('is_read', false),
           supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('receiver_id', uid).eq('unread', true),
         ]);
+        if (!isMounted) return;
 
         setProfile(profileRes.data || null);
         setStats({ connections: connRes.count || 0, messages: msgRes.count || 0, notifications: notifRes.count || 0 });
@@ -147,17 +120,17 @@ export default function HomeDashContent() {
             if (days.has(d.toISOString().slice(0, 10))) sk++;
             else if (i > 0) break;
           }
-          setStreak(sk);
+          if (isMounted) setStreak(sk);
         }
 
-        // Blog feed
+        // Latest articles
         const { data: posts } = await supabase
           .from('blog_posts')
-          .select('id,title,excerpt,tags,created_at,cover_url')
+          .select('id,title,slug,excerpt,tags,created_at,cover_url')
           .eq('published', true)
           .order('created_at', { ascending: false })
           .limit(3);
-        if (posts) setFeedPosts(posts);
+        if (posts && isMounted) setFeedPosts(posts);
       } catch (e) {
         console.error('HomeDash:', e);
       } finally {
@@ -175,352 +148,249 @@ export default function HomeDashContent() {
     };
   }, []);
 
-  const getBadge = (stat) => {
-    if (stat === 'messages') return stats.messages;
-    if (stat === 'notifications') return stats.notifications;
-    return 0;
-  };
-
+  const isGuest = !loading && !authSession;
   const { score, missing } = calcCompleteness(profile);
-  const barColor = score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500';
+  const barColor = score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-blue-600';
+  const stepsDone = [score >= 60, stats.connections > 0, stats.connections >= 3];
+  const doneCount = stepsDone.filter(Boolean).length;
+  const avatarSrc = getAvatarSrc(profile, authSession);
+  const displayName = profile?.full_name?.split(' ')[0] || profile?.username;
 
-  /* Derive which onboarding steps are done */
-  const stepsDone = [
-    score >= 60,            // profile built
-    stats.connections > 0,  // explored/connected
-    stats.connections >= 3, // grown network
+  const statCards = [
+    { key: 'connections',   label: t('home_dash.stat_connections'),   value: stats.connections,   icon: Users,         href: '/dash/connections' },
+    { key: 'messages',      label: t('home_dash.stat_messages'),      value: stats.messages,      icon: MessageSquare, href: '/dash/messages',      highlight: stats.messages > 0 },
+    { key: 'notifications', label: t('home_dash.stat_notifications'), value: stats.notifications, icon: Bell,          href: '/dash/notifications', highlight: stats.notifications > 0 },
   ];
 
   return (
-    <div className="space-y-8 pb-6">
+    <div className="max-w-5xl mx-auto space-y-8 pb-6">
 
-      {/* ── WELCOME BANNER ─────────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900 p-6 sm:p-8 text-white shadow-xl">
-        <div className="pointer-events-none absolute -top-20 -right-20 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl" />
-
-        <div className="relative z-10 flex items-center gap-4">
-          {getAvatarSrc(profile, authSession) ? (
-            <div className="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/20 shrink-0">
-              <Image src={getAvatarSrc(profile, authSession)} alt="avatar" fill sizes="56px" className="object-cover" referrerPolicy="no-referrer" />
-            </div>
-          ) : (
-            <div className="w-14 h-14 rounded-2xl bg-white/10 border-2 border-white/20 shrink-0 flex items-center justify-center text-xl font-black text-white/60">
-              {profile?.full_name?.[0] || profile?.username?.[0] || '?'}
-            </div>
-          )}
-
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-300 mb-0.5">{today}</p>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight">
-              {greeting}
-              {profile?.username && (
-                <span className="flex items-center gap-2 flex-wrap mt-0.5">
-                  <span className="text-blue-300">@{profile.username}</span>
-                  {profile.is_verified && <VerifiedBadge size={16} />}
-                  {(profile.is_premium || profile.is_admin) && profile.profile_visibility?.premium_badge !== false && (
-                    <PremiumBadge size={16} isTrial={!!profile.is_trial_premium} />
-                  )}
-                </span>
-              )}
-            </h1>
+      {/* ── Greeting ─────────────────────────────── */}
+      <header className="flex items-center gap-4">
+        {!isGuest && (
+          <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shrink-0 bg-blue-600 text-white flex items-center justify-center text-lg font-semibold uppercase">
+            {avatarSrc
+              ? <Image src={avatarSrc} alt="" fill sizes="56px" className="object-cover" referrerPolicy="no-referrer" />
+              : (profile?.full_name?.[0] || profile?.username?.[0] || '')}
           </div>
+        )}
+        <div className="min-w-0">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{today}</p>
+          <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-gray-900 dark:text-gray-100 flex items-center gap-2 flex-wrap">
+            <span>{greeting}{displayName ? `, ${displayName}` : ''}</span>
+            {profile?.is_verified && <VerifiedBadge size={18} />}
+            {(profile?.is_premium || profile?.is_admin) && profile?.profile_visibility?.premium_badge !== false && (
+              <PremiumBadge size={18} isTrial={!!profile?.is_trial_premium} />
+            )}
+          </h1>
+          {!isGuest && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('home_dash.subtitle')}</p>}
         </div>
+      </header>
 
-        {/* Three stat pills */}
-        <div className="relative z-10 flex flex-wrap gap-2 mt-5">
-          {[
-            { label: t('home_dash.connections', { count: stats.connections }), id: 'connections', icon: Users, badge: 0, iconColor: 'text-blue-300' },
-            { label: stats.messages > 0 ? `${stats.messages} ${t('home_dash.unread')}` : t('home_dash.messages'), id: 'messages', icon: MessageSquare, badge: stats.messages, iconColor: 'text-sky-300' },
-            { label: stats.notifications > 0 ? `${stats.notifications} ${stats.notifications !== 1 ? t('home_dash.alerts') : t('home_dash.alert')}` : t('home_dash.alerts_label'), id: 'notifications', icon: Bell, badge: stats.notifications, iconColor: 'text-yellow-300' },
-          ].map(({ label, id, icon: Icon, badge, iconColor }) => (
-            <button
-              key={id}
-              onClick={() => go(id)}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 active:scale-95 transition-all px-3 py-1.5 rounded-xl text-xs font-bold backdrop-blur-sm border border-white/10"
-            >
-              <Icon size={12} className={`${iconColor} shrink-0`} />
-              <span>{label}</span>
-              {badge > 0 && (
-                <span className="bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full shrink-0">
-                  {badge > 99 ? '99+' : badge}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── AI ASSISTANT BAR (assistant-first) ─────── */}
-      <div>
-        <form onSubmit={(e) => { e.preventDefault(); askAi(); }}>
-          <div className="flex items-center gap-2 bg-white dark:bg-[#18181B] border border-gray-200 dark:border-zinc-800 rounded-2xl p-2 pl-4 shadow-sm focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
-            <Search size={18} className="text-brand-500 shrink-0" />
-            <input
-              value={aiQuery}
-              onChange={(e) => setAiQuery(e.target.value)}
-              placeholder={t('home_dash.ask_placeholder')}
-              className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 min-w-0"
-              aria-label={t('home_dash.ask_ai')}
-            />
-            <button type="submit" className="shrink-0 inline-flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-3.5 sm:px-4 py-2 rounded-xl transition-colors active:scale-95">
-              <span className="hidden sm:inline">{t('home_dash.ask_ai')}</span>
-              <ArrowRight size={13} />
-            </button>
+      {/* ── Guest welcome / account summary ─────── */}
+      {isGuest ? (
+        <section className={`${card} p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-5`}>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('home_dash.guest_title')}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-md">{t('home_dash.guest_desc')}</p>
           </div>
-        </form>
-        <div className="flex flex-wrap gap-1.5 mt-2.5">
-          {[
-            t('home_dash.suggest_job'),
-            t('home_dash.suggest_network'),
-          ].map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => askAi(s)}
-              className="text-[11px] font-semibold px-3 py-1 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-500/15 hover:text-brand-600 dark:hover:text-brand-300 transition-colors"
+          <div className="flex gap-2.5 shrink-0">
+            <Link href="/auth" className="h-10 px-5 inline-flex items-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors">
+              {t('home_dash.sign_in')}
+            </Link>
+            <Link href="/auth?mode=sign-up" className="h-10 px-5 inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/[0.04] text-sm font-semibold transition-colors">
+              {t('home_dash.create_account')}
+            </Link>
+          </div>
+        </section>
+      ) : (
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {statCards.map(({ key, label, value, icon: Icon, href, highlight }) => (
+            <Link
+              key={key}
+              href={href}
+              className={`${card} group p-5 flex items-center gap-4 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all`}
             >
-              {s}
-            </button>
+              <span className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                highlight ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+              }`}>
+                <Icon size={20} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-2xl font-semibold leading-tight text-gray-900 dark:text-gray-100 tabular-nums">
+                  {loading ? <span className="inline-block w-8 h-6 rounded bg-gray-100 dark:bg-gray-800 animate-pulse align-middle" /> : value}
+                </span>
+                <span className="block text-sm text-gray-500 dark:text-gray-400 truncate">{label}</span>
+              </span>
+              <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </Link>
           ))}
-        </div>
-      </div>
+        </section>
+      )}
 
-      {/* ── YOUR JOURNEY ───────────────────────────── */}
+      {/* ── Get started (hidden once complete) ──── */}
+      {!isGuest && !loading && doneCount < STEPS.length && (
+        <section className={`${card} p-5 sm:p-6`}>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('home_dash.get_started')}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('home_dash.get_started_desc')}</p>
+            </div>
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400 shrink-0 tabular-nums">
+              {t('home_dash.steps_done', { done: doneCount, total: STEPS.length })}
+            </span>
+          </div>
+          <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-4">
+            <div className="h-full bg-blue-600 rounded-full transition-all duration-700" style={{ width: `${(doneCount / STEPS.length) * 100}%` }} />
+          </div>
+          <ol className="divide-y divide-gray-100 dark:divide-gray-800">
+            {STEPS.map((step, i) => {
+              const done = stepsDone[i];
+              return (
+                <li key={step.href}>
+                  <Link href={step.href} className="group flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                    {done
+                      ? <CheckCircle2 size={22} className="text-emerald-500 shrink-0" />
+                      : <Circle size={22} className="text-gray-300 dark:text-gray-600 shrink-0" />}
+                    <span className="flex-1 min-w-0">
+                      <span className={`block text-sm font-medium ${done ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
+                        {t(step.labelKey)}
+                      </span>
+                      {!done && <span className="block text-sm text-gray-500 dark:text-gray-400 truncate">{t(step.descKey)}</span>}
+                    </span>
+                    {!done && <ChevronRight size={18} className="text-gray-300 dark:text-gray-600 group-hover:text-blue-600 shrink-0 transition-colors" />}
+                  </Link>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
+
+      {/* ── Quick actions ────────────────────────── */}
       <section>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('home_dash.journey_title')}</h2>
-          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-          <span className="text-[10px] font-black text-gray-400 shrink-0">{stepsDone.filter(Boolean).length}/{STEPS.length}</span>
-        </div>
-        <div className="flex items-stretch gap-2 sm:gap-3">
-          {STEPS.map((step, i) => {
-            const done = stepsDone[i];
-            return (
-              <button
-                key={step.n}
-                onClick={() => go(step.key)}
-                title={t(step.descKey)}
-                className={`group relative flex-1 min-w-0 text-left p-3 sm:p-4 rounded-2xl border transition-all active:scale-[0.98] ${
-                  done
-                    ? 'bg-emerald-50 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800/40'
-                    : 'bg-white dark:bg-[#18181B] border-gray-200/80 dark:border-zinc-800/80 hover:border-brand-300 dark:hover:border-brand-700'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black mb-2 transition-colors ${
-                  done ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 group-hover:bg-brand-500 group-hover:text-white'
-                }`}>
-                  {done ? <CheckCheck size={15} /> : step.n}
-                </div>
-                <p className={`text-[11px] sm:text-xs font-bold leading-tight line-clamp-2 ${
-                  done ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'
-                }`}>
-                  {t(step.labelKey)}
-                </p>
-              </button>
-            );
-          })}
+        <SectionTitle>{t('home_dash.quick_actions')}</SectionTitle>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {QUICK_ACTIONS.map(({ labelKey, icon: Icon, href }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`${card} group flex items-center gap-3 p-4 hover:border-blue-300 dark:hover:border-blue-500/40 hover:shadow-sm transition-all`}
+            >
+              <span className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                <Icon size={18} />
+              </span>
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">{t(labelKey)}</span>
+            </Link>
+          ))}
         </div>
       </section>
 
-      {/* ── HUB CARDS ──────────────────────────────── */}
-      <section>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('home_dash.platform_title')}</h2>
-          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {HUBS.map((hub) => {
-            const Icon = hub.icon;
-            const hubLabel = t(hub.labelKey);
-            return (
-              <button
-                key={hub.href}
-                onClick={() => router.push(hub.href)}
-                className={`group text-left p-6 rounded-2xl border ${hub.bg} ${hub.border} transition-all duration-200 hover:shadow-xl hover:-translate-y-1 active:scale-[0.98]`}
-              >
-                <div className="flex items-start justify-between mb-5">
-                  <div className={`w-12 h-12 ${hub.iconBg} rounded-xl flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-200`}>
-                    <Icon size={22} className="text-white" />
-                  </div>
-                  <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${hub.pillStyle}`}>
-                    {hub.pills.length} {t('home_dash.sections_suffix')}
-                  </span>
-                </div>
-
-                <h3 className={`text-lg font-black ${hub.text} mb-1.5`}>{hubLabel}</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-4">{t(hub.descKey)}</p>
-
-                <div className="flex flex-wrap gap-1.5 mb-5">
-                  {hub.pills.map((p) => (
-                    <span key={p} className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${hub.pillStyle}`}>{p}</span>
+      {/* ── Progress ─────────────────────────────── */}
+      {!isGuest && (
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className={`${card} p-5`}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('home_dash.profile_strength')}</h2>
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 tabular-nums">{score}%</span>
+            </div>
+            <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-4">
+              <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${score}%` }} />
+            </div>
+            {missing.length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {missing.slice(0, 4).map(m => (
+                    <span key={m} className="text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full">{t(m)}</span>
                   ))}
+                  {missing.length > 4 && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 px-1 py-1">+{missing.length - 4} {t('home_dash.more_suffix')}</span>
+                  )}
                 </div>
-
-                <span className={`inline-flex items-center gap-1.5 text-xs font-black ${hub.text}`}>
-                  {t('home_dash.browse')} {hubLabel}
-                  <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── QUICK NAV ──────────────────────────────── */}
-      <section>
-        <div className="flex items-center gap-3 mb-4">
-          <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('home_dash.quick_access')}</h2>
-          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-        </div>
-
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2.5">
-          {NAV_TILES.map((tile) => {
-            const Icon = tile.icon;
-            const badge = getBadge(tile.stat);
-            return (
-              <button
-                key={tile.id}
-                onClick={() => go(tile.id)}
-                className="group relative flex flex-col items-center gap-2 py-4 px-1 rounded-2xl bg-white dark:bg-[#18181B] border border-gray-200/80 dark:border-zinc-800/80 hover:border-gray-300 dark:hover:border-zinc-600 hover:shadow-md transition-all duration-200 active:scale-[0.95]"
-              >
-                {badge > 0 && (
-                  <span className="absolute top-2 right-2 bg-red-500 text-white text-[8px] font-black min-w-[15px] h-[15px] flex items-center justify-center rounded-full px-1">
-                    {badge > 99 ? '99+' : badge}
-                  </span>
-                )}
-                <Icon size={18} className={`${tile.color} group-hover:scale-110 transition-transform duration-200`} />
-                <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 text-center leading-tight">{t(tile.labelKey)}</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── LIVE FEED ──────────────────────────────── */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{t('home_dash.whats_new')}</h2>
-            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 px-2 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              {t('home_dash.live')}
-            </div>
+                <Link href="/dash/profile" className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                  {t('home_dash.complete_profile')} <ArrowRight size={14} />
+                </Link>
+              </>
+            ) : (
+              <p className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 size={16} /> {t('home_dash.profile_complete')}
+              </p>
+            )}
           </div>
-          <button onClick={() => go('blog')} className="text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-            {t('home_dash.view_all')} <ArrowRight size={11} />
-          </button>
-        </div>
+
+          <div className={`${card} p-5`}>
+            <div className="flex items-center gap-2 mb-3">
+              <Flame size={18} className="text-orange-500" />
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('home_dash.streak_title')}</h2>
+            </div>
+            <p className="flex items-baseline gap-2 mb-2">
+              <span className="text-4xl font-semibold text-gray-900 dark:text-gray-100 tabular-nums leading-none">{streak}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{streak !== 1 ? t('home_dash.days') : t('home_dash.day')}</span>
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+              {streak === 0
+                ? t('home_dash.streak_zero')
+                : streak >= 7
+                ? t('home_dash.streak_strong', { days: streak })
+                : t('home_dash.streak_building')}
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* ── Latest articles ──────────────────────── */}
+      <section>
+        <SectionTitle
+          action={
+            <button onClick={() => router.push('/dash/blog')} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1">
+              {t('home_dash.view_all')} <ArrowRight size={14} />
+            </button>
+          }
+        >
+          {t('home_dash.latest_articles')}
+        </SectionTitle>
 
         {feedPosts.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-8 text-center">
-            <FileText size={26} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">{t('home_dash.feed_empty')}</p>
-            <button onClick={() => go('blog')} className="text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline">
+          <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+            <FileText size={24} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t('home_dash.feed_empty')}</p>
+            <Link href="/dash/blog" className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
               {t('home_dash.feed_go_blog')}
-            </button>
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {feedPosts.map((post) => (
-              <button
+              <Link
                 key={post.id}
-                onClick={() => go('blog')}
-                className="group text-left p-4 rounded-2xl bg-white dark:bg-[#18181B] border border-gray-200/80 dark:border-zinc-800/80 hover:border-gray-300 dark:hover:border-zinc-600 hover:shadow-md transition-all duration-200 active:scale-[0.98]"
+                href={post.slug ? `/blog/${post.slug}` : '/dash/blog'}
+                className={`${card} group overflow-hidden hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all`}
               >
                 {post.cover_url ? (
-                  <div className="relative w-full h-28 rounded-xl overflow-hidden mb-3 border border-gray-100 dark:border-gray-800">
-                    <Image src={post.cover_url} alt={post.title} fill sizes="300px" className="object-cover" />
+                  <div className="relative w-full h-32">
+                    <Image src={post.cover_url} alt="" fill sizes="(min-width: 640px) 33vw, 100vw" className="object-cover" />
                   </div>
                 ) : (
-                  <div className="w-full h-28 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 mb-3 flex items-center justify-center border border-gray-100 dark:border-gray-800">
-                    <FileText size={24} className="text-blue-300 dark:text-blue-700" />
+                  <div className="w-full h-32 bg-gray-50 dark:bg-gray-800/60 flex items-center justify-center">
+                    <FileText size={24} className="text-gray-300 dark:text-gray-600" />
                   </div>
                 )}
-                <h3 className="text-[13px] font-black text-gray-900 dark:text-gray-100 leading-tight line-clamp-2 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  {post.title}
-                </h3>
-                <div className="flex items-center gap-2">
-                  {post.tags?.[0] && (
-                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40">
-                      {post.tags[0]}
+                <div className="p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-snug line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    {post.title}
+                  </h3>
+                  <p className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    {post.tags?.[0] && <span className="truncate">{post.tags[0]}</span>}
+                    <span className="flex items-center gap-1 ml-auto shrink-0">
+                      <Clock size={12} /> {t('home_dash.ago', { time: timeAgo(post.created_at) })}
                     </span>
-                  )}
-                  <span className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 ml-auto">
-                    <Clock size={9} />
-                    {t('home_dash.ago', { time: timeAgo(post.created_at) })}
-                  </span>
+                  </p>
                 </div>
-              </button>
+              </Link>
             ))}
           </div>
         )}
       </section>
-
-      {/* ── CAREER PROGRESS ────────────────────────── */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-        {/* Profile Strength */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
-              <BarChart2 size={15} className="text-white" />
-            </div>
-            <p className="text-sm font-black text-gray-900 dark:text-gray-100">{t('home_dash.profile_strength')}</p>
-            <span className={`ml-auto text-xs font-black px-2 py-0.5 rounded-full ${score >= 80 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : score >= 50 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
-              {score}%
-            </span>
-          </div>
-          <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-3">
-            <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${score}%` }} />
-          </div>
-          {missing.length > 0 ? (
-            <div className="space-y-1">
-              {missing.slice(0, 3).map(m => (
-                <div key={m} className="flex items-center gap-2">
-                  <Circle size={9} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400">{t(m)}</span>
-                </div>
-              ))}
-              {missing.length > 3 && <p className="text-[10px] text-gray-400">+{missing.length - 3} {t('home_dash.more_suffix')}</p>}
-              <button onClick={() => go('profile')} className="mt-2 flex items-center gap-1 text-[11px] font-black text-blue-600 dark:text-blue-400 hover:underline">
-                {t('home_dash.complete_profile')} <ArrowRight size={10} />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 size={14} />
-              <span className="text-xs font-bold">{t('home_dash.profile_complete')}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Activity Streak */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-8 h-8 bg-orange-500 rounded-xl flex items-center justify-center shrink-0">
-              <Flame size={15} className="text-white" />
-            </div>
-            <p className="text-sm font-black text-gray-900 dark:text-gray-100">{t('home_dash.streak_title')}</p>
-          </div>
-          <div className="flex items-end gap-2.5 mb-3">
-            <p className="text-5xl font-black text-orange-500 leading-none">{streak}</p>
-            <div className="mb-1">
-              <p className="text-sm font-black text-gray-700 dark:text-gray-300">{streak !== 1 ? t('home_dash.days') : t('home_dash.day')}</p>
-              <p className="text-[10px] text-gray-400">{t('home_dash.consecutive')}</p>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-            {streak === 0
-              ? t('home_dash.streak_zero')
-              : streak >= 7
-              ? t('home_dash.streak_strong', { days: streak })
-              : t('home_dash.streak_building')}
-          </p>
-        </div>
-
-      </section>
-
     </div>
   );
 }

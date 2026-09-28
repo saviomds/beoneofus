@@ -40,7 +40,6 @@ function FlagChip({ flag }) {
 }
 
 export default function StudyWorkAdminContent({ showToast }) {
-  const [token, setToken] = useState(undefined);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -53,17 +52,17 @@ export default function StudyWorkAdminContent({ showToast }) {
   const [reply, setReply] = useState("");
   const [finalDoc, setFinalDoc] = useState({ name: "", category: "Admission Letter", file: null });
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setToken(session?.access_token ?? null));
+  // Read the session per request: the client refreshes the access token in the
+  // background, so a token captured once at mount expires after ~1h.
+  const authHeaders = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
   }, []);
 
-  const authHeaders = useCallback(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
-
   const load = useCallback(async () => {
-    if (token === undefined) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/study-work/admin", { headers: authHeaders() });
+      const res = await fetch("/api/study-work/admin", { headers: await authHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load applications");
       setApplications(data.applications || []);
@@ -72,7 +71,7 @@ export default function StudyWorkAdminContent({ showToast }) {
     } finally {
       setLoading(false);
     }
-  }, [token, authHeaders, showToast]);
+  }, [authHeaders, showToast]);
 
   useEffect(() => {
     const run = () => { load(); };
@@ -84,7 +83,7 @@ export default function StudyWorkAdminContent({ showToast }) {
     try {
       const res = await fetch("/api/study-work/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
         body: JSON.stringify({ op: "detail", applicationId: id }),
       });
       const data = await res.json();
@@ -111,7 +110,7 @@ export default function StudyWorkAdminContent({ showToast }) {
     try {
       const res = await fetch("/api/study-work/admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
         body: JSON.stringify({ op, ...payload }),
       });
       const data = await res.json();
@@ -152,7 +151,7 @@ export default function StudyWorkAdminContent({ showToast }) {
     try {
       const res = await fetch("/api/study-work/admin", {
         method: "POST",
-        headers: { ...authHeaders() },
+        headers: await authHeaders(),
         body: formData,
       });
       const data = await res.json();

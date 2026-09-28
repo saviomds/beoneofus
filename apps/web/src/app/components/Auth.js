@@ -388,9 +388,8 @@ export default function AuthForm() {
             const isNew = Date.now() - new Date(session.user.created_at).getTime() < 120_000;
             fetch('/api/auth/send-welcome', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
               body: JSON.stringify({
-                email: session.user.email,
                 name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
                 isNewUser: isNew,
               }),

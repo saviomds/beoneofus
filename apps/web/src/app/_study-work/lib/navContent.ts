@@ -67,4 +67,7 @@ export const MEGA_MENUS: MegaMenuDef[] = [
   },
 ]
 
-export const SIMPLE_LINKS = [{ href: '/how-it-works', label: 'How It Works' }]
+export const SIMPLE_LINKS = [
+  { href: '/how-it-works', label: 'How It Works' },
+  { href: '/for-institutions', label: 'For Institutions' },
+]

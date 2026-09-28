@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 import { fetchWithTimeout } from '../../../../lib/fetchWithTimeout';
 import { escapeHtml } from '../../../../lib/escapeHtml';
+import { requireAuth } from '../../../../lib/requireAuth';
+import { checkRateLimit } from '../../../../lib/rateLimit';
 
+// Sends only to the signed-in caller's own verified address, so this can't be
+// used as a relay to email arbitrary people.
 export async function POST(request) {
+  const { user, error: authError, status: authStatus } = await requireAuth(request);
+  if (authError || !user?.email) return NextResponse.json({ error: authError || 'Unauthorized' }, { status: authStatus || 401 });
+
+  const rl = checkRateLimit(user.id, '/api/auth/send-welcome', { max: 3, windowMs: 10 * 60_000 });
+  if (rl.limited) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+
   try {
-    const { email, name, isNewUser } = await request.json();
-    if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-    }
+    const { name, isNewUser } = await request.json().catch(() => ({}));
+    const email = user.email;
 
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json({ error: 'Email service not configured' }, { status: 503 });

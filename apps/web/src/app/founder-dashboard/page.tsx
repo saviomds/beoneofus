@@ -88,8 +88,8 @@ function CircularProgress({ rings }: { rings: { value: number; max: number; colo
 
 const TABS = [
   { id: 'overview',     label: 'Overview',     icon: BarChart3,    protected: false },
-  { id: 'applications', label: 'Applications', icon: Crown,        protected: true  },
-  { id: 'apply_applications', label: 'Apply Applications', icon: GraduationCap, protected: true },
+  { id: 'applications', label: 'Team Applications', icon: Crown,   protected: true  },
+  { id: 'apply_applications', label: 'Study & Work', icon: GraduationCap, protected: true },
   { id: 'users',        label: 'Users',        icon: Users,        protected: true  },
   { id: 'orders',       label: 'Orders',       icon: Package,      protected: true  },
   { id: 'tasks',        label: 'Tasks',        icon: ClipboardList, protected: false },
@@ -103,7 +103,7 @@ const TABS = [
 // System Logs, Settings) as one console inside founder-dashboard, so this
 // page is the single place a founder/admin manages everything instead of
 // bouncing out to a separate /dash/admin screen.
-const ADMIN_CONSOLE_TAB = { id: 'admin_console', label: 'Admin Console', icon: Terminal, protected: true };
+const ADMIN_CONSOLE_TAB = { id: 'admin_console', label: 'Platform Admin', icon: Terminal, protected: true };
 const AUDIT_LOG_TAB = { id: 'audit_log', label: 'Audit Log', icon: History, protected: true };
 
 const PROTECTED_TABS = new Set(['applications', 'apply_applications', 'users', 'orders', 'contracts', 'platform', 'admin_console', 'audit_log']);
@@ -178,6 +178,21 @@ export default function FounderDashboard() {
   const showToast = useCallback((msg: string, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: '', type: 'success' }), 3500);
+  }, []);
+
+  // Team roles are privileged profile columns (DB trigger blocks client writes),
+  // so they go through the admin-gated service-role endpoint.
+  const setUserRole = useCallback(async (userId: string, role: 'founder' | 'member' | null) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/admin/user-flags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ userId, flags: { role } }),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      throw new Error(json.error || 'Failed to update role');
+    }
   }, []);
 
   // Platform version
@@ -343,6 +358,12 @@ export default function FounderDashboard() {
       const { error } = await supabase.from('founder_applications').update({ status }).eq('id', appId);
       if (error) throw error;
 
+      // If accepted, grant the team role first so the applicant is never told
+      // "welcome" without actually having access.
+      if (status === 'accepted') {
+        await setUserRole(applicantId, appTitle === 'cofounder' ? 'founder' : 'member');
+      }
+
       // Notify applicant
       const roleLabel = appTitle === 'cofounder' ? 'co-founder' : 'co-member';
       await supabase.from('notifications').insert({
@@ -352,20 +373,15 @@ export default function FounderDashboard() {
         content: `Your ${roleLabel} application was ${status}. ${status === 'accepted' ? 'Welcome to the team!' : 'Thank you for your interest.'}`,
       });
 
-      // If accepted, update profile role based on intended_role
-      if (status === 'accepted') {
-        const profileRole = appTitle === 'cofounder' ? 'founder' : 'member';
-        await supabase.from('profiles').update({ role: profileRole }).eq('id', applicantId);
-      }
-
       // Send email notification with correct dashboard link
       const dashboardLink = status === 'accepted'
         ? (appTitle === 'cofounder' ? '/founder-dashboard' : '/member-dashboard')
         : undefined;
       try {
+        const { data: { session } } = await supabase.auth.getSession();
         await fetch('/api/notify-applicant', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
           body: JSON.stringify({ applicationId: appId, applicantId, status, role: appTitle, dashboardLink }),
         });
       } catch { /* non-blocking */ }
@@ -827,7 +843,7 @@ export default function FounderDashboard() {
         .eq('status', 'accepted')
         .neq('id', appId);
       if (!otherAccepted?.length) {
-        await supabase.from('profiles').update({ role: null }).eq('id', applicantId);
+        await setUserRole(applicantId, null);
       }
 
       await supabase.from('notifications').insert({
@@ -863,7 +879,7 @@ export default function FounderDashboard() {
     setUserActionLoading(userId);
     try {
       await supabase.from('founder_applications').update({ status: 'removed' }).eq('user_id', userId).eq('status', 'accepted');
-      await supabase.from('profiles').update({ role: null }).eq('id', userId);
+      await setUserRole(userId, null);
       await supabase.from('notifications').insert({
         receiver_id: userId,
         actor_id: currentUserId,
@@ -918,7 +934,7 @@ export default function FounderDashboard() {
         });
       }
 
-      await supabase.from('profiles').update({ role: 'founder' }).eq('id', userId);
+      await setUserRole(userId, 'founder');
 
       await supabase.from('notifications').insert({
         receiver_id: userId,
@@ -1187,7 +1203,7 @@ export default function FounderDashboard() {
               {isAdmin && (
                 <button onClick={() => handleTabClick('admin_console')}
                   className="flex items-center gap-1.5 px-4 py-2.5 bg-[#FFB020] hover:bg-amber-400 text-white rounded-2xl font-bold transition-all shadow-md shadow-amber-200 text-xs">
-                  <Shield size={13} /> Admin Console <ArrowRight size={12} />
+                  <Shield size={13} /> Platform Admin <ArrowRight size={12} />
                 </button>
               )}
             </div>
@@ -1196,8 +1212,7 @@ export default function FounderDashboard() {
 
         {/* Tab Bar */}
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-0.5 p-1 rounded-2xl overflow-x-auto flex-1"
-            style={{ background: 'white', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 2px 14px rgba(0,0,0,0.05)' }}>
+          <div className="flex items-center gap-0.5 p-1 rounded-2xl overflow-x-auto flex-1 bg-white dark:bg-gray-900 border border-black/[0.07] dark:border-white/[0.06] shadow-sm">
             {(() => {
               const META: Record<string, { color: string; grad: string; badge?: number }> = {
                 overview:     { color: '#8b5cf6', grad: 'linear-gradient(135deg,#8b5cf6,#6d28d9)' },
@@ -1225,13 +1240,13 @@ export default function FounderDashboard() {
                     onClick={() => handleTabClick(tab.id)}
                     style={isActive ? { background: m.grad } : {}}
                     className={`relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[11px] font-black whitespace-nowrap transition-all duration-200 flex-1 justify-center
-                      ${isActive ? 'text-white shadow-lg scale-[1.02]' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50'}`}
+                      ${isActive ? 'text-white shadow-lg scale-[1.02]' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50 dark:hover:text-gray-200 dark:hover:bg-white/[0.04]'}`}
                   >
                     <tab.icon size={13} style={isActive ? { color: 'rgba(255,255,255,0.9)' } : { color: m.color }} />
                     <span>{tab.label}</span>
                     {(m.badge ?? 0) > 0 && (
                       <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none ${
-                        isActive ? 'bg-white/25 text-white' : 'bg-gray-100 text-gray-500'
+                        isActive ? 'bg-white/25 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
                       }`}>
                         {m.badge}
                       </span>
@@ -1245,7 +1260,7 @@ export default function FounderDashboard() {
           {protectedUnlocked && (
             <button
               onClick={handleLock}
-              className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-400 hover:text-amber-500 hover:border-amber-200 hover:bg-amber-50 transition-all shadow-sm shrink-0"
+              className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-400 hover:text-amber-500 hover:border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all shadow-sm shrink-0"
               title="Lock protected sections"
             >
               <Unlock size={15} />
@@ -1261,7 +1276,8 @@ export default function FounderDashboard() {
         {/* ── ADMIN CONSOLE — full platform Admin Panel, embedded ─────────────── */}
         {activeTab === 'admin_console' && isAdmin && (
           <div className="h-[80vh] min-h-[560px] rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm">
-            <AdminPanelTool currentUserId={currentUserId} />
+            {/* Team applications, Study & Work and Tasks already have top-level tabs here. */}
+            <AdminPanelTool currentUserId={currentUserId} hideTabs={['study_work', 'founder_apps', 'tasks']} />
           </div>
         )}
 

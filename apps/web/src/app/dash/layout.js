@@ -56,11 +56,11 @@ export const MOB_NAV_CLEARANCE = 'calc(env(safe-area-inset-bottom,0px) + 5.5rem)
 const NAV_BOTTOM               = 'calc(env(safe-area-inset-bottom,0px) + 0.75rem)';
 
 const BOTTOM_NAV = [
-  { id: 'home',          icon: Home,          label: 'Home'    },
-  { id: 'messages',      icon: MessageSquare, label: 'Msgs'    },
-  { id: 'notifications', icon: Bell,          label: 'Alerts'  },
-  { id: 'connections',   icon: Users,         label: 'Network' },
-  { id: 'profile',       icon: User,          label: 'Profile' },
+  { id: 'home',          icon: Home,          label: 'Home'     },
+  { id: 'messages',      icon: MessageSquare, label: 'Messages' },
+  { id: 'notifications', icon: Bell,          label: 'Alerts'   },
+  { id: 'connections',   icon: Users,         label: 'Network'  },
+  { id: 'profile',       icon: User,          label: 'Profile'  },
 ];
 
 function BottomNav({ pathname }) {
@@ -81,19 +81,17 @@ function BottomNav({ pathname }) {
             <button
               key={id}
               onClick={() => router.push('/dash/' + id)}
-              className={`relative flex-1 flex flex-col items-center justify-center gap-[3px] h-[50px] rounded-[16px] transition-all duration-200 active:scale-[0.93] ${
+              aria-current={isActive ? 'page' : undefined}
+              className={`relative flex-1 flex flex-col items-center justify-center gap-1 h-[52px] rounded-2xl transition-colors active:scale-[0.96] ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                  : 'text-gray-400 dark:text-zinc-500'
+                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
+                  : 'text-gray-500 dark:text-zinc-400'
               }`}
             >
-              <Icon size={16} strokeWidth={isActive ? 2.5 : 1.8} />
-              <span className={`text-[8.5px] font-bold leading-none tracking-tight ${isActive ? 'opacity-90' : 'opacity-60'}`}>
+              <Icon size={19} strokeWidth={isActive ? 2.25 : 1.9} />
+              <span className={`text-[10.5px] leading-none ${isActive ? 'font-semibold' : 'font-medium'}`}>
                 {label}
               </span>
-              {isActive && (
-                <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white/50" />
-              )}
             </button>
           );
         })}
@@ -448,6 +446,8 @@ export default function DashLayout({ children }) {
   const [authState, setAuthState] = useState('initializing'); // 'initializing', 'authenticated', 'guest', 'session_expired'
   const [showPickUsername, setShowPickUsername] = useState(false);
   const router = useRouter();
+  // Home has its own guest welcome card, so the floating prompt would repeat it.
+  const isHome = usePathname() === '/dash/home';
 
   useLayoutEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- optimistic auth seeded
@@ -518,7 +518,7 @@ export default function DashLayout({ children }) {
       {authState === 'session_expired' && (
         <SessionExpiredCard onDismiss={() => setAuthState('guest')} />
       )}
-      {authState === 'guest' && (
+      {authState === 'guest' && !isHome && (
         <div
           className="fixed left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-2rem)] max-w-md"
           style={{ bottom: 'calc(env(safe-area-inset-bottom,0px) + 5.75rem)' }}

@@ -1066,7 +1066,7 @@ function OrgPageEditor({ org, slug, token, reload }) {
 
   return (
     <div className="max-w-2xl">
-      <SectionHead tag="Presence" title="Public page" desc="Your verified presence on the opportunity graph." />
+      <SectionHead tag="Presence" title="Public page" desc="How your organization appears to students, workers and partners on beoneofus." />
       <Link href={`/organizations/${slug}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 dark:text-brand-400 hover:underline mb-5"><ExternalLink size={14} /> View public page</Link>
       <div className="mb-5">
         <label className={`block text-xs font-bold ${muted} mb-1.5`}>Banner &amp; logo</label>

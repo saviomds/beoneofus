@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
+import { useDashboard } from './DashboardContext';
 import {
   Globe2, CalendarDays, MessageSquare, Plus, Search, Loader2,
   Heart, ChevronRight, ArrowLeft, MapPin, Users, Clock, Tag,
@@ -154,7 +155,7 @@ function CreatePostModal({ session, onClose, onCreated }) {
 }
 
 export default function TechHubContent() {
-  const [session, setSession] = useState(null);
+  const { session, sessionReady } = useDashboard();
   const [activeTab, setActiveTab] = useState('discussions');
   const [posts, setPosts] = useState([]);
   const [events, setEvents] = useState([]);
@@ -196,13 +197,12 @@ export default function TechHubContent() {
     setRefreshing(false);
   }, [activeTab]);
 
+  // fetchData changes with the active tab; wait for the session so liked-state is correct.
+  const uid = session?.user?.id;
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); fetchData(session?.user?.id); });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => { (async () => { setLoading(true); await fetchData(session?.user?.id); })(); }, [activeTab]);
+    if (!sessionReady) return;
+    (async () => { setLoading(true); await fetchData(uid); })();
+  }, [sessionReady, fetchData, uid]);
 
   const handleLike = async (post) => {
     if (!session) return;

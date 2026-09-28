@@ -35,7 +35,7 @@ const FounderDashboard = dynamic(() => import("../../founder-dashboard/page"), {
 // Console" tab (see founder-dashboard/page.tsx) so it isn't duplicated here.
 const WORKSPACES = [
   { id: "verify",  label: "Verification", short: "Verify",  Icon: BadgeCheck, desc: "Organization trust & verification review" },
-  { id: "founder", label: "Founder",      short: "Founder", Icon: Crown,      desc: "Team, founder applications & operations" },
+  { id: "founder", label: "Operations",   short: "Ops",     Icon: Crown,      desc: "Team, applications, orders, contracts & platform admin" },
   { id: "me",      label: "My Dashboard", short: "Me",      Icon: UserCircle, desc: "Your tasks, applications & notifications" },
 ];
 

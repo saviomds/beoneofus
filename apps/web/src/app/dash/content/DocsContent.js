@@ -1,177 +1,217 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  BookOpen, 
-  Terminal, 
-  Users, 
-  Shield, 
-  Cpu, 
-  MessageSquare, 
-  ChevronDown, 
-  Zap, 
-  Code2, 
-  Bookmark,
-  AlertTriangle,
+import Link from "next/link";
+import {
+  BookOpen, Plane, UserCircle, Users, MessageSquare, Briefcase, LifeBuoy,
+  ChevronDown, ArrowRight, CheckCircle2,
 } from "lucide-react";
+
+const p = "text-sm text-gray-600 dark:text-gray-400 leading-relaxed";
+const A = ({ href, children }) => (
+  <Link href={href} className="font-medium text-blue-600 dark:text-blue-400 hover:underline">{children}</Link>
+);
+function List({ items }) {
+  return (
+    <ul className="space-y-2">
+      {items.map((item) => (
+        <li key={typeof item === "string" ? item : item.key} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+          <CheckCircle2 size={16} className="text-blue-500 shrink-0 mt-0.5" />
+          <span>{typeof item === "string" ? item : item.node}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const DOC_SECTIONS = [
   {
-    id: "intro",
-    title: "System Overview",
-    icon: <Terminal size={18} />,
-    badge: "v1.0",
+    id: "overview",
+    title: "Overview",
+    icon: BookOpen,
     content: (
-      <div className="space-y-4 text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-        <p>
-          <strong className="text-gray-900 dark:text-gray-100">beoneofus</strong> is a highly interactive, developer-centric social networking and collaboration platform. Built with a clean aesthetic, it connects developers globally.
+      <div className="space-y-4">
+        <p className={p}>
+          <strong className="text-gray-900 dark:text-gray-100">beoneofus</strong> helps graduates and school-leavers from
+          Rwanda study or work abroad in Mauritius. Alongside your application you get a profile, a professional network,
+          jobs and a community to grow with.
         </p>
-        <p>
-          The network is powered by an edge-ready Next.js architecture and heavily leverages Supabase for real-time Postgres packet syncing, secure edge functions, and continuous data streams.
+        <List items={[
+          "Apply to study or work in Mauritius with an advisor guiding you",
+          "Track every stage of your application and each document",
+          "Connect with people, join groups and events",
+          "Find jobs, internships and remote work",
+        ]} />
+      </div>
+    ),
+  },
+  {
+    id: "application",
+    title: "Your application",
+    icon: Plane,
+    content: (
+      <div className="space-y-4">
+        <p className={p}>
+          Start at <A href="/apply">/apply</A> by choosing Study Abroad or Work Abroad. After you send your initial
+          application, our team reviews it. Once it is confirmed you can complete your history, see your personal
+          requirements and upload documents.
         </p>
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 p-4 rounded-xl text-blue-600 dark:text-blue-400 mt-4">
-          <Zap size={18} className="mb-2" />
-          <p className="text-xs font-bold tracking-wide">MISSION DIRECTIVE:</p>
-          <p className="text-xs mt-1 opacity-80">Connect top-tier developer nodes globally. Share code. Establish secure handshakes. Build the future.</p>
-        </div>
+        <List items={[
+          "Follow your stage at any time from your application dashboard",
+          "Upload PDF, JPG or PNG files up to 10 MB — each document shows its own status",
+          "If a correction is needed, you're told exactly what and why, and can re-upload",
+          "Message the team from the Messages tab inside your application",
+          "Download your final documents when your application is complete",
+        ]} />
+        <p className={p}>
+          See the <A href="/requirements">requirements</A> and the full <A href="/how-it-works">application journey</A>.
+        </p>
       </div>
-    )
+    ),
   },
   {
-    id: "nodes",
-    title: "Nodes & Identity",
-    icon: <Cpu size={18} />,
+    id: "profile",
+    title: "Profile & verification",
+    icon: UserCircle,
     content: (
-      <div className="space-y-4 text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-        <p>Your <strong>Node</strong> is your verified identity on the network.</p>
-        <ul className="list-disc list-inside space-y-2 ml-4 text-gray-500 dark:text-gray-400">
-          <li><strong className="text-gray-900 dark:text-gray-100">Username & Avatar:</strong> Customize how other developers perceive you on the platform.</li>
-          <li><strong className="text-gray-900 dark:text-gray-100">Node Status:</strong> A bio indicating your current system state (e.g., {`Active`}, {`In Maintenance`}).</li>
-          <li><strong className="text-gray-900 dark:text-gray-100">Security Clearance:</strong> Represents your verification level and registration data.</li>
-        </ul>
+      <div className="space-y-4">
+        <p className={p}>
+          Edit your profile at <A href="/dash/profile">My profile</A>. Your public page is <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">/u/your-username</code>.
+        </p>
+        <List items={[
+          "Add a photo, bio, location, skills and links — the Home page shows what is still missing",
+          { key: "verify", node: <>Request a verified badge from <A href="/dash/settings">Settings</A> once your profile is complete</> },
+          "Connections can endorse your skills on your public profile",
+        ]} />
       </div>
-    )
+    ),
   },
   {
-    id: "handshakes",
-    title: "Network Handshakes",
-    icon: <Zap size={18} />,
+    id: "network",
+    title: "Connections & messages",
+    icon: MessageSquare,
     content: (
-      <div className="space-y-4 text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-        <p>To open a direct peer-to-peer (P2P) communication channel, you must establish a <strong>Handshake</strong>.</p>
-        <p>When you send a request, the receiving node must <em>authorize the link</em>. Until then, the connection remains in a pending {`Syncing`} state.</p>
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 p-4 rounded-xl text-red-600 dark:text-red-400 mt-4 shadow-sm">
-          <AlertTriangle size={18} className="mb-2" />
-          <p className="text-xs font-bold tracking-wide uppercase">Critical Alert: Severing Connections</p>
-          <p className="text-xs mt-1 opacity-80">If a user becomes hostile, you can immediately <strong className="text-red-600 dark:text-red-400">Sever the Connection</strong> (Block). This locks the channel and prevents future transmissions.</p>
-        </div>
+      <div className="space-y-4">
+        <p className={p}>
+          Connections are mutual: send a request from someone&apos;s profile, and once they accept you can message each
+          other in <A href="/dash/messages">Messages</A>.
+        </p>
+        <List items={[
+          "Only people you've accepted can message you",
+          "See read receipts and typing indicators, react to messages and share images",
+          "You can remove a connection or block someone at any time",
+        ]} />
       </div>
-    )
+    ),
   },
   {
-    id: "workspaces",
-    title: "Secured Workspaces",
-    icon: <Shield size={18} />,
+    id: "community",
+    title: "Feed, groups & events",
+    icon: Users,
     content: (
-      <div className="space-y-4 text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-        <p><strong>Secured Workspaces</strong> (Channels) are collaborative environments for multiple nodes.</p>
-        <p>Administrators can create Public or Private workspaces. Access to a private workspace requires an exact username invitation or an approved Join Request.</p>
-        <p>Inside a workspace, members have access to a real-time, encrypted-style chat interface to broadcast text and image payloads.</p>
+      <div className="space-y-4">
+        <List items={[
+          { key: "feed", node: <>Share updates and photos in the <A href="/dash/feed">Feed</A>, and post stories that disappear after 24 hours</> },
+          { key: "groups", node: <>Join or create <A href="/dash/groups">Groups</A> — public, or private by invitation</> },
+          { key: "events", node: <>Find meetups and online sessions in <A href="/dash/events">Events</A></> },
+          { key: "bookmarks", node: <>Save posts to <A href="/dash/bookmarks">Bookmarks</A> to read later</> },
+          "Report any post that breaks the rules — our team reviews every report",
+        ]} />
       </div>
-    )
+    ),
   },
   {
-    id: "feed",
-    title: "The Public Feed",
-    icon: <Code2 size={18} />,
+    id: "jobs",
+    title: "Jobs & opportunities",
+    icon: Briefcase,
     content: (
-      <div className="space-y-4 text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-        <p>The <strong>Feed</strong> is the main broadcast terminal of the beoneofus network.</p>
-        <ul className="list-disc list-inside space-y-2 ml-4 text-gray-500 dark:text-gray-400">
-          <li>Share text updates and media.</li>
-          <li>Inject formatted <strong>Code Snippets</strong> for code reviews.</li>
-          <li>Like and Comment on transmissions from other nodes.</li>
-          <li>Generate a <strong>Post Protocol Link</strong> to copy and share specific feed items.</li>
-        </ul>
+      <div className="space-y-4">
+        <List items={[
+          { key: "jobs", node: <>Browse and apply to <A href="/dash/jobs">Jobs</A> and internships, and follow each application</> },
+          { key: "remote", node: <>Find <A href="/dash/freelance">remote work</A> and explore <A href="/dash/companies">companies</A></> },
+          { key: "services", node: <>Offer your own <A href="/dash/services">services</A></> },
+          "Job posts and company pages are reviewed by our team before they appear",
+        ]} />
       </div>
-    )
+    ),
   },
   {
-    id: "bookmarks",
-    title: "Data Bookmarks",
-    icon: <Bookmark size={18} />,
+    id: "help",
+    title: "Help & support",
+    icon: LifeBuoy,
     content: (
-      <div className="space-y-4 text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-        <p>Save important snippets, code blocks, or discussions to your personal <strong>Bookmarks</strong>.</p>
-        <p>Bookmarks are categorized locally as {`Code`} or {`General`} and update in real-time if new comments are added to the original transmission.</p>
+      <div className="space-y-4">
+        <p className={p}>
+          For questions about your application, use the Messages tab inside it. For anything else, open a support
+          ticket from <A href="/dash/more?tool=support">More tools</A> or visit the <A href="/contact">contact page</A>.
+        </p>
       </div>
-    )
-  }
+    ),
+  },
 ];
 
 export default function DocsContent() {
-  const [activeSection, setActiveSection] = useState(DOC_SECTIONS[0]);
+  const [activeId, setActiveId] = useState(DOC_SECTIONS[0].id);
+  const active = DOC_SECTIONS.find((s) => s.id === activeId) || DOC_SECTIONS[0];
+  const ActiveIcon = active.icon;
 
   return (
-    <div className="w-full flex flex-col bg-transparent animate-in fade-in slide-in-from-bottom-4 duration-700 min-h-[calc(100vh-120px)] h-full">
-      {/* Header */}
-      <div className="mb-6 md:mb-8 shrink-0 flex flex-col gap-2">
-        <div className="min-w-0">
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tighter flex items-center gap-3">
-            <BookOpen className="text-blue-500 dark:text-blue-400 w-6 h-6 md:w-8 md:h-8 shrink-0" />
-            <span className="truncate sm:whitespace-normal">Platform Docs</span>
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1.5 font-medium truncate sm:whitespace-normal">Official reference manual for the beoneofus network.</p>
+    <div className="max-w-5xl mx-auto w-full">
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">Help &amp; docs</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">How beoneofus works, in plain words.</p>
         </div>
+        <Link href="/docs" className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+          Full documentation <ArrowRight size={14} />
+        </Link>
       </div>
 
-      <div className="flex flex-col gap-6 flex-1 min-h-0">
-        {/* Native Select Navigation */}
-        <div className="relative w-full shrink-0">
-          <select
-            value={activeSection.id}
-            onChange={(e) => setActiveSection(DOC_SECTIONS.find(s => s.id === e.target.value) || DOC_SECTIONS[0])}
-            className="w-full p-4 pr-12 rounded-2xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 font-bold appearance-none focus:outline-none focus:border-blue-500 hover:border-gray-400 dark:hover:border-gray-600 transition-colors shadow-sm cursor-pointer"
-          >
-            {DOC_SECTIONS.map((section) => (
-              <option key={section.id} value={section.id}>
-                {section.title}
-              </option>
+      {/* Mobile: dropdown */}
+      <div className="relative md:hidden mb-4">
+        <select
+          value={activeId}
+          onChange={(e) => setActiveId(e.target.value)}
+          aria-label="Choose a topic"
+          className="w-full h-11 pl-4 pr-10 rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-sm font-medium text-gray-900 dark:text-gray-100 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+        >
+          {DOC_SECTIONS.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+        </select>
+        <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
+        {/* Desktop: topic list */}
+        <nav className="hidden md:block" aria-label="Topics">
+          <ul className="space-y-0.5">
+            {DOC_SECTIONS.map(({ id, title, icon: Icon }) => (
+              <li key={id}>
+                <button
+                  type="button"
+                  onClick={() => setActiveId(id)}
+                  aria-current={id === activeId ? "page" : undefined}
+                  className={`w-full flex items-center gap-2.5 h-9 px-3 rounded-lg text-sm text-left transition-colors ${
+                    id === activeId
+                      ? "bg-blue-50 text-blue-700 font-semibold dark:bg-blue-500/15 dark:text-blue-300"
+                      : "text-gray-600 dark:text-gray-400 font-medium hover:bg-gray-100 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-gray-100"
+                  }`}
+                >
+                  <Icon size={16} className="shrink-0" /> {title}
+                </button>
+              </li>
             ))}
-          </select>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 dark:text-gray-400">
-            <ChevronDown size={20} />
-          </div>
-        </div>
+          </ul>
+        </nav>
 
-        {/* Main Content Area */}
-        <div className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[2rem] relative overflow-hidden flex flex-col shadow-lg">
-          {/* Cyberpunk Top Accent */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-transparent opacity-50" />
-          
-          <div className="p-8 md:p-10 flex-1 overflow-y-auto custom-scrollbar">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
-                {activeSection.icon}
-              </div>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100">{activeSection.title}</h2>
-                  {activeSection.badge && (
-                    <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest border border-gray-200 dark:border-gray-700">
-                      {activeSection.badge}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-[0.2em] mt-1">Documentation Protocol</p>
-              </div>
-            </div>
-
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {activeSection.content}
-            </div>
+        <article key={active.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 sm:p-8 animate-in fade-in duration-200">
+          <div className="flex items-center gap-3 mb-5">
+            <span className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <ActiveIcon size={19} />
+            </span>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{active.title}</h2>
           </div>
-        </div>
+          {active.content}
+        </article>
       </div>
     </div>
   );

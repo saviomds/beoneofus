@@ -156,16 +156,14 @@ export default function FounderContent({ onSubmitSuccess } = {}) {
         throw new Error("Database error: Empty response. Please verify your 'founder_applications' table is created and Row Level Security (RLS) policies are correctly configured.");
       }
 
-      // Trigger email notification to admin
-      fetch('/api/notify-admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'new_founder_app',
-          name: formData.name.trim(),
-          role: formData.role
+      // Alert admins (best-effort — the application is already saved).
+      supabase.auth.getSession().then(({ data: { session } }) =>
+        fetch('/api/notify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ type: 'new_founder_app' }),
         })
-      }).catch(err => console.error('Failed to trigger admin email API:', err));
+      ).catch(() => {});
 
       setIsSuccess(true);
 

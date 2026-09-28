@@ -38,7 +38,7 @@ export function MegaMenuTrigger({ menu, open, onOpen, onClose }: MegaMenuProps) 
         onClick={() => (open ? onClose() : onOpen())}
         aria-expanded={open}
         aria-haspopup="true"
-        className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-colors duration-150 ${
+        className={`flex items-center gap-1 px-3 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors duration-150 ${
           open
             ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300'
             : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'

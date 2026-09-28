@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { validate } from '../../../../lib/validate';
 
 export async function GET(request) {
   const supabase = createClient(
-    process.env.SUPABASE_URL,
+    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
@@ -91,14 +92,18 @@ export async function GET(request) {
 // Record a profile view (called from public profile page)
 export async function POST(request) {
   const supabase = createClient(
-    process.env.SUPABASE_URL,
+    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
 
   try {
-    const { viewed_id, viewer_id } = await request.json();
-    if (!viewed_id) return NextResponse.json({ error: 'viewed_id required' }, { status: 400 });
+    const { viewed_id } = await request.json();
+    if (!validate.uuid(viewed_id)) return NextResponse.json({ error: 'A valid viewed_id is required' }, { status: 400 });
+
+    // The viewer comes from the verified token, never the request body.
+    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+    const viewer_id = token ? (await supabase.auth.getUser(token)).data?.user?.id ?? null : null;
 
     // Don't count self-views
     if (viewer_id && viewer_id === viewed_id) return NextResponse.json({ ok: true });

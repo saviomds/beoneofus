@@ -13,7 +13,7 @@ export async function POST(req) {
     const adminId = user.id;
 
     const supabase = createClient(
-      process.env.SUPABASE_URL,
+      (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
     const groq = aiClient; // Groq when a real gsk_ key exists, else Anthropic fallback

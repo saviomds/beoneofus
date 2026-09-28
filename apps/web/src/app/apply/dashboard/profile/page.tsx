@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { CheckCircle2, Info } from 'lucide-react'
 import { useStudyWork } from '../../../_study-work/state/StudyWorkContext'
 import { Field, TextInput, PhoneInput, DateInput, Button } from '../../../_study-work/components/FormControls'
@@ -13,7 +13,12 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { setForm(user) }, [user])
+  // Re-seed the form whenever the signed-in user record changes.
+  const [seededFrom, setSeededFrom] = useState(user)
+  if (user !== seededFrom) {
+    setSeededFrom(user)
+    setForm(user)
+  }
 
   if (loading) return <LoadingState />
   if (!form) return null

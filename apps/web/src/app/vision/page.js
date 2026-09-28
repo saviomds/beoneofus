@@ -345,7 +345,7 @@ export default function VisionPage() {
                 Explore the roadmap
               </Link>
             </div>
-            <p className="mt-12 text-xs text-gray-400 dark:text-gray-600">BeOneOfUs — The Global Opportunity Ecosystem</p>
+            <p className="mt-12 text-xs text-gray-400 dark:text-gray-600">beoneofus — Study &amp; work abroad in Mauritius, rooted in Rwanda</p>
           </Reveal>
         </div>
       </section>

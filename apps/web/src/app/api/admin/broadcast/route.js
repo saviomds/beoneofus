@@ -146,7 +146,7 @@ async function sendBatch(emails, subject, html, text) {
 
 export async function POST(request) {
   const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL,
+    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
@@ -207,7 +207,7 @@ export async function POST(request) {
 // Lightweight count endpoint (GET ?audience=...)
 export async function GET(request) {
   const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL,
+    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { autoRefreshToken: false, persistSession: false } },
   );

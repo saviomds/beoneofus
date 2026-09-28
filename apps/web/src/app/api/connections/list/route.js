@@ -18,13 +18,13 @@ export async function GET(request) {
     return NextResponse.json({ error: 'A valid user_id is required' }, { status: 400 });
   }
 
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ users: [] });
   }
 
   try {
     const supabaseAdmin = createClient(
-      process.env.SUPABASE_URL,
+      (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
       process.env.SUPABASE_SERVICE_ROLE_KEY,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );

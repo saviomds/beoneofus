@@ -9,9 +9,12 @@ export function OnlineUsersProvider({ children }) {
   const [onlineIds, setOnlineIds] = useState(new Set());
 
   useEffect(() => {
+    // supabase is null when the public env vars are missing (see supabaseClient.js).
+    if (!supabase) return;
     let ch;
+    let cancelled = false;
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return;
+      if (!session || cancelled) return;
       ch = supabase.channel("online-users", {
         config: { presence: { key: session.user.id } },
       });
@@ -21,7 +24,7 @@ export function OnlineUsersProvider({ children }) {
         if (status === "SUBSCRIBED") await ch.track({ online_at: new Date().toISOString() });
       });
     });
-    return () => { if (ch) supabase.removeChannel(ch); };
+    return () => { cancelled = true; if (ch) supabase.removeChannel(ch); };
   }, []);
 
   return <OnlineUsersCtx.Provider value={onlineIds}>{children}</OnlineUsersCtx.Provider>;

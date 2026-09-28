@@ -134,6 +134,42 @@ const TYPEWRITER_WORD_KEYS = [
 ];
 
 /* ─── Component ─────────────────────────────────────────────── */
+/* ─── Landing navbar ─────────────────────────────────────────── */
+const NAV_PRIMARY = [
+  { label: 'landing.nav.product_menu.study_abroad_label', href: '/study-abroad' },
+  { label: 'landing.nav.product_menu.work_abroad_label',  href: '/work-abroad' },
+  { label: 'landing.nav.for_institutions',                href: '/for-institutions' },
+];
+
+const NAV_MENUS = [
+  {
+    id: 'platform', label: 'landing.nav.platform',
+    columns: [{ items: [
+      { icon: Briefcase,   label: 'landing.nav.product_menu.jobs_label',        desc: 'landing.nav.product_menu.jobs_desc',        href: '/dash/jobs' },
+      { icon: Users,       label: 'landing.nav.product_menu.connections_label', desc: 'landing.nav.product_menu.connections_desc', href: '/dash/connections' },
+      { icon: ShoppingBag, label: 'landing.nav.product_menu.marketplace_label', desc: 'landing.nav.product_menu.marketplace_desc', href: '/dash/marketplace' },
+      { icon: Crown,       label: 'landing.nav.product_menu.tool_premium',      desc: 'landing.nav.premium_desc',                  href: '/dash/premium' },
+    ] }],
+  },
+  {
+    id: 'resources', label: 'landing.nav.resources',
+    columns: [
+      { heading: 'landing.nav.learn_heading', items: [
+        { icon: Zap,          label: 'landing.nav.resources_menu.how_label',           desc: 'landing.nav.resources_menu.how_desc',           href: '/how-it-works' },
+        { icon: CheckCircle2, label: 'landing.nav.resources_menu.quickstart_label',    desc: 'landing.nav.resources_menu.quickstart_desc',    href: '/quick-start' },
+        { icon: FileText,     label: 'landing.nav.resources_menu.documentation_label', desc: 'landing.nav.resources_menu.documentation_desc', href: '/docs' },
+        { icon: Newspaper,    label: 'landing.nav.company_menu.blog_label',            desc: 'landing.nav.blog_desc',                         href: '/blog' },
+      ] },
+      { heading: 'landing.nav.support_heading', items: [
+        { icon: Users,         label: 'landing.nav.company_menu.community_label',   desc: 'landing.nav.company_menu.community_desc', href: '/dash/more?tool=community' },
+        { icon: MessageSquare, label: 'landing.nav.resources_menu.support_ticket',  desc: null,                                      href: '/dash/more?tool=support' },
+        { icon: Globe,         label: 'landing.nav.resources_menu.all_resources',   desc: null,                                      href: '/resources' },
+        { icon: Star,          label: 'landing.nav.company_menu.sponsors_label',    desc: 'landing.nav.sponsors_desc',               href: '/sponsors' },
+      ] },
+    ],
+  },
+];
+
 export default function LandingPage() {
   const { t } = useLanguage();
   const [session, setSession] = useState(null);
@@ -141,7 +177,8 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [mobileSection, setMobileSection] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
+  const navRef = useRef(null);
   const [authError, setAuthError] = useState(null);
   const [pageViews, setPageViews] = useState(null);
   const [liveStats, setLiveStats] = useState(FALLBACK_STATS);
@@ -389,6 +426,32 @@ export default function LandingPage() {
     }
   };
 
+  /* navbar: solid background after scrolling */
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  /* navbar: Esc / outside click close menus; lock scroll under the mobile menu */
+  useEffect(() => {
+    if (!activeDropdown && !mobileMenuOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') { setActiveDropdown(null); setMobileMenuOpen(false); } };
+    const onDown = (e) => { if (navRef.current && !navRef.current.contains(e.target)) setActiveDropdown(null); };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    const prevOverflow = document.body.style.overflow;
+    if (mobileMenuOpen) document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [activeDropdown, mobileMenuOpen]);
+
+  const navSolid = scrolled || mobileMenuOpen || !!activeDropdown;
+
   /* keep typewriter words translated in sync with the active language.
      Stored in a ref so the mount-once tick loop below can read fresh
      translations without re-subscribing or restarting the animation. */
@@ -483,53 +546,97 @@ export default function LandingPage() {
 
         {/* ── Navbar ──────────────────────────── */}
         <nav
-          className="fixed top-0 w-full z-50 border-b border-gray-200/80 dark:border-white/5 bg-white/95 dark:bg-[#080c12]/95 backdrop-blur-2xl shadow-sm shadow-gray-900/[0.03] dark:shadow-none"
+          ref={navRef}
+          aria-label="Main"
+          className={`fixed top-0 w-full z-50 transition-[background-color,border-color,box-shadow] duration-300 ${
+            navSolid
+              ? "bg-white/90 dark:bg-[#080c12]/90 backdrop-blur-xl border-b border-gray-200/80 dark:border-white/[0.06] shadow-[0_1px_12px_rgba(15,23,42,0.04)]"
+              : "bg-transparent border-b border-transparent"
+          }`}
           onMouseLeave={() => setActiveDropdown(null)}
         >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-6">
 
-           <div className="flex items-center shrink-0">
-            {/* Logo */}
-            <Link href="/" className="flex items-center shrink-0 group" onClick={() => setActiveDropdown(null)}>
-              <Image src="/logo.svg" alt="beoneofus" width={32} height={32} priority unoptimized className="w-8 h-8 rounded-lg shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform" />
+            {/* Brand */}
+            <Link href="/" aria-label={t('landing.nav.home_aria')} className="flex items-center gap-2.5 shrink-0 group" onClick={() => setActiveDropdown(null)}>
+              <Image src="/logo.svg" alt="" width={32} height={32} priority unoptimized className="w-8 h-8 rounded-lg" />
+              <span className="text-[17px] font-bold tracking-tight text-gray-900 dark:text-white">
+                beone<span className="text-brand-600 dark:text-brand-400">of</span>us
+              </span>
             </Link>
-           </div>
 
-            {/* Desktop nav — mega menus */}
-            <div className="hidden lg:flex items-center gap-1">
-              {[
-                { id: "product",   label: "landing.nav.product"   },
-                { id: "community", label: "landing.nav.community" },
-                { id: "resources", label: "landing.nav.resources" },
-                { id: "company",   label: "landing.nav.company"   },
-              ].map(item => (
-                <button
-                  key={item.id}
-                  onMouseEnter={() => setActiveDropdown(item.id)}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-full transition-all duration-200 ${
-                    activeDropdown === item.id
-                      ? "text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-500/10"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
-                  }`}
-                >
-                  {t(item.label)}
-                  <ChevronDown size={13} className={`transition-transform duration-200 ${activeDropdown === item.id ? "rotate-180 text-cyan-600 dark:text-cyan-400" : ""}`} />
-                </button>
+            {/* Desktop links */}
+            <ul className="hidden lg:flex items-center gap-1 ml-2">
+              {NAV_PRIMARY.map(item => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onMouseEnter={() => setActiveDropdown(null)}
+                    className="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100/80 dark:hover:bg-white/[0.06] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+                  >
+                    {t(item.label)}
+                  </Link>
+                </li>
               ))}
+              {NAV_MENUS.map(menu => {
+                const open = activeDropdown === menu.id;
+                return (
+                  <li key={menu.id} className="relative" onMouseEnter={() => setActiveDropdown(menu.id)}>
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      aria-haspopup="true"
+                      onClick={() => setActiveDropdown(open ? null : menu.id)}
+                      className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
+                        open
+                          ? "text-gray-900 dark:text-white bg-gray-100/80 dark:bg-white/[0.06]"
+                          : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      {t(menu.label)}
+                      <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+                    </button>
 
-              <Link href="/docs" onMouseEnter={() => setActiveDropdown(null)} className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-all duration-200">
-                {t('landing.nav.docs')}
-              </Link>
+                    {open && (
+                      <div className="absolute left-0 top-full pt-2 z-[60]">
+                        <div className={`${menu.columns.length > 1 ? "w-[560px] grid grid-cols-2" : "w-[340px]"} gap-2 p-2 bg-white dark:bg-[#0d121b] border border-gray-200 dark:border-white/[0.08] rounded-2xl shadow-xl shadow-gray-900/[0.08] dark:shadow-black/40 animate-in fade-in slide-in-from-top-1 duration-150`}>
+                          {menu.columns.map(col => (
+                            <div key={col.heading || 'main'}>
+                              {col.heading && (
+                                <p className="px-3 pt-2 pb-1 text-xs font-medium text-gray-400 dark:text-gray-500">{t(col.heading)}</p>
+                              )}
+                              {col.items.map(({ icon: Icon, label, desc, href }) => (
+                                <Link
+                                  key={href + label}
+                                  href={href}
+                                  onClick={() => setActiveDropdown(null)}
+                                  className="group flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors"
+                                >
+                                  <span className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300 group-hover:bg-brand-50 group-hover:text-brand-600 dark:group-hover:bg-brand-500/15 dark:group-hover:text-brand-300 flex items-center justify-center shrink-0 transition-colors">
+                                    <Icon size={17} />
+                                  </span>
+                                  <span className="min-w-0">
+                                    <span className="block text-sm font-semibold text-gray-900 dark:text-white">{t(label)}</span>
+                                    {desc && <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{t(desc)}</span>}
+                                  </span>
+                                </Link>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
 
-            </div>
-
-            {/* Auth area */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Rwanda */}
-              <RwandaFlag className="scale-[0.9]" />
+            {/* Right side */}
+            <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
+              <span className="hidden sm:inline-flex mr-1"><RwandaFlag className="scale-[0.8]" /></span>
 
               {loading ? (
-                <div className="w-32 sm:w-48 h-9 bg-gray-100 dark:bg-white/5 animate-pulse rounded-xl" />
+                <div className="w-28 sm:w-44 h-9 bg-gray-100 dark:bg-white/5 animate-pulse rounded-lg" />
               ) : session ? (
                 <>
                   {/* Notification bell with dropdown */}
@@ -716,340 +823,90 @@ export default function LandingPage() {
                 </>
               ) : (
                 <>
-                  <Link href="/auth" onMouseEnter={() => setActiveDropdown(null)} className="hidden sm:block px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                  <Link href="/auth" onMouseEnter={() => setActiveDropdown(null)} className="hidden sm:inline-flex items-center h-9 px-3.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100/80 dark:hover:bg-white/[0.06] transition-colors">
                     {t('landing.auth.sign_in')}
                   </Link>
-                  <Link href="/auth"
+                  <Link
+                    href="/auth?mode=sign-up"
                     onMouseEnter={() => setActiveDropdown(null)}
-                    className="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-black rounded-full transition-all shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 hover:scale-105">
+                    className="inline-flex items-center gap-1.5 h-9 px-4 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg shadow-sm shadow-brand-600/20 transition-colors"
+                  >
                     {t('landing.auth.get_started')}
+                    <ArrowRight size={14} className="hidden sm:block" />
                   </Link>
                 </>
               )}
 
               {/* Mobile toggle */}
               <button
-                className="lg:hidden p-2 text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
-                onClick={() => { setMobileMenuOpen(!mobileMenuOpen); setMobileSection(null); }}>
-                {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                type="button"
+                className="lg:hidden w-10 h-10 -mr-1.5 flex items-center justify-center rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
+                aria-label={mobileMenuOpen ? t('landing.nav.close_menu') : t('landing.nav.open_menu')}
+                aria-expanded={mobileMenuOpen}
+                onClick={() => setMobileMenuOpen(o => !o)}
+              >
+                {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
             </div>
           </div>
 
-          {/* ── Mega dropdown panel ── */}
-          {activeDropdown && (
-            <div
-              className="absolute top-full left-0 right-0 border-t border-gray-100 dark:border-white/[0.06] bg-white/98 dark:bg-[#080c12]/98 backdrop-blur-xl shadow-2xl shadow-black/10 dark:shadow-black/50"
-              onMouseEnter={() => {}}
-            >
-              <div className="max-w-7xl mx-auto px-6 py-8">
+          {/* ── Mobile menu ── */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden absolute top-16 inset-x-0 h-[calc(100dvh-4rem)] overflow-y-auto bg-white dark:bg-[#080c12] border-t border-gray-200 dark:border-white/[0.06] animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="px-4 py-4 space-y-6">
+                {session && (
+                  <Link href="/dash" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-white/[0.08]">
+                    <span className="w-10 h-10 rounded-full bg-brand-600 text-white flex items-center justify-center text-sm font-semibold overflow-hidden shrink-0">
+                      {getAvatarSrc(profile, session) && !navAvatarError
+                        ? <Image src={getAvatarSrc(profile, session)} alt="" width={40} height={40} unoptimized className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
+                        : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-gray-900 dark:text-white truncate">{profile?.full_name || `@${profile?.username || session?.user?.email?.split("@")[0]}`}</span>
+                      <span className="block text-xs text-gray-500 dark:text-gray-400">{t('landing.nav.mobile.open_dashboard')}</span>
+                    </span>
+                    <ChevronRight size={18} className="text-gray-400" />
+                  </Link>
+                )}
 
-                {/* ── Product ── */}
-                {activeDropdown === "product" && (
-                  <div className="grid grid-cols-4 gap-8">
-                    <div className="col-span-2">
-                      {/* Flagship: Study & Work Abroad */}
-                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-3">{t('landing.nav.product_menu.abroad_heading')}</p>
-                      <div className="grid grid-cols-2 gap-3 mb-6">
-                        {[
-                          { icon: <GraduationCap size={20} />,label: t('landing.nav.product_menu.study_abroad_label'), desc: t('landing.nav.product_menu.study_abroad_desc'), href: "/study-abroad", color: "emerald" },
-                          { icon: <Plane size={20} />,        label: t('landing.nav.product_menu.work_abroad_label'),  desc: t('landing.nav.product_menu.work_abroad_desc'),  href: "/work-abroad",  color: "violet"  },
-                        ].map(({ icon, label, desc, href, color }) => (
-                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                            className={`flex items-start gap-3 p-4 rounded-2xl border transition-colors group ${
-                              color === "violet"
-                                ? "bg-violet-50 dark:bg-violet-900/10 border-violet-100 dark:border-violet-900/30 hover:border-violet-300 dark:hover:border-violet-700"
-                                : "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700"
-                            }`}>
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                              color === "violet" ? "bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400" :
-                                                   "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
-                            }`}>{icon}</div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.product_menu.features_heading')}</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { icon: <Briefcase size={17} />,    label: t('landing.nav.product_menu.jobs_label'), desc: t('landing.nav.product_menu.jobs_desc'),    href: "/dash/services",    color: "blue"    },
-                          { icon: <Users size={17} />,        label: t('landing.nav.product_menu.connections_label'),     desc: t('landing.nav.product_menu.connections_desc'),  href: "/dash/connections", color: "indigo"  },
-                          { icon: <ShoppingBag size={17} />,  label: t('landing.nav.product_menu.marketplace_label'),     desc: t('landing.nav.product_menu.marketplace_desc'),  href: "/dash/marketplace", color: "amber"   },
-                        ].map(({ icon, label, desc, href, color }) => (
-                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                            className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                              color === "blue"   ? "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400" :
-                              color === "amber"  ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" :
-                              color === "indigo" ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" :
-                                                   "bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400"
-                            }`}>{icon}</div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.product_menu.tools_heading')}</p>
-                      <div className="space-y-0.5">
-                        {[
-                          { icon: <ShoppingBag size={15} />, label: t('landing.nav.product_menu.tool_marketplace'),    href: "/dash/marketplace"   },
-                          { icon: <Crown size={15} />,       label: t('landing.nav.product_menu.tool_premium'),        href: "/dash/premium"       },
-                        ].map(({ icon, label, href }) => (
-                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all font-medium">
-                            <span className="shrink-0">{icon}</span>{label}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="bg-gradient-to-br from-brand-600 to-violet-600 rounded-2xl p-6 text-white flex flex-col justify-between">
-                      <div>
-                        <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center mb-4"><Sparkles size={18} /></div>
-                        <p className="font-black text-lg leading-tight mb-2">{t('landing.nav.product_menu.promo_title')}</p>
-                        <p className="text-sm text-white/80 leading-relaxed">{t('landing.nav.product_menu.promo_desc')}</p>
-                      </div>
-                      <Link href="/dash/premium" onClick={() => setActiveDropdown(null)}
-                        className="mt-5 flex items-center gap-2 bg-white text-brand-600 font-bold text-sm px-4 py-2.5 rounded-xl hover:bg-brand-50 transition-colors self-start">
-                        {t('landing.nav.product_menu.promo_cta')} <ArrowRight size={14} />
+                <ul className="space-y-0.5">
+                  {NAV_PRIMARY.map(item => (
+                    <li key={item.href}>
+                      <Link href={item.href} onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between px-3 py-3 text-base font-semibold text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.04]">
+                        {t(item.label)} <ChevronRight size={18} className="text-gray-300 dark:text-gray-600" />
                       </Link>
-                    </div>
-                  </div>
-                )}
+                    </li>
+                  ))}
+                </ul>
 
-                {/* ── Community ── */}
-                {activeDropdown === "community" && (
-                  <div className="grid grid-cols-3 gap-10">
-                    <div className="col-span-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.community_menu.hubs_heading')}</p>
-                      <Link href="/dash/more?tool=community" onClick={() => setActiveDropdown(null)}
-                        className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-gray-100 dark:border-white/5 hover:border-brand-200 dark:hover:border-brand-500/20 hover:bg-brand-50/40 dark:hover:bg-brand-500/5 transition-all group">
-                        <div className="w-2 h-2 rounded-full bg-brand-500/60 shrink-0" />
-                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{t('landing.nav.community_menu.hub_open')}</span>
-                      </Link>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.community_menu.explore_heading')}</p>
-                      <div className="space-y-0.5">
-                        {[
-                          { icon: <Newspaper size={15} />,    label: t('landing.nav.community_menu.blog'),             href: "/blog" },
-                          { icon: <MessageSquare size={15} />,label: t('landing.nav.community_menu.messaging'),        href: "/dash/messages" },
-                          { icon: <Users size={15} />,        label: t('landing.nav.community_menu.connections'),      href: "/dash/connections" },
-                          { icon: <Star size={15} />,         label: t('landing.nav.community_menu.sponsors'),         href: "/sponsors" },
-                        ].map(({ icon, label, href }) => (
-                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-all font-medium">
-                            <span className="shrink-0">{icon}</span>{label}
+                {NAV_MENUS.flatMap(menu => menu.columns.map(col => ({ key: menu.id + (col.heading || ''), heading: col.heading || menu.label, items: col.items }))).map(group => (
+                  <div key={group.key}>
+                    <p className="px-3 mb-1 text-xs font-medium text-gray-400 dark:text-gray-500">{t(group.heading)}</p>
+                    <ul className="space-y-0.5">
+                      {group.items.map(({ icon: Icon, label, href }) => (
+                        <li key={href + label}>
+                          <Link href={href} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-[15px] font-medium text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.04]">
+                            <Icon size={18} className="text-gray-400 dark:text-gray-500 shrink-0" /> {t(label)}
                           </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Resources ── */}
-                {activeDropdown === "resources" && (
-                  <div className="grid grid-cols-2 gap-10">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.resources_menu.docs_heading')}</p>
-                      {[
-                        { icon: <FileText size={16} />,    label: t('landing.nav.resources_menu.documentation_label'), desc: t('landing.nav.resources_menu.documentation_desc'),     href: "/docs"         },
-                        { icon: <Zap size={16} />,         label: t('landing.nav.resources_menu.how_label'),  desc: t('landing.nav.resources_menu.how_desc'),       href: "/how-it-works" },
-                        { icon: <Shield size={16} />,      label: t('landing.nav.resources_menu.premium_label'), desc: t('landing.nav.resources_menu.premium_desc'),   href: "/dash/premium" },
-                        { icon: <CheckCircle2 size={16} />,label: t('landing.nav.resources_menu.quickstart_label'),   desc: t('landing.nav.resources_menu.quickstart_desc'), href: "/quick-start"  },
-                      ].map(({ icon, label, desc, href }) => (
-                        <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                          className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                          <div className="w-8 h-8 bg-gray-100 dark:bg-white/5 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 shrink-0 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 group-hover:text-brand-500 transition-colors">{icon}</div>
-                          <div>
-                            <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{desc}</p>
-                          </div>
-                        </Link>
+                        </li>
                       ))}
-                    </div>
-                    <div className="bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 rounded-2xl p-5 flex flex-col gap-4">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">{t('landing.nav.resources_menu.support_heading')}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{t('landing.nav.resources_menu.support_desc')}</p>
-                      </div>
-                      {[
-                        { icon: <Globe size={14} />,         label: t('landing.nav.resources_menu.all_resources'),          href: "/resources" },
-                        { icon: <MessageSquare size={14} />, label: t('landing.nav.resources_menu.support_ticket'),  href: "/dash/more?tool=support" },
-                        { icon: <Users size={14} />,         label: t('landing.nav.resources_menu.community_forum'),         href: "/dash/more?tool=community" },
-                      ].map(({ icon, label, href }) => (
-                        <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                          className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
-                          {icon}{label} <ChevronRight size={13} className="ml-auto" />
-                        </Link>
-                      ))}
-                    </div>
+                    </ul>
+                  </div>
+                ))}
+
+                {!session && (
+                  <div className="grid grid-cols-2 gap-2 pt-2">
+                    <Link href="/auth" onClick={() => setMobileMenuOpen(false)} className="h-11 flex items-center justify-center rounded-lg border border-gray-300 dark:border-white/15 text-sm font-semibold text-gray-900 dark:text-white">
+                      {t('landing.nav.mobile.sign_in')}
+                    </Link>
+                    <Link href="/auth?mode=sign-up" onClick={() => setMobileMenuOpen(false)} className="h-11 flex items-center justify-center rounded-lg bg-brand-600 hover:bg-brand-700 text-sm font-semibold text-white">
+                      {t('landing.nav.mobile.get_started_free')}
+                    </Link>
                   </div>
                 )}
-
-                {/* ── Company ── */}
-                {activeDropdown === "company" && (
-                  <div className="grid grid-cols-3 gap-10">
-                    <div className="col-span-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">{t('landing.nav.company_menu.about_heading')}</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { icon: <Star size={17} />,      label: t('landing.nav.company_menu.sponsors_label'),          desc: t('landing.nav.company_menu.sponsors_desc'),      href: "/sponsors",         color: "amber"  },
-                          { icon: <Newspaper size={17} />, label: t('landing.nav.company_menu.blog_label'),              desc: t('landing.nav.company_menu.blog_desc'),    href: "/blog",             color: "gray"   },
-                          { icon: <Users size={17} />,     label: t('landing.nav.company_menu.community_label'),         desc: t('landing.nav.company_menu.community_desc'),   href: "/dash/more?tool=community",        color: "indigo" },
-                          { icon: <Shield size={17} />,    label: t('landing.nav.company_menu.founder_label'), desc: t('landing.nav.company_menu.founder_desc'),      href: "/founder-dashboard",color: "blue"   },
-                        ].map(({ icon, label, desc, href, color }) => (
-                          <Link key={label} href={href} onClick={() => setActiveDropdown(null)}
-                            className="flex items-start gap-3 p-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                              color === "amber"  ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" :
-                              color === "indigo" ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400" :
-                              color === "blue"   ? "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400" :
-                                                   "bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"
-                            }`}>{icon}</div>
-                            <div>
-                              <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{label}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{desc}</p>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 rounded-2xl p-6 flex flex-col gap-4">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('landing.nav.company_menu.join_heading')}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{t('landing.nav.company_menu.join_desc')}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Link href="/auth" onClick={() => setActiveDropdown(null)}
-                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-brand-500/20 w-full">
-                          {t('landing.nav.company_menu.get_started_free')} <ArrowRight size={14} />
-                        </Link>
-                        <Link href="/sponsors" onClick={() => setActiveDropdown(null)}
-                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm transition-all hover:border-brand-300 dark:hover:border-brand-500/30 w-full">
-                          {t('landing.nav.company_menu.become_sponsor')}
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
               </div>
             </div>
           )}
-
-          {/* ── Mobile menu ── */}
-          <div className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? "max-h-[85vh] opacity-100 overflow-y-auto" : "max-h-0 opacity-0"}`}>
-            <div className="px-4 pb-6 pt-2 border-t border-gray-100 dark:border-white/5">
-              {/* User card */}
-              {session && (
-                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-white/5 rounded-xl mb-4">
-                  <div className="w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-black overflow-hidden shrink-0">
-                    {getAvatarSrc(profile, session) && !navAvatarError
-                      ? <Image src={getAvatarSrc(profile, session)} alt="av" width={36} height={36} unoptimized className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={() => setNavAvatarError(true)} />
-                      : (profile?.username?.[0] || session?.user?.email?.[0] || "U").toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">@{profile?.username || session?.user?.email?.split("@")[0] || t('landing.nav.mobile.member')}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{profile?.role || t('landing.nav.mobile.member')}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Accordion sections */}
-              {[
-                {
-                  id: "product", label: t('landing.nav.product'),
-                  links: [
-                    { label: t('landing.nav.product_menu.study_abroad_label'), href: "/study-abroad" },
-                    { label: t('landing.nav.product_menu.work_abroad_label'),  href: "/work-abroad"  },
-                    { label: t('landing.nav.product_menu.jobs_label'), href: "/dash/services"    },
-                    { label: t('landing.nav.product_menu.connections_label'),     href: "/dash/connections" },
-                    { label: t('landing.nav.product_menu.tool_marketplace'),     href: "/dash/marketplace" },
-                  ],
-                },
-                {
-                  id: "community", label: t('landing.nav.community'),
-                  links: [
-                    { label: t('landing.nav.community_menu.hub_open'),         href: "/dash/more?tool=community"        },
-                    { label: t('landing.nav.community_menu.blog'),                   href: "/blog"             },
-                    { label: t('landing.nav.community_menu.messaging'),              href: "/dash/messages"    },
-                  ],
-                },
-                {
-                  id: "resources", label: t('landing.nav.resources'),
-                  links: [
-                    { label: t('landing.nav.resources_menu.documentation_label'), href: "/docs"         },
-                    { label: t('landing.nav.resources_menu.how_label'),  href: "/how-it-works" },
-                    { label: t('landing.nav.resources_menu.quickstart_label'),   href: "/docs"         },
-                  ],
-                },
-                {
-                  id: "company", label: t('landing.nav.company'),
-                  links: [
-                    { label: t('landing.nav.company_menu.sponsors_label'), href: "/sponsors"          },
-                    { label: t('landing.nav.company_menu.blog_label'),     href: "/blog"              },
-                    { label: t('landing.nav.company_menu.community_label'),href: "/dash/more?tool=community"         },
-                  ],
-                },
-              ].map(section => (
-                <div key={section.id} className="border-b border-gray-100 dark:border-white/5 last:border-0">
-                  <button
-                    onClick={() => setMobileSection(mobileSection === section.id ? null : section.id)}
-                    className="flex items-center justify-between w-full px-3 py-3.5 text-sm font-bold text-gray-700 dark:text-gray-300">
-                    {section.label}
-                    <ChevronDown size={15} className={`transition-transform text-gray-400 ${mobileSection === section.id ? "rotate-180" : ""}`} />
-                  </button>
-                  {mobileSection === section.id && (
-                    <div className="pb-2 pl-4 space-y-0.5">
-                      {section.links.map(link => (
-                        <Link key={link.href + link.label} href={link.href}
-                          onClick={() => { setMobileMenuOpen(false); setMobileSection(null); }}
-                          className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-all font-medium">
-                          <ChevronRight size={12} className="text-gray-300 dark:text-gray-600 shrink-0" />{link.label}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {/* Direct links */}
-              <div className="pt-3 space-y-0.5">
-                <Link href="/docs" onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center px-3 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-all">
-                  {t('landing.nav.mobile.docs')}
-                </Link>
-                {session && (
-                  <Link href="/dash" onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center px-3 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-all">
-                    {t('landing.nav.mobile.dashboard')}
-                  </Link>
-                )}
-              </div>
-
-              {/* CTA */}
-              <div className="pt-4 flex flex-col gap-2">
-                {!session && (
-                  <Link href="/auth" onClick={() => setMobileMenuOpen(false)}
-                    className="w-full text-center py-3 bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white font-bold rounded-xl text-sm border border-gray-200 dark:border-white/10">
-                    {t('landing.nav.mobile.sign_in')}
-                  </Link>
-                )}
-                <Link href={session ? "/dash" : "/auth"} onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2">
-                  {session ? t('landing.nav.mobile.open_dashboard') : t('landing.nav.mobile.get_started_free')} <ArrowRight size={15} />
-                </Link>
-              </div>
-            </div>
-          </div>
         </nav>
 
         {/* ── Hero ────────────────────────────── */}

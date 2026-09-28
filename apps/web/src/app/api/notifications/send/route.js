@@ -16,12 +16,12 @@ const ALLOWED_TYPES = [
 
 export async function POST(request) {
   try {
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (!(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 503 });
     }
 
     const supabaseAdmin = createClient(
-      process.env.SUPABASE_URL,
+      (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
       process.env.SUPABASE_SERVICE_ROLE_KEY,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );

@@ -2,11 +2,17 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 import { NextResponse } from 'next/server';
+// @ts-ignore — plain-JS RBAC helper
+import { requireRole } from '../../../../../lib/rbac';
 // @ts-ignore - Ensure 'resend' is installed via npm install resend
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 
+// Admin-only (unused legacy endpoint — superseded by /api/notify-admin and /api/notify-applicant).
 export async function POST(req: Request) {
+  const { error: authError, status: authStatus } = await requireRole(req, 'admin');
+  if (authError) return NextResponse.json({ error: authError }, { status: authStatus });
+
   try {
     // Initialize Resend with your API key
     const resend = new Resend(process.env.RESEND_API_KEY);

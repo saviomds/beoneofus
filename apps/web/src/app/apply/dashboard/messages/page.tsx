@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { GraduationCap, Briefcase, MessageSquare } from 'lucide-react'
 import { useStudyWork } from '../../../_study-work/state/StudyWorkContext'
 import { useApplicationDetail } from '../../../_study-work/hooks/useApplicationDetail'
@@ -9,13 +9,9 @@ import { EmptyState, LoadingState } from '../../../_study-work/components/EmptyS
 
 export default function MessagesPage() {
   const { loading, applications } = useStudyWork()
-  const [activeAppId, setActiveAppId] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!loading && applications.length > 0 && !activeAppId) {
-      setActiveAppId(applications[0].id)
-    }
-  }, [loading, applications, activeAppId])
+  const [selectedAppId, setActiveAppId] = useState<string | null>(null)
+  // Default to the first application until the user picks one.
+  const activeAppId = selectedAppId ?? applications[0]?.id ?? null
 
   const detail = useApplicationDetail(activeAppId)
 

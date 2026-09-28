@@ -4,8 +4,9 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Compass, MessageCircle, X, Loader2, Users, User, Hash, Sun, Moon, Briefcase, ChevronRight, ShoppingBag, Package, Wrench, FileText, CalendarDays, Zap, Star, ArrowRight } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
+import { sectionTitle } from '../dash/navConfig';
 import { supabase } from '../supabaseClient';
 import ProfileContent from '../dash/content/ProfileContent';
 import { useDashboard } from '../dash/content/DashboardContext';
@@ -38,6 +39,8 @@ export default function Header({ setActiveTab }) {
   const { t } = useLanguage();
   const { setTargetChatUser } = useDashboard();
   const router = useRouter();
+  const pathname = usePathname();
+  const pageTitle = sectionTitle(t, pathname?.split('/')[2]);
   const [showQuickView, setShowQuickView] = useState(null); // 'discuss' or 'discover'
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -326,17 +329,19 @@ export default function Header({ setActiveTab }) {
     <>
       {/* ══ DESKTOP HEADER ══ */}
       <header className={`
-        hidden md:flex flex-col
-        px-4 lg:px-6 pt-2.5 pb-2
-        border-b border-gray-200 dark:border-gray-800
-        bg-white/95 dark:bg-gray-900/95 backdrop-blur-md
+        hidden md:flex flex-col justify-center
+        h-16 px-4 lg:px-6
+        bg-white/95 dark:bg-[#111115]/95 backdrop-blur-md
         sticky top-0 z-40
         transition-transform duration-300 ease-in-out
         ${showHeader ? 'translate-y-0' : '-translate-y-full'}
       `}>
-        {/* One clean row: universal search + controls (top-mid-right) */}
-        <div className="flex items-center gap-2.5 w-full">
-          <div className="relative flex-1" ref={searchRef}>
+        {/* Page title · search · controls */}
+        <div className="flex items-center gap-4 w-full">
+          <h1 className="hidden lg:block w-48 xl:w-56 shrink-0 text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
+            {pageTitle}
+          </h1>
+          <div className="relative flex-1 max-w-2xl" ref={searchRef}>
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             <Search size={14} className="text-gray-400 dark:text-gray-500" />
           </div>
@@ -401,7 +406,7 @@ export default function Header({ setActiveTab }) {
                             <MessageCircle size={15} />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={post.title || 'Untitled Node'} query={searchQuery} /></p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"><HighlightMatch text={post.title || 'Untitled post'} query={searchQuery} /></p>
                             <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5"><HighlightMatch text={post.content} query={searchQuery} /></p>
                           </div>
                         </div>
@@ -450,7 +455,7 @@ export default function Header({ setActiveTab }) {
                                 </span>
                               )}
                             </p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5 uppercase tracking-widest font-black"><HighlightMatch text={user.status || 'Active Node'} query={searchQuery} /></p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5"><HighlightMatch text={user.status || 'Member'} query={searchQuery} /></p>
                           </div>
                         </div>
                       ))}
@@ -510,13 +515,14 @@ export default function Header({ setActiveTab }) {
           )}
           </div>
 
-          {/* Controls — sit at the top-mid-right of the bar */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Controls */}
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
             <LanguageSwitcher />
             {mounted && (
               <button
                 onClick={() => { const cur = theme === 'system' ? systemTheme : theme; setTheme(cur === 'dark' ? 'light' : 'dark'); }}
-                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all border border-gray-200 dark:border-gray-700"
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                aria-label={t('header.toggle_theme')}
                 title={t('header.toggle_theme')}
               >
                 {theme === 'dark' || (theme === 'system' && systemTheme === 'dark') ? <Sun size={15} /> : <Moon size={15} />}

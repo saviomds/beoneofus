@@ -111,7 +111,7 @@ export default function NewOrganizationPage() {
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
         <div className="mb-8">
           <h1 className="text-3xl font-black tracking-tight">Create your organization</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1.5">Put your institution on the graph. You can refine everything later.</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1.5">Set up your page to open study, work or programme opportunities. You can edit everything later.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -139,7 +139,7 @@ export default function NewOrganizationPage() {
 
           <div>
             <label className="block text-sm font-bold mb-2">Name <span className="text-brand-500">*</span></label>
-            <input className={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ministry of Digital Skills" maxLength={120} autoFocus />
+            <input className={field} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. University of Rwanda, Port Louis Hotel Group" maxLength={120} autoFocus />
           </div>
 
           <div>
@@ -150,7 +150,7 @@ export default function NewOrganizationPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold mb-2">Sector / field</label>
-              <input className={field} value={sector} onChange={(e) => setSector(e.target.value)} placeholder="e.g. Public sector, EdTech" maxLength={80} />
+              <input className={field} value={sector} onChange={(e) => setSector(e.target.value)} placeholder="e.g. Higher education, Hospitality" maxLength={80} />
             </div>
             <div>
               <label className="block text-sm font-bold mb-2">Location</label>
@@ -165,7 +165,7 @@ export default function NewOrganizationPage() {
 
           <div>
             <label className="block text-sm font-bold mb-2">About</label>
-            <textarea className={`${field} min-h-[110px] resize-y`} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What your organization does and who it serves." maxLength={1000} />
+            <textarea className={`${field} min-h-[110px] resize-y`} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What your organization does, who it serves, and the opportunities you offer." maxLength={1000} />
           </div>
 
           {error && (

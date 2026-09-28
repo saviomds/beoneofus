@@ -8,7 +8,7 @@ import { supabase } from "../../supabaseClient";
 import VerifiedBadge from "../../components/VerifiedBadge";
 import PremiumBadge from "../../components/PremiumBadge";
 import GitHubStats from "../../components/GitHubStats";
-import { StoryRing, useUserStories, StoryViewer, StoryCreator } from "./Stories";
+import { StoryRing, useUserStories, StoryViewer, StoryCreator, deleteStory } from "./Stories";
 import { useLanguage } from "../../../lib/i18n";
 
 // --- Image Cropping Helper ---
@@ -116,7 +116,7 @@ export default function ProfileContent({ viewUserId }) {
   const [likedEdge, setLikedEdge] = useState({ left: false, right: true });
 
   // Stories for the profile being viewed (profile?.id = null while loading → hook handles it)
-  const { hasStory, stories: profileStories } = useUserStories(profile?.id);
+  const { hasStory, stories: profileStories, refresh: refreshStories } = useUserStories(profile?.id);
 
   useEffect(() => {
     let channel;
@@ -1977,9 +1977,10 @@ export default function ProfileContent({ viewUserId }) {
           startGroupIdx={0}
           currentUserId={currentUser?.id}
           onClose={() => setStoryViewerOpen(false)}
-          onDelete={async (id) => {
-            await supabase.from("stories").delete().eq("id", id);
-            setStoryViewerOpen(false);
+          onDelete={async (story) => {
+            const err = await deleteStory(story);
+            if (!err) refreshStories();
+            return err;
           }}
         />
       )}
@@ -1989,6 +1990,7 @@ export default function ProfileContent({ viewUserId }) {
         <StoryCreator
           currentUserId={currentUser?.id}
           onClose={() => setStoryViewerOpen(false)}
+          onCreated={refreshStories}
         />
       )}
 

@@ -671,9 +671,10 @@ export default function FeedContent() {
     if (!reportReason || !reportingPost) return;
     setReportLoading(true);
     try {
-      await fetch('/api/report', {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           content_type: 'post',
           content_id: reportingPost.id,
@@ -681,9 +682,10 @@ export default function FeedContent() {
           details: reportDetails.trim() || null,
         }),
       });
+      if (!res.ok) throw new Error();
       setReportDone(true);
-    } catch (_) {
-      // silent — the report either went through or didn't
+    } catch {
+      showToast('Could not submit report. Please try again.');
     } finally {
       setReportLoading(false);
     }

@@ -364,9 +364,12 @@ function SystemLogsView({ currentUserId }) {
 }
 
 
-const AdminPanelTool = ({ currentUserId }) => {
+// hideTabs: sections the host page already exposes at top level (avoids
+// showing the same screen twice when embedded in the founder dashboard).
+const AdminPanelTool = ({ currentUserId, hideTabs = [] }) => {
   const searchParams = useSearchParams();
-  const [adminTab, setAdminTab] = useState(searchParams?.get("tab") || "overview");
+  const initialTab = searchParams?.get("tab");
+  const [adminTab, setAdminTab] = useState(initialTab && !hideTabs.includes(initialTab) ? initialTab : "overview");
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, showToast] = useToast();
@@ -1190,7 +1193,7 @@ const AdminPanelTool = ({ currentUserId }) => {
     { id: "hiring",       label: "Hiring",       icon: Building2      },
     { id: "system_logs",  label: "System Logs",  icon: Terminal      },
     { id: "settings",     label: "Settings",     icon: Shield        },
-  ];
+  ].filter(tab => !hideTabs.includes(tab.id));
 
   if (loading) return <div className="p-16 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={24} /></div>;
 
@@ -1200,7 +1203,7 @@ const AdminPanelTool = ({ currentUserId }) => {
         <ShieldAlert size={28} className="text-red-400" />
       </div>
       <p className="text-gray-900 dark:text-white font-black text-lg mb-1.5">Access Denied</p>
-      <p className="text-gray-400 dark:text-gray-600 text-sm max-w-xs leading-relaxed">Your node lacks admin clearance to access this control terminal.</p>
+      <p className="text-gray-400 dark:text-gray-600 text-sm max-w-xs leading-relaxed">You need administrator access to view this section.</p>
     </div>
   );
 
@@ -1374,11 +1377,13 @@ const AdminPanelTool = ({ currentUserId }) => {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {[
-                { label: "Requests",     icon: Bell,        iconColor: "text-amber-500",  iconBg: "bg-amber-50 dark:bg-amber-500/10",    action: () => setAdminTab("requests") },
-                { label: "Users",        icon: Users,       iconColor: "text-blue-500",   iconBg: "bg-blue-50 dark:bg-blue-500/10",      action: () => setAdminTab("users") },
-                { label: "Tasks",        icon: ClipboardList, iconColor: "text-violet-500", iconBg: "bg-violet-50 dark:bg-violet-500/10", action: () => setAdminTab("tasks") },
-                { label: "Founder Apps", icon: Crown,       iconColor: "text-amber-600",  iconBg: "bg-amber-50 dark:bg-amber-500/10",    action: () => setAdminTab("founder_apps") },
-              ].map(({ label, icon: Icon, iconColor, iconBg, action }) => (
+                { id: "requests",     label: "Requests",     icon: Bell,        iconColor: "text-amber-500",  iconBg: "bg-amber-50 dark:bg-amber-500/10",    action: () => setAdminTab("requests") },
+                { id: "users",        label: "Users",        icon: Users,       iconColor: "text-blue-500",   iconBg: "bg-blue-50 dark:bg-blue-500/10",      action: () => setAdminTab("users") },
+                { id: "tasks",        label: "Tasks",        icon: ClipboardList, iconColor: "text-violet-500", iconBg: "bg-violet-50 dark:bg-violet-500/10", action: () => setAdminTab("tasks") },
+                { id: "founder_apps", label: "Founder Apps", icon: Crown,       iconColor: "text-amber-600",  iconBg: "bg-amber-50 dark:bg-amber-500/10",    action: () => setAdminTab("founder_apps") },
+                { id: "hiring",       label: "Hiring",       icon: Building2,   iconColor: "text-emerald-500", iconBg: "bg-emerald-50 dark:bg-emerald-500/10", action: () => setAdminTab("hiring") },
+                { id: "system_logs",  label: "System Logs",  icon: Terminal,    iconColor: "text-rose-500",   iconBg: "bg-rose-50 dark:bg-rose-500/10",     action: () => setAdminTab("system_logs") },
+              ].filter(q => !hideTabs.includes(q.id)).slice(0, 4).map(({ label, icon: Icon, iconColor, iconBg, action }) => (
                 <button key={label} onClick={action}
                   className="flex flex-col items-center gap-3 p-5 rounded-2xl bg-white dark:bg-gray-900/70 border border-gray-100 dark:border-white/[0.05] text-xs font-bold text-gray-600 dark:text-gray-400 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/5 hover:border-blue-200 dark:hover:border-blue-500/20 group">
                   <div className={`w-9 h-9 rounded-xl ${iconBg} ${iconColor} flex items-center justify-center transition-transform group-hover:scale-110`}>

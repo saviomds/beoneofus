@@ -44,15 +44,15 @@ export default function SponsorDashboard() {
       if (!session?.user) { setLoading(false); return; }
       setUser(session.user);
 
-      const email = session.user.email;
-      const res = await fetch(`/api/sponsors?email=${encodeURIComponent(email)}`);
-      const data = await res.json();
+      const auth = { Authorization: `Bearer ${session.access_token}` };
+      const res = await fetch("/api/sponsors?mine=true", { headers: auth });
+      const data = await res.json().catch(() => ({}));
 
       if (!data.sponsor) { setNotFound(true); setLoading(false); return; }
       setSponsor(data.sponsor);
 
       if (data.sponsor.status === "active") {
-        const statsRes = await fetch(`/api/sponsors?sponsorId=${data.sponsor.id}`);
+        const statsRes = await fetch(`/api/sponsors?sponsorId=${data.sponsor.id}`, { headers: auth });
         const statsData = await statsRes.json();
         setImpressions(statsData.impressions || []);
       }

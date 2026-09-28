@@ -13,6 +13,7 @@ export function PublicFooter() {
             { href: '/work-abroad', label: 'Work Abroad' },
             { href: '/how-it-works', label: 'How It Works' },
             { href: '/requirements', label: 'Requirements' },
+            { href: '/for-institutions', label: 'For Institutions' },
             { href: '/contact', label: 'Contact' },
             { href: '/privacy', label: 'Privacy' },
             { href: '/terms', label: 'Terms' },

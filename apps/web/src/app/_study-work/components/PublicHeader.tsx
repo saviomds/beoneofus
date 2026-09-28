@@ -38,7 +38,7 @@ export function PublicHeader() {
             <span>beone<span className="text-cyan-600 dark:text-cyan-400">of</span>us</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1" onMouseLeave={() => setOpenMenu(null)}>
+          <nav className="hidden lg:flex items-center gap-0.5" onMouseLeave={() => setOpenMenu(null)}>
             {MEGA_MENUS.map((menu) => (
               <MegaMenuTrigger
                 key={menu.key}
@@ -52,14 +52,14 @@ export function PublicHeader() {
               <Link
                 key={l.href}
                 href={l.href}
-                className="px-4 py-2 rounded-full text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors duration-150"
+                className="px-3 py-2 rounded-full text-sm font-semibold whitespace-nowrap text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors duration-150"
               >
                 {l.label}
               </Link>
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          <div className="hidden lg:flex items-center gap-2 shrink-0">
             {signedIn ? (
               <Link
                 href="/dash"
@@ -82,7 +82,7 @@ export function PublicHeader() {
             )}
           </div>
 
-          <button type="button" onClick={() => setMobileOpen((v) => !v)} className="md:hidden text-gray-600 dark:text-gray-300" aria-label="Menu" aria-expanded={mobileOpen}>
+          <button type="button" onClick={() => setMobileOpen((v) => !v)} className="lg:hidden text-gray-600 dark:text-gray-300" aria-label="Menu" aria-expanded={mobileOpen}>
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
@@ -90,7 +90,7 @@ export function PublicHeader() {
 
       {/* Mobile panel — proper accordion navigation, not a shrunk mega-menu */}
       {mobileOpen && (
-        <div className="md:hidden max-w-5xl mx-auto mt-2 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+        <div className="lg:hidden max-w-5xl mx-auto mt-2 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
           <div className="max-h-[70vh] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
             {MEGA_MENUS.map((menu) => {
               const expanded = mobileExpanded === menu.key

@@ -7,7 +7,7 @@ const VALID_STATUSES = new Set(['pending', 'active', 'rejected']);
 // Use service role so RLS does not block admin reads/writes.
 // Public GET paths return only what is explicitly filtered below.
 function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Supabase env vars missing');
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -24,58 +24,62 @@ async function requireAdmin(req, sb) {
   return { user };
 }
 
-// GET /api/sponsors                → active sponsors (public, no auth needed)
+// Resolve the signed-in caller from the Bearer token (null when absent/invalid).
+async function getCaller(req, sb) {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!token) return null;
+  const { data: { user } } = await sb.auth.getUser(token);
+  return user ?? null;
+}
+
+// GET /api/sponsors                → active sponsors (public; contact email omitted)
 // GET /api/sponsors?all=true       → all sponsors   (admin)
-// GET /api/sponsors?email=x        → own record     (self-serve — matched by email, not by auth token)
-// GET /api/sponsors?sponsorId=x    → impression stats
+// GET /api/sponsors?mine=true      → caller's own sponsor record (matched on their verified email)
+// GET /api/sponsors?sponsorId=x    → impression stats (that sponsor's owner or an admin)
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const all       = searchParams.get('all') === 'true';
-  const email     = searchParams.get('email');
+  const mine      = searchParams.get('mine') === 'true';
   const sponsorId = searchParams.get('sponsorId');
   const sb        = getSupabase();
 
   try {
-    if (sponsorId) {
-      const [{ data: sponsor, error }, { data: impressions }] = await Promise.all([
-        sb.from('sponsors').select('*').eq('id', sponsorId).single(),
-        sb.from('sponsor_impressions')
-          .select('viewed_at, certificate_id')
-          .eq('sponsor_id', sponsorId)
-          .order('viewed_at', { ascending: false })
-          .limit(500),
-      ]);
-      if (error) return NextResponse.json({ error: 'Sponsor not found' }, { status: 404 });
+    if (mine || sponsorId) {
+      const caller = await getCaller(req, sb);
+      if (!caller?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+      if (mine) {
+        const { data } = await sb.from('sponsors').select('*').eq('contact_email', caller.email).maybeSingle();
+        return NextResponse.json({ sponsor: data ?? null });
+      }
+
+      const { data: sponsor } = await sb.from('sponsors').select('*').eq('id', sponsorId).maybeSingle();
+      if (!sponsor) return NextResponse.json({ error: 'Sponsor not found' }, { status: 404 });
+      if (sponsor.contact_email !== caller.email) {
+        const adminCheck = await requireAdmin(req, sb);
+        if (adminCheck.error) return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status });
+      }
+      const { data: impressions } = await sb.from('sponsor_impressions')
+        .select('viewed_at, certificate_id')
+        .eq('sponsor_id', sponsorId)
+        .order('viewed_at', { ascending: false })
+        .limit(500);
       return NextResponse.json({ sponsor, impressions: impressions || [] });
     }
 
-    if (email) {
-      // Expose only own record — client must pass the exact email they authenticated with.
-      const { data } = await sb.from('sponsors').select('*').eq('contact_email', email).single();
-      return NextResponse.json({ sponsor: data ?? null });
-    }
-
-    // Restrict ?all=true to admins only.
     if (all) {
       const adminCheck = await requireAdmin(req, sb);
       if (adminCheck.error) return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status });
+      const { data: rows, error } = await sb.from('sponsors').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return NextResponse.json({ sponsors: rows || [] });
     }
 
-    const { data, error } = await sb
-      .from('sponsors')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .eq('status', all ? undefined : 'active')  // undefined skips the filter when all=true
-      .then(q => all ? sb.from('sponsors').select('*').order('created_at', { ascending: false }) : q);
-
-    // Re-do cleanly without the chained undefined trick:
-    const query = all
-      ? sb.from('sponsors').select('*').order('created_at', { ascending: false })
-      : sb.from('sponsors').select('*').eq('status', 'active').order('created_at', { ascending: false });
-
-    const { data: rows, error: qErr } = await query;
-    if (qErr) throw qErr;
-    return NextResponse.json({ sponsors: rows || [] });
+    const { data: rows, error } = await sb.from('sponsors').select('*')
+      .eq('status', 'active').order('created_at', { ascending: false });
+    if (error) throw error;
+    const sponsors = (rows || []).map(({ contact_email, ...pub }) => pub);
+    return NextResponse.json({ sponsors });
   } catch (err) {
     console.error('[sponsors] GET error:', err.message);
     return NextResponse.json({ error: 'Failed to load sponsors' }, { status: 500 });

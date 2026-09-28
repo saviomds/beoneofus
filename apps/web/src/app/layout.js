@@ -16,6 +16,8 @@ const inter = Inter({
 });
 
 export const metadata = {
+  // Resolves relative OG/Twitter image URLs to absolute ones for link previews.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://beoneofus.work'),
   title: 'beoneofus — Study & Work Abroad in Mauritius',
   description: 'beoneofus helps graduates and school-leavers study or work abroad in Mauritius — from your application and requirements to documents, review, and support at every step.',
   icons: {

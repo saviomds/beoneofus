@@ -8,9 +8,15 @@ export function useNotifications(userId: string | null) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
 
   const load = useCallback(async () => {
-    setNotifications(userId ? await apps.listNotificationsForUser(userId) : [])
+    if (!userId) return
+    try {
+      setNotifications(await apps.listNotificationsForUser(userId))
+    } catch (err) {
+      console.error('[study-work] failed to load notifications', err)
+    }
   }, [userId])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load() only sets state after its awaited fetch resolves
   useEffect(() => { load() }, [load])
 
   const markRead = useCallback(async (id: string) => {
@@ -23,7 +29,8 @@ export function useNotifications(userId: string | null) {
     await load()
   }, [userId, load])
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const visible = userId ? notifications : []
+  const unreadCount = visible.filter((n) => !n.read).length
 
-  return { notifications, unreadCount, markRead, markAllRead, refresh: load }
+  return { notifications: visible, unreadCount, markRead, markAllRead, refresh: load }
 }

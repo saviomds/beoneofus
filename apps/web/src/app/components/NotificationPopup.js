@@ -22,6 +22,7 @@ export default function NotificationPopup() {
 
   // ── Resolve authenticated user ──────────────────────────────────────────
   useEffect(() => {
+    if (!supabase) return;
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null);
     });

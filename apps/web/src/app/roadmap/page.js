@@ -468,9 +468,9 @@ export default function RoadmapPage() {
         <div className="relative overflow-hidden rounded-3xl border border-gray-200 dark:border-white/10 bg-gradient-to-br from-brand-600 via-brand-600 to-violet-700 p-8 sm:p-12 text-white shadow-2xl">
           <div aria-hidden className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "22px 22px" }} />
           <div className="relative max-w-2xl">
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-balance">Building the world&apos;s opportunity ecosystem</h2>
+            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-balance">Opening doors abroad, one step at a time</h2>
             <p className="mt-3 text-white/80 leading-relaxed">
-              From a global MVP to planetary-scale intelligence — one deliberate phase at a time. Partner with us early.
+              We start with study and work in Mauritius, and grow each phase with the institutions that join us. Partner with us early.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/for-institutions" className="inline-flex items-center gap-2 bg-white text-gray-900 font-bold text-sm px-5 py-3 rounded-2xl hover:bg-white/90 transition-all active:scale-95">
@@ -483,7 +483,7 @@ export default function RoadmapPage() {
           </div>
         </div>
         <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-8">
-          BeOneOfUs — The Global Opportunity Ecosystem
+          beoneofus — Study &amp; work abroad in Mauritius, rooted in Rwanda
         </p>
       </section>
     </main>

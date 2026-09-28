@@ -226,6 +226,7 @@ export default function OrganizationProfile() {
       }
     })();
     return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per org: re-running would double-count the page view
   }, [org?.id]);
 
   const toggleFollow = async () => {

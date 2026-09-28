@@ -11,7 +11,7 @@ import {
   Zap, BookOpen, Copy, Plus, Mail, BadgeCheck, Briefcase, MessageCircle,
   Compass, Clock, TrendingUp, RefreshCw, Flame, Crown, Star, Rocket,
   Lightbulb, Calendar, FileText, Newspaper, MapPin, Hash, Activity,
-  Award, Code, LayoutGrid, Layers
+  Layers
 } from 'lucide-react';
 import ProfileContent from "../dash/content/ProfileContent";
 import NewPost from "./NewPost";
@@ -54,15 +54,6 @@ function formatCount(n) {
   return n.toString();
 }
 
-const PLATFORM_SECTIONS = [
-  { label: 'Dashboard',   icon: LayoutGrid,    href: '/dash',              bg: 'bg-blue-50 dark:bg-blue-900/20',    text: 'text-blue-600 dark:text-blue-400',    border: 'border-blue-100 dark:border-blue-800/30' },
-  { label: 'Groups',      icon: Users,          href: '/dash/groups',       bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-600 dark:text-violet-400', border: 'border-violet-100 dark:border-violet-800/30' },
-  { label: 'Events',      icon: Calendar,       href: '/dash/events',       bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-100 dark:border-emerald-800/30' },
-  { label: 'Jobs',        icon: Briefcase,      href: '/dash/more',         bg: 'bg-amber-50 dark:bg-amber-900/20',  text: 'text-amber-600 dark:text-amber-400',  border: 'border-amber-100 dark:border-amber-800/30' },
-  { label: 'Marketplace', icon: Rocket,         href: '/dash/marketplace',  bg: 'bg-rose-50 dark:bg-rose-900/20',    text: 'text-rose-600 dark:text-rose-400',    border: 'border-rose-100 dark:border-rose-800/30' },
-  { label: 'Connections', icon: Award,          href: '/dash/connections',  bg: 'bg-teal-50 dark:bg-teal-900/20',    text: 'text-teal-600 dark:text-teal-400',    border: 'border-teal-100 dark:border-teal-800/30' },
-  { label: 'Projects',    icon: Code,           href: '/dash/projects',  bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-100 dark:border-orange-800/30' },
-];
 
 const SectionHeader = ({ title, icon: Icon, iconColor, isCollapsible, isOpen, onToggle, action }) => (
   <div
@@ -70,13 +61,13 @@ const SectionHeader = ({ title, icon: Icon, iconColor, isCollapsible, isOpen, on
     onClick={isCollapsible ? onToggle : undefined}
   >
     <div className="flex items-center gap-2">
-      {Icon && <Icon size={11} className={iconColor || 'text-gray-400 dark:text-gray-500'} />}
-      <h3 className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[2px]">{title}</h3>
+      {Icon && <Icon size={14} className={iconColor || 'text-gray-400 dark:text-gray-500'} />}
+      <h3 className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
     </div>
     <div className="flex items-center gap-1.5">
       {action}
       {isCollapsible && (
-        <ChevronRight size={10} className={`text-gray-300 dark:text-gray-600 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
+        <ChevronRight size={14} className={`text-gray-400 dark:text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
       )}
     </div>
   </div>
@@ -96,7 +87,6 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
   const [isTrendingOpen, setIsTrendingOpen]         = useState(true);
   const [isInviteDevelopersOpen, setIsInviteDevelopersOpen] = useState(false);
   const [isWhatsHappeningOpen, setIsWhatsHappeningOpen]   = useState(true);
-  const [isExplorerOpen, setIsExplorerOpen]         = useState(true);
 
   const [spotlights, setSpotlights]     = useState([]);
   const [newsItems, setNewsItems]       = useState([]);
@@ -439,11 +429,11 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
             { label: 'Members',   value: statsLoaded ? formatCount(liveStats.members)    : '—', icon: Users,    text: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-950/40',    border: 'border-blue-100 dark:border-blue-900/40' },
             { label: 'Posts 24h', value: statsLoaded ? formatCount(liveStats.postsToday) : '—', icon: Activity, text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40', border: 'border-emerald-100 dark:border-emerald-900/40' },
             { label: 'Groups',    value: statsLoaded ? formatCount(liveStats.groups)     : '—', icon: Layers,   text: 'text-violet-600 dark:text-violet-400',  bg: 'bg-violet-50 dark:bg-violet-950/40',  border: 'border-violet-100 dark:border-violet-900/40' },
-          ].map(({ label, value, icon: Icon, text, bg, border }) => (
-            <div key={label} className={`${bg} border ${border} rounded-xl p-3 flex flex-col items-center gap-1.5`}>
-              <Icon size={12} className={text} />
-              <span className={`text-[15px] font-black leading-none tracking-tight ${text}`}>{value}</span>
-              <span className="text-[8px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider text-center leading-tight">{label}</span>
+          ].map(({ label, value, icon: Icon, text }) => (
+            <div key={label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-3 flex flex-col items-center gap-1">
+              <Icon size={14} className={text} />
+              <span className="text-base font-semibold leading-none text-gray-900 dark:text-gray-100 tabular-nums">{value}</span>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium text-center leading-tight">{label}</span>
             </div>
           ))}
         </div>
@@ -453,43 +443,16 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
       <div className="shrink-0">
         <button
           onClick={() => setShowBroadcastModal(true)}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] py-3 rounded-xl transition-all shadow-lg shadow-blue-500/15 flex items-center justify-center gap-2 active:scale-[0.98] tracking-wide"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm h-10 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
-          <Plus size={15} strokeWidth={2.5} /> New Broadcast
+          <Plus size={16} strokeWidth={2.25} /> Create post
         </button>
       </div>
 
-      {/* ── Platform Explorer ── */}
-      <div className="shrink-0">
+      {/* ── Suggested Connections ── (hidden once loaded if empty) */}
+      {(loading || suggestions.length > 0) && <div>
         <SectionHeader
-          title="Platform Explorer"
-          icon={LayoutGrid}
-          iconColor="text-blue-500 dark:text-blue-400"
-          isCollapsible
-          isOpen={isExplorerOpen}
-          onToggle={() => setIsExplorerOpen(v => !v)}
-        />
-        {isExplorerOpen && (
-          <div className="grid grid-cols-4 gap-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-            {PLATFORM_SECTIONS.map(({ label, icon: Icon, href, bg, text, border }) => (
-              <Link
-                key={label}
-                href={href}
-                onClick={() => onClose?.()}
-                className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border ${bg} ${border} hover:scale-[1.04] active:scale-95 transition-all shadow-sm shadow-black/3`}
-              >
-                <Icon size={14} className={`${text} shrink-0`} />
-                <span className={`text-[8px] font-bold ${text} text-center leading-tight`}>{label}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Suggested Connections ── */}
-      <div>
-        <SectionHeader
-          title="Suggested Connections"
+          title="People you may know"
           icon={UserPlus}
           iconColor="text-blue-500 dark:text-blue-400"
           isCollapsible
@@ -567,7 +530,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
             )}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Community Spotlights ── */}
       {spotlights.length > 0 && (
@@ -627,9 +590,9 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
       )}
 
       {/* ── Trending Channels ── */}
-      <div>
+      {(loading || groups.length > 0) && <div>
         <SectionHeader
-          title="Trending Channels"
+          title="Popular groups"
           icon={TrendingUp}
           iconColor="text-rose-500 dark:text-rose-400"
           isCollapsible
@@ -686,12 +649,12 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
             )}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── What's Happening ── */}
-      <div>
+      {(!newsLoaded || newsItems.length > 0) && <div>
         <SectionHeader
-          title="What's Happening"
+          title="Latest updates"
           icon={Flame}
           iconColor="text-orange-500 dark:text-orange-400"
           isCollapsible
@@ -732,7 +695,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
                     post:  { color: 'text-blue-600 dark:text-blue-400',       bg: 'bg-blue-50 dark:bg-blue-900/20',       Icon: Newspaper, nav: () => { if (item.authorId) setSelectedUserId(item.authorId); } },
                     event: { color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', Icon: Calendar,  nav: () => { router.push('/dash/events'); onClose?.(); } },
                     page:  { color: 'text-violet-600 dark:text-violet-400',   bg: 'bg-violet-50 dark:bg-violet-900/20',   Icon: FileText,  nav: () => { router.push('/dash/pages'); onClose?.(); } },
-                    job:   { color: 'text-amber-600 dark:text-amber-400',     bg: 'bg-amber-50 dark:bg-amber-900/20',     Icon: Briefcase, nav: () => { if (item.authorId) setSelectedUserId(item.authorId); else { router.push('/dash'); onClose?.(); } } },
+                    job:   { color: 'text-amber-600 dark:text-amber-400',     bg: 'bg-amber-50 dark:bg-amber-900/20',     Icon: Briefcase, nav: () => { if (item.authorId) setSelectedUserId(item.authorId); else { router.push('/dash/jobs'); onClose?.(); } } },
                   }[item.type] || { color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800', Icon: Newspaper, nav: () => {} };
 
                   const dateLabel = item.type === 'event'
@@ -778,12 +741,12 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
             )}
           </div>
         )}
-      </div>
+      </div>}
 
-      {/* ── Invite Developers ── (collapsed by default) */}
+      {/* ── Invite ── (collapsed by default) */}
       <div>
         <SectionHeader
-          title="Invite Developers"
+          title="Invite people"
           icon={UserPlus}
           iconColor="text-violet-500 dark:text-violet-400"
           isCollapsible
@@ -967,7 +930,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
         <SectionHeader title="Resources" icon={BookOpen} iconColor="text-blue-500 dark:text-blue-400" />
         <div className="space-y-1.5">
           {[
-            { label: 'Platform Docs',     sub: 'Network reference manual', icon: FileText,    action: () => { router.push('/dash/docs'); onClose?.(); } },
+            { label: 'Help & docs',       sub: 'Guides and answers', icon: FileText,    action: () => { router.push('/dash/docs'); onClose?.(); } },
             { label: 'Quick Start Guide', sub: 'Get started in minutes',  icon: Zap,          href: '/quick-start' },
           ].map(({ label, sub, icon: Icon, href, action }) => {
             const cls = "flex items-center gap-3 p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:border-blue-200 dark:hover:border-blue-800/50 hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition-all group w-full text-left";
@@ -996,10 +959,6 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
       <div className="mt-auto pt-5 border-t border-gray-100 dark:border-gray-800/50">
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">beoneofus</span>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">All systems up</span>
-          </div>
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-1">
           {[
@@ -1012,7 +971,7 @@ export default function RightSidebar({ onSectionChange, setActiveTab, onClose })
             </Link>
           ))}
         </div>
-        <p className="text-[8px] text-gray-300 dark:text-gray-600 mt-2 font-mono">v1.0 · {new Date().getFullYear()}</p>
+        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">© {new Date().getFullYear()} beoneofus</p>
       </div>
 
       {/* ── User Profile Modal ── */}

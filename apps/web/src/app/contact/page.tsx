@@ -42,13 +42,13 @@ export default function ContactPage() {
             </p>
             <div className="space-y-4 text-sm">
               <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <Mail size={16} className="text-blue-600 dark:text-blue-400" /> support@beoneofus.work
+                <Mail size={16} className="text-blue-600 dark:text-blue-400" /> dominiquesaviomds@gmail.com
               </div>
               <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <Phone size={16} className="text-blue-600 dark:text-blue-400" /> +230 000 0000
+                <Phone size={16} className="text-blue-600 dark:text-blue-400" /> +250 786731976 - +230 54753221s
               </div>
               <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <MapPin size={16} className="text-blue-600 dark:text-blue-400" /> Port Louis, Mauritius
+                <MapPin size={16} className="text-blue-600 dark:text-blue-400" /> Rwanda - Mauritius
               </div>
             </div>
           </div>

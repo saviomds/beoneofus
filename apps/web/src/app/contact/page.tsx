@@ -14,17 +14,45 @@ export default function ContactPage() {
   const [message, setMessage] = useState('')
   const [errors, setErrors] = useState<Errors>({})
   const [sent, setSent] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const next: Errors = {}
     if (isBlank(name)) next.name = 'Please enter your name.'
     if (!isValidEmail(email)) next.email = 'Please enter a valid email address.'
-    if (isBlank(message)) next.message = 'Please enter a message.'
+    if (message.trim().length < 10) next.message = 'Please write a little more (at least 10 characters).'
     setErrors(next)
-    if (Object.keys(next).length === 0) {
-      // No backend for this feature yet — this simulates a successful send.
+    if (Object.keys(next).length === 0 && !isSubmitting) {
+      setIsSubmitting(true)
+      setSubmitError('')
+
+      try {
+        const formData = new FormData(e.currentTarget)
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            email,
+            topic,
+            message,
+            website: formData.get('website'),
+          }),
+        })
+        const result = await response.json().catch(() => ({}))
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'We could not send your message. Please try again.')
+        }
+
       setSent(true)
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : 'We could not send your message. Please try again.')
+      } finally {
+        setIsSubmitting(false)
+      }
     }
   }
 
@@ -42,10 +70,14 @@ export default function ContactPage() {
             </p>
             <div className="space-y-4 text-sm">
               <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <Mail size={16} className="text-blue-600 dark:text-blue-400" /> dominiquesaviomds@gmail.com
+                <Mail size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                <a href="mailto:dominiquesaviomds@gmail.com" className="hover:underline">dominiquesaviomds@gmail.com</a>
               </div>
               <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-                <Phone size={16} className="text-blue-600 dark:text-blue-400" /> +250 786731976 - +230 54753221s
+                <Phone size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                <a href="tel:+250786731976" className="hover:underline">+250 786731976</a>
+                <span aria-hidden="true">·</span>
+                <a href="tel:+23054753221" className="hover:underline">+230 54753221</a>
               </div>
               <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
                 <MapPin size={16} className="text-blue-600 dark:text-blue-400" /> Rwanda - Mauritius
@@ -62,16 +94,20 @@ export default function ContactPage() {
               </div>
             ) : (
               <form onSubmit={onSubmit} className="space-y-4" noValidate>
+                <div className="absolute -left-[9999px]" aria-hidden="true">
+                  <label htmlFor="c-website">Leave this field empty</label>
+                  <input id="c-website" name="website" tabIndex={-1} autoComplete="off" />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="Your name" htmlFor="c-name" required error={errors.name}>
-                    <TextInput id="c-name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
+                    <TextInput id="c-name" name="name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
                   </Field>
                   <Field label="Email address" htmlFor="c-email" required error={errors.email}>
-                    <TextInput id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} />
+                    <TextInput id="c-email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} />
                   </Field>
                 </div>
                 <Field label="Topic" htmlFor="c-topic">
-                  <Select id="c-topic" value={topic} onChange={(e) => setTopic(e.target.value)}>
+                  <Select id="c-topic" name="topic" value={topic} onChange={(e) => setTopic(e.target.value)}>
                     <option>Study Abroad</option>
                     <option>Work Abroad</option>
                     <option>An existing application</option>
@@ -79,9 +115,12 @@ export default function ContactPage() {
                   </Select>
                 </Field>
                 <Field label="Message" htmlFor="c-message" required error={errors.message}>
-                  <TextArea id="c-message" value={message} onChange={(e) => setMessage(e.target.value)} error={errors.message} rows={5} />
+                  <TextArea id="c-message" name="message" value={message} onChange={(e) => setMessage(e.target.value)} error={errors.message} rows={5} />
                 </Field>
-                <Button type="submit" className="w-full sm:w-auto">Send Message</Button>
+                {submitError && <p className="text-sm font-semibold text-rose-600 dark:text-rose-400" role="alert">{submitError}</p>}
+                <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+                  {isSubmitting ? 'Sending...' : 'Send Message'}
+                </Button>
               </form>
             )}
           </div>

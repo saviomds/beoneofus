@@ -3,13 +3,20 @@ import { createClient } from '@supabase/supabase-js';
 import { logAdminAction } from '../../../../lib/auditLog';
 
 export async function DELETE(request) {
-  const supabaseAdmin = createClient(
-    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL),
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-
   try {
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('delete-user error: Supabase admin credentials are not configured');
+      return NextResponse.json({ error: 'User deletion is not configured on the server.' }, { status: 500 });
+    }
+
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      serviceRoleKey,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+
     const authHeader = request.headers.get('Authorization');
     const token = authHeader?.replace('Bearer ', '');
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -27,7 +34,13 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { userId } = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'A valid JSON request body is required.' }, { status: 400 });
+    }
+    const userId = typeof body?.userId === 'string' ? body.userId.trim() : '';
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
     // Prevent self-deletion
@@ -38,7 +51,10 @@ export async function DELETE(request) {
     // Delete auth user first — if this fails we stop before touching the profile,
     // keeping the data consistent. Profile deletion comes second (or is cascaded via FK).
     const { error: deleteErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
-    if (deleteErr) throw deleteErr;
+    if (deleteErr) {
+      console.error('delete-user auth deletion failed:', deleteErr);
+      return NextResponse.json({ error: deleteErr.message || 'Unable to delete this account.' }, { status: 500 });
+    }
 
     // Best-effort profile cleanup (may already be cascaded by FK on the DB side)
     await supabaseAdmin.from('profiles').delete().eq('id', userId);
@@ -54,6 +70,6 @@ export async function DELETE(request) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('delete-user error:', err);
-    return NextResponse.json({ error: 'Failed to delete user. Please try again.' }, { status: 500 });
+    return NextResponse.json({ error: err?.message || 'Failed to delete user. Please try again.' }, { status: 500 });
   }
 }

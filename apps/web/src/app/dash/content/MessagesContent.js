@@ -276,9 +276,8 @@ export default function MessagesContent() {
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
-  const { targetChatUser, setTargetChatUser } = useDashboard();
+  const { targetChatUser, setTargetChatUser, session, sessionReady } = useDashboard();
+  const currentUserId = session?.user?.id ?? null;
   const onlineUsers = useOnlineUsers();
   const [unreadCounts, setUnreadCounts] = useState({});
   const [lastMessagePreviews, setLastMessagePreviews] = useState({});
@@ -466,15 +465,16 @@ export default function MessagesContent() {
   /* ── 1. Contacts ── */
   useEffect(() => {
     let isMounted = true;
-    const fallbackTimer = window.setTimeout(() => {
-      if (isMounted) setAuthChecked(true);
-    }, 2500);
+    if (!sessionReady) return () => { isMounted = false; };
+
+    if (!currentUserId) {
+      setContacts([]);
+      setActiveChat(null);
+      return () => { isMounted = false; };
+    }
 
     const fetchContacts = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { if (isMounted) setAuthChecked(true); return; }
-      const uid = session.user.id;
-      if (isMounted) { setCurrentUserId(uid); setAuthChecked(true); }
+      const uid = currentUserId;
 
       const { data: connections } = await supabase
         .from("connections").select("sender_id, receiver_id")
@@ -503,10 +503,9 @@ export default function MessagesContent() {
       .subscribe();
     return () => {
       isMounted = false;
-      clearTimeout(fallbackTimer);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [sessionReady, currentUserId]);
 
   useEffect(() => {
     if (targetChatUser) {
@@ -837,7 +836,7 @@ export default function MessagesContent() {
 
   /* ── Auth gate ── */
   if (!currentUserId) {
-    if (!authChecked) {
+    if (!sessionReady) {
       return (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", background: "var(--mc-bg)" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center", padding: "0 24px" }}>

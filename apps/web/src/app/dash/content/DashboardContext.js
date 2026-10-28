@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
+import { shouldApplySessionSnapshot } from '../authSession.mjs';
 
 const DashboardContext = createContext();
 
@@ -19,21 +20,26 @@ export function DashboardProvider({ children }) {
   // sidebar, so every consumer agrees.
   const [session, setSession] = useState(null);
   const [sessionReady, setSessionReady] = useState(false);
+  const authEventSeenRef = useRef(false);
 
   useEffect(() => {
     let active = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!active) return;
-      setSession(data?.session ?? null);
-      setSessionReady(true);
-    }).catch(() => { if (active) setSessionReady(true); });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      if (!active) return;
-      setSession(s ?? null);
+      authEventSeenRef.current = true;
+      setSession(nextSession ?? null);
       setSessionReady(true);
     });
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      const snapshot = data?.session ?? null;
+      if (shouldApplySessionSnapshot(authEventSeenRef.current)) {
+        setSession(snapshot);
+      }
+      setSessionReady(true);
+    }).catch(() => { if (active) setSessionReady(true); });
 
     return () => { active = false; sub.subscription?.unsubscribe(); };
   }, []);

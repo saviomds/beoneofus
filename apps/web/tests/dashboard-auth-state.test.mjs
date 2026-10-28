@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isAuthenticated, nextAuthState } from '../src/app/dash/authSession.mjs';
+import { isAuthenticated, nextAuthState, shouldApplySessionSnapshot } from '../src/app/dash/authSession.mjs';
+
+test('session snapshots cannot override a newer auth event with an empty result', () => {
+  assert.equal(shouldApplySessionSnapshot(false), true);
+  assert.equal(shouldApplySessionSnapshot(true), false);
+});
 
 test('isAuthenticated: a cached token counts until getSession says otherwise', () => {
   assert.equal(isAuthenticated(null, true), true);

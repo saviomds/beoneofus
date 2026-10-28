@@ -131,6 +131,7 @@ export default function FounderDashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [deleteUserTarget, setDeleteUserTarget] = useState<{ id: string; username: string } | null>(null);
 
   // Tasks tab
   const [tasks, setTasks] = useState<any[]>([]);
@@ -410,18 +411,21 @@ export default function FounderDashboard() {
     setUsersLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Your session expired. Sign in again.');
       const res = await fetch('/api/admin/users?limit=200', {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `Unable to load users (HTTP ${res.status}).`);
       const data = json.users || [];
       setUsers(data);
       setAllUsers(data);
-    } catch {
-      // silently fall back to empty
+    } catch (err: any) {
+      showToast(err.message || 'Unable to load users.', 'error');
+    } finally {
+      setUsersLoading(false);
     }
-    setUsersLoading(false);
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch users when the tab activates
@@ -787,12 +791,14 @@ export default function FounderDashboard() {
 
   const handleSuspendUser = async (userId: string, suspend: boolean) => {
     setUserActionLoading(userId);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ status: suspend ? 'suspended' : 'active' })
-      .eq('id', userId);
-    if (!error) {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: suspend ? 'suspended' : 'active' })
+        .eq('id', userId);
+      if (error) throw error;
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: suspend ? 'suspended' : 'active' } : u));
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, status: suspend ? 'suspended' : 'active' } : u));
       await logAdminAction(supabase, {
         actorId: currentUserId,
         action: suspend ? 'suspend_user' : 'unsuspend_user',
@@ -800,30 +806,37 @@ export default function FounderDashboard() {
         targetUserId: userId,
       });
       showToast(suspend ? 'User suspended.' : 'User reinstated.');
-    } else {
-      showToast(error.message, 'error');
+    } catch (err: any) {
+      showToast(err.message || 'Unable to update user status.', 'error');
+    } finally {
+      setUserActionLoading(null);
     }
-    setUserActionLoading(null);
   };
 
-  const handleDeleteUser = async (userId: string, username: string) => {
-    if (!window.confirm(`Permanently delete @${username}? This cannot be undone.`)) return;
+  const handleDeleteUser = async () => {
+    const target = deleteUserTarget;
+    if (!target || userActionLoading) return;
+    const { id: userId, username } = target;
     setUserActionLoading(userId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Your session expired. Sign in again.');
       const res = await fetch('/api/admin/delete-user', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ userId }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `Unable to delete user (HTTP ${res.status}).`);
       setUsers(prev => prev.filter(u => u.id !== userId));
+      setAllUsers(prev => prev.filter(u => u.id !== userId));
+      setDeleteUserTarget(null);
       showToast(`@${username} deleted permanently.`);
     } catch (err: any) {
-      showToast(err.message, 'error');
+      showToast(err.message || 'Unable to delete user.', 'error');
+    } finally {
+      setUserActionLoading(null);
     }
-    setUserActionLoading(null);
   };
 
   // Revoke a specific accepted application (applications tab)
@@ -878,7 +891,12 @@ export default function FounderDashboard() {
     if (!window.confirm(`Revoke ${roleLabel} access for @${username}? They will lose dashboard access but can re-apply.`)) return;
     setUserActionLoading(userId);
     try {
-      await supabase.from('founder_applications').update({ status: 'removed' }).eq('user_id', userId).eq('status', 'accepted');
+      const { error: applicationError } = await supabase
+        .from('founder_applications')
+        .update({ status: 'removed' })
+        .eq('user_id', userId)
+        .eq('status', 'accepted');
+      if (applicationError) throw applicationError;
       await setUserRole(userId, null);
       await supabase.from('notifications').insert({
         receiver_id: userId,
@@ -894,11 +912,13 @@ export default function FounderDashboard() {
         details: { currentRole },
       });
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: null } : u));
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, role: null } : u));
       showToast(`${roleLabel} access revoked for @${username}.`);
     } catch (err: any) {
       showToast(err.message, 'error');
+    } finally {
+      setUserActionLoading(null);
     }
-    setUserActionLoading(null);
   };
 
   // Promote a co-member to co-founder access (admin only, no re-apply needed)
@@ -912,18 +932,20 @@ export default function FounderDashboard() {
     if (source === 'user') setUserActionLoading(userId); else setAppActionLoading(true);
     try {
       // Upsert a cofounder application marked accepted
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from('founder_applications')
         .select('id')
         .eq('user_id', userId)
         .eq('intended_role', 'cofounder')
         .limit(1)
-        .single();
+        .maybeSingle();
+      if (existingError) throw existingError;
 
       if (existing) {
-        await supabase.from('founder_applications').update({ status: 'accepted' }).eq('id', existing.id);
+        const { error } = await supabase.from('founder_applications').update({ status: 'accepted' }).eq('id', existing.id);
+        if (error) throw error;
       } else {
-        await supabase.from('founder_applications').insert({
+        const { error } = await supabase.from('founder_applications').insert({
           user_id: userId,
           intended_role: 'cofounder',
           status: 'accepted',
@@ -932,6 +954,7 @@ export default function FounderDashboard() {
           experience: 'Promoted by admin',
           reason: { note: 'Directly promoted to co-founder by admin.' },
         });
+        if (error) throw error;
       }
 
       await setUserRole(userId, 'founder');
@@ -952,6 +975,7 @@ export default function FounderDashboard() {
       });
 
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: 'founder' } : u));
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, role: 'founder' } : u));
       if (appId) setApplications(prev => prev.map(a => a.id === appId ? { ...a, promoted: true } : a));
       showToast(`@${username} promoted to co-founder.`);
     } catch (err: any) {
@@ -1157,6 +1181,56 @@ export default function FounderDashboard() {
         <div className={`fixed bottom-6 right-6 z-[500] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-sm ${toast.type === 'error' ? 'bg-white dark:bg-gray-900 border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400' : 'bg-white dark:bg-gray-900 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400'}`}>
           {toast.type === 'error' ? <AlertTriangle size={15} className="shrink-0" /> : <Check size={15} className="shrink-0" />}
           <span className="text-xs font-bold">{toast.msg}</span>
+        </div>
+      )}
+
+      {deleteUserTarget && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+            aria-label="Cancel user deletion"
+            onClick={() => !userActionLoading && setDeleteUserTarget(null)}
+          />
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-user-title"
+            aria-describedby="delete-user-description"
+            className="relative w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 shadow-2xl animate-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                <AlertOctagon size={21} />
+              </div>
+              <div className="min-w-0">
+                <h2 id="delete-user-title" className="text-base font-black text-gray-900 dark:text-white">Delete user permanently?</h2>
+                <p id="delete-user-description" className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                  Delete <span className="font-bold text-gray-900 dark:text-white">@{deleteUserTarget.username || 'unknown'}</span> and their account data? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                autoFocus
+                disabled={!!userActionLoading}
+                onClick={() => setDeleteUserTarget(null)}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!!userActionLoading}
+                onClick={() => void handleDeleteUser()}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {userActionLoading === deleteUserTarget.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {userActionLoading === deleteUserTarget.id ? 'Deleting…' : 'Delete user'}
+              </button>
+            </div>
+          </section>
         </div>
       )}
 
@@ -1885,7 +1959,7 @@ export default function FounderDashboard() {
                             {isActioning ? <Loader2 size={13} className="animate-spin" /> : <Ban size={13} />}
                           </button>
                           <button
-                            onClick={() => handleDeleteUser(user.id, user.username)}
+                            onClick={() => setDeleteUserTarget({ id: user.id, username: user.username || 'unknown' })}
                             disabled={isActioning || user.id === currentUserId}
                             className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl transition-all disabled:opacity-40"
                             title="Delete user permanently">

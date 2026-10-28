@@ -19,6 +19,11 @@ export function isAuthenticated(session, hasCachedToken) {
   return Boolean(session || hasCachedToken);
 }
 
+/** An initial snapshot must not override a newer auth-state event. */
+export function shouldApplySessionSnapshot(authEventSeen) {
+  return !authEventSeen;
+}
+
 /**
  * Reducer for the layout's auth state.
  * @param {'initializing'|'authenticated'|'guest'|'session_expired'} prev

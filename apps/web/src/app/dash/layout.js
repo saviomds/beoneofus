@@ -10,7 +10,7 @@ import { DashboardProvider } from './content/DashboardContext'
 import NotificationPopup from '../components/NotificationPopup'
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../supabaseClient';
-import { nextAuthState } from './authSession.mjs';
+import { nextAuthState, shouldApplySessionSnapshot } from './authSession.mjs';
 
 /* ── Temporary session diagnostics ───────────────────────────────
    Silent by default. To trace the session lifecycle in any environment
@@ -445,6 +445,7 @@ function SessionExpiredCard({ onDismiss }) {
 export default function DashLayout({ children }) {
   const [authState, setAuthState] = useState('initializing'); // 'initializing', 'authenticated', 'guest', 'session_expired'
   const [showPickUsername, setShowPickUsername] = useState(false);
+  const authEventSeenRef = useRef(false);
   const router = useRouter();
   // Home has its own guest welcome card, so the floating prompt would repeat it.
   const isHome = usePathname() === '/dash/home';
@@ -476,10 +477,13 @@ export default function DashLayout({ children }) {
       setAuthState(prev => nextAuthState(prev, event, session));
     };
 
-    supabase.auth.getSession().then(({ data: { session } }) => apply('GET_SESSION', session));
-
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      authEventSeenRef.current = true;
       apply(event, session);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (shouldApplySessionSnapshot(authEventSeenRef.current)) apply('GET_SESSION', session);
     });
 
     return () => { active = false; authListener.subscription?.unsubscribe(); };

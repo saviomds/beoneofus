@@ -146,8 +146,8 @@ function AISummaryPanel({ messages, activeChat }) {
       {hasContent ? (
         <p style={{ fontSize: 12, color: "#6D28D9", lineHeight: 1.6, margin: 0 }}>
           {messages.length === 1
-            ? t("messages.convo_summary_one", { name: activeChat?.username, n: messages.length })
-            : t("messages.convo_summary_many", { name: activeChat?.username, n: messages.length })}
+            ? t("messages.convo_summary_one", { name: activeChat?.username || activeChat?.full_name || "User", n: messages.length })
+            : t("messages.convo_summary_many", { name: activeChat?.username || activeChat?.full_name || "User", n: messages.length })}
           {messages.some(m => m.image_url) ? t("messages.contains_images") : ""}
           {messages.some(m => parseSnippet(m.text)) ? t("messages.includes_snippets") : ""}
         </p>
@@ -229,7 +229,7 @@ function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
           )}
           {task.assigned_to ? (
             <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 100, background: "#EEF2FF", color: "#4F46E5", display: "flex", alignItems: "center", gap: 3 }}>
-              <AtSign size={9} /> {chatUsername}
+              <AtSign size={9} /> {chatUsername || "User"}
             </span>
           ) : (
             <button
@@ -238,7 +238,7 @@ function TaskCard({ task, onToggle, onRename, onAssign, chatUsername }) {
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#6366F1"; e.currentTarget.style.color = "#6366F1"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#CBD5E1"; e.currentTarget.style.color = "#94A3B8"; }}
             >
-              <AtSign size={9} /> {t("messages.assign_to", { username: chatUsername })}
+              <AtSign size={9} /> {t("messages.assign_to", { username: chatUsername || "User" })}
             </button>
           )}
         </div>
@@ -408,7 +408,7 @@ export default function MessagesContent() {
         const body = await res.json().catch(() => ({}));
         showToast(t("messages.toast_task_email_failed", { message: body.error || res.status }), "error");
       } else {
-        showToast(t("messages.toast_task_notified", { username: assigneeProfile.username }));
+        showToast(t("messages.toast_task_notified", { username: assigneeProfile.username || 'there' }));
       }
     } catch (err) {
       showToast(t("messages.toast_task_email_error", { message: err.message }), "error");
@@ -484,7 +484,7 @@ export default function MessagesContent() {
 
       if (connectedIds.length > 0) {
         const { data: profiles } = await supabase
-          .from("profiles").select("id, username, status, avatar_url, is_verified").in("id", connectedIds);
+          .from("profiles").select("id, username, full_name, status, avatar_url, is_verified").in("id", connectedIds);
         if (isMounted) {
           setContacts(profiles || []);
           setActiveChat(prev => {
@@ -828,7 +828,9 @@ export default function MessagesContent() {
   const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
 
   const filteredContacts = contacts.filter(c => {
-    const matchSearch = c.username.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!c) return false;
+    const q = (searchQuery || "").toLowerCase();
+    const matchSearch = !q || (c.username || "").toLowerCase().includes(q) || (c.full_name || "").toLowerCase().includes(q);
     if (filterTab === "unread") return matchSearch && (unreadCounts[c.id] || 0) > 0;
     return matchSearch;
   });
@@ -925,7 +927,7 @@ export default function MessagesContent() {
             <div style={{ width: 56, height: 56, background: "#FFF7ED", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
               <ShieldAlert size={24} color="#F97316" />
             </div>
-            <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--mc-t1)", margin: "0 0 8px" }}>{t("messages.block_q", { name: activeChat?.username })}</h3>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--mc-t1)", margin: "0 0 8px" }}>{t("messages.block_q", { name: activeChat?.username || activeChat?.full_name || "User" })}</h3>
             <p style={{ fontSize: 13, color: "var(--mc-t5)", margin: "0 0 24px", lineHeight: 1.6 }}>{t("messages.block_desc")}</p>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setShowBlockConfirm(false)} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "1.5px solid var(--mc-border2)", background: "var(--mc-surface)", fontSize: 13, fontWeight: 600, color: "var(--mc-t4)", cursor: "pointer" }}>{t("messages.cancel")}</button>
@@ -1067,7 +1069,7 @@ export default function MessagesContent() {
                         <Image src={contact.avatar_url} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
                       ) : (
                         <div style={{ width: "100%", height: "100%", background: isActive ? "#DBEAFE" : "var(--mc-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: isActive ? "#2563EB" : "var(--mc-t5)" }}>
-                          {contact.username[0].toUpperCase()}
+                          {(contact.username?.[0] || contact.full_name?.[0] || "U").toUpperCase()}
                         </div>
                       )}
                     </div>
@@ -1077,7 +1079,7 @@ export default function MessagesContent() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, marginBottom: 2 }}>
                       <span style={{ fontSize: 13, fontWeight: 600, color: isActive ? "var(--mc-active-t)" : "var(--mc-t2)", display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {contact.username}
+                        {contact.username || contact.full_name || "User"}
                         {contact.is_verified && <BadgeCheck size={12} color="#3B82F6" fill="#3B82F6" stroke="white" strokeWidth={2} />}
                         {isMuted && <BellOff size={10} color="#94A3B8" />}
                       </span>
@@ -1120,14 +1122,14 @@ export default function MessagesContent() {
                       <Image src={activeChat.avatar_url} alt="" fill sizes="36px" style={{ objectFit: "cover" }} />
                     ) : (
                       <div style={{ width: "100%", height: "100%", background: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#7C3AED" }}>
-                        {activeChat.username[0].toUpperCase()}
+                        {(activeChat.username?.[0] || activeChat.full_name?.[0] || "U").toUpperCase()}
                       </div>
                     )}
                   </div>
 
                   <div style={{ cursor: "pointer", minWidth: 0 }} onClick={() => setSelectedUserId(activeChat.id)}>
                     <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--mc-t1)", margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>@{activeChat.username}</span>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeChat.username ? `@${activeChat.username}` : (activeChat.full_name || "User")}</span>
                       {activeChat.is_verified && <BadgeCheck size={14} color="#6366F1" fill="#6366F1" stroke="white" strokeWidth={2} />}
                     </h3>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 1 }}>
@@ -1216,7 +1218,7 @@ export default function MessagesContent() {
                                 <Image src={activeChat.avatar_url} alt="" fill sizes="30px" style={{ objectFit: "cover" }} />
                               ) : (
                                 <div style={{ width: "100%", height: "100%", background: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#7C3AED" }}>
-                                  {activeChat.username[0].toUpperCase()}
+                                  {(activeChat.username?.[0] || activeChat.full_name?.[0] || "U").toUpperCase()}
                                 </div>
                               )}
                             </div>
@@ -1229,7 +1231,7 @@ export default function MessagesContent() {
                                 <CornerUpLeft size={11} color="#94A3B8" style={{ flexShrink: 0, marginTop: 1 }} />
                                 <div style={{ minWidth: 0 }}>
                                   <p style={{ fontSize: 10, fontWeight: 700, color: "#6366F1", margin: "0 0 1px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                                    @{msg.replied_message.sender_id === currentUserId ? t("messages.you") : activeChat.username}
+                                    {msg.replied_message.sender_id === currentUserId ? `@${t("messages.you")}` : (activeChat.username ? `@${activeChat.username}` : (activeChat.full_name || "User"))}
                                   </p>
                                   <p style={{ fontSize: 11.5, color: "var(--mc-t5)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     {msg.replied_message.text || t("messages.img_label")}
@@ -1351,7 +1353,7 @@ export default function MessagesContent() {
                             <Image src={activeChat.avatar_url} alt="" fill sizes="30px" style={{ objectFit: "cover" }} />
                           ) : (
                             <div style={{ width: "100%", height: "100%", background: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#7C3AED" }}>
-                              {activeChat.username[0].toUpperCase()}
+                              {(activeChat.username?.[0] || activeChat.full_name?.[0] || "U").toUpperCase()}
                             </div>
                           )}
                         </div>
@@ -1376,7 +1378,7 @@ export default function MessagesContent() {
                         <p style={{ fontSize: 14, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>{t("messages.connection_blocked")}</p>
                         {blockerId === currentUserId ? (
                           <button onClick={handleUnblockUser} style={{ fontSize: 13, color: "#6366F1", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
-                            {t("messages.unblock_name", { name: activeChat.username })}
+                            {t("messages.unblock_name", { name: activeChat.username || activeChat.full_name || "User" })}
                           </button>
                         ) : (
                           <p style={{ fontSize: 12, color: "var(--mc-t6)", fontStyle: "italic", margin: 0 }}>{t("messages.been_blocked_by")}</p>
@@ -1403,14 +1405,14 @@ export default function MessagesContent() {
                           <Send size={24} color="#94A3B8" className="animate-pulse" />
                         </div>
                         <p style={{ fontSize: 14, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>{t("messages.request_sent")}</p>
-                        <p style={{ fontSize: 12, color: "var(--mc-t6)", margin: 0 }}>{t("messages.waiting_accept", { name: activeChat.username })}</p>
+                        <p style={{ fontSize: 12, color: "var(--mc-t6)", margin: 0 }}>{t("messages.waiting_accept", { name: activeChat.username || activeChat.full_name || "User" })}</p>
                       </div>
                     ) : connectionStatus === "incoming" ? (
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
                         <div style={{ width: 64, height: 64, background: "#F0FDF4", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <UserPlus size={28} color="#22C55E" />
                         </div>
-                        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>{t("messages.wants_connect", { name: activeChat.username })}</p>
+                        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--mc-t2)", margin: 0 }}>{t("messages.wants_connect", { name: activeChat.username || activeChat.full_name || "User" })}</p>
                         <div style={{ display: "flex", gap: 10 }}>
                           <button onClick={handleAcceptRequest} style={{ padding: "10px 22px", borderRadius: 11, background: "#22C55E", color: "white", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 12px rgba(34,197,94,0.25)" }}>
                             <Check size={14} /> {t("messages.accept")}
@@ -1446,13 +1448,13 @@ export default function MessagesContent() {
                           <Image src={activeChat.avatar_url} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
                         ) : (
                           <div style={{ width: "100%", height: "100%", background: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#7C3AED" }}>
-                            {activeChat.username[0].toUpperCase()}
+                            {(activeChat.username?.[0] || activeChat.full_name?.[0] || "U").toUpperCase()}
                           </div>
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: 13, fontWeight: 700, color: "var(--mc-t1)", margin: 0, display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          @{activeChat.username}
+                          {activeChat.username ? `@${activeChat.username}` : (activeChat.full_name || "User")}
                           {activeChat.is_verified && <BadgeCheck size={12} color="#6366F1" fill="#6366F1" stroke="white" strokeWidth={2} />}
                         </p>
                         <p style={{ fontSize: 11, color: "var(--mc-t6)", margin: 0 }}>{activeChat.status || t("messages.member")}</p>
@@ -1498,7 +1500,7 @@ export default function MessagesContent() {
                         onToggle={toggleTask}
                         onRename={renameTask}
                         onAssign={assignTask}
-                        chatUsername={activeChat?.username}
+                        chatUsername={activeChat?.username || activeChat?.full_name || "User"}
                       />
                     ))}
                   </div>
@@ -1518,7 +1520,7 @@ export default function MessagesContent() {
                   <div className="slide-up" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#EEF2FF", border: "1px solid #C7D2FE", borderBottom: "none", borderRadius: "12px 12px 0 0", padding: "8px 12px", marginBottom: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                       <CornerUpLeft size={12} color="#6366F1" />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "#4F46E5" }}>@{replyingTo.sender_id === currentUserId ? t("messages.you") : activeChat.username}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "#4F46E5" }}>{replyingTo.sender_id === currentUserId ? `@${t("messages.you")}` : (activeChat.username ? `@${activeChat.username}` : (activeChat.full_name || "User"))}</span>
                       <span style={{ fontSize: 12, color: "#818CF8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{replyingTo.text || t("messages.img_label")}</span>
                     </div>
                     <button onClick={() => setReplyingTo(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#818CF8", lineHeight: 0 }}>

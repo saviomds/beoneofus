@@ -48,16 +48,49 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
     }
 
-    // Delete auth user first — if this fails we stop before touching the profile,
-    // keeping the data consistent. Profile deletion comes second (or is cascaded via FK).
-    const { error: deleteErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
-    if (deleteErr) {
-      console.error('delete-user auth deletion failed:', deleteErr);
-      return NextResponse.json({ error: deleteErr.message || 'Unable to delete this account.' }, { status: 500 });
+    const { data: authData, error: authLookupError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const authUserMissing = authLookupError && (
+      authLookupError.status === 404 || /user not found/i.test(authLookupError.message || '')
+    );
+    if (authLookupError && !authUserMissing) {
+      console.error('delete-user auth lookup failed:', authLookupError);
+      return NextResponse.json({ error: authLookupError.message || 'Unable to verify this account.' }, { status: 500 });
     }
 
-    // Best-effort profile cleanup (may already be cascaded by FK on the DB side)
-    await supabaseAdmin.from('profiles').delete().eq('id', userId);
+    if (authData?.user) {
+      const { error: deleteErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (deleteErr) {
+        console.error('delete-user auth deletion failed:', deleteErr);
+        return NextResponse.json({ error: deleteErr.message || 'Unable to delete this account.' }, { status: 500 });
+      }
+    }
+
+    // Auth deletion may cascade the profile; retry cleanup handles accounts
+    // whose Auth record was removed by an earlier partial attempt.
+    const { error: profileDeleteError } = await supabaseAdmin
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+    if (profileDeleteError) {
+      console.error('delete-user profile deletion failed:', profileDeleteError);
+      return NextResponse.json({
+        error: `The Auth account is removed, but profile cleanup failed: ${profileDeleteError.message}`,
+        partialDeletion: true,
+      }, { status: 500 });
+    }
+
+    const { data: remainingProfile, error: verifyError } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+    if (verifyError || remainingProfile) {
+      console.error('delete-user profile verification failed:', verifyError || 'Profile row remains');
+      return NextResponse.json({
+        error: verifyError?.message || 'The profile row still exists after deletion.',
+        partialDeletion: true,
+      }, { status: 500 });
+    }
 
     // Audit log: record which admin deleted which user
     await logAdminAction(supabaseAdmin, {

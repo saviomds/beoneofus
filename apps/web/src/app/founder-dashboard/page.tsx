@@ -828,6 +828,7 @@ export default function FounderDashboard() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || `Unable to delete user (HTTP ${res.status}).`);
+      if (json.success !== true) throw new Error(json.error || 'The server did not confirm user deletion.');
       setUsers(prev => prev.filter(u => u.id !== userId));
       setAllUsers(prev => prev.filter(u => u.id !== userId));
       setDeleteUserTarget(null);

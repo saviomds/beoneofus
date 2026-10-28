@@ -116,16 +116,12 @@ const serwist = new Serwist({
         pathname.startsWith("/api/"),
       handler: new NetworkOnly(),
     },
-    // HTML navigation — always network-first so users always get fresh HTML
-    // with the correct chunk URLs. Auth routes excluded from interception.
+    // Never replay cached HTML after a deployment: it may reference chunks
+    // that no longer exist. The offline fallback below handles failed loads.
     {
       matcher: ({ request, url: { pathname } }: { request: Request; url: URL }) =>
         request.destination === "document" && !pathname.startsWith("/auth"),
-      handler: new NetworkFirst({
-        cacheName: "documents",
-        networkTimeoutSeconds: 4,
-        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 })],
-      }),
+      handler: new NetworkOnly(),
     },
   ],
   fallbacks: {

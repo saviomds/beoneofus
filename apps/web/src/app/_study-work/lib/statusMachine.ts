@@ -88,12 +88,20 @@ const STATUS_META: Record<ApplicationStatus, StatusMeta> = {
   },
 }
 
-export function statusMeta(status: ApplicationStatus): StatusMeta {
-  return STATUS_META[status]
+export function statusMeta(status: ApplicationStatus | string | null | undefined): StatusMeta {
+  return typeof status === 'string' && status in STATUS_META
+    ? STATUS_META[status as ApplicationStatus]
+    : {
+        label: 'Status unavailable',
+        shortLabel: 'Unknown status',
+        description: 'The application status is being updated.',
+        badgeTone: 'neutral',
+        progress: 0,
+      }
 }
 
-export function statusProgress(status: ApplicationStatus): number {
-  return STATUS_META[status].progress
+export function statusProgress(status: ApplicationStatus | string | null | undefined): number {
+  return statusMeta(status).progress
 }
 
 /** Has the client been unlocked into the full post-confirmation portal yet? */

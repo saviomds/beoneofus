@@ -10,7 +10,8 @@ export function useNotifications(userId: string | null) {
   const load = useCallback(async () => {
     if (!userId) return
     try {
-      setNotifications(await apps.listNotificationsForUser(userId))
+      const result = await apps.listNotificationsForUser(userId)
+      setNotifications(Array.isArray(result) ? result : [])
     } catch (err) {
       console.error('[study-work] failed to load notifications', err)
     }
@@ -29,7 +30,7 @@ export function useNotifications(userId: string | null) {
     await load()
   }, [userId, load])
 
-  const visible = userId ? notifications : []
+  const visible = userId && Array.isArray(notifications) ? notifications : []
   const unreadCount = visible.filter((n) => !n.read).length
 
   return { notifications: visible, unreadCount, markRead, markAllRead, refresh: load }
